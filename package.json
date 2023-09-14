@@ -1,0 +1,26 @@
+{
+  "name": "bireader",
+  "version": "1.0.0",
+  "description": "Read and write data in binary",
+  "main": "index.js",
+  "directories": {
+    "lib": "src"
+  },
+  "scripts": {
+    "build": "npm run build:cjs && npm run build:esm",
+    "build:cjs": "tsc --module commonjs --outDir dist",
+    "build:esm": "tsc --module esnext --outDir dist/esm && mv dist/esm/bireader.js dist/esm/bireader.mjs"
+  },
+  "keywords": [
+    "buffer",
+    "parser",
+    "binary",
+    "decode",
+    "unpack",
+    "struct",
+    "bit",
+    "hex"
+  ],
+  "author": "HearHellacopters",
+  "license": "MIT"
+}

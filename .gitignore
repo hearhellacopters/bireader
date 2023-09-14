@@ -1,0 +1,4 @@
+node_modules/
+dist/
+test_reader.js
+test_writer.js
