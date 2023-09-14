@@ -6,6 +6,10 @@
   "directories": {
     "lib": "src"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hearhellacopters/bireader.git"
+  },
   "scripts": {
     "build": "npm run build:cjs && npm run build:esm",
     "build:cjs": "tsc --module commonjs --outDir dist",
@@ -22,5 +26,9 @@
     "hex"
   ],
   "author": "HearHellacopters",
-  "license": "MIT"
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hearhellacopters/bireader/issues"
+  },
+  "homepage": "https://github.com/hearhellacopters/bireader#readme"
 }
