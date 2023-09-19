@@ -73,9 +73,14 @@ function header_write(size, magic, ver, heigth, width){
 
 Common functions for setup and movement shared by both (unless indicated).
 
+<style>
+.tg {
+  border-bottom: 3px solid black;
+}
+</style>
 <table>
 <thead>
-  <tr>
+  <tr class="tg">
     <th align="center" colspan="2">Function</th>
     <th align="center">Params (bold requires)</th>
     <th align="left">Notes</th>
@@ -85,7 +90,7 @@ Common functions for setup and movement shared by both (unless indicated).
   <tr>
     <td>Name</td>
     <td>new bireader(data, 1, 0, "big")</td>
-    <td rowspan="2">Buffer | Uint8Array, byte offset, bit offset, endianness</td>
+    <td align="center" rowspan="2">Buffer | Uint8Array, byte offset, bit offset, endianness</td>
     <td rowspan="2">new constructor </td>
   </tr>
   <tr>
@@ -95,7 +100,7 @@ Common functions for setup and movement shared by both (unless indicated).
   <tr>
     <td>Name</td>
     <td>endianness(str)</td>
-    <td rowspan="2">big or little (default little)</td>
+    <td align="center" rowspan="2">big or little (default little)</td>
     <td rowspan="2">Can be changed at any time</td>
   </tr>
   <tr>
@@ -105,7 +110,7 @@ Common functions for setup and movement shared by both (unless indicated).
   <tr>
     <td>Name</td>
     <td>skip(bytes, bits)</td>
-    <td rowspan="2">bytes to skip, bits to skip</td>
+    <td align="center" rowspan="2">bytes to skip, bits to skip</td>
     <td rowspan="2">Use negative to go back</td>
   </tr>
   <tr>
@@ -115,7 +120,7 @@ Common functions for setup and movement shared by both (unless indicated).
   <tr>
     <td>Name</td>
     <td>goto(byte, bit)</td>
-    <td rowspan="2">offset current byte, bit read position</td>
+    <td align="center" rowspan="2">offset current byte, bit read position</td>
     <td rowspan="2">Note: remaining bits are drop when returning to byte data</td>
   </tr>
   <tr>
@@ -125,7 +130,7 @@ Common functions for setup and movement shared by both (unless indicated).
   <tr>
     <td>Name</td>
     <td>rewind()</td>
-    <td rowspan="2">none</td>
+    <td align="center" rowspan="2">none</td>
     <td rowspan="2">Moves current read position to start of data</td>
   </tr>
   <tr>
@@ -135,7 +140,7 @@ Common functions for setup and movement shared by both (unless indicated).
   <tr>
     <td>Name</td>
     <td>ftell()</td>
-    <td rowspan="2">none</td>
+    <td align="center" rowspan="2">none</td>
     <td rowspan="2">Gets current read position in bytes</td>
   </tr>
   <tr>
@@ -145,19 +150,19 @@ Common functions for setup and movement shared by both (unless indicated).
   <tr>
     <td>Name</td>
     <td>unrestrict()</td>
-    <td>none</td>
+    <td align="center">none</td>
     <td>biwriter only: Will extend array if data is written outside of max size (default on)</td>
   </tr>
   <tr>
     <td>Name</td>
     <td>restrict()</td>
-    <td>none</td>
+    <td align="center">none</td>
     <td>biwriter only: Won't extend array if data is written outside of max size (default off)</td>
   </tr>
   <tr>
     <td>Name</td>
     <td>crop(start, end)</td>
-    <td rowspan="2">start location of data, end location of data</td>
+    <td align="center" rowspan="2">start location of data, end location of data</td>
     <td rowspan="2">Returns data truncated. defaults to 0 and current read / write position. <br>Note: Does not affect supplied data.</td>
   </tr>
   <tr>
@@ -167,7 +172,7 @@ Common functions for setup and movement shared by both (unless indicated).
   <tr>
     <td>Name</td>
     <td>get() </td>
-    <td rowspan="2">none</td>
+    <td align="center" rowspan="2">none</td>
     <td rowspan="2">returns supplied data</td>
   </tr>
   <tr>
@@ -177,7 +182,7 @@ Common functions for setup and movement shared by both (unless indicated).
   <tr>
     <td>Name</td>
     <td>end()</td>
-    <td rowspan="2">none</td>
+    <td align="center" rowspan="2">none</td>
     <td rowspan="2">removes supplied data</td>
   </tr>
   <tr>
