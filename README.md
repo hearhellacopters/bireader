@@ -24,87 +24,61 @@ Import the reader or writer. Create a new parser with the data and start parsing
 
 ```javascript
 import {bireader, biwriter} from 'bireader';
-//or
-const {bireader, biwriter} = require('bireader');
 
 function header_read(data){
-
     const br = new bireader(data)
-
     const header = {}
-
     header.magic = br.string({length:4})
-
     header.ver = br.ubyte()
-
     br.skip(2) //reserved
-
     if(header.ver == 10){
-
         br.endianness("big")
         header.file_size = br.size
         header.heigth = br.uint()
         header.width = br.udouble()
-
     } else if(header.ver < 9) {
-
         br.endianness("little")
-
         header.file_size = br.ushort()
         header.heigth = br.uword()
         header.width = br.uint16()
-
     } else {
         throw new Error('Unknown version of ' + header.ver)
     }
-
     br.finished()
-
     return header
 }
 
 function header_write(size, magic, ver, heigth, width){
-
     const data = new Uint8Array(size)
-
     const bw = new biwriter(data)
-
     header.magic = bw.string(magic, {length:4})
-
     header.ver = bw.uint8(ver)
-
     br.int16(0) //reserved
-
-    if(header.ver == 10){
-        
+    if(header.ver == 10){ 
         header.heigth = bw.uint32be(heigth)
         header.width = bw.uint32be(width)
-
     } else if(header.ver < 9) {
-
         header.file_size = bw.ushort(size)
         header.heigth = bw.uint16(heigth)
         header.width = bw.uint16(width)
-
     } else {
         throw new Error('Unknown version of ' + ver)
     }
-
     bw.end()
-
     return data
 }
 ```
 
 ## Common Functions
 
+Common functions for setup and movement shared by both (unless indicated).
+
 <table>
 <thead>
   <tr>
-    <th></th>
-    <th>Function</th>
-    <th>Params (bold requires)</th>
-    <th>Notes</th>
+    <th align="center" colspan="2">Function</th>
+    <th align="center">Params (bold requires)</th>
+    <th align="left">Notes</th>
   </tr>
 </thead>
 <tbody>
