@@ -1,13 +1,12 @@
- /**
- *
- * byte reader, includes bitfields and strings
- *
- * @param {Buffer|Uint8Array} data - ```Buffer``` or ```Uint8Array```
- * @param {number} byteoffset - byte offset to start reader, default is 0 
- * @param {number} bitoffset - bit offset to start reader, 0-7 
- * @param endianness - endianness ```big``` or ```little``` (default ```little```)
- * @returns ```number``` or ```string```
- */
+/**
+*
+* byte reader, includes bitfields and strings
+*
+* @param {Buffer|Uint8Array} data - ```Buffer``` or ```Uint8Array```
+* @param {number} byteoffset - byte offset to start reader, default is 0 
+* @param {number} bitoffset - bit offset to start reader, 0-7 
+* @param {string} endianness - endianness ```big``` or ```little``` (default ```little```)
+*/
 class bireader {
     endian = "little";
     offset = 0;
@@ -15,27 +14,22 @@ class bireader {
     size = 0
     data;
 
-    #check_size = function(read_size){
-        if(this.bitoffset != 0){
-            //droped bits
-            const new_off = Math.ceil(this.bitoffset / 8)
-            this.offset = this.offset + new_off
-        }
-        if((this.offset + read_size) > this.size){
+    #check_size = function(read_size, read_bits){
+        const new_off = this.offset + (read_size||0) + Math.ceil((this.bitoffset + (read_bits||0) )/ 8)
+        if(new_off > this.size){
             throw new Error(`Reader reached end of data.`);
         }
     }
 
     /**
-     *
-     * byte reader, includes bitfields and strings
-     *
-     * @param {Buffer|Uint8Array} data - ```Buffer``` or ```Uint8Array```
-     * @param {number} byteoffset - byte offset to start reader, default is 0 
-     * @param {number} bitoffset - bit offset to start reader, 0-7 
-     * @param endianness - endianness ```big``` or ```little``` (default ```little```)
-     * @returns ```number``` or ```string```
-     */
+    *
+    * byte reader, includes bitfields and strings
+    *
+    * @param {Buffer|Uint8Array} data - ```Buffer``` or ```Uint8Array```
+    * @param {number} byteoffset - byte offset to start reader, default is 0 
+    * @param {number} bitoffset - bit offset to start reader, 0-7 
+    * @param {string} endianness - endianness ```big``` or ```little``` (default ```little```)
+    */
     constructor(data, byteoffset, bitoffset, endianness) {
         if(endianness != undefined && typeof endianness != "string"){
             throw Error("endianness must be big or little")
@@ -63,214 +57,2448 @@ class bireader {
         }
     }
 
-    endianness = function(order){
-        if(order == undefined || typeof order != "string"){
-            throw Error("endianness must be big or little")
+    /**
+    *
+    * Change endian, defaults to little
+    * 
+    * Can be changed at any time, doesn't loose position
+    *
+    * @param {string} endian - endianness ```big``` or ```little```
+    */
+    endianness = function(endian){
+        if(endian == undefined || typeof endian != "string"){
+            throw Error("Endian must be big or little")
         }
-        if(order != undefined && !(order == "big" || order == "little")){
-            throw Error("byteorder must be big or little")
+        if(endian != undefined && !(endian == "big" || endian == "little")){
+            throw Error("Endian must be big or little")
         }
-        this.endian = order
-    }
-
-     /**
-     *
-     * @param {number} offset - bytes to skip
-     */
-     seek = function(offset){
-        this.#check_size(offset)
-        this.offset += offset
+        this.endian = endian
     }
 
     /**
-     *
-     * @param {number} offset - byte to jump to
-     */
-    goto = function(loc){
-        if(loc > this.size){
-            throw Error("goto outside of size of data")
-        }
-        this.offset = loc
+    *Sets endian to big
+    */
+    bigEndian = this.big = this.bigendian = function(){
+        this.endianness("big")
     }
 
     /**
-     *
-     * bit field reader
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped
-     *
-     * @param {number} numBitsToRead - bits to read
-     * @returns number
-     */
-    readBit = function(numBitsToRead, endian){
-        if(numBitsToRead == undefined || typeof numBitsToRead != "number"){
+    * Sets endian to little
+    */
+    littleEndian = this.little = this.littleendian = function(){
+        this.endianness("little")
+    }
+
+    /**
+    * Move current read byte or bit position
+    *
+    * @param {number} offset - bytes to skip
+    * @param {number} bits - bits to skip
+    */
+    skip = this.fskip = function(bytes, bits){
+        this.#check_size(bytes || 0)
+        if((((bytes || 0) + this.offset) + Math.ceil((this.bitoffset + (bits||0)) /8) ) > this.size){
+            throw Error("Seek outside of size of data")
+        }
+        this.bitoffset += (bits || 0) % 8
+        this.offset += (bytes || 0)
+    }
+
+    /**
+    * Change current byte or bit read position
+    * 
+    * @param {number} byte - byte to jump to
+    * @param {number} bit - bit to jump to (0-7)
+    */
+    goto = this.seek = this.fseek = this.jump = this.pointer = this.warp = this.fsetpos = function(byte, bit){
+        if((byte + Math.ceil((bit||0)/8) ) > this.size){
+            throw Error("Goto outside of size of data: " + this.size)
+        }
+        this.offset = byte
+        this.bitoffset = (bit || 0) % 8
+    }
+
+    /**
+    * Set offset to start of file
+    */
+    rewind = this.gotostart = this.tostart = function(){
+        this.offset = 0
+        this.bitoffset = 0
+    }
+    
+    /**
+    * Get the current byte position
+    *
+    * @return {number} current byte position
+    */
+    ftell = this.tell = this.fgetpos =  function(){
+        return this.offset
+    }
+
+    //
+    //bit reader
+    //
+
+    /**
+    *
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    *
+    * @param {number} bits - bits to read
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
+    */
+    readBit = this.bit = function(bits, unsigned, endian){
+        if(bits == undefined || typeof bits != "number"){
             throw Error("Enter number of bits to read")
         }
-        const size_needed = ((((numBitsToRead-1) + this.bitoffset) / 8) + this.offset)
-        if (numBitsToRead <= 0 || size_needed > this.size) {
+        if (bits <= 0 || bits > 32) {
+            throw Error('Bit length must be between 1 and 32.');
+        }
+        const size_needed = ((((bits-1) + this.bitoffset) / 8) + this.offset)
+        if (bits <= 0 || size_needed > this.size) {
             throw new Error("Invalid number of bits to read: " + size_needed + " of " + this.size);
         }
 
-        let result = "0b";
-        let startByteIndex = this.offset //cur byte
-        let endByteIndex = this.offset + Math.floor(((numBitsToRead-1) + this.bitoffset) / 8) //end byte
-        let bytesToRead = (endByteIndex - startByteIndex) + 1 //at least 1
-        let startBitIndex = this.bitoffset
-        let endBitIndex = ((numBitsToRead-1) + this.bitoffset)+1
-        let bitArray = []
+        var off_in_bits = (this.offset * 8) + this.bitoffset
 
-        let startByteIndexI = endByteIndex
+        var value = 0;
 
-        //big backwards read
-        do {
-            var element = this.data[startByteIndexI];
-            element = element.toString(2).padStart(8, '0').split('')
-            if(endian == "little"){
-                element = element.reverse()
+        for (var i = 0; i < bits;) {
+            var remaining = bits - i;
+            var bitOffset = off_in_bits & 7;
+            var currentByte = this.data[off_in_bits >> 3];
+
+            var read = Math.min(remaining, 8 - bitOffset);
+
+            var mask, readBits;
+            if ((endian != undefined ? endian : this.endian)  == "big") {
+
+                mask = ~(0xFF << read);
+                readBits = (currentByte >> (8 - read - bitOffset)) & mask;
+                value <<= read;
+                value |= readBits;
+
+            } else {
+
+                mask = ~(0xFF << read);
+                readBits = (currentByte >> bitOffset) & mask;
+                value |= readBits << i;
+
             }
-            bitArray.push(element)
-            startByteIndexI--
-            bytesToRead--
-        } while (bytesToRead != 0);
-        if(endian == "big"){
-            bitArray = bitArray.reverse()
+
+            off_in_bits += read;
+            i += read;
         }
-        bitArray = bitArray.flat()
-        // console.log(bitArray)
-        bitArray = bitArray.slice(startBitIndex,endBitIndex)
 
-        this.offset = this.offset + Math.floor(((numBitsToRead) + this.bitoffset) / 8) //end byte
-        this.bitoffset = ((numBitsToRead) + this.bitoffset) % 8
+        this.offset = this.offset + Math.floor(((bits) + this.bitoffset) / 8) //end byte
+        this.bitoffset = ((bits) + this.bitoffset) % 8
+
+        if (unsigned == true) {
+
+            return value >>> 0;
             
-        result = result + bitArray.join("")
-        
-        return Number(result);
+        } 
+
+        if (bits !== 32 && value & (1 << (bits - 1))) {
+            value |= -1 ^ ((1 << bits) - 1);
+        }
+
+        return value;        
+
     }
 
     /**
-     *
-     * bit field reader
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped
-     *
-     * @param {number} bits - bits to read
-     * @returns number
-     */
-    bit = function(bits){
-        return this.readBit(bits, this.endian)
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit1 = function(unsigned){
+        return this.bit(1, unsigned)
     }
 
     /**
-     *
-     * bit field reader
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped
-     *
-     * @param {number} bits - bits to read
-     * @returns number
-     */
-    readBitBE = function(bits){
-        return this.readBit(bits, "big")
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit1le = function(unsigned){
+        return this.bit(1, unsigned, "little")
     }
 
     /**
-     *
-     * bit field reader
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped
-     *
-     * @param {number} bits - bits to read
-     * @returns number
-     */
-    bitbe = function(bits){
-        return this.readBit(bits, "big")
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit1be = function(unsigned){
+        return this.bit(1, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit1 = function(){
+        return this.bit(1, true)
     }
 
     /**
-     *
-     * bit field reader
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped
-     *
-     * @param {number} bits - bits to read
-     * @returns number
-     */
-    bitle = function(bits){
-        return this.readBit(bits, "little")
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit1le = function(){
+        return this.bit(1, true, "little")
     }
 
     /**
-     *
-     * bit field reader
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped
-     *
-     * @param {number} bits - bits to read
-     * @returns number
-     */
-    readBitLE = function(bits){
-        return this.readBit(bits, "little")
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit1be = function(){
+        return this.bit(1, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit2 = function(unsigned){
+        return this.bit(2, unsigned)
     }
 
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit2le = function(unsigned){
+        return this.bit(2, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit2be = function(unsigned){
+        return this.bit(2, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit2 = function(){
+        return this.bit(2, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit2le = function(){
+        return this.bit(2, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit2be = function(){
+        return this.bit(2, true, "big")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit3 = function(unsigned){
+        return this.bit(3, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit3le = function(unsigned){
+        return this.bit(3, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit3be = function(unsigned){
+        return this.bit(3, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit3 = function(){
+        return this.bit(3, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit3le = function(){
+        return this.bit(3, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit3be = function(){
+        return this.bit(3, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit4 = function(unsigned){
+        return this.bit(4, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit4le = function(unsigned){
+        return this.bit(4, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit4be = function(unsigned){
+        return this.bit(4, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit4 = function(){
+        return this.bit(4, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit4le = function(){
+        return this.bit(4, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit4be = function(){
+        return this.bit(4, true, "big")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit5 = function(unsigned){
+        return this.bit(5, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit5le = function(unsigned){
+        return this.bit(5, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit5be = function(unsigned){
+        return this.bit(5, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit5 = function(){
+        return this.bit(5, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit5le = function(){
+        return this.bit(5, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit5be = function(){
+        return this.bit(5, true, "big")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit6 = function(unsigned){
+        return this.bit(6, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit6le = function(unsigned){
+        return this.bit(6, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit6be = function(unsigned){
+        return this.bit(6, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit6 = function(){
+        return this.bit(6, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit6le = function(){
+        return this.bit(6, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit6be = function(){
+        return this.bit(6, true, "big")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit7 = function(unsigned){
+        return this.bit(7, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit7le = function(unsigned){
+        return this.bit(7, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit7be = function(unsigned){
+        return this.bit(7, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit7 = function(){
+        return this.bit(7, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit7le = function(){
+        return this.bit(7, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit7be = function(){
+        return this.bit(7, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit8 = function(unsigned){
+        return this.bit(8, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit8le = function(unsigned){
+        return this.bit(8, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit8be = function(unsigned){
+        return this.bit(8, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit8 = function(){
+        return this.bit(8, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit8le = function(){
+        return this.bit(8, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit8be = function(){
+        return this.bit(8, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit9 = function(unsigned){
+        return this.bit(9, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit9le = function(unsigned){
+        return this.bit(9, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit9be = function(unsigned){
+        return this.bit(9, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit9 = function(){
+        return this.bit(9, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit9le = function(){
+        return this.bit(9, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit9be = function(){
+        return this.bit(9, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit10 = function(unsigned){
+        return this.bit(10, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit10le = function(unsigned){
+        return this.bit(10, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit10be = function(unsigned){
+        return this.bit(10, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit10 = function(){
+        return this.bit(10, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit10le = function(){
+        return this.bit(10, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit10be = function(){
+        return this.bit(10, true, "big")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit11 = function(unsigned){
+        return this.bit(11, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit11le = function(unsigned){
+        return this.bit(11, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit11be = function(unsigned){
+        return this.bit(11, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit11 = function(){
+        return this.bit(11, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit11le = function(){
+        return this.bit(11, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit11be = function(){
+        return this.bit(11, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit12 = function(unsigned){
+        return this.bit(12, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit12le = function(unsigned){
+        return this.bit(12, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit12be = function(unsigned){
+        return this.bit(12, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit12 = function(){
+        return this.bit(12, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit12le = function(){
+        return this.bit(12, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit12be = function(){
+        return this.bit(12, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit13 = function(unsigned){
+        return this.bit(13, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit13le = function(unsigned){
+        return this.bit(13, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit13be = function(unsigned){
+        return this.bit(13, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit13 = function(){
+        return this.bit(13, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit13le = function(){
+        return this.bit(13, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit13be = function(){
+        return this.bit(13, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit14 = function(unsigned){
+        return this.bit(14, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit14le = function(unsigned){
+        return this.bit(14, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit14be = function(unsigned){
+        return this.bit(14, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit14 = function(){
+        return this.bit(14, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit14le = function(){
+        return this.bit(14, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit14be = function(){
+        return this.bit(14, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit15 = function(unsigned){
+        return this.bit(15, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit15le = function(unsigned){
+        return this.bit(15, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit15be = function(unsigned){
+        return this.bit(15, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit15 = function(){
+        return this.bit(15, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit15le = function(){
+        return this.bit(15, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit15be = function(){
+        return this.bit(15, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit16 = function(unsigned){
+        return this.bit(16, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit16le = function(unsigned){
+        return this.bit(16, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit16be = function(unsigned){
+        return this.bit(16, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit16 = function(){
+        return this.bit(16, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit16le = function(){
+        return this.bit(16, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit16be = function(){
+        return this.bit(16, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit17 = function(unsigned){
+        return this.bit(17, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit17le = function(unsigned){
+        return this.bit(17, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit17be = function(unsigned){
+        return this.bit(17, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit17 = function(){
+        return this.bit(17, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit17le = function(){
+        return this.bit(17, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit17be = function(){
+        return this.bit(17, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit18 = function(unsigned){
+        return this.bit(18, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit18le = function(unsigned){
+        return this.bit(18, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit18be = function(unsigned){
+        return this.bit(18, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit18 = function(){
+        return this.bit(18, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit18le = function(){
+        return this.bit(18, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit18be = function(){
+        return this.bit(18, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit19 = function(unsigned){
+        return this.bit(19, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit19le = function(unsigned){
+        return this.bit(19, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit19be = function(unsigned){
+        return this.bit(19, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit19 = function(){
+        return this.bit(19, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit19le = function(){
+        return this.bit(19, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit19be = function(){
+        return this.bit(19, true, "big")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit20 = function(unsigned){
+        return this.bit(20, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit20le = function(unsigned){
+        return this.bit(20, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit20be = function(unsigned){
+        return this.bit(20, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit20 = function(){
+        return this.bit(20, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit20le = function(){
+        return this.bit(20, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit20be = function(){
+        return this.bit(20, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit21 = function(unsigned){
+        return this.bit(21, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit21le = function(unsigned){
+        return this.bit(21, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit21be = function(unsigned){
+        return this.bit(21, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit21 = function(){
+        return this.bit(21, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit21le = function(){
+        return this.bit(21, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit21be = function(){
+        return this.bit(21, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit22 = function(unsigned){
+        return this.bit(22, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit22le = function(unsigned){
+        return this.bit(22, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit22be = function(unsigned){
+        return this.bit(22, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit22 = function(){
+        return this.bit(22, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit22le = function(){
+        return this.bit(22, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit22be = function(){
+        return this.bit(22, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit23 = function(unsigned){
+        return this.bit(23, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit23le = function(unsigned){
+        return this.bit(23, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit23be = function(unsigned){
+        return this.bit(23, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit23 = function(){
+        return this.bit(23, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit23le = function(){
+        return this.bit(23, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit23be = function(){
+        return this.bit(23, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit24 = function(unsigned){
+        return this.bit(24, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit24le = function(unsigned){
+        return this.bit(24, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit24be = function(unsigned){
+        return this.bit(24, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit24 = function(){
+        return this.bit(24, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit24le = function(){
+        return this.bit(24, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit24be = function(){
+        return this.bit(24, true, "big")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit25 = function(unsigned){
+        return this.bit(25, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit25le = function(unsigned){
+        return this.bit(25, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit25be = function(unsigned){
+        return this.bit(25, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit25 = function(){
+        return this.bit(25, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit25le = function(){
+        return this.bit(25, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit25be = function(){
+        return this.bit(25, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit26 = function(unsigned){
+        return this.bit(26, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit26le = function(unsigned){
+        return this.bit(26, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit26be = function(unsigned){
+        return this.bit(26, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit26 = function(){
+        return this.bit(26, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit26le = function(){
+        return this.bit(26, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit26be = function(){
+        return this.bit(26, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit27 = function(unsigned){
+        return this.bit(27, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit27le = function(unsigned){
+        return this.bit(27, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit27be = function(unsigned){
+        return this.bit(27, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit27 = function(){
+        return this.bit(27, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit27le = function(){
+        return this.bit(27, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit27be = function(){
+        return this.bit(27, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit28 = function(unsigned){
+        return this.bit(28, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit28le = function(unsigned){
+        return this.bit(28, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit28be = function(unsigned){
+        return this.bit(28, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit28 = function(){
+        return this.bit(28, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit28le = function(){
+        return this.bit(28, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit28be = function(){
+        return this.bit(28, true, "big")
+    }
+	
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit29 = function(unsigned){
+        return this.bit(29, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit29le = function(unsigned){
+        return this.bit(29, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit29be = function(unsigned){
+        return this.bit(29, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit29 = function(){
+        return this.bit(29, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit29le = function(){
+        return this.bit(29, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit29be = function(){
+        return this.bit(29, true, "big")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit30 = function(unsigned){
+        return this.bit(30, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit30le = function(unsigned){
+        return this.bit(30, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit30be = function(unsigned){
+        return this.bit(30, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit30 = function(){
+        return this.bit(30, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit30le = function(){
+        return this.bit(30, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit30be = function(){
+        return this.bit(30, true, "big")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit31 = function(unsigned){
+        return this.bit(31, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit31le = function(unsigned){
+        return this.bit(31, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit31be = function(unsigned){
+        return this.bit(31, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit31 = function(){
+        return this.bit(31, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit31le = function(){
+        return this.bit(31, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit31be = function(){
+        return this.bit(31, true, "big")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit32 = function(unsigned){
+        return this.bit(32, unsigned)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit32le = function(unsigned){
+        return this.bit(32, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    bit32be = function(unsigned){
+        return this.bit(32, unsigned, "big")
+    }
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit32 = function(){
+        return this.bit(32, true)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit32le = function(){
+        return this.bit(32, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    * 
+    * @returns number
+    */
+    ubit32be = function(){
+        return this.bit(32, true, "big")
+    }
+
+    /**
+    *
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    *
+    * @param {number} bits - bits to read
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    readUBitBE = this.ubitbe = function(bits){
+        return this.readBit(bits, true, "big")
+    }
+
+    /**
+    *
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    *
+    * @param {number} bits - bits to read
+    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @returns number
+    */
+    readBitBE = this.bitbe = function(bits, unsigned){
+        return this.readBit(bits, unsigned, "big")
+    }
+
+    /**
+    *
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    *
+    * @param {number} bits - bits to read
+    * @param {boolean} signed - if the vlaue is signed
+    * @returns number
+    */
+    readUBitLE = this.ubitle = function(bits){
+        return this.readBit(bits, true, "little")
+    }
+
+    /**
+    *
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    *
+    * @param {number} bits - bits to read
+    * @param {boolean} signed - if the vlaue is signed
+    * @returns number
+    */
+    readBitLE = this.bitle = function(bits, signed){
+        return this.readBit(bits, signed, "little")
+    }
+
+    //
     //byte read
+    //
 
     /**
+    * Read signed byte
+    * 
     * @returns number
     */
     readByte = function(signed){
         this.#check_size(1)
         const read = (this.data[this.offset])
         this.offset += 1
-        if(signed){
-            return read 
+        if(signed == undefined || signed == true){
+            return read
         } else {
             return read & 0xFF
         }
     }
 
     /**
+    * Read unsigned byte
+    * 
     * @returns number
     */
-    readUByte = function(){
+    readUByte = this.uint8 = this.ubyte = this.char = function(){
         return this.readByte(true)
     }
 
     /**
+    * Read signed byte
+    * 
     * @returns number
     */
-    ubyte = function(){
-        return this.readByte(true)
-    }
-    /**
-    * @returns number
-    */
-    byte = function(){
+    byte = this.int8 = function(){
         return this.readByte(false)
     }
 
-    /**
-    * @returns number
-    */
-    uint8 = function(){
-        return this.readByte(true)
-    }
-    /**
-    * @returns number
-    */
-    int8 = function(){
-        return this.readByte(false)
-    }
-
+    //
     //short16 read
+    //
 
     /**
+    * Read signed short
+    * 
     * @returns number
     */
-    readInt16LE = function(signed){
+    readInt16 = this.short = this.int16 = function(signed, endian){
         this.#check_size(2)
-        const read = (this.data[this.offset + 1] << 8) | this.data[this.offset];
+        var read
+        if((endian != undefined ? endian : this.endian)  == "little"){
+            read = (this.data[this.offset + 1] << 8) | this.data[this.offset];
+        } else {
+            read = (this.data[this.offset] << 8) | this.data[this.offset + 1];
+        }
         this.offset += 2
-        if(signed){
+        if(signed == undefined || signed == true){
             return read
         } else {
             return read & 0xFFFF
@@ -278,481 +2506,54 @@ class bireader {
     }
 
     /**
+    * Read unsigned short
+    * 
     * @returns number
     */
-    readInt16BE = function(signed){
-        this.#check_size(2)
-        const read = (this.data[this.offset] << 8) | this.data[this.offset + 1];
-        this.offset += 2
-        if(signed){
-            return read
-        } else {
-            return read & 0xFFFF
-        }
+    readUInt16LE = this.uint16le = this.ushortle = function(){
+        return this.readInt16(true, "little")
     }
 
     /**
+    * Read signed short
+    * 
     * @returns number
     */
-    readUInt16 = function(){
-        if(this.endian == "little"){
-            return this.readInt16LE(true)
-        } else {
-            return this.readInt16BE(true)
-        }
+    readInt16LE = this.int16le = this.shortle = function(){
+        return this.readInt16(false, "little")
     }
 
     /**
+    * Read unsigned short
+    * 
     * @returns number
     */
-    readInt16 = function(){
-        if(this.endian == "little"){
-            return this.readInt16LE(false)
-        } else {
-            return this.readInt16BE(false)
-        }
-    }        
+    readUInt16BE = this.uint16be = this.ushortbe = function(){
+        return this.readInt16(true, "big")
+    }
 
     /**
+    * Read signed short
+    * 
     * @returns number
     */
-    readUShort = function(){
-        return this.readUInt16()
+    readInt16BE = this.int16be = this.shortbe = function(){
+        return this.readInt16(false, "big")
     }
 
-    /**
-    * @returns number
-    */
-    readShort = function(){
-        return this.readInt16()
-    }
-
-    /**
-    * @returns number
-    */
-    ushort = function(){
-        return this.readUInt16()
-    }
-
-    /**
-    * @returns number
-    */
-    short = function (){
-        return this.readInt16()
-    }
-
-    /**
-    * @returns number
-    */
-    uint16 = function(){
-        return this.readUInt16()
-    }
-
-    /**
-    * @returns number
-    */
-    int16 = function (){
-        return this.readInt16()
-    }
-
-    //int read
-
-    /**
-    * @returns number
-    */
-    readInt32LE = function(signed){
-        this.#check_size(4)
-        const read = ((this.data[this.offset + 3] << 24) | (this.data[this.offset + 2] << 16) | (this.data[this.offset + 1] << 8) | this.data[this.offset])
-        this.offset += 4
-        if(signed){
-            return read
-        } else {
-            return read >>> 0
-        }
-    }
-
-    /**
-    * @returns number
-    */
-    readInt32BE = function(signed){
-        this.#check_size(4)
-        const read = (this.data[this.offset] << 24) | (this.data[this.offset + 1] << 16) | (this.data[this.offset + 2] << 8) | this.data[this.offset + 3]
-        this.offset += 4
-        if(signed){
-            return read
-        } else {
-            return read >>> 0
-        }
-    }
-
-    /**
-    * @returns number
-    */
-    readUInt32 = function(){
-        if(this.endian == "little"){
-            return this.readInt32LE(true)
-        } else {
-            return this.readInt32BE(true)
-        }
-    }
-
-    /**
-    * @returns number
-    */
-    readInt32 = function(){
-        if(this.endian == "little"){
-            return this.readInt32LE(false)
-        } else {
-            return this.readInt32BE(false)
-        }
-    }
-
-    /**
-    * @returns number
-    */
-    readUInt = function(){
-        return this.readUInt32()
-    }
-
-    /**
-    * @returns number
-    */
-    readInt = function(){
-        return this.readInt32()
-    }
-
-    /**
-    * @returns number
-    */
-    int = function(){
-        return this.readInt32()
-    }
-
-    /**
-    * @returns number
-    */
-    uint = function(){
-        return this.readUInt32()
-    }
-
-    //string reader
-
-    /**
-    * inculde length or reads until 0 byte
-    * can include terminate character (as number), defaults to 0
-    * @param {number} length - number
-    * @param {any} terminateValue - number
-    * @returns string
-    */
-    string = function(length,terminateValue){
-        var terminate = 0
-        if(length != undefined){
-            this.#check_size(length)
-        }
-        if(typeof terminateValue == "number"){
-            terminate = terminateValue & 0xFF
-        }
-        if (length === undefined) {
-            let currentString = '';
-        
-            for (let i = this.offset; i < this.size; i++) {
-                const byte = this.readUByte();
-                if (byte != terminate) {
-                    currentString += String.fromCharCode(byte);
-                } else {
-                    break;
-                }
-            }
-            return currentString;
-        } else {
-            // If a length is specified, read that many bytes
-            const string = String.fromCharCode.apply(null, this.data.slice(this.offset, this.offset+length))
-            this.offset += length
-            return string;
-        }
-    }
-
-    /**
-    * inculde length or reads until 0 byte
-    * can include terminate character (as number), defaults to 0
-    * @param {number} length - number
-    * @param {any} terminateValue - number
-    * @returns string
-    */
-    readString = function(length,terminateValue){
-        return this.string(length,terminateValue)
-    }
-
-    /**
-    * can switch byte order on demand, default to set endianness
-    * inculde length in bytes or reads until 0 short
-    * can include terminate character (as number), defaults to 0
-    * @param {number} byteorder - number
-    * @param {number} length - number
-    * @param {any} terminateValue - number
-    * @returns string
-    */
-    string16 = function(byteorder,length,terminateValue){
-        var terminate = 0x0000
-        if(length != undefined){
-            this.#check_size(length)
-        }
-        if(typeof terminateValue == "number"){
-            terminate = terminateValue & 0xFFFF
-        }
-        if(byteorder != undefined && !(byteorder == "big" || byteorder == "little")){
-            throw Error("byteorder must be big or little")
-        }
-        if (length == undefined) {
-            let currentString = '';
-        
-            for (let i = this.offset; i < this.size; i += 2) {
-                var short = terminateValue;
-                var endian = byteorder || this.endian
-                if(endian == "big"){
-                    short = this.readInt16BE(true)
-                }
-                if(endian == "little"){
-                    short = this.readInt16LE(true)
-                }
-                
-                if (short != terminate) {
-                    currentString += String.fromCharCode(short);
-                } else {
-                    break;
-                }
-            }
-            return currentString;
-        } else {
-            let currentString = '';
-        
-            for (let i = 0; i < (length/2); i++) {
-                var short = terminateValue;
-                var endian = byteorder || this.endian
-                if(endian == "big"){
-                    short = this.readInt16BE(true)
-                }
-                if(endian == "little"){
-                    short = this.readInt16LE(true)
-                }
-                currentString += String.fromCharCode(short);
-            }
-            return currentString;
-        }
-    }
-
-    /**
-    * can switch byte order on demand, default to set endianness
-    * inculde length in bytes or reads until 0 short
-    * can include terminate character (as number), defaults to 0
-    * @param {string} byteorder - ```big``` or ```little```
-    * @param {number} length - number
-    * @param {any} terminateValue - number
-    * @returns string
-    */
-    read16String = function(byteorder,length,terminateValue){
-        return this.string16(byteorder,length,terminateValue)
-    }
-
-    /**
-    * can switch byte order on demand, default to set endianness
-    * inculde length in bytes or reads until 0 short
-    * can include terminate character (as number), defaults to 0
-    * @param {string} byteorder - ```big``` or ```little```
-    * @param {number} length - number
-    * @param {any} terminateValue - number
-    * @returns string
-    */
-    readCString = function(byteorder,length,terminateValue){
-        return this.string16(byteorder,length,terminateValue)
-    }
-
-    /**
-    * can switch byte order on demand, default to set endianness
-    * inculde length in bytes or reads until 0 short
-    * can include terminate character (as number), defaults to 0
-    * @param {string} byteorder - ```big``` or ```little```
-    * @param {number} length - number
-    * @param {any} terminateValue - number
-    * @returns string
-    */
-    cstring = function(byteorder,length,terminateValue){
-        return this.string16(byteorder,length,terminateValue)
-    }
-
-    //int64 reader
-
-    /**
-    * @returns number
-    */
-    readInt64LE = function(signed) {
-        this.#check_size(8)
-        
-        // Convert the byte array to a BigInt
-        let value = BigInt(0);
-        for (let i = 0; i < 8; i++) {
-            value |= BigInt(this.data[this.offset]) << BigInt(8 * i);
-            this.offset += 1
-        }
-        if(signed){
-            if (value & (BigInt(1) << BigInt(63))) {
-                value -= BigInt(1) << BigInt(64);
-            }
-            return value;
-        } else {
-            return value;
-        }
-    }
-
-    /**
-    * @returns number
-    */
-    readInt64BE = function(signed) {
-        this.#check_size(8)
-        
-        // Convert the byte array to a BigInt
-        let value = BigInt(0);
-        for (let i = 0; i < 8; i++) {
-            value = (value << BigInt(8)) | BigInt(this.data[this.offset]);
-            this.offset += 1
-            }
-        if(signed){
-            if (value & (BigInt(1) << BigInt(63))) {
-                value -= BigInt(1) << BigInt(64);
-            }
-            return value;
-        } else {
-            return value;
-        }
-    }
-
-    /**
-    * @returns number
-    */
-    readUInt64 = function(){
-        if(this.endian == "little"){
-            return this.readInt64LE(true)
-        } else {
-            return this.readInt64BE(true)
-        }
-    }
-
-    /**
-    * @returns number
-    */
-    readInt64 = function(){
-        if(this.endian == "little"){
-            return this.readInt32LE(false)
-        } else {
-            return this.readInt32BE(false)
-        }
-    }
-
-    /**
-    * @returns number
-    */
-    uint64 = function(){
-        if(this.endian == "little"){
-            return this.readInt64LE(true)
-        } else {
-            return this.readInt64BE(true)
-        }
-    }
-
-    /**
-    * @returns number
-    */
-    int64 = function(){
-        if(this.endian == "little"){
-            return this.readInt32LE(false)
-        } else {
-            return this.readInt32BE(false)
-        }
-    }
-
-    //float read
-
-    /**
-    * @returns number
-    */
-    readFloat = function(order){
-        this.#check_size(4)
-        var uint32Value;
-        var endian = order == undefined ? this.endian : order
-        if(endian == "little"){
-            uint32Value = this.readInt32LE(true)
-        } else {
-            uint32Value = this.readInt32BE(true)
-        }
-        // Check if the value is negative (i.e., the most significant bit is set)
-        const isNegative = (uint32Value & 0x80000000) !== 0;
-
-        // Extract the exponent and fraction parts
-        const exponent = (uint32Value >> 23) & 0xFF;
-        const fraction = uint32Value & 0x7FFFFF;
-
-        // Calculate the float value
-        let floatValue;
-
-        if (exponent === 0) {
-            // Denormalized number (exponent is 0)
-            floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
-        } else if (exponent === 0xFF) {
-            // Infinity or NaN (exponent is 255)
-            floatValue = fraction === 0 ? (isNegative ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : Number.NaN;
-        } else {
-            // Normalized number
-            floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
-        }
-
-        return floatValue;
-    }
-
-    /**
-    * @returns number
-    */
-    float = function(){
-        return this.readFloat()
-    }
-
-    /**
-    * @returns number
-    */
-    floatbe = function(){
-        return this.readFloat(true)
-    }
-
-     /**
-    * @returns number
-    */
-    floatle = function(){
-        return this.readFloat(false)
-    }
-
-    /**
-    * @returns number
-    */
-    readFloatBE = function(){
-        return this.readFloat(true)
-    }
-
-    /**
-    * @returns number
-    */
-    readFloatLE = function(){
-        return this.readFloat(false)
-    }
-
+    //
     //half float read
+    //
 
     /**
+    * Read half float
+    * 
     * @returns number
     */
-    readHalfFloat = function(order){
+    readHalfFloat = this.halffloat = this.half = function(endian){
         this.#check_size(2)
         var uint16Value;
-        var endian = order == undefined ? this.endian : order
-        if(endian == "little"){
+        if((endian != undefined ? endian : this.endian) == "little"){
             uint16Value = this.readInt16LE(true)
         } else {
             uint16Value = this.readInt16BE(true)
@@ -785,53 +2586,256 @@ class bireader {
     }
 
     /**
+    * Read half float
+    * 
     * @returns number
     */
-    halffloat = function(){
-        return this.readHalfFloat()
+    readHalfFloatBE = this.halffloatbe = this.halfbe = function(){
+        return this.readHalfFloat("big")
     }
 
     /**
+    * Read half float
+    * 
     * @returns number
     */
-    halffloatbe = function(){
-        return this.readHalfFloat(true)
+    readHalfFloatLE = this.halffloatle = this.halfle = function(){
+        return this.readHalfFloat("little")
     }
 
-     /**
-    * @returns number
-    */
-    halffloatle = function(){
-        return this.readHalfFloat(false)
-    }
+    //
+    //int read
+    //
 
     /**
+    * Read signed 32 bit integer
+    * 
     * @returns number
     */
-    readHalfFloatBE = function(){
-        return this.readHalfFloat(true)
-    }
-
-    /**
-    * @returns number
-    */
-    readHalfFloatLE = function(){
-        return this.readHalfFloat(false)
-    }
-
-    //doublefloat reader
-
-    /**
-    * @returns number
-    */
-    readDoubleFloat = function(order){
-        this.#check_size(8)
-        var uint64Value ;
-        var endian = order == undefined ? this.endian : order
-        if(endian == "little"){
-            uint64Value = this.readInt64LE(true)
+    readInt32 = this.readInt = this.int = this.double = this.int32 = function(signed, endian){
+        this.#check_size(4)
+        var read;
+        if((endian != undefined ? endian : this.endian) == "little"){
+            read = ((this.data[this.offset + 3] << 24) | (this.data[this.offset + 2] << 16) | (this.data[this.offset + 1] << 8) | this.data[this.offset])
         } else {
-            uint64Value = this.readInt64BE(true)
+            read = (this.data[this.offset] << 24) | (this.data[this.offset + 1] << 16) | (this.data[this.offset + 2] << 8) | this.data[this.offset + 3]
+        }
+        this.offset += 4
+        if(signed == undefined || signed == true){
+            return read
+        } else {
+            return read >>> 0
+        }
+    }
+
+    /**
+    * Read unsigned 32 bit integer
+    * 
+    * @returns number
+    */
+    readUInt = this.readUInt = this.uint = this.udouble = this.uint32 = function(){
+        return this.readInt32(true)
+    }
+
+    /**
+    * Read signed 32 bit integer
+    * 
+    * @returns number
+    */
+    readInt32BE = this.readIntBE = this.intbe = this.doublebe = this.int32be = function(){
+        return this.readInt32(false, "big")
+    }
+
+    /**
+    * Read unsigned 32 bit integer
+    * 
+    * @returns number
+    */
+    readUInt32BE = this.readUIntBE = this.uintbe = this.udoublebe = this.uint32be = function(){
+        return this.readInt32(true, "big")
+    }
+
+    /**
+    * Read signed 32 bit integer
+    * 
+    * @returns number
+    */
+    readInt32LE = this.readIntLE = this.intle = this.doublele = this.int32le = function(){
+        return this.readInt32(false, "little")
+    }
+
+    /**
+    * Read signed 32 bit integer
+    * 
+    * @returns number
+    */
+    readUInt32LE = this.readUIntLE = this.uintle = this.udoublele = this.uint32le = function(){
+        return this.readInt32(true, "little")
+    }
+
+    //
+    //float read
+    //
+
+    /**
+    * Read float
+    * 
+    * @returns number
+    */
+    readFloat = this.float = function(endian){
+        this.#check_size(4)
+        var uint32Value;
+        if((endian == undefined ? this.endian : endian) == "little"){
+            uint32Value = this.readUInt32LE()
+        } else {
+            uint32Value = this.readUInt32BE()
+        }
+        // Check if the value is negative (i.e., the most significant bit is set)
+        const isNegative = (uint32Value & 0x80000000) !== 0;
+
+        // Extract the exponent and fraction parts
+        const exponent = (uint32Value >> 23) & 0xFF;
+        const fraction = uint32Value & 0x7FFFFF;
+
+        // Calculate the float value
+        let floatValue;
+
+        if (exponent === 0) {
+            // Denormalized number (exponent is 0)
+            floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
+        } else if (exponent === 0xFF) {
+            // Infinity or NaN (exponent is 255)
+            floatValue = fraction === 0 ? (isNegative ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : Number.NaN;
+        } else {
+            // Normalized number
+            floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
+        }
+
+        return floatValue;
+    }
+
+    /**
+    * Read float
+    * 
+    * @returns number
+    */
+    readFloatBE = this.floatbe = function(){
+        return this.readFloat("big")
+    }
+
+    /**
+    * Read float
+    * 
+    * @returns number
+    */
+     readFloatLE = this.floatle = function(){
+        return this.readFloat("little")
+    }
+  
+    //
+    //int64 reader
+    //
+
+    /**
+    * Read signed 64 bit integer
+    * 
+    * @returns number
+    */
+    readInt64 = this.int64 = this.bigint = this.quad = function(signed, endian) {
+        this.#check_size(8)
+        
+        // Convert the byte array to a BigInt
+        let value = BigInt(0);
+        if((endian == undefined ? this.endian : endian) == "little"){
+            for (let i = 0; i < 8; i++) {
+                value |= BigInt(this.data[this.offset]) << BigInt(8 * i);
+                this.offset += 1
+            }
+            if(signed == undefined || signed == true){
+                if (value & (BigInt(1) << BigInt(63))) {
+                    value -= BigInt(1) << BigInt(64);
+                }
+                return value;
+            } else {
+                return value;
+            }
+        } else {
+            for (let i = 0; i < 8; i++) {
+                value = (value << BigInt(8)) | BigInt(this.data[this.offset]);
+                this.offset += 1
+                }
+            if(signed == undefined || signed == true){
+                if (value & (BigInt(1) << BigInt(63))) {
+                    value -= BigInt(1) << BigInt(64);
+                }
+                return value;
+            } else {
+                return value;
+            }
+        }
+    }
+
+    /**
+    * Read unsigned 64 bit integer
+    * 
+    * @returns number
+    */
+    readUInt64 = this.uint64 = this.ubigint = this.uquad = function() {
+        return this.readInt64(false)
+    }
+
+    /**
+    * Read signed 64 bit integer
+    * 
+    * @returns number
+    */
+    readInt64BE = this.int64be = this.bigintbe = this.quadbe = function() {
+        return this.readInt64(false, "big")
+    }
+
+    /**
+    * Read unsigned 64 bit integer
+    * 
+    * @returns number
+    */
+    readUInt64BE = this.uint64be = this.ubigintbe = this.uquadbe =  function() {
+        return this.readInt64(true, "big");
+    }
+
+    /**
+    * Read signed 64 bit integer
+    * 
+    * @returns number
+    */
+    readInt64LE = this.int64le = this.bigintle = this.quadle = function() {
+        return this.readInt64(false, "little")
+    }
+
+    /**
+    * Read unsigned 64 bit integer
+    * 
+    * @returns number
+    */
+    readUInt64LE = this.uint64le = this.ubigintle = this.uquadle = function() {
+        return this.readInt64(true, "little");
+    }
+
+    //
+    //doublefloat reader
+    //
+
+    /**
+    * Read double float
+    * 
+    * @returns number
+    */
+    readDoubleFloat = this.doublefloat = this.dfloat = function(endian){
+        this.#check_size(8)
+        var uint64Value;
+        if((endian == undefined ? this.endian : endian) == "little"){
+            uint64Value = this.readUInt64LE()
+        } else {
+            uint64Value = this.readUInt64BE()
         }
         const sign = (uint64Value & 0x8000000000000000n) >> 63n;
         const exponent = Number((uint64Value & 0x7FF0000000000000n) >> 52n) - 1023;
@@ -860,53 +2864,130 @@ class bireader {
         return floatValue;
     }
 
-    /**
-    * @returns number
-    */
-    doublefloat = function(){
-        return this.readDoubleFloat()
-    }
-
-    /**
-    * @returns number
-    */
-    doublefloatbe = function(){
-        return this.readDoubleFloat(true)
-    }
-
      /**
+    * Read double float
+    * 
     * @returns number
     */
-     doublefloatle = function(){
-        return this.readDoubleFloat(false)
+    readDoubleFloatBE = this.dfloatebe = this.doublefloatbe = function(){
+        return this.readDoubleFloat("big")
     }
 
     /**
+    * Read double float
+    * 
     * @returns number
     */
-    readDoubleFloatBE = function(){
-        return this.readDoubleFloat(true)
+    readDoubleFloatLE = this.dfloatle = this.doublefloatle = function(){
+        return this.readDoubleFloat("little")
+    }
+
+     //
+    //string reader
+    //
+
+    /**
+    * Reads string, use options object for different type
+    * 
+    * encoding: Any accepted to TextEncoder
+    * stringType: utf, delphi, pascal, wide-pascal
+    * 
+    * @param {string} string - text string
+    * @param {object} options 
+    * ```
+    * {
+    *  length: number, 
+    *  encoding: "utf-8", 
+    *  stringType: "utf", 
+    *  endian: "little", //for wide-pascal, uses set endian that defaults to "little"
+    *  terminateValue: number // only with stringType: "utf"
+    * }
+    * ```
+    */
+    readString = this.string = function(options = {}){
+
+        const {
+            length = undefined,
+            encoding = 'utf-8',
+            stringType = 'utf',
+            endian = this.endian,
+            terminateValue = 0
+        } = options;
+        
+        var terminate = terminateValue
+        if(length != undefined){
+            this.#check_size(length)
+        }
+        if(typeof terminateValue == "number"){
+            terminate = terminateValue & 0xFF
+        } else {
+            if(terminateValue != undefined){
+                throw Error("terminateValue must be a number")
+            }
+        }
+
+        if (stringType === 'utf') {
+
+            // Read the string as UTF-8 encoded untill 0 or terminateValue
+            const encodedBytes = [];
+
+            while (this.offset < this.data.length && this.data[this.offset] !== terminate) {
+              encodedBytes.push(this.readUByte());
+            }
+
+            return new TextDecoder(encoding).decode(new Uint8Array(encodedBytes));
+
+        } else if (stringType === 'pascal' || stringType === 'wide-pascal' || stringType === 'delphi') {
+
+            const maxBytes = this.readUByte();
+            
+            // Read the string as Pascal or Delphi encoded
+            const encodedBytes = [];
+            for (let i = 0; i < maxBytes; i++) {
+              if (stringType === 'delphi') {
+                encodedBytes.push(this.readUByte());
+              } else if (stringType === 'wide-pascal') {
+                var read;
+                if(endian == "little"){
+                    read = this.readInt16LE(true)
+                } else {
+                    read = this.readInt16BE(true)
+                }
+                console.log(read)
+                encodedBytes.push(read);
+              } else {
+                encodedBytes.push(this.readUByte());
+              }
+            }
+        
+            return new TextDecoder(encoding).decode(new Uint8Array(encodedBytes));
+        } else {
+            throw new Error('Unsupported string type.');
+        }
     }
 
     /**
-    * @returns number
+    * Truncates array from start to current position unless supplied
+    * Note: Does not affect supplied data
+    * @param {number} startoffset - Start location, default 0
+    * @param {number} endoffset - end location, default current write position
     */
-    readDoubleFloatLE = function(){
-        return this.readDoubleFloat(false)
+    clip = this.crop = this.truncate = this.slice = function(startoffset, endoffset){
+        return this.data.slice(startoffset || 0, endoffset || this.offset)
+    }
+    
+    /**
+    * Returns current data
+    */
+    get = this.return = function(){
+        return this.data
     }
     
     /**
     * removes reading data
     */
-    end = function(){
-        this.data = []
-    }
-
-    /**
-    * removes reading data
-    */
-    close = function(){
-        this.data = []
+    end = this.close = this.done = this.finished = function(){
+        return this.data
     }
 }
 
