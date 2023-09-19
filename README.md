@@ -73,14 +73,9 @@ function header_write(size, magic, ver, heigth, width){
 
 Common functions for setup and movement shared by both (unless indicated).
 
-<style>
-.tg {
-  border-bottom: 3px solid black;
-}
-</style>
 <table>
 <thead>
-  <tr class="tg">
+  <tr>
     <th align="center" colspan="2">Function</th>
     <th align="center">Params (bold requires)</th>
     <th align="left">Notes</th>
