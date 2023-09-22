@@ -2,10 +2,10 @@
 * Binary writer, includes bitfields and strings
 *
 * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``biwriter.data``
-* @param {number} byteoffset - byte offset to start writer, default is 0 
-* @param {number} bitoffset - bit offset to start writer, 0-7 
+* @param {number} byteOffset - byte offset to start writer, default is 0 
+* @param {number} bitOffset - bit offset to start writer, 0-7 
 * @param {string} endianness - endianness ``big`` or ``little`` (default little)
-* @param {boolean} strict - strict mode true does not extend supplied array on outside write (default false)
+* @param {boolean} strict - strict mode: if true does not extend supplied array on outside write (default false)
 */
  class biwriter {
     endian = "little";
@@ -47,6 +47,8 @@
             const dif = needed_size - this.size
             if(this.strict == false){
                 this.extendArray(dif)
+            } else {
+                throw new Error("Location outside of size of data: "+ this.size)
             }
             this.size = this.data.length
         }
@@ -58,44 +60,46 @@
     * Binary writer, includes bitfields and strings
     *
     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``biwriter.data``
-    * @param {number} byteoffset - byte offset to start writer, default is 0 
-    * @param {number} bitoffset - bit offset to start writer, 0-7 
+    * @param {number} byteOffset - byte offset to start writer, default is 0 
+    * @param {number} bitOffset - bit offset to start writer, 0-7 
     * @param {string} endianness - endianness ``big`` or ``little`` (default little)
-    * @param {boolean} strict - strict mode true does not extend supplied array on outside write (default false)
+    * @param {boolean} strict - strict mode: if true does not extend supplied array on outside write (default false)
     */
-    constructor(data, byteoffset, bitoffset, endianness, strict) {
+    constructor(data, byteOffset, bitOffset, endianness, strict) {
         if(endianness != undefined && typeof endianness != "string"){
-            throw Error("endianness must be big or little")
+            throw new Error("endianness must be big or little")
         }
         if(endianness != undefined && !(endianness == "big" || endianness == "little")){
-            throw Error("byteorder must be big or little")
+            throw new Error("Endianness must be big or little")
         }
         this.endian = endianness || "little"
         
-        if(byteoffset != undefined ){
-            if(typeof byteoffset == "number"){
-                this.offset = Math.round(byteoffset) || 0
+        if(byteOffset != undefined ){
+            if(typeof byteOffset == "number"){
+                this.offset = Math.round(byteOffset) || 0
             } else {
-                throw Error("Byteoffset must be number")
+                throw new Error("Byte offset must be number")
             }
         }
-        if(bitoffset!= undefined){
-            this.bitoffset = (bitoffset % 8)
+        if(bitOffset!= undefined){
+            this.bitoffset = (bitOffset % 8)
         }
         if(typeof strict == "boolean"){
             this.strict = strict
         } else {
-            throw Error("Strict mode must be true of false")
+            if(strict != undefined){
+                throw new Error("Strict mode must be true of false")
+            }
         }
         this.data = data
         if(this.data == undefined){
             this.data = new Uint8Array(4)
         } else {
             if(!this.#isBufferOrUint8Array(this.data)){
-                throw Error("Write data must be UIntArray or Buffer")
+                throw new Error("Write data must be UIntArray or Buffer")
             }           
         }
-        this.size = this.data.length + ((bitoffset || 0) % 8)
+        this.size = this.data.length + ((bitOffset || 0) % 8)
     }
 
     /**
@@ -108,10 +112,10 @@
     */
     endianness = function(endian){
         if(endian == undefined || typeof endian != "string"){
-            throw Error("Endian must be big or little")
+            throw new Error("Endian must be big or little")
         }
         if(endian != undefined && !(endian == "big" || endian == "little")){
-            throw Error("Endian must be big or little")
+            throw new Error("Endian must be big or little")
         }
         this.endian = endian
     }
@@ -120,7 +124,7 @@
     *
     * Sets endian to big
     */
-    bigEndian = this.big = this.bigendian = function(){
+    bigEndian = this.big = this.be = function(){
         this.endianness("big")
     }
 
@@ -128,7 +132,7 @@
     *
     * Sets endian to little
     */
-    littleEndian = this.little = this.littleendian = function(){
+    littleEndian = this.little = this.le = function(){
         this.endianness("little")
     }
 
@@ -155,7 +159,7 @@
         if(new_size > this.size && this.strict == false){
             this.extendArray(new_size - this.size)
         } else {
-            throw Error("Outside of range of data: "+ this.size)
+            throw new Error("Outside of range of data: "+ this.size)
         }
         this.offset = byte
         this.bitoffset = (bit || 0) % 8
@@ -164,10 +168,10 @@
     /**
     * Set offset to start of file
     */
-   rewind = this.gotostart = this.tostart = function(){
-        this.offset = 0
-        this.bitoffset = 0
-   }
+    rewind = this.gotostart = this.tostart = function(){
+            this.offset = 0
+            this.bitoffset = 0
+    }
 
     /**
     * Get the current byte position
@@ -192,6 +196,38 @@
         this.strict = false
     }
 
+    /**
+    * Truncates array from start to current position unless supplied
+    * Note: Does not affect supplied data
+    * Note: Will extend array if strict mode is off
+    * @param {number} startOffset - Start location, default 0
+    * @param {number} endOffset - end location, default current write position
+    */
+    clip = this.crop = this.truncate = this.slice = function(startOffset, endOffset){
+        if(endOffset > this.size){
+            if(this.strict == false){
+                this.extendArray(endOffset - this.size)
+            } else {
+                throw new Error("End offset outside of data: " + this.size)
+            }
+        }
+        return this.data.slice(Math.abs(startOffset || 0), endOffset || this.offset)
+    }
+    
+    /**
+    * Returns current data
+    */
+    get = this.return = function(){
+        return this.data
+    }
+
+    /**
+    * removes writing data
+    */
+    end = this.close = this.done = this.finished = function(){
+        this.data = []
+    }
+
     //
     //bit writer
     //
@@ -211,23 +247,23 @@
     */
     writeBit = this.bit = function(value, bits, offsetBits, offsetBytes, unsigned, endian) {
         if(value == undefined){
-            throw Error('Must supply value.');
+            throw new Error('Must supply value.');
         }
         if(bits == undefined){
-            throw Error('Must supply bits.');
+            throw new Error('Must supply bits.');
         }
         if (bits <= 0 || bits > 32) {
-            throw Error('Bit length must be between 1 and 32.');
+            throw new Error('Bit length must be between 1 and 32.');
         }
         if (unsigned == true) {
-            if (value >= Math.pow(2, bits)) {
-                throw Error('Value is out of range for the specified bit length.');
+            if (value < 0 || value > Math.pow(2, bits)) {
+                throw new Error(`Value is out of range for the specified ${bits}bit length.` +" min: " + 0 + " max: " + Math.pow(2, bits) + " value: "+ value);
             }
         } else {
             const maxValue = Math.pow(2, bits - 1) - 1;
             const minValue = -maxValue - 1;
             if(value < minValue || value > maxValue){
-                throw Error('Value is out of range for the specified bit length.');
+                throw new Error(`Value is out of range for the specified ${bits}bit length.` +" min: " + minValue + " max: " + maxValue + " value: "+ value);
             }
         }
         if(unsigned == true){
@@ -284,7 +320,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit1 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 1, offsetBits, offsetBytes, unsigned)
@@ -311,7 +347,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit1le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 1, offsetBits, offsetBytes, unsigned, "little")
@@ -338,7 +374,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit1be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 1, offsetBits, offsetBytes, unsigned, "big")
@@ -365,7 +401,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit2 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 2, offsetBits, offsetBytes, unsigned)
@@ -392,7 +428,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit2le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 2, offsetBits, offsetBytes, unsigned, "little")
@@ -419,7 +455,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit2be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 2, offsetBits, offsetBytes, unsigned, "big")
@@ -446,7 +482,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit3 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 3, offsetBits, offsetBytes, unsigned)
@@ -473,7 +509,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit3le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 3, offsetBits, offsetBytes, unsigned, "little")
@@ -500,7 +536,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit3be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 3, offsetBits, offsetBytes, unsigned, "big")
@@ -527,7 +563,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit4 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 4, offsetBits, offsetBytes, unsigned)
@@ -554,7 +590,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit4le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 4, offsetBits, offsetBytes, unsigned, "little")
@@ -581,7 +617,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit4be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 4, offsetBits, offsetBytes, unsigned, "big")
@@ -608,7 +644,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit5 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 5, offsetBits, offsetBytes, unsigned)
@@ -635,7 +671,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit5le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 5, offsetBits, offsetBytes, unsigned, "little")
@@ -662,7 +698,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit5be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 5, offsetBits, offsetBytes, unsigned, "big")
@@ -689,7 +725,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit6 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 6, offsetBits, offsetBytes, unsigned)
@@ -716,7 +752,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit6le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 6, offsetBits, offsetBytes, unsigned, "little")
@@ -743,7 +779,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit6be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 6, offsetBits, offsetBytes, unsigned, "big")
@@ -770,7 +806,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit7 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 7, offsetBits, offsetBytes, unsigned)
@@ -797,7 +833,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit7le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 7, offsetBits, offsetBytes, unsigned, "little")
@@ -824,7 +860,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit7be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 7, offsetBits, offsetBytes, unsigned, "big")
@@ -851,7 +887,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit8 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 8, offsetBits, offsetBytes, unsigned)
@@ -878,7 +914,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit8le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 8, offsetBits, offsetBytes, unsigned, "little")
@@ -905,7 +941,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit8be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 8, offsetBits, offsetBytes, unsigned, "big")
@@ -932,7 +968,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit9 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 9, offsetBits, offsetBytes, unsigned)
@@ -959,7 +995,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit9le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 9, offsetBits, offsetBytes, unsigned, "little")
@@ -986,7 +1022,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit9be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 9, offsetBits, offsetBytes, unsigned, "big")
@@ -1013,7 +1049,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit10 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 10, offsetBits, offsetBytes, unsigned)
@@ -1040,7 +1076,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit10le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 10, offsetBits, offsetBytes, unsigned, "little")
@@ -1067,7 +1103,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit10be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 10, offsetBits, offsetBytes, unsigned, "big")
@@ -1094,7 +1130,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit11 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 11, offsetBits, offsetBytes, unsigned)
@@ -1121,7 +1157,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit11le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 11, offsetBits, offsetBytes, unsigned, "little")
@@ -1148,7 +1184,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit11be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 11, offsetBits, offsetBytes, unsigned, "big")
@@ -1175,7 +1211,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit12 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 12, offsetBits, offsetBytes, unsigned)
@@ -1202,7 +1238,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit12le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 12, offsetBits, offsetBytes, unsigned, "little")
@@ -1229,7 +1265,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit12be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 12, offsetBits, offsetBytes, unsigned, "big")
@@ -1256,7 +1292,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit13 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 13, offsetBits, offsetBytes, unsigned)
@@ -1283,7 +1319,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit13le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 13, offsetBits, offsetBytes, unsigned, "little")
@@ -1310,7 +1346,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit13be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 13, offsetBits, offsetBytes, unsigned, "big")
@@ -1337,7 +1373,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit14 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 14, offsetBits, offsetBytes, unsigned)
@@ -1364,7 +1400,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit14le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 14, offsetBits, offsetBytes, unsigned, "little")
@@ -1391,7 +1427,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit14be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 14, offsetBits, offsetBytes, unsigned, "big")
@@ -1418,7 +1454,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit15 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 15, offsetBits, offsetBytes, unsigned)
@@ -1445,7 +1481,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit15le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 15, offsetBits, offsetBytes, unsigned, "little")
@@ -1472,7 +1508,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit15be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 15, offsetBits, offsetBytes, unsigned, "big")
@@ -1499,7 +1535,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit16 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 16, offsetBits, offsetBytes, unsigned)
@@ -1526,7 +1562,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit16le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 16, offsetBits, offsetBytes, unsigned, "little")
@@ -1553,7 +1589,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit16be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 16, offsetBits, offsetBytes, unsigned, "big")
@@ -1580,7 +1616,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit17 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 17, offsetBits, offsetBytes, unsigned)
@@ -1607,7 +1643,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit17le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 17, offsetBits, offsetBytes, unsigned, "little")
@@ -1634,7 +1670,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit17be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 17, offsetBits, offsetBytes, unsigned, "big")
@@ -1661,7 +1697,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit18 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 18, offsetBits, offsetBytes, unsigned)
@@ -1688,7 +1724,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit18le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 18, offsetBits, offsetBytes, unsigned, "little")
@@ -1715,7 +1751,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit18be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 18, offsetBits, offsetBytes, unsigned, "big")
@@ -1742,7 +1778,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit19 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 19, offsetBits, offsetBytes, unsigned)
@@ -1769,7 +1805,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit19le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 19, offsetBits, offsetBytes, unsigned, "little")
@@ -1796,7 +1832,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit19be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 19, offsetBits, offsetBytes, unsigned, "big")
@@ -1823,7 +1859,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit20 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 20, offsetBits, offsetBytes, unsigned)
@@ -1850,7 +1886,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit20le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 20, offsetBits, offsetBytes, unsigned, "little")
@@ -1877,7 +1913,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit20be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 20, offsetBits, offsetBytes, unsigned, "big")
@@ -1904,7 +1940,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit21 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 21, offsetBits, offsetBytes, unsigned)
@@ -1931,7 +1967,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit21le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 21, offsetBits, offsetBytes, unsigned, "little")
@@ -1958,7 +1994,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit21be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 21, offsetBits, offsetBytes, unsigned, "big")
@@ -1985,7 +2021,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit22 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 22, offsetBits, offsetBytes, unsigned)
@@ -2012,7 +2048,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit22le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 22, offsetBits, offsetBytes, unsigned, "little")
@@ -2039,7 +2075,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit22be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 22, offsetBits, offsetBytes, unsigned, "big")
@@ -2066,7 +2102,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit21 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 21, offsetBits, offsetBytes, unsigned)
@@ -2093,7 +2129,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit21le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 21, offsetBits, offsetBytes, unsigned, "little")
@@ -2120,7 +2156,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit21be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 21, offsetBits, offsetBytes, unsigned, "big")
@@ -2147,7 +2183,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit22 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 22, offsetBits, offsetBytes, unsigned)
@@ -2174,7 +2210,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit22le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 22, offsetBits, offsetBytes, unsigned, "little")
@@ -2201,7 +2237,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit22be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 22, offsetBits, offsetBytes, unsigned, "big")
@@ -2228,7 +2264,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit23 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 23, offsetBits, offsetBytes, unsigned)
@@ -2255,7 +2291,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit23le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 23, offsetBits, offsetBytes, unsigned, "little")
@@ -2282,7 +2318,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit23be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 23, offsetBits, offsetBytes, unsigned, "big")
@@ -2309,7 +2345,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit24 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 24, offsetBits, offsetBytes, unsigned)
@@ -2336,7 +2372,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit24le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 24, offsetBits, offsetBytes, unsigned, "little")
@@ -2363,7 +2399,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit24be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 24, offsetBits, offsetBytes, unsigned, "big")
@@ -2390,7 +2426,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit25 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 25, offsetBits, offsetBytes, unsigned)
@@ -2417,7 +2453,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit25le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 25, offsetBits, offsetBytes, unsigned, "little")
@@ -2444,7 +2480,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit25be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 25, offsetBits, offsetBytes, unsigned, "big")
@@ -2471,7 +2507,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit26 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 26, offsetBits, offsetBytes, unsigned)
@@ -2498,7 +2534,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit26le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 26, offsetBits, offsetBytes, unsigned, "little")
@@ -2525,7 +2561,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit26be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 26, offsetBits, offsetBytes, unsigned, "big")
@@ -2552,7 +2588,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit27 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 27, offsetBits, offsetBytes, unsigned)
@@ -2579,7 +2615,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit27le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 27, offsetBits, offsetBytes, unsigned, "little")
@@ -2606,7 +2642,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit27be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 27, offsetBits, offsetBytes, unsigned, "big")
@@ -2633,7 +2669,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit28 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 28, offsetBits, offsetBytes, unsigned)
@@ -2660,7 +2696,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit28le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 28, offsetBits, offsetBytes, unsigned, "little")
@@ -2687,7 +2723,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit28be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 28, offsetBits, offsetBytes, unsigned, "big")
@@ -2714,7 +2750,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit29 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 29, offsetBits, offsetBytes, unsigned)
@@ -2741,7 +2777,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit29le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 29, offsetBits, offsetBytes, unsigned, "little")
@@ -2768,7 +2804,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit29be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 29, offsetBits, offsetBytes, unsigned, "big")
@@ -2795,7 +2831,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit30 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 30, offsetBits, offsetBytes, unsigned)
@@ -2822,7 +2858,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit30le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 30, offsetBits, offsetBytes, unsigned, "little")
@@ -2849,7 +2885,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit30be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 30, offsetBits, offsetBytes, unsigned, "big")
@@ -2876,7 +2912,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit31 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 31, offsetBits, offsetBytes, unsigned)
@@ -2903,7 +2939,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit31le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 31, offsetBits, offsetBytes, unsigned, "little")
@@ -2930,7 +2966,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit31be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 31, offsetBits, offsetBytes, unsigned, "big")
@@ -2957,7 +2993,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit32 = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 32, offsetBits, offsetBytes, unsigned)
@@ -2984,7 +3020,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit32le = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 32, offsetBits, offsetBytes, unsigned, "little")
@@ -3011,7 +3047,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     bit32be = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 32, offsetBits, offsetBytes, unsigned, "big")
@@ -3038,7 +3074,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     writeBitBE = this.bitbe = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 32, offsetBits, offsetBytes, unsigned, "big")
@@ -3052,7 +3088,7 @@
     * @param {number} value - value as int 
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
     * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - is value is signed or not
+    * @param {boolean} unsigned - if value is unsigned or not
     */
     writeBitLE = this.bitle = function(value, offsetBits, offsetBytes, unsigned){
         return this.bit(value, 32, offsetBits, offsetBytes, unsigned, "little")
@@ -3063,14 +3099,26 @@
     //
 
     /**
-    * Write signed byte
+    * Write byte
     *
     * @param {number} value - value as int 
     * @param {number} offset - byte offset (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
     */
-    writeByte = this.byte = this.int8 = function(value, offset, signed){
+    writeByte = this.byte = this.int8 = function(value, offset, unsigned){
         this.#check_size(1,0,offset)
-        this.data[this.offset] = (signed == undefined || signed == true) ? value : value & 0xFF;
+        if (unsigned == true) {
+            if (value< 0 || value > 255) {
+                throw new Error('Value is out of range for the specified 8bit length.' +" min: " + 0 + " max: " + 255 + " value: "+ value);
+            }
+        } else {
+            const maxValue = Math.pow(2, 8 - 1) - 1;
+            const minValue = -maxValue - 1;
+            if(value < minValue || value > maxValue){
+                throw new Error('Value is out of range for the specified 8bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
+            }
+        }
+        this.data[this.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
         this.offset += 1
     }
 
@@ -3080,8 +3128,8 @@
     * @param {number} value - value as int 
     * @param {number} offset - byte offset (default last write position)
     */
-    writeUByte = this.uint8 = this.ubyte = this.char = function(value, offset){
-        return this.writeByte(value, offset, false)
+    writeUByte = this.uint8 = this.ubyte = function(value, offset){
+        return this.writeByte(value, offset, true)
     }
 
     //
@@ -3089,19 +3137,32 @@
     //
     
     /**
-    * Write signed int16
+    * Write int16
     *
     * @param {number} value - value as int 
     * @param {number} offset - byte offset (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
     */
-    writeInt16 = this.int16 = this.short = this.word = function(value, offset, signed, endian) {
+    writeInt16 = this.int16 = this.short = this.word = function(value, offset, unsigned, endian) {
         this.#check_size(2,0,offset)
-        if((endian != undefined ? endian : this.endian) == "little"){
-            this.data[this.offset] = (signed == undefined || signed == true) ? value : value & 0xff;
-            this.data[this.offset + 1] = (signed == undefined || signed == true) ? (value >> 8) : (value >> 8) & 0xff; 
+        if (unsigned == true) {
+            if (value< 0 || value > 65535) {
+                throw new Error('Value is out of range for the specified 16bit length.' +" min: " + 0 + " max: " + 65535 + " value: "+ value);
+            }
         } else {
-            this.data[this.offset] = (signed == undefined || signed == true) ? (value >> 8) : (value >> 8) & 0xff;
-            this.data[this.offset + 1] = (signed == undefined || signed == true) ? value : value& 0xff;
+            const maxValue = Math.pow(2, 16 - 1) - 1;
+            const minValue = -maxValue - 1;
+            if(value < minValue || value > maxValue){
+                throw new Error('Value is out of range for the specified 16bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
+            }
+        }
+        if((endian != undefined ? endian : this.endian) == "little"){
+            this.data[this.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xff;
+            this.data[this.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff; 
+        } else {
+            this.data[this.offset] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff;
+            this.data[this.offset + 1] = (unsigned == undefined || unsigned == false) ? value : value& 0xff;
         }
         this.offset += 2
     }
@@ -3111,9 +3172,10 @@
     *
     * @param {number} value - value as int 
     * @param {number} offset - byte offset (default last write position)
+    * @param {string} endian - ``big`` or ``little`
     */
-    writeUInt16 = this.uint16 = this.ushort = this.uword =  function(value, offset) {
-        return this.writeInt16(value, offset, true)
+    writeUInt16 = this.uint16 = this.ushort = this.uword =  function(value, offset, endian) {
+        return this.writeInt16(value, offset, true, endian)
     }
 
     /**
@@ -3169,7 +3231,11 @@
     */
     writeHalfFloat = this.half = this.halffloat = function(value, offset, endian) {
         this.#check_size(2,0,offset)
-      
+        const maxValue = 65504;
+        const minValue = 5.96e-08;
+        if(value < minValue || value > maxValue){
+            throw new Error('Value is out of range for the specified half float length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
+        }
         const signMask = 0x8000;
         const exponentMask = 0x7C00;
         const fractionMask = 0x03FF;
@@ -3232,37 +3298,49 @@
     //
 
     /**
-    * Write signed int32
+    * Write int32
     *
     * @param {number} value - value as int 
     * @param {number} offset - byte offset (default last write position)
-    * @param {boolean} signed - if the vlaue is signed
+    * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    writeInt32 = this.int = this.int32 = this.double = function(value, offset, signed, endian) {
+    writeInt32 = this.int = this.int32 = this.double = function(value, offset, unsigned, endian) {
         this.#check_size(4,0,offset)
-        if ((endian = undefined ? endian : this.endian ) == "little") {
-            this.data[this.offset] = (signed == undefined || signed == true) ? value : value & 0xFF;
-            this.data[this.offset + 1] = (signed == undefined || signed == true) ? (value >> 8) : (value >> 8) & 0xFF;
-            this.data[this.offset + 2] = (signed == undefined || signed == true) ? (value >> 16) : (value >> 16) & 0xFF;
-            this.data[this.offset + 3] = (signed == undefined || signed == true) ? (value >> 24) : (value >> 24) & 0xFF;
+        if (unsigned == true) {
+            if (value < 0 || value > 4294967295) {
+                throw new Error('Value is out of range for the specified 32bit length.' +" min: " + 0 + " max: " + 4294967295 + " value: "+ value);
+            }
         } else {
-            this.data[this.offset] = (signed == undefined || signed == true) ? (value >> 24) : (value >> 24) & 0xFF;
-            this.data[this.offset + 1] = (signed == undefined || signed == true) ? (value >> 16): (value >> 16) & 0xFF;
-            this.data[this.offset + 2] = (signed == undefined || signed == true) ? (value >> 8) : (value >> 8) & 0xFF;
-            this.data[this.offset + 3] = (signed == undefined || signed == true) ? value : value & 0xFF;
+            const maxValue = Math.pow(2, 32 - 1) - 1;
+            const minValue = -maxValue - 1;
+            if(value < minValue || value > maxValue){
+                throw new Error('Value is out of range for the specified 32bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
+            }
+        }
+        if ((endian = undefined ? endian : this.endian ) == "little") {
+            this.data[this.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
+            this.data[this.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
+            this.data[this.offset + 2] = (unsigned == undefined || unsigned == false) ? (value >> 16) : (value >> 16) & 0xFF;
+            this.data[this.offset + 3] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
+        } else {
+            this.data[this.offset] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
+            this.data[this.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 16): (value >> 16) & 0xFF;
+            this.data[this.offset + 2] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
+            this.data[this.offset + 3] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
         }
         this.offset += 4
     }
 
     /**
-    * Write signed int32
+    * Write unsigned int32
     *
     * @param {number} value - value as int 
     * @param {number} offset - byte offset (default last write position)
+    * @param {string} endian - ``big`` or ``little`
     */
-     writeUInt32 = this.uint32 = this.uint = this.udouble= function(value, offset) {
-        return this.writeInt32(value, offset, false)
+     writeUInt32 = this.uint32 = this.uint = this.udouble= function(value, offset, endian) {
+        return this.writeInt32(value, offset, true, endian)
     }
 
     /**
@@ -3272,7 +3350,7 @@
     * @param {number} offset - byte offset (default last write position)
     */
     writeInt32LE = this.int32le = this.intle = this.doublele = function(value, offset) {
-        return this.writeInt32(value, offset, true, "little")
+        return this.writeInt32(value, offset, false, "little")
     }
 
     /**
@@ -3282,7 +3360,7 @@
     * @param {number} offset - byte offset (default last write position)
     */
     writeUInt32LE = this.uint32le = this.uintle = this.udoublele = function(value, offset) {
-        return this.writeInt32(value, offset, false, "little")
+        return this.writeInt32(value, offset, true, "little")
     }
 
     /**
@@ -3292,17 +3370,17 @@
     * @param {number} offset - byte offset (default last write position)
     */
     writeInt32BE = this.int32be = this.int32be = this.doublebe = function(value, offset) {
-        return this.writeInt32(value, offset, true, "big")
+        return this.writeInt32(value, offset, false, "big")
     }
 
     /**
-    * Write signed int32
+    * Write unsigned int32
     *
     * @param {number} value - value as int 
     * @param {number} offset - byte offset (default last write position)
     */
     writeUInt32BE = this.uint32be = this.uint32be = this.udoublebe = function(value, offset) {
-        return this.writeInt32(value, offset, false, "big")
+        return this.writeInt32(value, offset, true, "big")
     }
 
     //
@@ -3318,7 +3396,11 @@
     */
     writeFloat = this.float = function(value, offset, endian){
         this.#check_size(4,0,offset)
-
+        const maxValue = 3.402823466e+38
+        const minValue = 1.175494351e-38
+        if(value < minValue || value > maxValue){
+            throw new Error('Value is out of range for the specified float length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
+        }
         let intValue = Float32Array.from([value])[0]; // Convert float to 32-bit integer representation
         let shift = 0;
     
@@ -3359,16 +3441,26 @@
     //
 
     /**
-    * Write signed 64 bit integer
+    * Write 64 bit integer
     * 
     * @param {number} value - value as int 
     * @param {number} offset - byte offset (default last write position)
-    * @param {boolean} signed - if the vlaue is signed
+    * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    writeInt64 = this.int64 = this.quad = this.bigint = function(value, offset, signed, endian) {
+    writeInt64 = this.int64 = this.quad = this.bigint = function(value, offset, unsigned, endian) {
         this.#check_size(8,0,offset)
-      
+        if (unsigned == true) {
+            if (value < 0 || value > Math.pow(2, 64) - 1) {
+                throw new Error('Value is out of range for the specified 64bit length.' +" min: " + 0 + " max: " + (Math.pow(2, 64) - 1) + " value: "+ value);
+            }
+        } else {
+            const maxValue = Math.pow(2, 63) - 1;
+            const minValue = -Math.pow(2, 63);
+            if(value < minValue || value > maxValue){
+                throw new Error('Value is out of range for the specified 64bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
+            }
+        }
         // Convert the BigInt to a 64-bit signed integer
         const bigIntArray = new BigInt64Array(1);
         bigIntArray[0] = value;
@@ -3378,7 +3470,7 @@
       
         for (let i = 0; i < 2; i++) {
             if ((endian = undefined ? endian : this.endian ) == "little") {
-                if(signed == undefined || signed == true){
+                if(unsigned == undefined || unsigned == false){
                     this.data[this.offset + i * 4 + 0] = int32Array[i];
                     this.data[this.offset + i * 4 + 1] = (int32Array[i] >> 8);
                     this.data[this.offset + i * 4 + 2] = (int32Array[i] >> 16);
@@ -3390,7 +3482,7 @@
                     this.data[this.offset + i * 4 + 3] = (int32Array[i] >> 24) & 0xFF;
                 }
             } else {
-                if(signed == undefined || signed == true){
+                if(unsigned == undefined || unsigned == false){
                     this.data[this.offset + (1 - i) * 4 + 0] = int32Array[i];
                     this.data[this.offset + (1 - i) * 4 + 1] = (int32Array[i] >> 8);
                     this.data[this.offset + (1 - i) * 4 + 2] = (int32Array[i] >> 16);
@@ -3408,14 +3500,14 @@
     }
 
     /**
-    * Write signed 64 bit integer
+    * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
     * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
     writeUInt64 = this.uint64 = this.ubigint = this.uquad = function(value, offset, endian) {
-        return this.writeInt64(value, offset, false, endian)
+        return this.writeInt64(value, offset, true, endian)
     }
 
     /**
@@ -3425,7 +3517,7 @@
     * @param {number} offset - byte offset (default last write position)
     */
     writeInt64LE = this.int64le = this.bigintle = this.quadle = function(value, offset) {
-        return this.writeInt64(value, offset, true, "little")
+        return this.writeInt64(value, offset, false, "little")
     }
 
     /**
@@ -3435,7 +3527,7 @@
     * @param {number} offset - byte offset (default last write position)
     */
     writeUInt64LE = this.uint64le = this.ubigintle = this.uquadle = function(value, offset) {
-        return this.writeInt64(value, offset, false, "little")
+        return this.writeInt64(value, offset, true, "little")
     }
 
     /**
@@ -3445,7 +3537,7 @@
     * @param {number} offset - byte offset (default last write position)
     */
     writeInt64BE = this.int64be = this.bigintbe = this.quadbe =  function(value, offset) {
-        return this.writeInt64(value, offset, true, "big")
+        return this.writeInt64(value, offset, false, "big")
     }
 
     /**
@@ -3455,7 +3547,7 @@
     * @param {number} offset - byte offset (default last write position)
     */
     writeUInt64BE = this.uint64be = this.ubigintbe = this.uquadbe =  function(value, offset) {
-        return this.writeInt64(value, offset, false, "big")
+        return this.writeInt64(value, offset, true, "big")
     }
 
     //
@@ -3471,7 +3563,11 @@
     */
     writeDoubleFloat = this.doublefloat = this.dfloat =  function(value, offset, endian) {
         this.#check_size(8,0,offset)
-        
+        const maxValue = 1.7976931348623158e308;
+        const minValue = 2.2250738585072014e-308;
+        if(value < minValue || value > maxValue){
+            throw new Error('Value is out of range for the specified 64bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
+        }
         const intArray = new Int32Array(2);
         const floatArray = new Float64Array(intArray.buffer);
 
@@ -3515,88 +3611,151 @@
     //
 
     /**
-    * Writes string, use options object for different type
+    * Writes string, use options object for different types
     * 
-    * encoding: Any accepted to TextEncoder
-    * stringType: utf, delphi, pascal, wide-pascal
     * 
     * @param {string} string - text string
     * @param {object} options - options: 
-    * ```
+    * ```javascript
     * {
-    *  offset: number, 
-    *  length: number, 
-    *  encoding: "utf-8", 
-    *  stringType: "utf", 
-    *  endian: "little", //for wide-pascal, uses set endian that defaults to "little"
-    *  terminateValue: number, // only with stringType: "utf"
-    *  maxLength: number
+    *  offset: 0, //byte offset from current position
+    *  length: string.length,  //for fixed length, non-terminate value utf strings
+    *  stringType: "utf-8", //utf-8, utf-16, pascal or wide-pascal
+    *  terminateValue: 0x00, // only with stringType: "utf"
+    *  lengthWriteSize: 1, //for pascal strings. 1, 2 or 4 byte length write size
+    *  encoding: "utf-8", //TextEncoder accepted types 
+    *  endian: "little", //for wide-pascal and utf-16
     * }
     * ```
     */
-    writeString = this.string = function(str, options = {}) {
+    writeString = this.string = function(string, options = {}) {
 
-        const {
+        var {
             offset = undefined,
             length = undefined,
-            encoding = 'utf-8',
-            stringType = 'utf',
-            endian = this.endian,
+            stringType = 'utf-8',
             terminateValue = undefined,
-            maxLength = 255
+            lengthWriteSize = 1,
+            encoding = 'utf-8',
+            endian = this.endian,
         } = options;
       
-        const encoder = new TextEncoder(encoding);
-      
-        if (stringType === 'utf') {
+        if (stringType === 'utf-8' || stringType === 'utf-16') {
             // Encode the string in the specified encoding
-            const encodedString = encoder.encode(str);
 
-            var totalLength = (length || encodedString.length) 
+            if(encoding == undefined){
+                if(stringType == 'utf-8'){
+                    encoding = 'utf-8'
+                }
+                if(stringType == 'utf-16'){
+                    encoding = 'utf-16'
+                }
+            }
 
-            this.#check_size(totalLength, 0, offset)     
+            const encoder = new TextEncoder(encoding);
+
+            const encodedString = encoder.encode(string);
+
+            if(length == undefined && terminateValue == undefined){
+                terminateValue = 0
+            }
+
+            var totalLength = (length || encodedString.length) + (terminateValue != undefined ? 1 : 0)
+
+            if(stringType == 'utf-16'){
+                totalLength = (length || (encodedString.length*2)) + (terminateValue != undefined ? 2 : 0)
+            }
+
+            this.#check_size(totalLength, 0, offset) 
         
             // Write the string bytes to the Uint8Array
             for (let i = 0; i < encodedString.length; i++) {
-                this.data[this.offset + i] = encodedString[i];
+                if (stringType === 'utf-16') {
+                    const charCode = encodedString[i];
+                    if(endian == "little"){
+                        this.data[this.offset + i * 2 ] = charCode & 0xFF;
+                        this.data[this.offset + i * 2 + 1] = (charCode >> 8) & 0xFF;
+                    } else {
+                        this.data[this.offset + i * 2 + 1] = charCode & 0xFF;
+                        this.data[this.offset + i * 2] = (charCode >> 8) & 0xFF;
+                    }
+                } else {
+                    this.data[this.offset + i] = encodedString[i];
+                }
             }
 
             if(terminateValue != undefined){
-                this.data[this.offset + totalLength] = terminateValue
+                if (stringType === 'utf-16') {
+                    this.data[this.offset + totalLength - 1] = terminateValue & 0xFF;
+                    this.data[this.offset + totalLength] = (terminateValue >> 8) & 0xFF;
+                } else {
+                    this.data[this.offset + totalLength] = terminateValue
+                }
             }
 
-            this.offset += totalLength + (terminateValue != undefined ? 1 : 0)
+            this.offset += totalLength
       
-        } else if (stringType === 'pascal' || stringType === 'wide-pascal' || stringType === 'delphi') {
+        } else if (stringType == 'pascal' || stringType == 'wide-pascal') {
+
+            if(encoding == undefined){
+                if(stringType == 'pascal'){
+                    encoding = 'utf-8'
+                }
+                if(stringType == 'wide-pascal'){
+                    encoding = 'utf-16'
+                }
+            }
+
+            const encoder = new TextEncoder(encoding);
+
             // Calculate the length of the string based on the specified max length
+            var maxLength;
          
             // Encode the string in the specified encoding
-            const maxBytes = Math.min(str.length, maxLength);
-            const encodedString = encoder.encode(str.substring(0, maxBytes));
+            if(lengthWriteSize == 1){
+                maxLength = 255;
+            } else if(lengthWriteSize == 2){
+                maxLength = 65535;
+            } else if(lengthWriteSize == 4){
+                maxLength = 4294967295;
+            } else {
+                throw new Error("Invalid length read size: " + lengthWriteSize)
+            }
+            if(str.length > maxLength || (length || 0) > maxLength ){
+                throw new Error("String outsize of max write length: " + maxLength)
+            }
+            maxBytes = Math.min(string.length, maxLength);
+            const encodedString = encoder.encode(string.substring(0, maxBytes));
 
-            totalLength = (length || encodedString.length) + 1
+            var totalLength = (length || encodedString.length) + lengthWriteSize
 
-            if(stringType === 'wide-pascal'){
-                totalLength = (length || (encodedString.length*2)) + 1
+            if(stringType == 'wide-pascal'){
+                totalLength = (length || (encodedString.length*2)) + lengthWriteSize
             }
 
             this.#check_size(totalLength, 0, offset)  
 
-            this.data[this.offset] = maxBytes;
+            if(lengthWriteSize == 1){
+                this.writeUByte(maxBytes, 0);
+            } else if(lengthWriteSize == 2){
+                this.writeUInt16(maxBytes, 0, );
+            } else if(lengthWriteSize == 4){
+                this.writeUInt32(maxBytes, 0, );
+            }
         
             // Write the string bytes to the Uint8Array
             for (let i = 0; i < encodedString.length; i++) {
-                if (stringType === 'wide-pascal') {
+                if (stringType == 'wide-pascal') {
                     const charCode = encodedString[i];
                     if(endian == "little"){
-                        this.data[this.offset + i * 2 + 1] = charCode & 0xFF;
-                        this.data[this.offset + i * 2 + 2] = (charCode >> 8) & 0xFF;
-                    } else {
-                        this.data[this.offset + i * 2 + 2] = charCode & 0xFF;
+                        this.data[this.offset + i * 2 ] = charCode & 0xFF;
                         this.data[this.offset + i * 2 + 1] = (charCode >> 8) & 0xFF;
+                    } else {
+                        this.data[this.offset + i * 2 + 1] = charCode & 0xFF;
+                        this.data[this.offset + i * 2] = (charCode >> 8) & 0xFF;
                     }
                 } else {
-                    this.data[this.offset + i + 1] = encodedString[i];
+                    this.data[this.offset + i] = encodedString[i];
                 }
             }
 
@@ -3607,35 +3766,298 @@
     }
 
     /**
-    * Truncates array from start to current position unless supplied
-    * Note: Does not affect supplied data
-    * Note: Will extend array if strict mode is off
-    * @param {number} startoffset - Start location, default 0
-    * @param {number} endoffset - end location, default current write position
+    * Writes UTF-8 (C) string
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    * @param {number} length - for fixed length utf strings
+    * @param {number} terminateValue - for non-fixed length utf strings
+    * 
+    * @return string
     */
-    clip = this.crop = this.truncate = this.slice = function(startoffset, endoffset){
-        if(endoffset > this.size){
-            if(this.strict == false){
-                this.extendArray(endoffset - this.size)
-            } else {
-                throw Error("End offset outside of data: " + this.size)
-            }
-        }
-        return this.data.slice(startoffset || 0, endoffset || this.offset)
-    }
-    
-    /**
-    * Returns current data
-    */
-    get = this.return = function(){
-        return this.data
+    utf8string = this.cstring = function(string, offset, length, terminateValue){
+        return this.string(string, {offset: offset, stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue})
     }
 
     /**
-    * removes writing data
+    * Writes ANSI string
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    * @param {number} length - for fixed length utf strings
+    * @param {number} terminateValue - for non-fixed length utf strings
     */
-    end = this.close = this.done = this.finished = function(){
-        this.data = []
+    ansistring = function(string, offset, length, terminateValue){
+        return this.string(string, {offset: offset, stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue})
+    }
+
+    /**
+    * Writes UTF-16 (Unicode) string
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    * @param {number} length - for fixed length utf strings
+    * @param {number} terminateValue - for non-fixed length utf strings
+    * @param {string} endian - ``big`` or ``little``
+    */
+    utf16string = this.unistring = function(string, offset, length, terminateValue, endian){
+        return this.string(string, {offset: offset, stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian})
+    }
+
+    /**
+    * Writes UTF-16 (Unicode) string in little endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    * @param {number} length - for fixed length utf strings
+    * @param {number} terminateValue - for non-fixed length utf strings
+    */
+    utf16stringle = this.unistringle = function(string, offset, length, terminateValue){
+        return this.string(string, {offset: offset, stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little"})
+    }
+
+    /**
+    * Writes UTF-16 (Unicode) string in big endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    * @param {number} length - for fixed length utf strings
+    * @param {number} terminateValue - for non-fixed length utf strings
+    */
+    utf16stringbe = this.unistringbe = function(string, offset, length, terminateValue){
+        return this.string(string, {offset: offset, stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big"})
+    }
+
+    /**
+    * Writes Pascal string
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    * @param {number} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {string} endian - ``big`` or ``little`` for 2 or 4 byte length write size
+    */
+    pstring = function(string, offset, lengthWriteSize, endian){
+        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: lengthWriteSize, endian: endian})
+    }
+
+    /**
+    * Writes Pascal string 1 byte length read
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    * @param {string} endian - ``big`` or ``little`` for 2 or 4 byte length write size
+    */
+    pstring1 = function(string, offset, endian){
+        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: endian})
+    }
+
+    /**
+    * Writes Pascal string 1 byte length read in little endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    */
+    pstring1le = function(string, offset){
+        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "little"})
+    }
+
+    /**
+    * Writes Pascal string 1 byte length read in big endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    */
+    pstring1be = function(string, offset){
+        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "big"})
+    }
+
+    /**
+    * Writes Pascal string 2 byte length read
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    * @param {string} endian - ``big`` or ``little``
+    */
+    pstring2 = function(string, offset, endian){
+        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2,endian: endian})
+    }
+
+    /**
+    * Writes Pascal string 2 byte length read in little endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    */
+    pstring2le = function(string, offset){
+        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "little"})
+    }
+
+    /**
+    * Writes Pascal string 2 byte length read in big endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    */
+    pstring2be = function(string, offset){
+        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "big"})
+    }
+
+    /**
+    * Writes Pascal string 4 byte length read
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    * @param {string} endian - ``big`` or ``little``
+    */
+    pstring4 = function(string, offset, endian){
+        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: endian})
+    }
+
+    /**
+    * Writes Pascal string 4 byte length read in big endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    */
+    pstring4be = function(string, offset){
+        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "big"})
+    }
+
+    /**
+    * Writes Pascal string 4 byte length read in little endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    */
+    pstring4le = function(string, offset){
+        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "little"})
+    }
+
+    /**
+    * Writes Wide-Pascal string
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    * @param {number} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {string} endian - ``big`` or ``little``
+    */
+    wpstring = function(string, offset, lengthWriteSize, endian){
+        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: endian})
+    }
+
+    /**
+    * Writes Wide-Pascal string in big endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    * @param {number} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    */
+    wpstringbe = function(string, offset, lengthWriteSize){
+        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "big"})
+    }
+
+    /**
+    * Writes Wide-Pascal string in little endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    * @param {number} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    */
+    wpstringle = function(string, offset, lengthWriteSize){
+        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "little"})
+    }
+
+    /**
+    * Writes Wide-Pascal string
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    * @param {string} endian - ``big`` or ``little``
+    */
+    wpstring1 = function(string, offset, endian){
+        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: endian})
+    }
+
+    /**
+    * Writes Wide-Pascal string 1 byte length read in big endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    */
+    wpstring1be = function(string, offset){
+        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "big"})
+    }
+
+    /**
+    * Writes Wide-Pascal string 1 byte length read in little endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    */
+    wpstring1le = function(string, offset){
+        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "little"})
+    }
+
+    /**
+    * Writes Wide-Pascal string 2 byte length read
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    * @param {string} endian - ``big`` or ``little``
+    */
+    wpstring2 = function(string, offset, endian){
+        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: endian})
+    }
+
+    /**
+    * Writes Wide-Pascal string 2 byte length read in little endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    */
+    wpstring2le = function(string, offset){
+        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "little"})
+    }
+
+    /**
+    * Writes Wide-Pascal string 2 byte length read in big endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    */
+    wpstring2be = function(string, offset){
+        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "big"})
+    }
+
+    /**
+    * Writes Wide-Pascal string 4 byte length read
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    * @param {string} endian - ``big`` or ``little``
+    */
+    wpstring4 = function(string, offset, endian){
+        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: endian})
+    }
+
+    /**
+    * Writes Wide-Pascal string 4 byte length read in little endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    */
+    wpstring4le = function(string, offset){
+        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "little"})
+    }
+
+    /**
+    * Writes Wide-Pascal string 4 byte length read in big endian order
+    * 
+    * @param {string} string - text string
+    * @param {number} offset - byte offset (default last write position)
+    */
+    wpstring4be = function(string, offset){
+        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "big"})
     }
 
 }

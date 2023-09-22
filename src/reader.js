@@ -3,8 +3,8 @@
 * byte reader, includes bitfields and strings
 *
 * @param {Buffer|Uint8Array} data - ```Buffer``` or ```Uint8Array```
-* @param {number} byteoffset - byte offset to start reader, default is 0 
-* @param {number} bitoffset - bit offset to start reader, 0-7 
+* @param {number} byteOffset - byte offset to start reader, default is 0 
+* @param {number} bitOffset - bit offset to start reader, 0-7 
 * @param {string} endianness - endianness ```big``` or ```little``` (default ```little```)
 */
 class bireader {
@@ -26,33 +26,33 @@ class bireader {
     * byte reader, includes bitfields and strings
     *
     * @param {Buffer|Uint8Array} data - ```Buffer``` or ```Uint8Array```
-    * @param {number} byteoffset - byte offset to start reader, default is 0 
-    * @param {number} bitoffset - bit offset to start reader, 0-7 
+    * @param {number} byteOffset - byte offset to start reader, default is 0 
+    * @param {number} bitOffset - bit offset to start reader, 0-7 
     * @param {string} endianness - endianness ```big``` or ```little``` (default ```little```)
     */
-    constructor(data, byteoffset, bitoffset, endianness) {
+    constructor(data, byteOffset, bitOffset, endianness) {
         if(endianness != undefined && typeof endianness != "string"){
-            throw Error("endianness must be big or little")
+            throw new Error("Endian must be big or little")
         }
         if(endianness != undefined && !(endianness == "big" || endianness == "little")){
-            throw Error("byteorder must be big or little")
+            throw new Error("Byte order must be big or little")
         }
         this.endian = endianness || "little"
         
-        if(byteoffset != undefined ){
-            if(typeof byteoffset == "number"){
-                this.offset = Math.round(byteoffset) || 0
+        if(byteOffset != undefined ){
+            if(typeof byteOffset == "number"){
+                this.offset = Math.round(byteOffset) || 0
             } else {
-                throw Error("Byteoffset must be number")
+                throw new Error("Byte offset must be number")
             }
         }
-        if(bitoffset!= undefined){
-            this.bitoffset = (bitoffset % 8)
+        if(bitOffset!= undefined){
+            this.bitoffset = (bitOffset % 8)
         }
         if(data == undefined){
-            throw Error("Data required")
+            throw new Error("Data required")
         } else {
-            this.size = data.length + ((bitoffset || 0) % 8)
+            this.size = data.length + ((bitOffset || 0) % 8)
             this.data = data
         }
     }
@@ -67,10 +67,10 @@ class bireader {
     */
     endianness = function(endian){
         if(endian == undefined || typeof endian != "string"){
-            throw Error("Endian must be big or little")
+            throw new Error("Endian must be big or little")
         }
         if(endian != undefined && !(endian == "big" || endian == "little")){
-            throw Error("Endian must be big or little")
+            throw new Error("Endian must be big or little")
         }
         this.endian = endian
     }
@@ -78,14 +78,14 @@ class bireader {
     /**
     *Sets endian to big
     */
-    bigEndian = this.big = this.bigendian = function(){
+    bigEndian = this.big = this.be = function(){
         this.endianness("big")
     }
 
     /**
     * Sets endian to little
     */
-    littleEndian = this.little = this.littleendian = function(){
+    littleEndian = this.little = this.le = function(){
         this.endianness("little")
     }
 
@@ -98,7 +98,7 @@ class bireader {
     skip = this.fskip = function(bytes, bits){
         this.#check_size(bytes || 0)
         if((((bytes || 0) + this.offset) + Math.ceil((this.bitoffset + (bits||0)) /8) ) > this.size){
-            throw Error("Seek outside of size of data")
+            throw new Error("Seek outside of size of data: "+ this.size)
         }
         this.bitoffset += (bits || 0) % 8
         this.offset += (bytes || 0)
@@ -112,7 +112,7 @@ class bireader {
     */
     goto = this.seek = this.fseek = this.jump = this.pointer = this.warp = this.fsetpos = function(byte, bit){
         if((byte + Math.ceil((bit||0)/8) ) > this.size){
-            throw Error("Goto outside of size of data: " + this.size)
+            throw new Error("Goto outside of size of data: " + this.size)
         }
         this.offset = byte
         this.bitoffset = (bit || 0) % 8
@@ -135,27 +135,50 @@ class bireader {
         return this.offset
     }
 
+    /**
+    * Truncates array from start to current position unless supplied
+    * Note: Does not affect supplied data
+    * @param {number} startOffset - Start location, default 0
+    * @param {number} endOffset - end location, default current write position
+    */
+    clip = this.crop = this.truncate = this.slice = function(startOffset, endOffset){
+        return this.data.slice(startOffset || 0, endOffset || this.offset)
+    }
+    
+    /**
+    * Returns current data
+    */
+    get = this.return = function(){
+        return this.data
+    }
+    
+    /**
+    * removes reading data
+    */
+    end = this.close = this.done = this.finished = function(){
+        return this.data
+    }
+
     //
     //bit reader
     //
 
     /**
-    *
     * Bit field reader
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     *
     * @param {number} bits - bits to read
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
     readBit = this.bit = function(bits, unsigned, endian){
         if(bits == undefined || typeof bits != "number"){
-            throw Error("Enter number of bits to read")
+            throw new Error("Enter number of bits to read")
         }
         if (bits <= 0 || bits > 32) {
-            throw Error('Bit length must be between 1 and 32.');
+            throw new Error('Bit length must be between 1 and 32.');
         }
         const size_needed = ((((bits-1) + this.bitoffset) / 8) + this.offset)
         if (bits <= 0 || size_needed > this.size) {
@@ -215,7 +238,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit1 = function(unsigned){
@@ -227,7 +250,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit1le = function(unsigned){
@@ -239,7 +262,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit1be = function(unsigned){
@@ -283,7 +306,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit2 = function(unsigned){
@@ -295,7 +318,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit2le = function(unsigned){
@@ -307,7 +330,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit2be = function(unsigned){
@@ -351,7 +374,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit3 = function(unsigned){
@@ -363,7 +386,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit3le = function(unsigned){
@@ -375,7 +398,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit3be = function(unsigned){
@@ -419,7 +442,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit4 = function(unsigned){
@@ -431,7 +454,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit4le = function(unsigned){
@@ -443,7 +466,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit4be = function(unsigned){
@@ -487,7 +510,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit5 = function(unsigned){
@@ -499,7 +522,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit5le = function(unsigned){
@@ -511,7 +534,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit5be = function(unsigned){
@@ -555,7 +578,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit6 = function(unsigned){
@@ -567,7 +590,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit6le = function(unsigned){
@@ -579,7 +602,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit6be = function(unsigned){
@@ -623,7 +646,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit7 = function(unsigned){
@@ -635,7 +658,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit7le = function(unsigned){
@@ -647,7 +670,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit7be = function(unsigned){
@@ -691,7 +714,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit8 = function(unsigned){
@@ -703,7 +726,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit8le = function(unsigned){
@@ -715,7 +738,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit8be = function(unsigned){
@@ -759,7 +782,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit9 = function(unsigned){
@@ -771,7 +794,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit9le = function(unsigned){
@@ -783,7 +806,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit9be = function(unsigned){
@@ -827,7 +850,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit10 = function(unsigned){
@@ -839,7 +862,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit10le = function(unsigned){
@@ -851,7 +874,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit10be = function(unsigned){
@@ -895,7 +918,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit11 = function(unsigned){
@@ -907,7 +930,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit11le = function(unsigned){
@@ -919,7 +942,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit11be = function(unsigned){
@@ -963,7 +986,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit12 = function(unsigned){
@@ -975,7 +998,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit12le = function(unsigned){
@@ -987,7 +1010,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit12be = function(unsigned){
@@ -1031,7 +1054,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit13 = function(unsigned){
@@ -1043,7 +1066,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit13le = function(unsigned){
@@ -1055,7 +1078,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit13be = function(unsigned){
@@ -1099,7 +1122,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit14 = function(unsigned){
@@ -1111,7 +1134,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit14le = function(unsigned){
@@ -1123,7 +1146,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit14be = function(unsigned){
@@ -1167,7 +1190,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit15 = function(unsigned){
@@ -1179,7 +1202,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit15le = function(unsigned){
@@ -1191,7 +1214,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit15be = function(unsigned){
@@ -1235,7 +1258,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit16 = function(unsigned){
@@ -1247,7 +1270,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit16le = function(unsigned){
@@ -1259,7 +1282,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit16be = function(unsigned){
@@ -1303,7 +1326,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit17 = function(unsigned){
@@ -1315,7 +1338,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit17le = function(unsigned){
@@ -1327,7 +1350,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit17be = function(unsigned){
@@ -1371,7 +1394,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit18 = function(unsigned){
@@ -1383,7 +1406,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit18le = function(unsigned){
@@ -1395,7 +1418,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit18be = function(unsigned){
@@ -1439,7 +1462,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit19 = function(unsigned){
@@ -1451,7 +1474,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit19le = function(unsigned){
@@ -1463,7 +1486,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit19be = function(unsigned){
@@ -1507,7 +1530,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit20 = function(unsigned){
@@ -1519,7 +1542,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit20le = function(unsigned){
@@ -1531,7 +1554,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit20be = function(unsigned){
@@ -1575,7 +1598,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit21 = function(unsigned){
@@ -1587,7 +1610,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit21le = function(unsigned){
@@ -1599,7 +1622,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit21be = function(unsigned){
@@ -1643,7 +1666,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit22 = function(unsigned){
@@ -1655,7 +1678,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit22le = function(unsigned){
@@ -1667,7 +1690,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit22be = function(unsigned){
@@ -1711,7 +1734,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit23 = function(unsigned){
@@ -1723,7 +1746,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit23le = function(unsigned){
@@ -1735,7 +1758,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit23be = function(unsigned){
@@ -1779,7 +1802,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit24 = function(unsigned){
@@ -1791,7 +1814,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit24le = function(unsigned){
@@ -1803,7 +1826,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit24be = function(unsigned){
@@ -1847,7 +1870,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit25 = function(unsigned){
@@ -1859,7 +1882,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit25le = function(unsigned){
@@ -1871,7 +1894,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit25be = function(unsigned){
@@ -1915,7 +1938,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit26 = function(unsigned){
@@ -1927,7 +1950,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit26le = function(unsigned){
@@ -1939,7 +1962,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit26be = function(unsigned){
@@ -1983,7 +2006,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit27 = function(unsigned){
@@ -1995,7 +2018,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit27le = function(unsigned){
@@ -2007,7 +2030,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit27be = function(unsigned){
@@ -2051,7 +2074,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit28 = function(unsigned){
@@ -2063,7 +2086,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit28le = function(unsigned){
@@ -2075,7 +2098,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit28be = function(unsigned){
@@ -2119,7 +2142,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit29 = function(unsigned){
@@ -2131,7 +2154,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit29le = function(unsigned){
@@ -2143,7 +2166,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit29be = function(unsigned){
@@ -2187,7 +2210,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit30 = function(unsigned){
@@ -2199,7 +2222,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit30le = function(unsigned){
@@ -2211,7 +2234,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit30be = function(unsigned){
@@ -2255,7 +2278,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit31 = function(unsigned){
@@ -2267,7 +2290,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit31le = function(unsigned){
@@ -2279,7 +2302,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit31be = function(unsigned){
@@ -2323,7 +2346,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit32 = function(unsigned){
@@ -2335,7 +2358,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit32le = function(unsigned){
@@ -2347,7 +2370,7 @@ class bireader {
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     * 
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     bit32be = function(unsigned){
@@ -2387,13 +2410,12 @@ class bireader {
     }
 
     /**
-    *
     * Bit field reader
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     *
     * @param {number} bits - bits to read
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     readUBitBE = this.ubitbe = function(bits){
@@ -2401,13 +2423,12 @@ class bireader {
     }
 
     /**
-    *
     * Bit field reader
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     *
     * @param {number} bits - bits to read
-    * @param {boolean} unsigned - if the vlaue is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     readBitBE = this.bitbe = function(bits, unsigned){
@@ -2415,13 +2436,12 @@ class bireader {
     }
 
     /**
-    *
     * Bit field reader
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     *
     * @param {number} bits - bits to read
-    * @param {boolean} signed - if the vlaue is signed
+    * @param {boolean} signed - if the value is unsigned
     * @returns number
     */
     readUBitLE = this.ubitle = function(bits){
@@ -2429,13 +2449,12 @@ class bireader {
     }
 
     /**
-    *
     * Bit field reader
     * 
     * Note: When returning to a byte read, remaining bits are dropped
     *
     * @param {number} bits - bits to read
-    * @param {boolean} signed - if the vlaue is signed
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
     readBitLE = this.bitle = function(bits, signed){
@@ -2447,18 +2466,19 @@ class bireader {
     //
 
     /**
-    * Read signed byte
+    * Read byte
     * 
+    * @param {boolean} unsigned - if value is unsigned or not
     * @returns number
     */
-    readByte = function(signed){
+    readByte = this.byte = this.int8 = function(unsigned){
         this.#check_size(1)
         const read = (this.data[this.offset])
         this.offset += 1
-        if(signed == undefined || signed == true){
-            return read
-        } else {
+        if(unsigned == true){
             return read & 0xFF
+        } else {
+            return read 
         }
     }
 
@@ -2467,17 +2487,8 @@ class bireader {
     * 
     * @returns number
     */
-    readUByte = this.uint8 = this.ubyte = this.char = function(){
+    readUByte = this.uint8 = this.ubyte = function(){
         return this.readByte(true)
-    }
-
-    /**
-    * Read signed byte
-    * 
-    * @returns number
-    */
-    byte = this.int8 = function(){
-        return this.readByte(false)
     }
 
     //
@@ -2485,11 +2496,13 @@ class bireader {
     //
 
     /**
-    * Read signed short
+    * Read short
     * 
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
     * @returns number
     */
-    readInt16 = this.short = this.int16 = function(signed, endian){
+    readInt16 = this.short = this.int16 = this.word = function(unsigned, endian){
         this.#check_size(2)
         var read
         if((endian != undefined ? endian : this.endian)  == "little"){
@@ -2498,7 +2511,7 @@ class bireader {
             read = (this.data[this.offset] << 8) | this.data[this.offset + 1];
         }
         this.offset += 2
-        if(signed == undefined || signed == true){
+        if(unsigned == undefined || unsigned == false){
             return read
         } else {
             return read & 0xFFFF
@@ -2510,7 +2523,7 @@ class bireader {
     * 
     * @returns number
     */
-    readUInt16LE = this.uint16le = this.ushortle = function(){
+    readUInt16LE = this.uint16le = this.ushortle = this.uwordle = function(){
         return this.readInt16(true, "little")
     }
 
@@ -2519,7 +2532,7 @@ class bireader {
     * 
     * @returns number
     */
-    readInt16LE = this.int16le = this.shortle = function(){
+    readInt16LE = this.int16le = this.shortle = this.wordle = function(){
         return this.readInt16(false, "little")
     }
 
@@ -2528,7 +2541,7 @@ class bireader {
     * 
     * @returns number
     */
-    readUInt16BE = this.uint16be = this.ushortbe = function(){
+    readUInt16BE = this.uint16be = this.ushortbe = this.uwordbe = function(){
         return this.readInt16(true, "big")
     }
 
@@ -2537,7 +2550,7 @@ class bireader {
     * 
     * @returns number
     */
-    readInt16BE = this.int16be = this.shortbe = function(){
+    readInt16BE = this.int16be = this.shortbe = this.wordbe = function(){
         return this.readInt16(false, "big")
     }
 
@@ -2548,6 +2561,7 @@ class bireader {
     /**
     * Read half float
     * 
+    * @param {string} endian - ```big``` or ```little```
     * @returns number
     */
     readHalfFloat = this.halffloat = this.half = function(endian){
@@ -2608,11 +2622,13 @@ class bireader {
     //
 
     /**
-    * Read signed 32 bit integer
+    * Read 32 bit integer
     * 
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
     * @returns number
     */
-    readInt32 = this.readInt = this.int = this.double = this.int32 = function(signed, endian){
+    readInt32 = this.int = this.double = this.int32 = function(unsigned, endian){
         this.#check_size(4)
         var read;
         if((endian != undefined ? endian : this.endian) == "little"){
@@ -2621,7 +2637,7 @@ class bireader {
             read = (this.data[this.offset] << 24) | (this.data[this.offset + 1] << 16) | (this.data[this.offset + 2] << 8) | this.data[this.offset + 3]
         }
         this.offset += 4
-        if(signed == undefined || signed == true){
+        if(unsigned == undefined || unsigned == false){
             return read
         } else {
             return read >>> 0
@@ -2633,7 +2649,7 @@ class bireader {
     * 
     * @returns number
     */
-    readUInt = this.readUInt = this.uint = this.udouble = this.uint32 = function(){
+    readUInt = this.uint = this.udouble = this.uint32 = function(){
         return this.readInt32(true)
     }
 
@@ -2642,7 +2658,7 @@ class bireader {
     * 
     * @returns number
     */
-    readInt32BE = this.readIntBE = this.intbe = this.doublebe = this.int32be = function(){
+    readInt32BE = this.intbe = this.doublebe = this.int32be = function(){
         return this.readInt32(false, "big")
     }
 
@@ -2651,7 +2667,7 @@ class bireader {
     * 
     * @returns number
     */
-    readUInt32BE = this.readUIntBE = this.uintbe = this.udoublebe = this.uint32be = function(){
+    readUInt32BE = this.uintbe = this.udoublebe = this.uint32be = function(){
         return this.readInt32(true, "big")
     }
 
@@ -2660,7 +2676,7 @@ class bireader {
     * 
     * @returns number
     */
-    readInt32LE = this.readIntLE = this.intle = this.doublele = this.int32le = function(){
+    readInt32LE = this.intle = this.doublele = this.int32le = function(){
         return this.readInt32(false, "little")
     }
 
@@ -2669,7 +2685,7 @@ class bireader {
     * 
     * @returns number
     */
-    readUInt32LE = this.readUIntLE = this.uintle = this.udoublele = this.uint32le = function(){
+    readUInt32LE = this.uintle = this.udoublele = this.uint32le = function(){
         return this.readInt32(true, "little")
     }
 
@@ -2680,6 +2696,7 @@ class bireader {
     /**
     * Read float
     * 
+    * @param {string} endian - ```big``` or ```little```
     * @returns number
     */
     readFloat = this.float = function(endian){
@@ -2738,10 +2755,11 @@ class bireader {
 
     /**
     * Read signed 64 bit integer
-    * 
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
     * @returns number
     */
-    readInt64 = this.int64 = this.bigint = this.quad = function(signed, endian) {
+    readInt64 = this.int64 = this.bigint = this.quad = function(unsigned, endian) {
         this.#check_size(8)
         
         // Convert the byte array to a BigInt
@@ -2751,7 +2769,7 @@ class bireader {
                 value |= BigInt(this.data[this.offset]) << BigInt(8 * i);
                 this.offset += 1
             }
-            if(signed == undefined || signed == true){
+            if(unsigned == undefined || unsigned == false){
                 if (value & (BigInt(1) << BigInt(63))) {
                     value -= BigInt(1) << BigInt(64);
                 }
@@ -2764,7 +2782,7 @@ class bireader {
                 value = (value << BigInt(8)) | BigInt(this.data[this.offset]);
                 this.offset += 1
                 }
-            if(signed == undefined || signed == true){
+            if(unsigned == undefined || unsigned == false){
                 if (value & (BigInt(1) << BigInt(63))) {
                     value -= BigInt(1) << BigInt(64);
                 }
@@ -2781,7 +2799,7 @@ class bireader {
     * @returns number
     */
     readUInt64 = this.uint64 = this.ubigint = this.uquad = function() {
-        return this.readInt64(false)
+        return this.readInt64(true)
     }
 
     /**
@@ -2827,6 +2845,7 @@ class bireader {
     /**
     * Read double float
     * 
+    * @param {string} endian - ```big``` or ```little```
     * @returns number
     */
     readDoubleFloat = this.doublefloat = this.dfloat = function(endian){
@@ -2887,108 +2906,417 @@ class bireader {
     //
 
     /**
-    * Reads string, use options object for different type
+    * Reads string, use options object for different types
     * 
-    * encoding: Any accepted to TextEncoder
-    * stringType: utf, delphi, pascal, wide-pascal
-    * 
-    * @param {string} string - text string
     * @param {object} options 
-    * ```
+    * ```javascript
     * {
-    *  length: number, 
-    *  encoding: "utf-8", 
-    *  stringType: "utf", 
-    *  endian: "little", //for wide-pascal, uses set endian that defaults to "little"
-    *  terminateValue: number // only with stringType: "utf"
+    *  length: number, //for fixed length, non-terminate value utf strings
+    *  stringType: "utf-8", //utf-8, utf-16, pascal or wide-pascal
+    *  terminateValue: 0x00, // only for non-fixed length utf strings
+    *  lengthReadSize: 1, //for pascal strings. 1, 2 or 4 byte length read size
+    *  stripNull: true, // removes 0x00 characters
+    *  encoding: "utf-8", //TextEncoder accepted types 
+    *  endian: "little", //for wide-pascal and utf-16
     * }
     * ```
+    * @return string
     */
     readString = this.string = function(options = {}){
 
-        const {
+        var {
             length = undefined,
-            encoding = 'utf-8',
-            stringType = 'utf',
-            endian = this.endian,
-            terminateValue = 0
+            stringType = 'utf-8',
+            terminateValue = undefined,
+            lengthReadSize = 1,
+            stripNull = true,
+            encoding = undefined,
+            endian = this.endian,  
         } = options;
         
         var terminate = terminateValue
+
         if(length != undefined){
             this.#check_size(length)
         }
+        
         if(typeof terminateValue == "number"){
             terminate = terminateValue & 0xFF
         } else {
             if(terminateValue != undefined){
-                throw Error("terminateValue must be a number")
+                throw new Error("terminateValue must be a number")
             }
         }
 
-        if (stringType === 'utf') {
+        if (stringType == 'utf-8' || stringType == 'utf-16') {
+
+            if(encoding == undefined){
+                if(stringType == 'utf-8'){
+                    encoding = 'utf-8'
+                }
+                if(stringType == 'utf-16'){
+                    encoding = 'utf-16'
+                }
+            }
 
             // Read the string as UTF-8 encoded untill 0 or terminateValue
             const encodedBytes = [];
 
-            while (this.offset < this.data.length && this.data[this.offset] !== terminate) {
-              encodedBytes.push(this.readUByte());
+            if(length == undefined && terminateValue == undefined){
+                terminate = 0
+            }
+
+            while (this.offset < this.data.length) {
+                if (stringType === 'utf-8') {
+                    var read = this.readUByte();
+                    if(read == terminate){
+                        break;
+                    } else {
+                        if(!(stripNull == true && read == 0)){
+                            encodedBytes.push(read);
+                        }
+                    }
+                } else {
+                    var read = this.readInt16(true, endian);
+                    var read1 = read & 0xFF
+                    var read2 = (read >> 8) & 0xFF
+                    if(read == terminate){
+                        break;
+                    } else {
+                        if(!(stripNull == true && read == 0)){
+                            encodedBytes.push(read1);
+                            encodedBytes.push(read2);
+                        }
+                    }
+                }
             }
 
             return new TextDecoder(encoding).decode(new Uint8Array(encodedBytes));
 
-        } else if (stringType === 'pascal' || stringType === 'wide-pascal' || stringType === 'delphi') {
+        } else if (stringType == 'pascal' || stringType == 'wide-pascal') {
 
-            const maxBytes = this.readUByte();
+            if(encoding == undefined){
+                if(stringType == 'pascal'){
+                    encoding = 'utf-8'
+                }
+                if(stringType == 'wide-pascal'){
+                    encoding = 'utf-16'
+                }
+            }
+
+            var maxBytes;
+            if(lengthReadSize == 1){
+                maxBytes = this.readUByte();
+            } else if(lengthReadSize == 2){
+                maxBytes = this.readInt16(true, endian);
+            } else if(lengthReadSize == 4){
+                maxBytes = this.readInt32(true, endian);
+            } else {
+                throw new Error("Invalid length read size: " + lengthReadSize)
+            }
             
             // Read the string as Pascal or Delphi encoded
             const encodedBytes = [];
             for (let i = 0; i < maxBytes; i++) {
-              if (stringType === 'delphi') {
-                encodedBytes.push(this.readUByte());
-              } else if (stringType === 'wide-pascal') {
-                var read;
-                if(endian == "little"){
-                    read = this.readInt16LE(true)
-                } else {
-                    read = this.readInt16BE(true)
+              if (stringType == 'wide-pascal') {
+                const read = this.readInt16(true, endian)
+                if(!(stripNull == true && read == 0)){
+                    encodedBytes.push(read)
                 }
-                console.log(read)
-                encodedBytes.push(read);
               } else {
-                encodedBytes.push(this.readUByte());
+                const read = this.readUByte()
+                if(!(stripNull == true && read == 0)){
+                    encodedBytes.push(read)
+                }
               }
             }
+            var str_return
+            if(stringType == 'wide-pascal'){
+                str_return = new TextDecoder(encoding).decode(new Uint16Array(encodedBytes));
+            } else {
+                str_return = new TextDecoder(encoding).decode(new Uint8Array(encodedBytes));
+            }
         
-            return new TextDecoder(encoding).decode(new Uint8Array(encodedBytes));
+            return str_return
         } else {
-            throw new Error('Unsupported string type.');
+            throw new Error('Unsupported string type: '+ stringType);
         }
     }
 
     /**
-    * Truncates array from start to current position unless supplied
-    * Note: Does not affect supplied data
-    * @param {number} startoffset - Start location, default 0
-    * @param {number} endoffset - end location, default current write position
+    * Reads UTF-8 (C) string
+    * 
+    * @param {number} length - for fixed length utf strings
+    * @param {number} terminateValue - for non-fixed length utf strings
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
     */
-    clip = this.crop = this.truncate = this.slice = function(startoffset, endoffset){
-        return this.data.slice(startoffset || 0, endoffset || this.offset)
+    utf8string = this.cstring = function(length, terminateValue, stripNull){
+        return this.string({stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull})
     }
-    
+
     /**
-    * Returns current data
+    * Reads ANSI string
+    * 
+    * @param {number} length - for fixed length utf strings
+    * @param {number} terminateValue - for non-fixed length utf strings
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
     */
-    get = this.return = function(){
-        return this.data
+    ansistring = function(length, terminateValue, stripNull){
+        return this.string({stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue, stripNull: stripNull})
     }
-    
+
     /**
-    * removes reading data
+    * Reads UTF-16 (Unicode) string
+    * 
+    * @param {number} length - for fixed length utf strings
+    * @param {number} terminateValue - for non-fixed length utf strings
+    * @param {boolean} stripNull - removes 0x00 characters
+    * @param {string} endian - ``big`` or ``little``
+    * 
+    * @return string
     */
-    end = this.close = this.done = this.finished = function(){
-        return this.data
+    utf16string = this.unistring = function(length, terminateValue, stripNull, endian){
+        return this.string({stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull})
     }
+
+    /**
+    * Reads UTF-16 (Unicode) string in little endian order
+    * 
+    * @param {number} length - for fixed length utf strings
+    * @param {number} terminateValue - for non-fixed length utf strings
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
+    */
+    utf16stringle = this.unistringle = function(length, terminateValue, stripNull){
+        return this.string({stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull})
+    }
+
+    /**
+    * Reads UTF-16 (Unicode) string in big endian order
+    * 
+    * @param {number} length - for fixed length utf strings
+    * @param {number} terminateValue - for non-fixed length utf strings
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
+    */
+    utf16stringbe = this.unistringbe = function(length, terminateValue, stripNull){
+        return this.string({stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull})
+    }
+
+    /**
+    * Reads Pascal string
+    * 
+    * @param {number} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {boolean} stripNull - removes 0x00 characters
+    * @param {string} endian - ``big`` or ``little``
+    * 
+    * @return string
+    */
+    pstring = function(lengthReadSize, stripNull, endian){
+        return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian})
+    }
+
+    /**
+    * Reads Pascal string 1 byte length read
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * @param {string} endian - ``big`` or ``little``
+    * 
+    * @return string
+    */
+    pstring1 = function(stripNull, endian){
+        return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: endian})
+    }
+
+    /**
+    * Reads Pascal string 1 byte length read in little endian order
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
+    */
+    pstring1le = function(stripNull){
+        return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "little"})
+    }
+
+    /**
+    * Reads Pascal string 1 byte length read in big endian order
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
+    */
+    pstring1be = function(stripNull){
+        return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "big"})
+    }
+
+    /**
+    * Reads Pascal string 2 byte length read
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * @param {string} endian - ``big`` or ``little``
+    * 
+    * @return string
+    */
+    pstring2 = function(stripNull, endian){
+        return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: endian})
+    }
+
+    /**
+    * Reads Pascal string 2 byte length read in little endian order
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
+    */
+    pstring2le = function(stripNull){
+        return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "little"})
+    }
+
+    /**
+    * Reads Pascal string 2 byte length read in big endian order
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
+    */
+    pstring2be = function(stripNull){
+        return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "big"})
+    }
+
+    /**
+    * Reads Pascal string 4 byte length read
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * @param {string} endian - ``big`` or ``little``
+    * 
+    * @return string
+    */
+    pstring4 = function(stripNull, endian){
+        return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: endian})
+    }
+
+    /**
+    * Reads Pascal string 4 byte length read in little endian order
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
+    */
+    pstring4le = function(stripNull){
+        return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "little"})
+    }
+
+    /**
+    * Reads Pascal string 4 byte length read in big endian order
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
+    */
+    pstring4be = function(stripNull){
+        return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "big"})
+    }
+
+    /**
+    * Reads Wide-Pascal string
+    * 
+    * @param {number} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {boolean} stripNull - removes 0x00 characters
+    * @param {string} endian - ``big`` or ``little``
+    * 
+    * @return string
+    */
+    wpstring = function(lengthReadSize, stripNull, endian){
+        return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: lengthReadSize, endian: endian, stripNull: stripNull})
+    }
+
+    /**
+    * Reads Wide-Pascal string 1 byte length read
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * @param {string} endian - ``big`` or ``little``
+    * 
+    * @return string
+    */
+    wpstring1 = function(stripNull, endian){
+        return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: endian, stripNull: stripNull})
+    }
+
+    /**
+    * Reads Wide-Pascal string 2 byte length read
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * @param {string} endian - ``big`` or ``little``
+    * 
+    * @return string
+    */
+    wpstring2 = function(stripNull, endian){
+        return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: endian, stripNull: stripNull})
+    }
+
+    /**
+    * Reads Wide-Pascal string 2 byte length read in little endian order
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
+    */
+    wpstring2le = function(stripNull){
+        return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "little", stripNull: stripNull})
+    }
+
+    /**
+    * Reads Wide-Pascal string 2 byte length read in big endian order
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
+    */
+    wpstring2be = function(stripNull){
+        return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "big", stripNull: stripNull})
+    }
+
+    /**
+    * Reads Wide-Pascal string 4 byte length read
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * @param {string} endian - ``big`` or ``little``
+    * 
+    * @return string
+    */
+    wpstring4 = function(stripNull, endian){
+        return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: endian, stripNull: stripNull})
+    }
+
+    /**
+    * Reads Wide-Pascal string 4 byte length read in big endian order
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
+    */
+    wpstring4be = function(stripNull){
+        return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "big", stripNull: stripNull})
+    }
+
+    /**
+    * Reads Wide-Pascal string 4 byte length read in little endian order
+    * 
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
+    */
+    wpstring4le = function(stripNull){
+        return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "little", stripNull: stripNull})
+    }
+
 }
 
 module.exports = bireader
