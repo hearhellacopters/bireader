@@ -201,7 +201,7 @@ Common functions for setup and movement shared by both (unless indicated).
 
 Parse value as a bit field. There are 32 functions from bit1 to bit32 and can be signed or unsigned (with a ``u`` at the start) and in little or big endian order (``be`` or ``le`` at the end).
 
-**Note:** Remaining bits are dropped when returning to a byte read. Example, after using bit4() then ubyte(), the read locations drops the remaining 4 bits after bit4() when reading ubyte().
+**Note:** Remaining bits are dropped when returning to a byte read. Example, after using ``bit4()`` then ``ubyte()``, the read locations drops the remaining 4 bits after ``bit4()`` when reading ``ubyte()``.
 
 <table>
 <thead>
@@ -229,7 +229,7 @@ Parse value as a bit field. There are 32 functions from bit1 to bit32 and can be
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
     <td>[u]bit{1-32}{le|be}(<b>value</b>, offsetBits, offsetBytes, *unsigned)</td>
-    <td><b>value to write</b>, byte offset from current position, if value is unsigned or not.<br>*Note: functions without the starting letter <u>u</U> can still be called unsigned when <b>true</b> is the <i>fourth</i> augment</td>
+    <td><b>value to write</b>, byte offset from current position, if value is unsigned or not.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>fourth</i> augment</td>
   </tr>
 </tbody>
 </table>
@@ -264,7 +264,7 @@ Parse value as a byte (aka int8). Can be signed or unsigned (with a ``u`` at the
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
     <td>[u]{byte|int8}(<b>value</b>, offsetBytes, *unsigned)</td>
-    <td><b>value to write</b>, byte offset from current position, if value is signed or not.<br>*Note: functions without the starting letter <u>u</U> can still be called unsigned when <b>true</b> is the <i>third</i> augment</td>
+    <td><b>value to write</b>, byte offset from current position, if value is signed or not.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment</td>
   </tr>
 </tbody>
 </table>
@@ -299,7 +299,7 @@ Parse value as a int16 (aka short or word). Can be signed or unsigned (with a ``
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
     <td>[u]{int16|word|short}{be|le}(<b>value</b>, offsetBytes, *unsigned, *endian)</td>
-    <td><b>value to write</b>, if value is unsigned, big or little endian.<br>*Note: functions without the starting letter <u>u</U> can still be called unsigned when <b>true</b> is the <i>third</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>fourth</i> augment (does not overwite set endian).</td>
+    <td><b>value to write</b>, if value is unsigned, big or little endian.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>fourth</i> augment (does not overwite set endian).</td>
   </tr>
 </tbody>
 </table>
@@ -369,7 +369,7 @@ Parse value as a int32 (aka int or double). Can be signed or unsigned (with a ``
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
     <td>[u]{int32|int|double}{be|le}(<b>value</b>, offsetBytes, *unsigned, *endian)</td>
-    <td><b>value to write</b>, byte offset from current position, if value is unsigned, little or big endian<br>*Note: functions without the starting letter <u>u</U> can still be called unsigned when <b>true</b> is the <i>third</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>fourth</i> augment (does not overwite set endian).</td>
+    <td><b>value to write</b>, byte offset from current position, if value is unsigned, little or big endian<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>fourth</i> augment (does not overwite set endian).</td>
   </tr>
 </tbody>
 </table>
@@ -439,7 +439,7 @@ Parse value as a int64 (aka quad or bigint). Can be signed or unsigned (with a `
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
     <td>[u]{int64|quad|bigint}{be|le}(<b>value</b>, offsetBytes, *unsigned, *endian)</td>
-    <td><b>value to write</b>, byte offset from current position, if value is unsigned, big or little endian.<br>*Note: functions without the starting letter <u>u</U> can still be called unsigned when <b>true</b> is the <i>third</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>fourth</i> augment (does not overwite set endian).</td>
+    <td><b>value to write</b>, byte offset from current position, if value is unsigned, big or little endian.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>fourth</i> augment (does not overwite set endian).</td>
   </tr>
 </tbody>
 </table>
@@ -483,7 +483,7 @@ Parse value as a double float (aka dfloat). Can be in little or big endian order
 
 Parse a string in any format. Be sure to use options object for formatting unless using a preset. Strings with larger than 1 byte character reads can use ``be`` or ``le`` at the end for little or big endian.
 
-Presents include C or Unicode, Ansi and muliple pascals.
+Presents include C or Unicode, Ansi and multiple pascals.
 
 
 <table>
@@ -524,12 +524,12 @@ Presents include C or Unicode, Ansi and muliple pascals.
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
     <td>
-    {c|utf8}string(length, terminateValue, stripNull)<br>
-    ansistring(length, terminateValue, stripNull)<br>
-    {utf16|uni}string(length, terminateValue, stripNull, *endian)<br>
-    pstring(lengthReadSize, stripNull, *endian)<br>
-    pstring{1|2|4}{be|le}(stripNull, *endian)<br>
-    wpstring{be|le}(lengthReadSize, stripNull, *endian)<br>
+    {c|utf8}string(length, terminateValue, stripNull)<br><br>
+    ansistring(length, terminateValue, stripNull)<br><br>
+    {utf16|uni}string(length, terminateValue, stripNull, *endian)<br><br>
+    pstring(lengthReadSize, stripNull, *endian)<br><br>
+    pstring{1|2|4}{be|le}(stripNull, *endian)<br><br>
+    wpstring{be|le}(lengthReadSize, stripNull, *endian)<br><br>
     wpstring{1|2|4}{be|le}(stripNull, *endian)
     </td>
     <td>Based on above.<br><b>Note:</b> Presets use augments not a single object. Endian only needed when not part of function name. Does not override set endian.</td>
@@ -537,12 +537,12 @@ Presents include C or Unicode, Ansi and muliple pascals.
   <tr>
   <td align="center"><b>Presets (writer)</b></td>
     <td>
-    {c|utf8}string(<b>string</b>, offset, length, terminateValue)<br>
-    ansistring(<b>string</b>, offset, length, terminateValue)<br>
-    {utf16|uni}string{be|le}(<b>string</b>, offset, length, terminateValue, *endian)<br>
-    pstring(<b>string</b>, offset, lengthWriteSize, *endian)<br>
-    pstring{1|2|4}{be|le}(<b>string</b>,offset, *endian)<br>
-    wpstring{be|le}(<b>string</b>, offset, lengthWriteSize, *endian)<br>
+    {c|utf8}string(<b>string</b>, offset, length, terminateValue)<br><br>
+    ansistring(<b>string</b>, offset, length, terminateValue)<br><br>
+    {utf16|uni}string{be|le}(<b>string</b>, offset, length, terminateValue, *endian)<br><br>
+    pstring(<b>string</b>, offset, lengthWriteSize, *endian)<br><br>
+    pstring{1|2|4}{be|le}(<b>string</b>,offset, *endian)<br><br>
+    wpstring{be|le}(<b>string</b>, offset, lengthWriteSize, *endian)<br><br>
     wpstring{1|2|4}{be|le}(<b>string</b>, offset, *endian)
     </td>
     <td>Based on above.<br><b>Note:</b> Presets use augments not a single object. Endian only needed when not part of function name. Does not override set endian.</td>
