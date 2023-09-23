@@ -7,7 +7,7 @@
 * @param {string} endianness - endianness ``big`` or ``little`` (default little)
 * @param {boolean} strict - strict mode: if true does not extend supplied array on outside write (default false)
 */
- class biwriter {
+class biwriter {
     endian = "little";
     offset = 0;
     bitoffset = 0;
@@ -3305,7 +3305,7 @@
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    writeInt32 = this.int = this.int32 = this.double = function(value, offset, unsigned, endian) {
+    writeInt32 = this.int = this.int32 = this.double = this.long = function(value, offset, unsigned, endian) {
         this.#check_size(4,0,offset)
         if (unsigned == true) {
             if (value < 0 || value > 4294967295) {
@@ -3339,7 +3339,7 @@
     * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-     writeUInt32 = this.uint32 = this.uint = this.udouble= function(value, offset, endian) {
+     writeUInt32 = this.uint32 = this.uint = this.udouble = this.ulong = function(value, offset, endian) {
         return this.writeInt32(value, offset, true, endian)
     }
 
@@ -3349,7 +3349,7 @@
     * @param {number} value - value as int 
     * @param {number} offset - byte offset (default last write position)
     */
-    writeInt32LE = this.int32le = this.intle = this.doublele = function(value, offset) {
+    writeInt32LE = this.int32le = this.intle = this.doublele = this.longle = function(value, offset) {
         return this.writeInt32(value, offset, false, "little")
     }
 
@@ -3359,7 +3359,7 @@
     * @param {number} value - value as int 
     * @param {number} offset - byte offset (default last write position)
     */
-    writeUInt32LE = this.uint32le = this.uintle = this.udoublele = function(value, offset) {
+    writeUInt32LE = this.uint32le = this.uintle = this.udoublele = this.ulongle = function(value, offset) {
         return this.writeInt32(value, offset, true, "little")
     }
 
@@ -3369,7 +3369,7 @@
     * @param {number} value - value as int 
     * @param {number} offset - byte offset (default last write position)
     */
-    writeInt32BE = this.int32be = this.int32be = this.doublebe = function(value, offset) {
+    writeInt32BE = this.int32be = this.int32be = this.doublebe = this.longbe = function(value, offset) {
         return this.writeInt32(value, offset, false, "big")
     }
 
@@ -3379,7 +3379,7 @@
     * @param {number} value - value as int 
     * @param {number} offset - byte offset (default last write position)
     */
-    writeUInt32BE = this.uint32be = this.uint32be = this.udoublebe = function(value, offset) {
+    writeUInt32BE = this.uint32be = this.uint32be = this.udoublebe = this.ulongbe = function(value, offset) {
         return this.writeInt32(value, offset, true, "big")
     }
 

@@ -8,7 +8,7 @@ Supported data types are:
 - [Bytes](#byte) ([u]int8, byte) 8 bit signed or unsigned value
 - [Shorts](#short) ([u]int16, word, short{le|be}) 16 bit signed or unsigned value in big or little endian order
 - [Half Floats](#half-float) (halffloat, half{le|be}) 16 bit decimal value in big or little endian order
-- [Integers](#integer) ([u]int32, int, double{le|be}) 32 bit signed or unsigned value in big or little endian order
+- [Integers](#integer) ([u]int32, long, int, double{le|be}) 32 bit signed or unsigned value in big or little endian order
 - [Floats](#float) (float{le|be}) 32 bit decimal value in big or little endian
 - [Quadwords](#quadword) ([u]int64, quad, bigint{le|be}) 64 bit signed or unsigned in big or little endian
 - [Double Floats](#double-float) (doublefloat, dfloat{le|be}) 64 bit decimal value in big or little endian
@@ -341,7 +341,7 @@ Parse value as a half float (aka half). Can be in little or big endian order (``
 
 ## Integer
 
-Parse value as a int32 (aka int or double). Can be signed or unsigned (with a ``u`` at the start) and in little or big endian order (``be`` or ``le`` at the end).
+Parse value as a int32 (aka int, long or  double). Can be signed or unsigned (with a ``u`` at the start) and in little or big endian order (``be`` or ``le`` at the end).
 
 <table>
 <thead>
@@ -363,12 +363,12 @@ Parse value as a int32 (aka int or double). Can be signed or unsigned (with a ``
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
-    <td>[u]{int32|int|double}{be|le}(*unsigned, *endian)</td>
+    <td>[u]{int32|long|int|double}{be|le}(*unsigned, *endian)</td>
     <td>If value is unsigned, little or big endian.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>first</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>second</i> augment (does not overwite set endian).</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>[u]{int32|int|double}{be|le}(<b>value</b>, offsetBytes, *unsigned, *endian)</td>
+    <td>[u]{int32|long|int|double}{be|le}(<b>value</b>, offsetBytes, *unsigned, *endian)</td>
     <td><b>value to write</b>, byte offset from current position, if value is unsigned, little or big endian<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>fourth</i> augment (does not overwite set endian).</td>
   </tr>
 </tbody>

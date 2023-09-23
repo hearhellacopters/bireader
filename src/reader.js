@@ -2521,6 +2521,17 @@ class bireader {
     /**
     * Read unsigned short
     * 
+    * @param {string} endian - ```big``` or ```little```
+    * 
+    * @returns number
+    */
+    readUInt16 = this.uint16 = this.ushort = this.uword = function(endian){
+        return this.readInt16(true, endian)
+    }
+
+    /**
+    * Read unsigned short in little endian
+    * 
     * @returns number
     */
     readUInt16LE = this.uint16le = this.ushortle = this.uwordle = function(){
@@ -2528,7 +2539,7 @@ class bireader {
     }
 
     /**
-    * Read signed short
+    * Read signed short in little endian
     * 
     * @returns number
     */
@@ -2537,7 +2548,7 @@ class bireader {
     }
 
     /**
-    * Read unsigned short
+    * Read unsigned short in big endian
     * 
     * @returns number
     */
@@ -2546,7 +2557,7 @@ class bireader {
     }
 
     /**
-    * Read signed short
+    * Read signed short in big endian
     * 
     * @returns number
     */
@@ -2628,7 +2639,7 @@ class bireader {
     * @param {string} endian - ```big``` or ```little```
     * @returns number
     */
-    readInt32 = this.int = this.double = this.int32 = function(unsigned, endian){
+    readInt32 = this.int = this.double = this.int32 = this.long  = function(unsigned, endian){
         this.#check_size(4)
         var read;
         if((endian != undefined ? endian : this.endian) == "little"){
@@ -2649,7 +2660,7 @@ class bireader {
     * 
     * @returns number
     */
-    readUInt = this.uint = this.udouble = this.uint32 = function(){
+    readUInt = this.uint = this.udouble = this.uint32 = this.ulong = function(){
         return this.readInt32(true)
     }
 
@@ -2658,7 +2669,7 @@ class bireader {
     * 
     * @returns number
     */
-    readInt32BE = this.intbe = this.doublebe = this.int32be = function(){
+    readInt32BE = this.intbe = this.doublebe = this.int32be = this.longbe = function(){
         return this.readInt32(false, "big")
     }
 
@@ -2667,7 +2678,7 @@ class bireader {
     * 
     * @returns number
     */
-    readUInt32BE = this.uintbe = this.udoublebe = this.uint32be = function(){
+    readUInt32BE = this.uintbe = this.udoublebe = this.uint32be = this.ulongbe = function(){
         return this.readInt32(true, "big")
     }
 
@@ -2676,7 +2687,7 @@ class bireader {
     * 
     * @returns number
     */
-    readInt32LE = this.intle = this.doublele = this.int32le = function(){
+    readInt32LE = this.intle = this.doublele = this.int32le = this.longle = function(){
         return this.readInt32(false, "little")
     }
 
@@ -2685,7 +2696,7 @@ class bireader {
     * 
     * @returns number
     */
-    readUInt32LE = this.uintle = this.udoublele = this.uint32le = function(){
+    readUInt32LE = this.uintle = this.udoublele = this.uint32le = this.ulongle = function(){
         return this.readInt32(true, "little")
     }
 
@@ -2966,7 +2977,15 @@ class bireader {
                 terminate = 0
             }
 
-            while (this.offset < this.data.length) {
+            var read_length = 0;
+
+            if(length != undefined){
+                read_length = length
+            } else {
+                read_length = this.data.length - this.offset
+            }
+
+            for (let i = 0; i < read_length; i++) {
                 if (stringType === 'utf-8') {
                     var read = this.readUByte();
                     if(read == terminate){
