@@ -2647,9 +2647,9 @@ class bireader {
         this.#check_size(4)
         var read;
         if((endian != undefined ? endian : this.endian) == "little"){
-            read = ((this.#flip(this.data[this.offset + 3]) << 24) | (this.#flip(this.data[this.offset + 2]) << 16) | (this.#flip(this.data[this.offset + 1]) << 8) | this.#flip(this.data[this.offset]))
+            read = (((this.data[this.offset + 3] & 0xFF)<< 24) | ((this.data[this.offset + 2] & 0xFF) << 16) | ((this.data[this.offset + 1] & 0xFF) << 8) | (this.data[this.offset] & 0xFF))
         } else {
-            read = (this.#flip(this.data[this.offset]) << 24) | (this.#flip(this.data[this.offset + 1]) << 16) | (this.#flip(this.data[this.offset + 2]) << 8) | this.#flip(this.data[this.offset + 3])
+            read = ((this.data[this.offset] & 0xFF) << 24) | ((this.data[this.offset + 1] & 0xFF) << 16) | ((this.data[this.offset + 2] & 0xFF) << 8) | (this.data[this.offset + 3] & 0xFF)
         }
         this.offset += 4
         if(unsigned == undefined || unsigned == false){
