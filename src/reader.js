@@ -21,10 +21,6 @@ class bireader {
         }
     }
 
-    #flip = function(unsignedValue){
-        return unsignedValue > 127 ? unsignedValue - 256 : unsignedValue;
-    }
-
     /**
     *
     * byte reader, includes bitfields and strings
@@ -2489,12 +2485,12 @@ class bireader {
     */
     readByte = this.byte = this.int8 = function(unsigned){
         this.#check_size(1)
-        const read = this.#flip(this.data[this.offset])
+        var read = this.data[this.offset]
         this.offset += 1
         if(unsigned == true){
             return read & 0xFF
         } else {
-            return read 
+            return read > 127 ? read - 256 : read; 
         }
     }
 
@@ -2522,13 +2518,13 @@ class bireader {
         this.#check_size(2)
         var read
         if((endian != undefined ? endian : this.endian)  == "little"){
-            read = (this.#flip(this.data[this.offset + 1]) << 8) | this.#flip(this.data[this.offset]);
+            read = ((this.data[this.offset + 1] & 0xFFFF) << 8) | (this.data[this.offset]& 0xFFFF);
         } else {
-            read = (this.#flip(this.data[this.offset]) << 8) | this.#flip(this.data[this.offset + 1]);
+            read = ((this.data[this.offset]& 0xFFFF) << 8) | (this.data[this.offset + 1] & 0xFFFF);
         }
         this.offset += 2
         if(unsigned == undefined || unsigned == false){
-            return read
+            return read & 0x8000 ? -(0x10000 - read) : read
         } else {
             return read & 0xFFFF
         }
@@ -2793,7 +2789,7 @@ class bireader {
         let value = BigInt(0);
         if((endian == undefined ? this.endian : endian) == "little"){
             for (let i = 0; i < 8; i++) {
-                value |= BigInt(this.#flip(this.data[this.offset])) << BigInt(8 * i);
+                value |= BigInt((this.data[this.offset] & 0xFF)) << BigInt(8 * i);
                 this.offset += 1
             }
             if(unsigned == undefined || unsigned == false){
@@ -2806,7 +2802,7 @@ class bireader {
             }
         } else {
             for (let i = 0; i < 8; i++) {
-                value = (value << BigInt(8)) | BigInt(this.#flip(this.data[this.offset]));
+                value = (value << BigInt(8)) | BigInt((this.data[this.offset] & 0xFF));
                 this.offset += 1
                 }
             if(unsigned == undefined || unsigned == false){
