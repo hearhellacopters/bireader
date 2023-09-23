@@ -174,6 +174,16 @@ Common functions for setup and movement shared by both (unless indicated).
     <td>Aliases</td>
     <td>clip(startOffset, endOffset)<br>truncate(startOffset, endOffset)<br>slice(startOffset, endOffset)</td>
   </tr>
+   <tr>
+    <td>Name</td>
+    <td>extract(<b>length</b>)</td>
+    <td align="center" rowspan="2">length of data from current position</td>
+    <td rowspan="2">Returns data from current read position to supplied length. <br><b>Note:</b> Does not affect supplied data or current read position.</td>
+  </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>wrap(<b>length</b>)<br>lift(<b>length</b>)</td>
+  </tr>
   <tr>
     <td>Name</td>
     <td>get() </td>

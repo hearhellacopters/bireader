@@ -213,6 +213,23 @@ class biwriter {
         }
         return this.data.slice(Math.abs(startOffset || 0), endOffset || this.offset)
     }
+
+    /**
+    * Extract array from current position to length supplied
+    * Note: Does not affect supplied data
+    * Note: Will extend array if strict mode is off
+    * @param {number} length - length of data to copy from current offset
+    */
+    extract = this.wrap = this.lift = function(length){
+        if(this.offset + (length ||0) > this.size){
+            if(this.strict == false){
+                this.extendArray(this.offset + (length ||0) - this.size)
+            } else {
+                throw new Error("End offset outside of data: " + this.size)
+            }
+        }
+        return this.data.slice(this.offset, this.offset + (length ||0))
+    }
     
     /**
     * Returns current data

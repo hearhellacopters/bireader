@@ -148,6 +148,18 @@ class bireader {
     clip = this.crop = this.truncate = this.slice = function(startOffset, endOffset){
         return this.data.slice(startOffset || 0, endOffset || this.offset)
     }
+
+     /**
+    * Extract array from current position to length supplied
+    * Note: Does not affect supplied data
+    * @param {number} length - length of data to copy from current offset
+    */
+    extract = this.wrap = this.lift = function(length){
+        if(this.offset + (length ||0) > this.size){
+            throw new Error("End offset outside of data: " + this.size)
+        }
+        return this.data.slice(this.offset, this.offset + (length ||0))
+    }
     
     /**
     * Returns current data
