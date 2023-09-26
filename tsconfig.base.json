@@ -8,6 +8,9 @@
       "declaration": true,
       "declarationMap": true,
       "isolatedModules": true,
+      "sourceMap": true,
+      "emitDecoratorMetadata": true,
+      "experimentalDecorators": true,
       "allowSyntheticDefaultImports": true
     },
     "files": ["index.ts"]

@@ -1,6 +1,6 @@
 {
   "name": "bireader",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Read and write data in binary",
   "types": "./lib/cjs/types/index.d.ts",
   "main": "./lib/cjs/index.js",
