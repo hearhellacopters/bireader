@@ -154,6 +154,12 @@ export declare class bireader {
     */
     fgetpos(): number;
     /**
+    * Get the current byte position
+    *
+    * @return {number} current byte position
+    */
+    saveOffset(): number;
+    /**
     * Truncates array from start to current position unless supplied
     * Note: Does not affect supplied data
     * @param {number} startOffset - Start location, default 0

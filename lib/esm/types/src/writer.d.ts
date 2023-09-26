@@ -162,6 +162,12 @@ export declare class biwriter {
     */
     fgetpos(): number;
     /**
+    * Get the current byte position
+    *
+    * @return {number} current byte position
+    */
+    saveOffset(): number;
+    /**
     * Disallows extending array if writing outside of max size
     */
     restrict(): void;

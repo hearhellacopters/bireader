@@ -117,7 +117,7 @@ Common functions for setup and movement shared by both (unless indicated).
   <tr>
     <td>Name</td>
     <td>skip(<b>bytes</b>, bits)</td>
-    <td align="center" rowspan="2"><b>bytes to skip</b>, bits to skip</td>
+    <td align="center" rowspan="2"><b>bytes to skip from current position</b>, bits to skip</td>
     <td rowspan="2">Use negative to go back.<br><b>Note:</b> Remaining bits are dropped when returning to a byte read.</td>
   </tr>
   <tr>
@@ -127,7 +127,7 @@ Common functions for setup and movement shared by both (unless indicated).
   <tr>
     <td>Name</td>
     <td>goto(<b>byte</b>, bit)</td>
-    <td align="center" rowspan="2"><b>Offset from current byte</b>, bit read position</td>
+    <td align="center" rowspan="2"><b>Byte offset from start</b>, bit offset from byte offset</td>
     <td rowspan="2"><b>Note:</b> Remaining bits are drop when returning to byte data.</td>
   </tr>
   <tr>

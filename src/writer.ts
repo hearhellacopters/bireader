@@ -321,6 +321,15 @@ export class biwriter {
     }
 
     /**
+    * Get the current byte position
+    *
+    * @return {number} current byte position
+    */
+    saveOffset(): number{
+        return this.offset
+    }
+
+    /**
     * Disallows extending array if writing outside of max size
     */
     restrict(): void{

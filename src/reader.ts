@@ -279,6 +279,15 @@ export class bireader {
     }
 
     /**
+    * Get the current byte position
+    *
+    * @return {number} current byte position
+    */
+    saveOffset(): number{
+        return this.offset
+    }
+
+    /**
     * Truncates array from start to current position unless supplied
     * Note: Does not affect supplied data
     * @param {number} startOffset - Start location, default 0
