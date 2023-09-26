@@ -8,7 +8,7 @@
 * @param {string} endianness - endianness ``big`` or ``little`` (default little)
 * @param {boolean} strict - strict mode: if true does not extend supplied array on outside write (default false)
 */
-export default class biwriter {
+export declare class biwriter {
     endian: string;
     offset: number;
     bitoffset: number;

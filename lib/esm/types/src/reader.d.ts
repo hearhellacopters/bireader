@@ -8,7 +8,7 @@
 * @param {number} bitOffset - bit offset to start reader, 0-7
 * @param {string} endianness - endianness ```big``` or ```little``` (default ```little```)
 */
-export default class bireader {
+export declare class bireader {
     endian: string;
     offset: number;
     bitoffset: number;

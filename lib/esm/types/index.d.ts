@@ -1,8 +1,3 @@
-import bireader from './src/reader';
-import biwriter from './src/writer';
-declare const _default: {
-    bireader: typeof bireader;
-    biwriter: typeof biwriter;
-};
-export default _default;
+export { bireader } from './src/reader';
+export { biwriter } from './src/writer';
 //# sourceMappingURL=index.d.ts.map
