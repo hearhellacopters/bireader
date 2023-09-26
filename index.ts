@@ -1,7 +1,7 @@
 import bireader from './src/reader'
 import biwriter from './src/writer'
 
-module.exports ={
+export default {
     bireader,
     biwriter
 }

@@ -3,11 +3,11 @@
       "strict": true,
       "esModuleInterop": true,
       "forceConsistentCasingInFileNames": true,
-      "skipLibCheck": true,
       "checkJs": true,
       "allowJs": true,
       "declaration": true,
       "declarationMap": true,
+      "isolatedModules": true,
       "allowSyntheticDefaultImports": true
     },
     "files": ["index.ts"]
