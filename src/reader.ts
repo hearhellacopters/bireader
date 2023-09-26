@@ -7,18 +7,26 @@
 * @param {number} bitOffset - bit offset to start reader, 0-7 
 * @param {string} endianness - endianness ```big``` or ```little``` (default ```little```)
 */
-class bireader {
-    endian = "little";
-    offset = 0;
-    bitoffset = 0;
-    size = 0
-    data;
+export default class bireader {
+    public endian: string = "little";
+    public offset: number = 0;
+    public bitoffset: number = 0;
+    public size: number = 0
+    public data: Array<Buffer|Uint8Array>;
 
-    #check_size = function(read_size, read_bits){
-        const new_off = this.offset + (read_size||0) + Math.ceil((this.bitoffset + (read_bits||0) )/ 8)
+    private check_size(read_size?: number, read_bits?: number): void{
+        const new_off: number = this.offset + (read_size||0) + Math.ceil((this.bitoffset + (read_bits||0) )/ 8)
         if(new_off > this.size){
             throw new Error(`Reader reached end of data.`);
         }
+    }
+
+    private isBuffer(obj: Array<Buffer|Uint8Array>): boolean {
+        return (typeof Buffer !== 'undefined' && obj instanceof Buffer);
+    }
+
+    private isBufferOrUint8Array(obj:  Array<Buffer|Uint8Array>): boolean {
+        return obj instanceof Uint8Array || this.isBuffer(obj);
     }
 
     /**
@@ -30,7 +38,7 @@ class bireader {
     * @param {number} bitOffset - bit offset to start reader, 0-7 
     * @param {string} endianness - endianness ```big``` or ```little``` (default ```little```)
     */
-    constructor(data, byteOffset, bitOffset, endianness) {
+    constructor(data: Array<Buffer|Uint8Array>, byteOffset?: number, bitOffset?: number, endianness?: string) {
         if(endianness != undefined && typeof endianness != "string"){
             throw new Error("Endian must be big or little")
         }
@@ -47,14 +55,17 @@ class bireader {
             }
         }
         if(bitOffset!= undefined){
-            this.bitoffset = (bitOffset % 8)
+            this.bitoffset = bitOffset % 8
         }
         if(data == undefined){
             throw new Error("Data required")
         } else {
-            this.size = data.length + ((bitOffset || 0) % 8)
-            this.data = data
+            if(!this.isBufferOrUint8Array(data)){
+                throw new Error("Write data must be Uint8Array or Buffer")
+            }       
         }
+        this.size = data.length + ((bitOffset || 0) % 8)
+        this.data = data
     }
 
     /**
@@ -65,7 +76,7 @@ class bireader {
     *
     * @param {string} endian - endianness ```big``` or ```little```
     */
-    endianness = function(endian){
+    endianness(endian: string): void{
         if(endian == undefined || typeof endian != "string"){
             throw new Error("Endian must be big or little")
         }
@@ -78,25 +89,53 @@ class bireader {
     /**
     *Sets endian to big
     */
-    bigEndian = this.big = this.be = function(){
+    bigEndian(): void{
+        this.endianness("big")
+    }
+
+    /**
+    *Sets endian to big
+    */
+    big(): void{
+        this.endianness("big")
+    }
+
+    /**
+    *Sets endian to big
+    */
+    be(): void{
         this.endianness("big")
     }
 
     /**
     * Sets endian to little
     */
-    littleEndian = this.little = this.le = function(){
+    littleEndian(): void{
+        this.endianness("little")
+    }
+
+    /**
+    * Sets endian to little
+    */
+    little(): void{
+        this.endianness("little")
+    }
+
+    /**
+    * Sets endian to little
+    */
+    le(): void{
         this.endianness("little")
     }
 
     /**
     * Move current read byte or bit position
     *
-    * @param {number} offset - bytes to skip
+    * @param {number} bytes - bytes to skip
     * @param {number} bits - bits to skip
     */
-    skip = this.fskip = function(bytes, bits){
-        this.#check_size(bytes || 0)
+    skip(bytes: number, bits?: number): void{
+        this.check_size(bytes || 0)
         if((((bytes || 0) + this.offset) + Math.ceil((this.bitoffset + (bits||0)) /8) ) > this.size){
             throw new Error("Seek outside of size of data: "+ this.size)
         }
@@ -105,12 +144,22 @@ class bireader {
     }
 
     /**
+    * Move current read byte or bit position
+    *
+    * @param {number} bytes - bytes to skip
+    * @param {number} bits - bits to skip
+    */
+    fskip(bytes: number, bits?: number): void{
+        this.skip(bytes, bits)
+    }
+
+    /**
     * Change current byte or bit read position
     * 
     * @param {number} byte - byte to jump to
     * @param {number} bit - bit to jump to (0-7)
     */
-    goto = this.seek = this.fseek = this.jump = this.pointer = this.warp = this.fsetpos = function(byte, bit){
+    goto(byte: number, bit?: number): void{
         if((byte + Math.ceil((bit||0)/8) ) > this.size){
             throw new Error("Goto outside of size of data: " + this.size)
         }
@@ -119,9 +168,85 @@ class bireader {
     }
 
     /**
+    * Change current byte or bit read position
+    * 
+    * @param {number} byte - byte to jump to
+    * @param {number} bit - bit to jump to (0-7)
+    */
+    seek(byte: number, bit?: number): void{
+        this.goto(byte, bit)
+    }
+
+    /**
+    * Change current byte or bit read position
+    * 
+    * @param {number} byte - byte to jump to
+    * @param {number} bit - bit to jump to (0-7)
+    */
+    fseek(byte: number, bit?: number): void{
+        this.goto(byte, bit)
+    }
+
+    /**
+    * Change current byte or bit read position
+    * 
+    * @param {number} byte - byte to jump to
+    * @param {number} bit - bit to jump to (0-7)
+    */
+    jump(byte: number, bit?: number): void{
+        this.goto(byte, bit)
+    }
+
+    /**
+    * Change current byte or bit read position
+    * 
+    * @param {number} byte - byte to jump to
+    * @param {number} bit - bit to jump to (0-7)
+    */
+    pointer(byte: number, bit?: number): void{
+        this.goto(byte, bit)
+    }
+
+    /**
+    * Change current byte or bit read position
+    * 
+    * @param {number} byte - byte to jump to
+    * @param {number} bit - bit to jump to (0-7)
+    */
+    warp(byte: number, bit?: number): void{
+        this.goto(byte, bit)
+    }
+
+    /**
+    * Change current byte or bit read position
+    * 
+    * @param {number} byte - byte to jump to
+    * @param {number} bit - bit to jump to (0-7)
+    */
+    fsetpos(byte: number, bit?: number): void{
+        this.goto(byte, bit)
+    }
+
+    /**
     * Set offset to start of file
     */
-    rewind = this.gotostart = this.tostart = function(){
+    rewind(): void{
+        this.offset = 0
+        this.bitoffset = 0
+    }
+
+    /**
+    * Set offset to start of file
+    */
+    gotostart(): void{
+        this.offset = 0
+        this.bitoffset = 0
+    }
+
+    /**
+    * Set offset to start of file
+    */
+    tostart(): void{
         this.offset = 0
         this.bitoffset = 0
     }
@@ -131,7 +256,25 @@ class bireader {
     *
     * @return {number} current byte position
     */
-    ftell = this.tell = this.fgetpos =  function(){
+    ftell(): number{
+        return this.offset
+    }
+
+    /**
+    * Get the current byte position
+    *
+    * @return {number} current byte position
+    */
+    tell(): number{
+        return this.offset
+    }
+
+    /**
+    * Get the current byte position
+    *
+    * @return {number} current byte position
+    */
+    fgetpos(): number{
         return this.offset
     }
 
@@ -140,17 +283,78 @@ class bireader {
     * Note: Does not affect supplied data
     * @param {number} startOffset - Start location, default 0
     * @param {number} endOffset - end location, default current write position
+    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    clip = this.crop = this.truncate = this.slice = function(startOffset, endOffset){
+    clip(startOffset?: number, endOffset?: number): Array<Buffer|Uint8Array>{
         return this.data.slice(startOffset || 0, endOffset || this.offset)
     }
 
-     /**
+    /**
+    * Truncates array from start to current position unless supplied
+    * Note: Does not affect supplied data
+    * @param {number} startOffset - Start location, default 0
+    * @param {number} endOffset - end location, default current write position
+    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    */
+    crop(startOffset?: number, endOffset?: number): Array<Buffer|Uint8Array>{
+        return this.data.slice(startOffset || 0, endOffset || this.offset)
+    }
+
+    /**
+    * Truncates array from start to current position unless supplied
+    * Note: Does not affect supplied data
+    * @param {number} startOffset - Start location, default 0
+    * @param {number} endOffset - end location, default current write position
+    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    */
+    truncate(startOffset?: number, endOffset?: number): Array<Buffer|Uint8Array>{
+        return this.data.slice(startOffset || 0, endOffset || this.offset)
+    }
+
+    /**
+    * Truncates array from start to current position unless supplied
+    * Note: Does not affect supplied data
+    * @param {number} startOffset - Start location, default 0
+    * @param {number} endOffset - end location, default current write position
+    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    */
+    slice(startOffset?: number, endOffset?: number): Array<Buffer|Uint8Array>{
+        return this.data.slice(startOffset || 0, endOffset || this.offset)
+    }
+
+    /**
     * Extract array from current position to length supplied
     * Note: Does not affect supplied data
     * @param {number} length - length of data to copy from current offset
+    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    extract = this.wrap = this.lift = function(length){
+    extract(length: number): Array<Buffer|Uint8Array>{
+        if(this.offset + (length ||0) > this.size){
+            throw new Error("End offset outside of data: " + this.size)
+        }
+        return this.data.slice(this.offset, this.offset + (length ||0))
+    }
+
+    /**
+    * Extract array from current position to length supplied
+    * Note: Does not affect supplied data
+    * @param {number} length - length of data to copy from current offset
+    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    */
+    wrap(length: number): Array<Buffer|Uint8Array>{
+        if(this.offset + (length ||0) > this.size){
+            throw new Error("End offset outside of data: " + this.size)
+        }
+        return this.data.slice(this.offset, this.offset + (length ||0))
+    }
+
+    /**
+    * Extract array from current position to length supplied
+    * Note: Does not affect supplied data
+    * @param {number} length - length of data to copy from current offset
+    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    */
+    lift(length: number): Array<Buffer|Uint8Array>{
         if(this.offset + (length ||0) > this.size){
             throw new Error("End offset outside of data: " + this.size)
         }
@@ -159,16 +363,46 @@ class bireader {
     
     /**
     * Returns current data
+    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    get = this.return = function(){
+    get(): Array<Buffer|Uint8Array>{
+        return this.data
+    }
+
+    /**
+    * Returns current data
+    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    */
+    return(): Array<Buffer|Uint8Array>{
         return this.data
     }
     
     /**
     * removes reading data
     */
-    end = this.close = this.done = this.finished = function(){
-        return this.data
+    end(): void{
+        this.data = []
+    }
+
+    /**
+    * removes reading data
+    */
+    close(): void{
+        this.data = []
+    }
+
+    /**
+    * removes reading data
+    */
+    done(): void{
+        this.data = []
+    }
+
+    /**
+    * removes reading data
+    */
+    finished(): void{
+        this.data = []
     }
 
     //
@@ -185,7 +419,7 @@ class bireader {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    readBit = this.bit = function(bits, unsigned, endian){
+    readBit(bits?: number, unsigned?: boolean, endian?: string): number{
         if(bits == undefined || typeof bits != "number"){
             throw new Error("Enter number of bits to read")
         }
@@ -204,11 +438,12 @@ class bireader {
         for (var i = 0; i < bits;) {
             var remaining = bits - i;
             var bitOffset = off_in_bits & 7;
-            var currentByte = this.data[off_in_bits >> 3];
+            var currentByte = <unknown> this.data[off_in_bits >> 3] as number
 
             var read = Math.min(remaining, 8 - bitOffset);
 
-            var mask, readBits;
+            var mask: number, readBits: number;
+
             if ((endian != undefined ? endian : this.endian)  == "big") {
 
                 mask = ~(0xFF << read);
@@ -249,11 +484,25 @@ class bireader {
     * Bit field reader
     * 
     * Note: When returning to a byte read, remaining bits are dropped
+    *
+    * @param {number} bits - bits to read
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
+    */
+    bit(bits: number, unsigned?: boolean, endian?: string): number{
+        return this.readBit(bits,unsigned,endian)
+    }
+
+        /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
     * 
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit1 = function(unsigned){
+    bit1(unsigned?: boolean): number{
         return this.bit(1, unsigned)
     }
 
@@ -265,7 +514,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit1le = function(unsigned){
+    bit1le(unsigned?: boolean): number{
         return this.bit(1, unsigned, "little")
     }
 
@@ -277,7 +526,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit1be = function(unsigned){
+    bit1be(unsigned?: boolean): number{
         return this.bit(1, unsigned, "big")
     }
     /**
@@ -287,7 +536,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit1 = function(){
+    ubit1(): number{
         return this.bit(1, true)
     }
 
@@ -298,7 +547,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit1le = function(){
+    ubit1le(): number{
         return this.bit(1, true, "little")
     }
 
@@ -309,10 +558,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit1be = function(){
+    ubit1be(): number{
         return this.bit(1, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -321,7 +570,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit2 = function(unsigned){
+    bit2(unsigned?: boolean): number{
         return this.bit(2, unsigned)
     }
 
@@ -333,7 +582,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit2le = function(unsigned){
+    bit2le(unsigned?: boolean): number{
         return this.bit(2, unsigned, "little")
     }
 
@@ -345,7 +594,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit2be = function(unsigned){
+    bit2be(unsigned?: boolean): number{
         return this.bit(2, unsigned, "big")
     }
     /**
@@ -355,7 +604,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit2 = function(){
+    ubit2(): number{
         return this.bit(2, true)
     }
 
@@ -366,7 +615,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit2le = function(){
+    ubit2le(): number{
         return this.bit(2, true, "little")
     }
 
@@ -377,10 +626,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit2be = function(){
+    ubit2be(): number{
         return this.bit(2, true, "big")
     }
-
+    
     /**
     * Bit field reader
     * 
@@ -389,7 +638,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit3 = function(unsigned){
+    bit3(unsigned?: boolean): number{
         return this.bit(3, unsigned)
     }
 
@@ -401,7 +650,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit3le = function(unsigned){
+    bit3le(unsigned?: boolean): number{
         return this.bit(3, unsigned, "little")
     }
 
@@ -413,7 +662,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit3be = function(unsigned){
+    bit3be(unsigned?: boolean): number{
         return this.bit(3, unsigned, "big")
     }
     /**
@@ -423,7 +672,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit3 = function(){
+    ubit3(): number{
         return this.bit(3, true)
     }
 
@@ -434,7 +683,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit3le = function(){
+    ubit3le(): number{
         return this.bit(3, true, "little")
     }
 
@@ -445,10 +694,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit3be = function(){
+    ubit3be(): number{
         return this.bit(3, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -457,7 +706,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit4 = function(unsigned){
+    bit4(unsigned?: boolean): number{
         return this.bit(4, unsigned)
     }
 
@@ -469,7 +718,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit4le = function(unsigned){
+    bit4le(unsigned?: boolean): number{
         return this.bit(4, unsigned, "little")
     }
 
@@ -481,7 +730,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit4be = function(unsigned){
+    bit4be(unsigned?: boolean): number{
         return this.bit(4, unsigned, "big")
     }
     /**
@@ -491,7 +740,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit4 = function(){
+    ubit4(): number{
         return this.bit(4, true)
     }
 
@@ -502,7 +751,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit4le = function(){
+    ubit4le(): number{
         return this.bit(4, true, "little")
     }
 
@@ -513,10 +762,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit4be = function(){
+    ubit4be(): number{
         return this.bit(4, true, "big")
     }
-
+    
     /**
     * Bit field reader
     * 
@@ -525,7 +774,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit5 = function(unsigned){
+    bit5(unsigned?: boolean): number{
         return this.bit(5, unsigned)
     }
 
@@ -537,7 +786,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit5le = function(unsigned){
+    bit5le(unsigned?: boolean): number{
         return this.bit(5, unsigned, "little")
     }
 
@@ -549,7 +798,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit5be = function(unsigned){
+    bit5be(unsigned?: boolean): number{
         return this.bit(5, unsigned, "big")
     }
     /**
@@ -559,7 +808,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit5 = function(){
+    ubit5(): number{
         return this.bit(5, true)
     }
 
@@ -570,7 +819,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit5le = function(){
+    ubit5le(): number{
         return this.bit(5, true, "little")
     }
 
@@ -581,10 +830,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit5be = function(){
+    ubit5be(): number{
         return this.bit(5, true, "big")
     }
-
+    
     /**
     * Bit field reader
     * 
@@ -593,7 +842,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit6 = function(unsigned){
+    bit6(unsigned?: boolean): number{
         return this.bit(6, unsigned)
     }
 
@@ -605,7 +854,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit6le = function(unsigned){
+    bit6le(unsigned?: boolean): number{
         return this.bit(6, unsigned, "little")
     }
 
@@ -617,7 +866,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit6be = function(unsigned){
+    bit6be(unsigned?: boolean): number{
         return this.bit(6, unsigned, "big")
     }
     /**
@@ -627,7 +876,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit6 = function(){
+    ubit6(): number{
         return this.bit(6, true)
     }
 
@@ -638,7 +887,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit6le = function(){
+    ubit6le(): number{
         return this.bit(6, true, "little")
     }
 
@@ -649,10 +898,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit6be = function(){
+    ubit6be(): number{
         return this.bit(6, true, "big")
     }
-
+    
     /**
     * Bit field reader
     * 
@@ -661,7 +910,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit7 = function(unsigned){
+    bit7(unsigned?: boolean): number{
         return this.bit(7, unsigned)
     }
 
@@ -673,7 +922,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit7le = function(unsigned){
+    bit7le(unsigned?: boolean): number{
         return this.bit(7, unsigned, "little")
     }
 
@@ -685,7 +934,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit7be = function(unsigned){
+    bit7be(unsigned?: boolean): number{
         return this.bit(7, unsigned, "big")
     }
     /**
@@ -695,7 +944,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit7 = function(){
+    ubit7(): number{
         return this.bit(7, true)
     }
 
@@ -706,7 +955,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit7le = function(){
+    ubit7le(): number{
         return this.bit(7, true, "little")
     }
 
@@ -717,10 +966,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit7be = function(){
+    ubit7be(): number{
         return this.bit(7, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -729,7 +978,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit8 = function(unsigned){
+    bit8(unsigned?: boolean): number{
         return this.bit(8, unsigned)
     }
 
@@ -741,7 +990,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit8le = function(unsigned){
+    bit8le(unsigned?: boolean): number{
         return this.bit(8, unsigned, "little")
     }
 
@@ -753,7 +1002,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit8be = function(unsigned){
+    bit8be(unsigned?: boolean): number{
         return this.bit(8, unsigned, "big")
     }
     /**
@@ -763,7 +1012,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit8 = function(){
+    ubit8(): number{
         return this.bit(8, true)
     }
 
@@ -774,7 +1023,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit8le = function(){
+    ubit8le(): number{
         return this.bit(8, true, "little")
     }
 
@@ -785,10 +1034,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit8be = function(){
+    ubit8be(): number{
         return this.bit(8, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -797,7 +1046,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit9 = function(unsigned){
+    bit9(unsigned?: boolean): number{
         return this.bit(9, unsigned)
     }
 
@@ -809,7 +1058,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit9le = function(unsigned){
+    bit9le(unsigned?: boolean): number{
         return this.bit(9, unsigned, "little")
     }
 
@@ -821,7 +1070,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit9be = function(unsigned){
+    bit9be(unsigned?: boolean): number{
         return this.bit(9, unsigned, "big")
     }
     /**
@@ -831,7 +1080,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit9 = function(){
+    ubit9(): number{
         return this.bit(9, true)
     }
 
@@ -842,7 +1091,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit9le = function(){
+    ubit9le(): number{
         return this.bit(9, true, "little")
     }
 
@@ -853,10 +1102,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit9be = function(){
+    ubit9be(): number{
         return this.bit(9, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -865,7 +1114,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit10 = function(unsigned){
+    bit10(unsigned?: boolean): number{
         return this.bit(10, unsigned)
     }
 
@@ -877,7 +1126,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit10le = function(unsigned){
+    bit10le(unsigned?: boolean): number{
         return this.bit(10, unsigned, "little")
     }
 
@@ -889,7 +1138,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit10be = function(unsigned){
+    bit10be(unsigned?: boolean): number{
         return this.bit(10, unsigned, "big")
     }
     /**
@@ -899,7 +1148,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit10 = function(){
+    ubit10(): number{
         return this.bit(10, true)
     }
 
@@ -910,7 +1159,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit10le = function(){
+    ubit10le(): number{
         return this.bit(10, true, "little")
     }
 
@@ -921,10 +1170,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit10be = function(){
+    ubit10be(): number{
         return this.bit(10, true, "big")
     }
-
+    
     /**
     * Bit field reader
     * 
@@ -933,7 +1182,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit11 = function(unsigned){
+    bit11(unsigned?: boolean): number{
         return this.bit(11, unsigned)
     }
 
@@ -945,7 +1194,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit11le = function(unsigned){
+    bit11le(unsigned?: boolean): number{
         return this.bit(11, unsigned, "little")
     }
 
@@ -957,7 +1206,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit11be = function(unsigned){
+    bit11be(unsigned?: boolean): number{
         return this.bit(11, unsigned, "big")
     }
     /**
@@ -967,7 +1216,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit11 = function(){
+    ubit11(): number{
         return this.bit(11, true)
     }
 
@@ -978,7 +1227,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit11le = function(){
+    ubit11le(): number{
         return this.bit(11, true, "little")
     }
 
@@ -989,10 +1238,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit11be = function(){
+    ubit11be(): number{
         return this.bit(11, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -1001,7 +1250,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit12 = function(unsigned){
+    bit12(unsigned?: boolean): number{
         return this.bit(12, unsigned)
     }
 
@@ -1013,7 +1262,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit12le = function(unsigned){
+    bit12le(unsigned?: boolean): number{
         return this.bit(12, unsigned, "little")
     }
 
@@ -1025,7 +1274,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit12be = function(unsigned){
+    bit12be(unsigned?: boolean): number{
         return this.bit(12, unsigned, "big")
     }
     /**
@@ -1035,7 +1284,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit12 = function(){
+    ubit12(): number{
         return this.bit(12, true)
     }
 
@@ -1046,7 +1295,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit12le = function(){
+    ubit12le(): number{
         return this.bit(12, true, "little")
     }
 
@@ -1057,10 +1306,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit12be = function(){
+    ubit12be(): number{
         return this.bit(12, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -1069,7 +1318,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit13 = function(unsigned){
+    bit13(unsigned?: boolean): number{
         return this.bit(13, unsigned)
     }
 
@@ -1081,7 +1330,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit13le = function(unsigned){
+    bit13le(unsigned?: boolean): number{
         return this.bit(13, unsigned, "little")
     }
 
@@ -1093,7 +1342,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit13be = function(unsigned){
+    bit13be(unsigned?: boolean): number{
         return this.bit(13, unsigned, "big")
     }
     /**
@@ -1103,7 +1352,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit13 = function(){
+    ubit13(): number{
         return this.bit(13, true)
     }
 
@@ -1114,7 +1363,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit13le = function(){
+    ubit13le(): number{
         return this.bit(13, true, "little")
     }
 
@@ -1125,10 +1374,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit13be = function(){
+    ubit13be(): number{
         return this.bit(13, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -1137,7 +1386,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit14 = function(unsigned){
+    bit14(unsigned?: boolean): number{
         return this.bit(14, unsigned)
     }
 
@@ -1149,7 +1398,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit14le = function(unsigned){
+    bit14le(unsigned?: boolean): number{
         return this.bit(14, unsigned, "little")
     }
 
@@ -1161,7 +1410,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit14be = function(unsigned){
+    bit14be(unsigned?: boolean): number{
         return this.bit(14, unsigned, "big")
     }
     /**
@@ -1171,7 +1420,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit14 = function(){
+    ubit14(): number{
         return this.bit(14, true)
     }
 
@@ -1182,7 +1431,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit14le = function(){
+    ubit14le(): number{
         return this.bit(14, true, "little")
     }
 
@@ -1193,10 +1442,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit14be = function(){
+    ubit14be(): number{
         return this.bit(14, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -1205,7 +1454,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit15 = function(unsigned){
+    bit15(unsigned?: boolean): number{
         return this.bit(15, unsigned)
     }
 
@@ -1217,7 +1466,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit15le = function(unsigned){
+    bit15le(unsigned?: boolean): number{
         return this.bit(15, unsigned, "little")
     }
 
@@ -1229,7 +1478,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit15be = function(unsigned){
+    bit15be(unsigned?: boolean): number{
         return this.bit(15, unsigned, "big")
     }
     /**
@@ -1239,7 +1488,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit15 = function(){
+    ubit15(): number{
         return this.bit(15, true)
     }
 
@@ -1250,7 +1499,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit15le = function(){
+    ubit15le(): number{
         return this.bit(15, true, "little")
     }
 
@@ -1261,10 +1510,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit15be = function(){
+    ubit15be(): number{
         return this.bit(15, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -1273,7 +1522,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit16 = function(unsigned){
+    bit16(unsigned?: boolean): number{
         return this.bit(16, unsigned)
     }
 
@@ -1285,7 +1534,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit16le = function(unsigned){
+    bit16le(unsigned?: boolean): number{
         return this.bit(16, unsigned, "little")
     }
 
@@ -1297,7 +1546,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit16be = function(unsigned){
+    bit16be(unsigned?: boolean): number{
         return this.bit(16, unsigned, "big")
     }
     /**
@@ -1307,7 +1556,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit16 = function(){
+    ubit16(): number{
         return this.bit(16, true)
     }
 
@@ -1318,7 +1567,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit16le = function(){
+    ubit16le(): number{
         return this.bit(16, true, "little")
     }
 
@@ -1329,10 +1578,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit16be = function(){
+    ubit16be(): number{
         return this.bit(16, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -1341,7 +1590,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit17 = function(unsigned){
+    bit17(unsigned?: boolean): number{
         return this.bit(17, unsigned)
     }
 
@@ -1353,7 +1602,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit17le = function(unsigned){
+    bit17le(unsigned?: boolean): number{
         return this.bit(17, unsigned, "little")
     }
 
@@ -1365,7 +1614,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit17be = function(unsigned){
+    bit17be(unsigned?: boolean): number{
         return this.bit(17, unsigned, "big")
     }
     /**
@@ -1375,7 +1624,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit17 = function(){
+    ubit17(): number{
         return this.bit(17, true)
     }
 
@@ -1386,7 +1635,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit17le = function(){
+    ubit17le(): number{
         return this.bit(17, true, "little")
     }
 
@@ -1397,10 +1646,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit17be = function(){
+    ubit17be(): number{
         return this.bit(17, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -1409,7 +1658,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit18 = function(unsigned){
+    bit18(unsigned?: boolean): number{
         return this.bit(18, unsigned)
     }
 
@@ -1421,7 +1670,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit18le = function(unsigned){
+    bit18le(unsigned?: boolean): number{
         return this.bit(18, unsigned, "little")
     }
 
@@ -1433,7 +1682,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit18be = function(unsigned){
+    bit18be(unsigned?: boolean): number{
         return this.bit(18, unsigned, "big")
     }
     /**
@@ -1443,7 +1692,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit18 = function(){
+    ubit18(): number{
         return this.bit(18, true)
     }
 
@@ -1454,7 +1703,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit18le = function(){
+    ubit18le(): number{
         return this.bit(18, true, "little")
     }
 
@@ -1465,10 +1714,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit18be = function(){
+    ubit18be(): number{
         return this.bit(18, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -1477,7 +1726,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit19 = function(unsigned){
+    bit19(unsigned?: boolean): number{
         return this.bit(19, unsigned)
     }
 
@@ -1489,7 +1738,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit19le = function(unsigned){
+    bit19le(unsigned?: boolean): number{
         return this.bit(19, unsigned, "little")
     }
 
@@ -1501,7 +1750,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit19be = function(unsigned){
+    bit19be(unsigned?: boolean): number{
         return this.bit(19, unsigned, "big")
     }
     /**
@@ -1511,7 +1760,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit19 = function(){
+    ubit19(): number{
         return this.bit(19, true)
     }
 
@@ -1522,7 +1771,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit19le = function(){
+    ubit19le(): number{
         return this.bit(19, true, "little")
     }
 
@@ -1533,10 +1782,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit19be = function(){
+    ubit19be(): number{
         return this.bit(19, true, "big")
     }
-
+    
     /**
     * Bit field reader
     * 
@@ -1545,7 +1794,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit20 = function(unsigned){
+    bit20(unsigned?: boolean): number{
         return this.bit(20, unsigned)
     }
 
@@ -1557,7 +1806,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit20le = function(unsigned){
+    bit20le(unsigned?: boolean): number{
         return this.bit(20, unsigned, "little")
     }
 
@@ -1569,7 +1818,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit20be = function(unsigned){
+    bit20be(unsigned?: boolean): number{
         return this.bit(20, unsigned, "big")
     }
     /**
@@ -1579,7 +1828,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit20 = function(){
+    ubit20(): number{
         return this.bit(20, true)
     }
 
@@ -1590,7 +1839,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit20le = function(){
+    ubit20le(): number{
         return this.bit(20, true, "little")
     }
 
@@ -1601,10 +1850,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit20be = function(){
+    ubit20be(): number{
         return this.bit(20, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -1613,7 +1862,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit21 = function(unsigned){
+    bit21(unsigned?: boolean): number{
         return this.bit(21, unsigned)
     }
 
@@ -1625,7 +1874,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit21le = function(unsigned){
+    bit21le(unsigned?: boolean): number{
         return this.bit(21, unsigned, "little")
     }
 
@@ -1637,7 +1886,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit21be = function(unsigned){
+    bit21be(unsigned?: boolean): number{
         return this.bit(21, unsigned, "big")
     }
     /**
@@ -1647,7 +1896,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit21 = function(){
+    ubit21(): number{
         return this.bit(21, true)
     }
 
@@ -1658,7 +1907,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit21le = function(){
+    ubit21le(): number{
         return this.bit(21, true, "little")
     }
 
@@ -1669,10 +1918,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit21be = function(){
+    ubit21be(): number{
         return this.bit(21, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -1681,7 +1930,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit22 = function(unsigned){
+    bit22(unsigned?: boolean): number{
         return this.bit(22, unsigned)
     }
 
@@ -1693,7 +1942,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit22le = function(unsigned){
+    bit22le(unsigned?: boolean): number{
         return this.bit(22, unsigned, "little")
     }
 
@@ -1705,7 +1954,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit22be = function(unsigned){
+    bit22be(unsigned?: boolean): number{
         return this.bit(22, unsigned, "big")
     }
     /**
@@ -1715,7 +1964,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit22 = function(){
+    ubit22(): number{
         return this.bit(22, true)
     }
 
@@ -1726,7 +1975,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit22le = function(){
+    ubit22le(): number{
         return this.bit(22, true, "little")
     }
 
@@ -1737,10 +1986,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit22be = function(){
+    ubit22be(): number{
         return this.bit(22, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -1749,7 +1998,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit23 = function(unsigned){
+    bit23(unsigned?: boolean): number{
         return this.bit(23, unsigned)
     }
 
@@ -1761,7 +2010,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit23le = function(unsigned){
+    bit23le(unsigned?: boolean): number{
         return this.bit(23, unsigned, "little")
     }
 
@@ -1773,7 +2022,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit23be = function(unsigned){
+    bit23be(unsigned?: boolean): number{
         return this.bit(23, unsigned, "big")
     }
     /**
@@ -1783,7 +2032,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit23 = function(){
+    ubit23(): number{
         return this.bit(23, true)
     }
 
@@ -1794,7 +2043,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit23le = function(){
+    ubit23le(): number{
         return this.bit(23, true, "little")
     }
 
@@ -1805,10 +2054,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit23be = function(){
+    ubit23be(): number{
         return this.bit(23, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -1817,7 +2066,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit24 = function(unsigned){
+    bit24(unsigned?: boolean): number{
         return this.bit(24, unsigned)
     }
 
@@ -1829,7 +2078,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit24le = function(unsigned){
+    bit24le(unsigned?: boolean): number{
         return this.bit(24, unsigned, "little")
     }
 
@@ -1841,7 +2090,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit24be = function(unsigned){
+    bit24be(unsigned?: boolean): number{
         return this.bit(24, unsigned, "big")
     }
     /**
@@ -1851,7 +2100,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit24 = function(){
+    ubit24(): number{
         return this.bit(24, true)
     }
 
@@ -1862,7 +2111,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit24le = function(){
+    ubit24le(): number{
         return this.bit(24, true, "little")
     }
 
@@ -1873,10 +2122,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit24be = function(){
+    ubit24be(): number{
         return this.bit(24, true, "big")
     }
-
+    
     /**
     * Bit field reader
     * 
@@ -1885,7 +2134,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit25 = function(unsigned){
+    bit25(unsigned?: boolean): number{
         return this.bit(25, unsigned)
     }
 
@@ -1897,7 +2146,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit25le = function(unsigned){
+    bit25le(unsigned?: boolean): number{
         return this.bit(25, unsigned, "little")
     }
 
@@ -1909,7 +2158,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit25be = function(unsigned){
+    bit25be(unsigned?: boolean): number{
         return this.bit(25, unsigned, "big")
     }
     /**
@@ -1919,7 +2168,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit25 = function(){
+    ubit25(): number{
         return this.bit(25, true)
     }
 
@@ -1930,7 +2179,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit25le = function(){
+    ubit25le(): number{
         return this.bit(25, true, "little")
     }
 
@@ -1941,10 +2190,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit25be = function(){
+    ubit25be(): number{
         return this.bit(25, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -1953,7 +2202,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit26 = function(unsigned){
+    bit26(unsigned?: boolean): number{
         return this.bit(26, unsigned)
     }
 
@@ -1965,7 +2214,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit26le = function(unsigned){
+    bit26le(unsigned?: boolean): number{
         return this.bit(26, unsigned, "little")
     }
 
@@ -1977,7 +2226,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit26be = function(unsigned){
+    bit26be(unsigned?: boolean): number{
         return this.bit(26, unsigned, "big")
     }
     /**
@@ -1987,7 +2236,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit26 = function(){
+    ubit26(): number{
         return this.bit(26, true)
     }
 
@@ -1998,7 +2247,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit26le = function(){
+    ubit26le(): number{
         return this.bit(26, true, "little")
     }
 
@@ -2009,10 +2258,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit26be = function(){
+    ubit26be(): number{
         return this.bit(26, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -2021,7 +2270,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit27 = function(unsigned){
+    bit27(unsigned?: boolean): number{
         return this.bit(27, unsigned)
     }
 
@@ -2033,7 +2282,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit27le = function(unsigned){
+    bit27le(unsigned?: boolean): number{
         return this.bit(27, unsigned, "little")
     }
 
@@ -2045,7 +2294,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit27be = function(unsigned){
+    bit27be(unsigned?: boolean): number{
         return this.bit(27, unsigned, "big")
     }
     /**
@@ -2055,7 +2304,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit27 = function(){
+    ubit27(): number{
         return this.bit(27, true)
     }
 
@@ -2066,7 +2315,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit27le = function(){
+    ubit27le(): number{
         return this.bit(27, true, "little")
     }
 
@@ -2077,10 +2326,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit27be = function(){
+    ubit27be(): number{
         return this.bit(27, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -2089,7 +2338,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit28 = function(unsigned){
+    bit28(unsigned?: boolean): number{
         return this.bit(28, unsigned)
     }
 
@@ -2101,7 +2350,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit28le = function(unsigned){
+    bit28le(unsigned?: boolean): number{
         return this.bit(28, unsigned, "little")
     }
 
@@ -2113,7 +2362,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit28be = function(unsigned){
+    bit28be(unsigned?: boolean): number{
         return this.bit(28, unsigned, "big")
     }
     /**
@@ -2123,7 +2372,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit28 = function(){
+    ubit28(): number{
         return this.bit(28, true)
     }
 
@@ -2134,7 +2383,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit28le = function(){
+    ubit28le(): number{
         return this.bit(28, true, "little")
     }
 
@@ -2145,10 +2394,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit28be = function(){
+    ubit28be(): number{
         return this.bit(28, true, "big")
     }
-	
+    
     /**
     * Bit field reader
     * 
@@ -2157,7 +2406,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit29 = function(unsigned){
+    bit29(unsigned?: boolean): number{
         return this.bit(29, unsigned)
     }
 
@@ -2169,7 +2418,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit29le = function(unsigned){
+    bit29le(unsigned?: boolean): number{
         return this.bit(29, unsigned, "little")
     }
 
@@ -2181,7 +2430,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit29be = function(unsigned){
+    bit29be(unsigned?: boolean): number{
         return this.bit(29, unsigned, "big")
     }
     /**
@@ -2191,7 +2440,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit29 = function(){
+    ubit29(): number{
         return this.bit(29, true)
     }
 
@@ -2202,7 +2451,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit29le = function(){
+    ubit29le(): number{
         return this.bit(29, true, "little")
     }
 
@@ -2213,10 +2462,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit29be = function(){
+    ubit29be(): number{
         return this.bit(29, true, "big")
     }
-
+    
     /**
     * Bit field reader
     * 
@@ -2225,7 +2474,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit30 = function(unsigned){
+    bit30(unsigned?: boolean): number{
         return this.bit(30, unsigned)
     }
 
@@ -2237,7 +2486,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit30le = function(unsigned){
+    bit30le(unsigned?: boolean): number{
         return this.bit(30, unsigned, "little")
     }
 
@@ -2249,7 +2498,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit30be = function(unsigned){
+    bit30be(unsigned?: boolean): number{
         return this.bit(30, unsigned, "big")
     }
     /**
@@ -2259,7 +2508,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit30 = function(){
+    ubit30(): number{
         return this.bit(30, true)
     }
 
@@ -2270,7 +2519,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit30le = function(){
+    ubit30le(): number{
         return this.bit(30, true, "little")
     }
 
@@ -2281,10 +2530,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit30be = function(){
+    ubit30be(): number{
         return this.bit(30, true, "big")
     }
-
+    
     /**
     * Bit field reader
     * 
@@ -2293,7 +2542,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit31 = function(unsigned){
+    bit31(unsigned?: boolean): number{
         return this.bit(31, unsigned)
     }
 
@@ -2305,7 +2554,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit31le = function(unsigned){
+    bit31le(unsigned?: boolean): number{
         return this.bit(31, unsigned, "little")
     }
 
@@ -2317,7 +2566,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit31be = function(unsigned){
+    bit31be(unsigned?: boolean): number{
         return this.bit(31, unsigned, "big")
     }
     /**
@@ -2327,7 +2576,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit31 = function(){
+    ubit31(): number{
         return this.bit(31, true)
     }
 
@@ -2338,7 +2587,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit31le = function(){
+    ubit31le(): number{
         return this.bit(31, true, "little")
     }
 
@@ -2349,10 +2598,10 @@ class bireader {
     * 
     * @returns number
     */
-    ubit31be = function(){
+    ubit31be(): number{
         return this.bit(31, true, "big")
     }
-
+    
     /**
     * Bit field reader
     * 
@@ -2361,7 +2610,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit32 = function(unsigned){
+    bit32(unsigned?: boolean): number{
         return this.bit(32, unsigned)
     }
 
@@ -2373,7 +2622,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit32le = function(unsigned){
+    bit32le(unsigned?: boolean): number{
         return this.bit(32, unsigned, "little")
     }
 
@@ -2385,7 +2634,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit32be = function(unsigned){
+    bit32be(unsigned?: boolean): number{
         return this.bit(32, unsigned, "big")
     }
     /**
@@ -2395,7 +2644,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit32 = function(){
+    ubit32(): number{
         return this.bit(32, true)
     }
 
@@ -2406,7 +2655,7 @@ class bireader {
     * 
     * @returns number
     */
-    ubit32le = function(){
+    ubit32le(): number{
         return this.bit(32, true, "little")
     }
 
@@ -2417,8 +2666,20 @@ class bireader {
     * 
     * @returns number
     */
-    ubit32be = function(){
+    ubit32be(): number{
         return this.bit(32, true, "big")
+    }
+        
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    *
+    * @param {number} bits - bits to read
+    * @returns number
+    */
+    readUBitBE(bits: number): number{
+        return this.readBit(bits, true, "big")
     }
 
     /**
@@ -2427,10 +2688,9 @@ class bireader {
     * Note: When returning to a byte read, remaining bits are dropped
     *
     * @param {number} bits - bits to read
-    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    readUBitBE = this.ubitbe = function(bits){
+    ubitbe(bits: number): number{
         return this.readBit(bits, true, "big")
     }
 
@@ -2443,7 +2703,7 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    readBitBE = this.bitbe = function(bits, unsigned){
+    readBitBE(bits: number, unsigned?: boolean): number{
         return this.readBit(bits, unsigned, "big")
     }
 
@@ -2453,10 +2713,34 @@ class bireader {
     * Note: When returning to a byte read, remaining bits are dropped
     *
     * @param {number} bits - bits to read
-    * @param {boolean} signed - if the value is unsigned
+    * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    readUBitLE = this.ubitle = function(bits){
+    bitbe(bits: number, unsigned?: boolean): number{
+        return this.readBit(bits, unsigned, "big")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    *
+    * @param {number} bits - bits to read
+    * @returns number
+    */
+    readUBitLE(bits: number): number{
+        return this.readBit(bits, true, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    *
+    * @param {number} bits - bits to read
+    * @returns number
+    */
+    ubitle(bits: number): number{
         return this.readBit(bits, true, "little")
     }
 
@@ -2469,8 +2753,21 @@ class bireader {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    readBitLE = this.bitle = function(bits, signed){
-        return this.readBit(bits, signed, "little")
+    readBitLE(bits: number, unsigned?: boolean): number{
+        return this.readBit(bits, unsigned, "little")
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    *
+    * @param {number} bits - bits to read
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bitle(bits: number, unsigned?: boolean): number{
+        return this.readBit(bits, unsigned, "little")
     }
 
     //
@@ -2483,9 +2780,9 @@ class bireader {
     * @param {boolean} unsigned - if value is unsigned or not
     * @returns number
     */
-    readByte = this.byte = this.int8 = function(unsigned){
-        this.#check_size(1)
-        var read = this.data[this.offset]
+    readByte(unsigned?: boolean): number{
+        this.check_size(1)
+        var read = <unknown> this.data[this.offset] as number
         this.offset += 1
         if(unsigned == true){
             return read & 0xFF
@@ -2495,11 +2792,49 @@ class bireader {
     }
 
     /**
+    * Read byte
+    * 
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
+    */
+    byte(unsigned?: boolean): number{
+        return this.readByte(unsigned)
+    }
+
+    /**
+    * Read byte
+    * 
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
+    */
+    int8(unsigned?: boolean): number{
+        return this.readByte(unsigned)
+    }
+
+    /**
     * Read unsigned byte
     * 
     * @returns number
     */
-    readUByte = this.uint8 = this.ubyte = function(){
+    readUByte(): number {
+        return this.readByte(true)
+    }
+
+    /**
+    * Read unsigned byte
+    * 
+    * @returns number
+    */
+    uint8(): number{
+        return this.readByte(true)
+    }
+
+    /**
+    * Read unsigned byte
+    * 
+    * @returns number
+    */
+    ubyte(): number{
         return this.readByte(true)
     }
 
@@ -2514,13 +2849,13 @@ class bireader {
     * @param {string} endian - ```big``` or ```little```
     * @returns number
     */
-    readInt16 = this.short = this.int16 = this.word = function(unsigned, endian){
-        this.#check_size(2)
-        var read
+    readInt16(unsigned?: boolean, endian?: string): number{
+        this.check_size(2)
+        var read: number;
         if((endian != undefined ? endian : this.endian)  == "little"){
-            read = ((this.data[this.offset + 1] & 0xFFFF) << 8) | (this.data[this.offset]& 0xFFFF);
+            read = ((<unknown>this.data[this.offset + 1] as number & 0xFFFF) << 8) | (<unknown>this.data[this.offset] as number & 0xFFFF);
         } else {
-            read = ((this.data[this.offset]& 0xFFFF) << 8) | (this.data[this.offset + 1] & 0xFFFF);
+            read = ((<unknown>this.data[this.offset] as number& 0xFFFF) << 8) | (<unknown>this.data[this.offset + 1] as number& 0xFFFF);
         }
         this.offset += 2
         if(unsigned == undefined || unsigned == false){
@@ -2531,13 +2866,79 @@ class bireader {
     }
 
     /**
+    * Read short
+    * 
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    int16(unsigned?: boolean, endian?: string): number{
+        return this.readInt16(unsigned, endian)
+    }
+
+    /**
+    * Read short
+    * 
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    short(unsigned?: boolean, endian?: string): number{
+        return this.readInt16(unsigned, endian)
+    }
+
+    /**
+    * Read short
+    * 
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    word(unsigned?: boolean, endian?: string): number{
+        return this.readInt16(unsigned, endian)
+    }
+
+    /**
     * Read unsigned short
     * 
     * @param {string} endian - ```big``` or ```little```
     * 
     * @returns number
     */
-    readUInt16 = this.uint16 = this.ushort = this.uword = function(endian){
+    readUInt16(endian?: string): number{
+        return this.readInt16(true, endian)
+    }
+
+    /**
+    * Read unsigned short
+    * 
+    * @param {string} endian - ```big``` or ```little```
+    * 
+    * @returns number
+    */
+    uint16(endian?: string): number{
+        return this.readInt16(true, endian)
+    }
+
+    /**
+    * Read unsigned short
+    * 
+    * @param {string} endian - ```big``` or ```little```
+    * 
+    * @returns number
+    */
+    ushort(endian?: string): number{
+        return this.readInt16(true, endian)
+    }
+
+    /**
+    * Read unsigned short
+    * 
+    * @param {string} endian - ```big``` or ```little```
+    * 
+    * @returns number
+    */
+    uword(endian?: string): number{
         return this.readInt16(true, endian)
     }
 
@@ -2546,7 +2947,34 @@ class bireader {
     * 
     * @returns number
     */
-    readUInt16LE = this.uint16le = this.ushortle = this.uwordle = function(){
+    readUInt16LE(): number{
+        return this.readInt16(true, "little")
+    }
+
+    /**
+    * Read unsigned short in little endian
+    * 
+    * @returns number
+    */
+    uint16le(): number{
+        return this.readInt16(true, "little")
+    }
+
+    /**
+    * Read unsigned short in little endian
+    * 
+    * @returns number
+    */
+    ushortle(): number{
+        return this.readInt16(true, "little")
+    }
+
+    /**
+    * Read unsigned short in little endian
+    * 
+    * @returns number
+    */
+    uwordle(): number{
         return this.readInt16(true, "little")
     }
 
@@ -2555,7 +2983,34 @@ class bireader {
     * 
     * @returns number
     */
-    readInt16LE = this.int16le = this.shortle = this.wordle = function(){
+    readInt16LE(): number{
+        return this.readInt16(false, "little")
+    }
+
+    /**
+    * Read signed short in little endian
+    * 
+    * @returns number
+    */
+    int16le(): number{
+        return this.readInt16(false, "little")
+    }
+
+    /**
+    * Read signed short in little endian
+    * 
+    * @returns number
+    */
+    shortle(): number{
+        return this.readInt16(false, "little")
+    }
+
+    /**
+    * Read signed short in little endian
+    * 
+    * @returns number
+    */
+    wordle(): number{
         return this.readInt16(false, "little")
     }
 
@@ -2564,7 +3019,34 @@ class bireader {
     * 
     * @returns number
     */
-    readUInt16BE = this.uint16be = this.ushortbe = this.uwordbe = function(){
+    readUInt16BE(): number{
+        return this.readInt16(true, "big")
+    }
+
+    /**
+    * Read unsigned short in big endian
+    * 
+    * @returns number
+    */
+    uint16be(): number{
+        return this.readInt16(true, "big")
+    }
+
+    /**
+    * Read unsigned short in big endian
+    * 
+    * @returns number
+    */
+    ushortbe(): number{
+        return this.readInt16(true, "big")
+    }
+
+    /**
+    * Read unsigned short in big endian
+    * 
+    * @returns number
+    */
+    uwordbe(): number{
         return this.readInt16(true, "big")
     }
 
@@ -2573,7 +3055,34 @@ class bireader {
     * 
     * @returns number
     */
-    readInt16BE = this.int16be = this.shortbe = this.wordbe = function(){
+    readInt16BE(): number{
+        return this.readInt16(false, "big")
+    }
+
+    /**
+    * Read signed short in big endian
+    * 
+    * @returns number
+    */
+    int16be(): number{
+        return this.readInt16(false, "big")
+    }
+
+    /**
+    * Read signed short in big endian
+    * 
+    * @returns number
+    */
+    shortbe(): number{
+        return this.readInt16(false, "big")
+    }
+
+    /**
+    * Read signed short in big endian
+    * 
+    * @returns number
+    */
+    wordbe(): number{
         return this.readInt16(false, "big")
     }
 
@@ -2587,14 +3096,9 @@ class bireader {
     * @param {string} endian - ```big``` or ```little```
     * @returns number
     */
-    readHalfFloat = this.halffloat = this.half = function(endian){
-        this.#check_size(2)
-        var uint16Value;
-        if((endian != undefined ? endian : this.endian) == "little"){
-            uint16Value = this.readInt16LE(true)
-        } else {
-            uint16Value = this.readInt16BE(true)
-        }
+    readHalfFloat(endian?: string): number{
+        this.check_size(2)
+        var uint16Value = this.readInt16(true, (endian != undefined ? endian : this.endian))
         const sign = (uint16Value & 0x8000) >> 15;
         const exponent = (uint16Value & 0x7C00) >> 10;
         const fraction = uint16Value & 0x03FF;
@@ -2625,9 +3129,29 @@ class bireader {
     /**
     * Read half float
     * 
+    * @param {string} endian - ```big``` or ```little```
     * @returns number
     */
-    readHalfFloatBE = this.halffloatbe = this.halfbe = function(){
+    halffloat(endian?: string): number{
+        return this.readHalfFloat(endian);
+    }
+
+    /**
+    * Read half float
+    * 
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    half(endian?: string): number{
+        return this.readHalfFloat(endian);
+    }
+
+    /**
+    * Read half float
+    * 
+    * @returns number
+    */
+    readHalfFloatBE(): number{
         return this.readHalfFloat("big")
     }
 
@@ -2636,7 +3160,43 @@ class bireader {
     * 
     * @returns number
     */
-    readHalfFloatLE = this.halffloatle = this.halfle = function(){
+    halffloatbe(){
+        return this.readHalfFloat("big")
+    }
+
+    /**
+    * Read half float
+    * 
+    * @returns number
+    */
+    halfbe(): number{
+        return this.readHalfFloat("big")
+    }
+
+    /**
+    * Read half float
+    * 
+    * @returns number
+    */
+    readHalfFloatLE(): number{
+        return this.readHalfFloat("little")
+    }
+
+    /**
+    * Read half float
+    * 
+    * @returns number
+    */
+    halffloatle(): number{
+        return this.readHalfFloat("little")
+    }
+
+    /**
+    * Read half float
+    * 
+    * @returns number
+    */
+    halfle(): number{
         return this.readHalfFloat("little")
     }
 
@@ -2651,13 +3211,13 @@ class bireader {
     * @param {string} endian - ```big``` or ```little```
     * @returns number
     */
-    readInt32 = this.int = this.double = this.int32 = this.long  = function(unsigned, endian){
-        this.#check_size(4)
-        var read;
+    readInt32(unsigned?: boolean, endian?: string): number{
+        this.check_size(4)
+        var read: number;
         if((endian != undefined ? endian : this.endian) == "little"){
-            read = (((this.data[this.offset + 3] & 0xFF)<< 24) | ((this.data[this.offset + 2] & 0xFF) << 16) | ((this.data[this.offset + 1] & 0xFF) << 8) | (this.data[this.offset] & 0xFF))
+            read = (((<unknown>this.data[this.offset + 3] as number & 0xFF)<< 24) | ((<unknown>this.data[this.offset + 2] as number & 0xFF) << 16) | ((<unknown>this.data[this.offset + 1] as number & 0xFF) << 8) | (<unknown>this.data[this.offset] as number & 0xFF))
         } else {
-            read = ((this.data[this.offset] & 0xFF) << 24) | ((this.data[this.offset + 1] & 0xFF) << 16) | ((this.data[this.offset + 2] & 0xFF) << 8) | (this.data[this.offset + 3] & 0xFF)
+            read = ((<unknown>this.data[this.offset] as number & 0xFF) << 24) | ((<unknown>this.data[this.offset + 1] as number & 0xFF) << 16) | ((<unknown>this.data[this.offset + 2] as number & 0xFF) << 8) | (<unknown>this.data[this.offset + 3] as number & 0xFF)
         }
         this.offset += 4
         if(unsigned == undefined || unsigned == false){
@@ -2668,11 +3228,91 @@ class bireader {
     }
 
     /**
+    * Read 32 bit integer
+    * 
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    int(unsigned?: boolean, endian?: string): number{
+        return this.readInt32(unsigned,endian)
+    }
+
+    /**
+    * Read 32 bit integer
+    * 
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    double(unsigned?: boolean, endian?: string): number{
+        return this.readInt32(unsigned,endian)
+    }
+
+    /**
+    * Read 32 bit integer
+    * 
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    int32(unsigned?: boolean, endian?: string): number{
+        return this.readInt32(unsigned,endian)
+    }
+
+    /**
+    * Read 32 bit integer
+    * 
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    long(unsigned?: boolean, endian?: string): number{
+        return this.readInt32(unsigned,endian)
+    }
+
+    /**
     * Read unsigned 32 bit integer
     * 
     * @returns number
     */
-    readUInt = this.uint = this.udouble = this.uint32 = this.ulong = function(){
+    readUInt(): number{
+        return this.readInt32(true)
+    }
+
+    /**
+    * Read unsigned 32 bit integer
+    * 
+    * @returns number
+    */
+    uint(): number{
+        return this.readInt32(true)
+    }
+
+    /**
+    * Read unsigned 32 bit integer
+    * 
+    * @returns number
+    */
+    udouble(): number{
+        return this.readInt32(true)
+    }
+
+    /**
+    * Read unsigned 32 bit integer
+    * 
+    * @returns number
+    */
+    uint32(): number{
+        return this.readInt32(true)
+    }
+
+    /**
+    * Read unsigned 32 bit integer
+    * 
+    * @returns number
+    */
+    ulong(): number{
         return this.readInt32(true)
     }
 
@@ -2681,7 +3321,43 @@ class bireader {
     * 
     * @returns number
     */
-    readInt32BE = this.intbe = this.doublebe = this.int32be = this.longbe = function(){
+    readInt32BE(): number{
+        return this.readInt32(false, "big")
+    }
+
+    /**
+    * Read signed 32 bit integer
+    * 
+    * @returns number
+    */
+    intbe(): number{
+        return this.readInt32(false, "big")
+    }
+
+    /**
+    * Read signed 32 bit integer
+    * 
+    * @returns number
+    */
+    doublebe(): number{
+        return this.readInt32(false, "big")
+    }
+
+    /**
+    * Read signed 32 bit integer
+    * 
+    * @returns number
+    */
+    int32be(): number{
+        return this.readInt32(false, "big")
+    }
+
+    /**
+    * Read signed 32 bit integer
+    * 
+    * @returns number
+    */
+    longbe(): number{
         return this.readInt32(false, "big")
     }
 
@@ -2690,7 +3366,43 @@ class bireader {
     * 
     * @returns number
     */
-    readUInt32BE = this.uintbe = this.udoublebe = this.uint32be = this.ulongbe = function(){
+    readUInt32BE(): number{
+        return this.readInt32(true, "big")
+    }
+
+    /**
+    * Read unsigned 32 bit integer
+    * 
+    * @returns number
+    */
+    uintbe(): number{
+        return this.readInt32(true, "big")
+    }
+
+    /**
+    * Read unsigned 32 bit integer
+    * 
+    * @returns number
+    */
+    udoublebe(): number{
+        return this.readInt32(true, "big")
+    }
+
+    /**
+    * Read unsigned 32 bit integer
+    * 
+    * @returns number
+    */
+    uint32be(): number{
+        return this.readInt32(true, "big")
+    }
+
+    /**
+    * Read unsigned 32 bit integer
+    * 
+    * @returns number
+    */
+    ulongbe(): number{
         return this.readInt32(true, "big")
     }
 
@@ -2699,7 +3411,7 @@ class bireader {
     * 
     * @returns number
     */
-    readInt32LE = this.intle = this.doublele = this.int32le = this.longle = function(){
+    readInt32LE(): number{
         return this.readInt32(false, "little")
     }
 
@@ -2708,7 +3420,79 @@ class bireader {
     * 
     * @returns number
     */
-    readUInt32LE = this.uintle = this.udoublele = this.uint32le = this.ulongle = function(){
+    intle(): number{
+        return this.readInt32(false, "little")
+    }
+
+    /**
+    * Read signed 32 bit integer
+    * 
+    * @returns number
+    */
+    doublele(): number{
+        return this.readInt32(false, "little")
+    }
+
+    /**
+    * Read signed 32 bit integer
+    * 
+    * @returns number
+    */
+    int32le(): number{
+        return this.readInt32(false, "little")
+    }
+
+    /**
+    * Read signed 32 bit integer
+    * 
+    * @returns number
+    */
+    longle(): number{
+        return this.readInt32(false, "little")
+    }
+
+    /**
+    * Read signed 32 bit integer
+    * 
+    * @returns number
+    */
+    readUInt32LE(): number{
+        return this.readInt32(true, "little")
+    }
+
+    /**
+    * Read signed 32 bit integer
+    * 
+    * @returns number
+    */
+    uintle(): number{
+        return this.readInt32(true, "little")
+    }
+
+    /**
+    * Read signed 32 bit integer
+    * 
+    * @returns number
+    */
+    udoublele(): number{
+        return this.readInt32(true, "little")
+    }
+
+    /**
+    * Read signed 32 bit integer
+    * 
+    * @returns number
+    */
+    uint32le(): number{
+        return this.readInt32(true, "little")
+    }
+
+    /**
+    * Read signed 32 bit integer
+    * 
+    * @returns number
+    */
+    ulongle(): number{
         return this.readInt32(true, "little")
     }
 
@@ -2722,23 +3506,18 @@ class bireader {
     * @param {string} endian - ```big``` or ```little```
     * @returns number
     */
-    readFloat = this.float = function(endian){
-        this.#check_size(4)
-        var uint32Value;
-        if((endian == undefined ? this.endian : endian) == "little"){
-            uint32Value = this.readUInt32LE()
-        } else {
-            uint32Value = this.readUInt32BE()
-        }
+    readFloat(endian?: string): number{
+        this.check_size(4)
+        var uint32Value = this.readInt32(true, (endian == undefined ? this.endian : endian))
         // Check if the value is negative (i.e., the most significant bit is set)
-        const isNegative = (uint32Value & 0x80000000) !== 0;
+        const isNegative = (uint32Value & 0x80000000) !== 0 ? 1: 0;
 
         // Extract the exponent and fraction parts
         const exponent = (uint32Value >> 23) & 0xFF;
         const fraction = uint32Value & 0x7FFFFF;
 
         // Calculate the float value
-        let floatValue;
+        let floatValue: number;
 
         if (exponent === 0) {
             // Denormalized number (exponent is 0)
@@ -2757,9 +3536,19 @@ class bireader {
     /**
     * Read float
     * 
+    * @param {string} endian - ```big``` or ```little```
     * @returns number
     */
-    readFloatBE = this.floatbe = function(){
+    float(endian?: string): number{
+        return this.readFloat(endian);
+    }
+
+    /**
+    * Read float
+    * 
+    * @returns number
+    */
+    readFloatBE(): number{
         return this.readFloat("big")
     }
 
@@ -2768,7 +3557,25 @@ class bireader {
     * 
     * @returns number
     */
-     readFloatLE = this.floatle = function(){
+    floatbe(): number{
+        return this.readFloat("big")
+    }
+
+    /**
+    * Read float
+    * 
+    * @returns number
+    */
+    readFloatLE(): number{
+        return this.readFloat("little")
+    }
+
+    /**
+    * Read float
+    * 
+    * @returns number
+    */
+    floatle(): number{
         return this.readFloat("little")
     }
   
@@ -2782,14 +3589,14 @@ class bireader {
     * @param {string} endian - ```big``` or ```little```
     * @returns number
     */
-    readInt64 = this.int64 = this.bigint = this.quad = function(unsigned, endian) {
-        this.#check_size(8)
+    readInt64(unsigned?: boolean, endian?: string): bigint {
+        this.check_size(8)
         
         // Convert the byte array to a BigInt
-        let value = BigInt(0);
+        let value: bigint = BigInt(0);
         if((endian == undefined ? this.endian : endian) == "little"){
             for (let i = 0; i < 8; i++) {
-                value |= BigInt((this.data[this.offset] & 0xFF)) << BigInt(8 * i);
+                value = value | BigInt((<unknown>this.data[this.offset]  as number & 0xFF)) << BigInt(8 * i);
                 this.offset += 1
             }
             if(unsigned == undefined || unsigned == false){
@@ -2802,7 +3609,7 @@ class bireader {
             }
         } else {
             for (let i = 0; i < 8; i++) {
-                value = (value << BigInt(8)) | BigInt((this.data[this.offset] & 0xFF));
+                value = (value << BigInt(8)) | BigInt((<unknown>this.data[this.offset] as number & 0xFF));
                 this.offset += 1
                 }
             if(unsigned == undefined || unsigned == false){
@@ -2817,11 +3624,68 @@ class bireader {
     }
 
     /**
+    * Read signed 64 bit integer
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    int64(unsigned?: boolean, endian?: string): bigint {
+        return this.readInt64(unsigned,endian)
+    }
+
+    /**
+    * Read signed 64 bit integer
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    bigint(unsigned?: boolean, endian?: string): bigint {
+        return this.readInt64(unsigned,endian)
+    }
+
+    /**
+    * Read signed 64 bit integer
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    quad(unsigned?: boolean, endian?: string): bigint {
+        return this.readInt64(unsigned,endian)
+    }
+
+    /**
     * Read unsigned 64 bit integer
     * 
     * @returns number
     */
-    readUInt64 = this.uint64 = this.ubigint = this.uquad = function() {
+    readUInt64(): bigint {
+        return this.readInt64(true)
+    }
+
+    /**
+    * Read unsigned 64 bit integer
+    * 
+    * @returns number
+    */
+    uint64(): bigint {
+        return this.readInt64(true)
+    }
+
+    /**
+    * Read unsigned 64 bit integer
+    * 
+    * @returns number
+    */
+    ubigint(): bigint {
+        return this.readInt64(true)
+    }
+
+    /**
+    * Read unsigned 64 bit integer
+    * 
+    * @returns number
+    */
+    uquad(): bigint {
         return this.readInt64(true)
     }
 
@@ -2830,7 +3694,34 @@ class bireader {
     * 
     * @returns number
     */
-    readInt64BE = this.int64be = this.bigintbe = this.quadbe = function() {
+    readInt64BE(): bigint {
+        return this.readInt64(false, "big")
+    }
+
+    /**
+    * Read signed 64 bit integer
+    * 
+    * @returns number
+    */
+    int64be(): bigint {
+        return this.readInt64(false, "big")
+    }
+
+    /**
+    * Read signed 64 bit integer
+    * 
+    * @returns number
+    */
+    bigintbe(): bigint {
+        return this.readInt64(false, "big")
+    }
+
+    /**
+    * Read signed 64 bit integer
+    * 
+    * @returns number
+    */
+    quadbe(): bigint {
         return this.readInt64(false, "big")
     }
 
@@ -2839,7 +3730,34 @@ class bireader {
     * 
     * @returns number
     */
-    readUInt64BE = this.uint64be = this.ubigintbe = this.uquadbe =  function() {
+    readUInt64BE(): bigint {
+        return this.readInt64(true, "big");
+    }
+
+    /**
+    * Read unsigned 64 bit integer
+    * 
+    * @returns number
+    */
+    uint64be(): bigint {
+        return this.readInt64(true, "big");
+    }
+
+    /**
+    * Read unsigned 64 bit integer
+    * 
+    * @returns number
+    */
+    ubigintbe(): bigint {
+        return this.readInt64(true, "big");
+    }
+
+    /**
+    * Read unsigned 64 bit integer
+    * 
+    * @returns number
+    */
+    uquadbe(): bigint {
         return this.readInt64(true, "big");
     }
 
@@ -2848,7 +3766,34 @@ class bireader {
     * 
     * @returns number
     */
-    readInt64LE = this.int64le = this.bigintle = this.quadle = function() {
+    readInt64LE(): bigint {
+        return this.readInt64(false, "little")
+    }
+
+    /**
+    * Read signed 64 bit integer
+    * 
+    * @returns number
+    */
+    int64le(): bigint {
+        return this.readInt64(false, "little")
+    }
+
+    /**
+    * Read signed 64 bit integer
+    * 
+    * @returns number
+    */
+    bigintle(): bigint {
+        return this.readInt64(false, "little")
+    }
+
+    /**
+    * Read signed 64 bit integer
+    * 
+    * @returns number
+    */
+    quadle(): bigint {
         return this.readInt64(false, "little")
     }
 
@@ -2857,7 +3802,34 @@ class bireader {
     * 
     * @returns number
     */
-    readUInt64LE = this.uint64le = this.ubigintle = this.uquadle = function() {
+    readUInt64LE(): bigint {
+        return this.readInt64(true, "little");
+    }
+
+    /**
+    * Read unsigned 64 bit integer
+    * 
+    * @returns number
+    */
+    uint64le(): bigint {
+        return this.readInt64(true, "little");
+    }
+
+    /**
+    * Read unsigned 64 bit integer
+    * 
+    * @returns number
+    */
+    ubigintle(): bigint {
+        return this.readInt64(true, "little");
+    }
+
+    /**
+    * Read unsigned 64 bit integer
+    * 
+    * @returns number
+    */
+    uquadle(): bigint {
         return this.readInt64(true, "little");
     }
 
@@ -2871,47 +3843,62 @@ class bireader {
     * @param {string} endian - ```big``` or ```little```
     * @returns number
     */
-    readDoubleFloat = this.doublefloat = this.dfloat = function(endian){
-        this.#check_size(8)
-        var uint64Value;
-        if((endian == undefined ? this.endian : endian) == "little"){
-            uint64Value = this.readUInt64LE()
-        } else {
-            uint64Value = this.readUInt64BE()
-        }
+    readDoubleFloat(endian?: string): number{
+        this.check_size(8)
+        var uint64Value = this.readInt64(true, (endian == undefined ? this.endian : endian))
         const sign = (uint64Value & 0x8000000000000000n) >> 63n;
         const exponent = Number((uint64Value & 0x7FF0000000000000n) >> 52n) - 1023;
         const fraction = Number(uint64Value & 0x000FFFFFFFFFFFFFn) / Math.pow(2, 52);
 
-        let floatValue;
+        var floatValue: number;
 
         if (exponent == -1023) {
             if (fraction == 0) {
-            floatValue = (sign == 0) ? 0 : -0; // +/-0
+            floatValue = (sign == 0n) ? 0 : -0; // +/-0
             } else {
             // Denormalized number
-            floatValue = (sign == 0 ? 1 : -1) * Math.pow(2, -1022) * fraction;
+            floatValue = (sign == 0n ? 1 : -1) * Math.pow(2, -1022) * fraction;
             }
         } else if (exponent == 1024) {
             if (fraction == 0) {
-            floatValue = (sign == 0) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+            floatValue = (sign == 0n) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
             } else {
             floatValue = Number.NaN;
             }
         } else {
             // Normalized number
-            floatValue = (sign == 0 ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
+            floatValue = (sign == 0n ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
         }
 
         return floatValue;
     }
 
-     /**
+    /**
+    * Read double float
+    * 
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    doublefloat(endian?: string): number{
+        return this.readDoubleFloat(endian)
+    }
+
+    /**
+    * Read double float
+    * 
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    dfloat(endian?: string): number{
+        return this.readDoubleFloat(endian)
+    }
+
+    /**
     * Read double float
     * 
     * @returns number
     */
-    readDoubleFloatBE = this.dfloatebe = this.doublefloatbe = function(){
+    readDoubleFloatBE(): number{
         return this.readDoubleFloat("big")
     }
 
@@ -2920,7 +3907,43 @@ class bireader {
     * 
     * @returns number
     */
-    readDoubleFloatLE = this.dfloatle = this.doublefloatle = function(){
+    dfloatebe(): number{
+        return this.readDoubleFloat("big")
+    }
+
+    /**
+    * Read double float
+    * 
+    * @returns number
+    */
+    doublefloatbe(): number{
+        return this.readDoubleFloat("big")
+    }
+
+    /**
+    * Read double float
+    * 
+    * @returns number
+    */
+    readDoubleFloatLE(): number{
+        return this.readDoubleFloat("little")
+    }
+
+    /**
+    * Read double float
+    * 
+    * @returns number
+    */
+    dfloatle(): number{
+        return this.readDoubleFloat("little")
+    }
+
+    /**
+    * Read double float
+    * 
+    * @returns number
+    */
+    doublefloatle(): number{
         return this.readDoubleFloat("little")
     }
 
@@ -2945,22 +3968,29 @@ class bireader {
     * ```
     * @return string
     */
-    readString = this.string = function(options = {}){
+    readString(
+        options?: {   
+            length?: number,
+            stringType?: string,
+            terminateValue?: number,
+            lengthReadSize?: number,
+            stripNull?: boolean,
+            encoding?: string,
+            endian?:string,
+        } ): string{
 
-        var {
-            length = undefined,
-            stringType = 'utf-8',
-            terminateValue = undefined,
-            lengthReadSize = 1,
-            stripNull = true,
-            encoding = undefined,
-            endian = this.endian,  
-        } = options;
+        var length:any = options && options.length
+        var stringType:any = options && options.stringType || 'utf-8'
+        var terminateValue:any = options && options.terminateValue
+        var lengthReadSize:any = options && options.lengthReadSize || 1
+        var stripNull: any = options && options.stripNull || true
+        var encoding: any = options && options.encoding || 'utf-8'
+        var endian:any = options && options.endian || this.endian
         
         var terminate = terminateValue
 
         if(length != undefined){
-            this.#check_size(length)
+            this.check_size(length)
         }
         
         if(typeof terminateValue == "number"){
@@ -2983,7 +4013,7 @@ class bireader {
             }
 
             // Read the string as UTF-8 encoded untill 0 or terminateValue
-            const encodedBytes = [];
+            const encodedBytes: Array<number> = [];
 
             if(length == undefined && terminateValue == undefined){
                 terminate = 0
@@ -3047,7 +4077,7 @@ class bireader {
             }
             
             // Read the string as Pascal or Delphi encoded
-            const encodedBytes = [];
+            const encodedBytes: Array<number> = [];
             for (let i = 0; i < maxBytes; i++) {
               if (stringType == 'wide-pascal') {
                 const read = this.readInt16(true, endian)
@@ -3061,7 +4091,7 @@ class bireader {
                 }
               }
             }
-            var str_return
+            var str_return: string
             if(stringType == 'wide-pascal'){
                 str_return = new TextDecoder(encoding).decode(new Uint16Array(encodedBytes));
             } else {
@@ -3074,6 +4104,19 @@ class bireader {
         }
     }
 
+    string(
+        options?: {   
+            length?: number,
+            stringType?: string,
+            terminateValue?: number,
+            lengthReadSize?: number,
+            stripNull?: boolean,
+            encoding?: string,
+            endian?: string,
+        } ): string{
+        return this.readString(options)
+    }
+
     /**
     * Reads UTF-8 (C) string
     * 
@@ -3083,7 +4126,20 @@ class bireader {
     * 
     * @return string
     */
-    utf8string = this.cstring = function(length, terminateValue, stripNull){
+    utf8string(length?: number, terminateValue?: number, stripNull?: boolean): string{
+        return this.string({stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull})
+    }
+
+    /**
+    * Reads UTF-8 (C) string
+    * 
+    * @param {number} length - for fixed length utf strings
+    * @param {number} terminateValue - for non-fixed length utf strings
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
+    */
+    cstring(length?: number, terminateValue?: number, stripNull?: boolean): string{
         return this.string({stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull})
     }
 
@@ -3096,7 +4152,7 @@ class bireader {
     * 
     * @return string
     */
-    ansistring = function(length, terminateValue, stripNull){
+    ansistring(length?: number, terminateValue?: number, stripNull?: boolean): string{
         return this.string({stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue, stripNull: stripNull})
     }
 
@@ -3110,7 +4166,21 @@ class bireader {
     * 
     * @return string
     */
-    utf16string = this.unistring = function(length, terminateValue, stripNull, endian){
+    utf16string(length?: number, terminateValue?: number, stripNull?: boolean, endian?: string): string{
+        return this.string({stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull})
+    }
+
+    /**
+    * Reads UTF-16 (Unicode) string
+    * 
+    * @param {number} length - for fixed length utf strings
+    * @param {number} terminateValue - for non-fixed length utf strings
+    * @param {boolean} stripNull - removes 0x00 characters
+    * @param {string} endian - ``big`` or ``little``
+    * 
+    * @return string
+    */
+    unistring(length?: number, terminateValue?: number, stripNull?: boolean, endian?: string): string{
         return this.string({stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull})
     }
 
@@ -3123,7 +4193,20 @@ class bireader {
     * 
     * @return string
     */
-    utf16stringle = this.unistringle = function(length, terminateValue, stripNull){
+    utf16stringle(length?: number, terminateValue?: number, stripNull?: boolean): string{
+        return this.string({stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull})
+    }
+
+    /**
+    * Reads UTF-16 (Unicode) string in little endian order
+    * 
+    * @param {number} length - for fixed length utf strings
+    * @param {number} terminateValue - for non-fixed length utf strings
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
+    */
+    unistringle(length?: number, terminateValue?: number, stripNull?: boolean): string{
         return this.string({stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull})
     }
 
@@ -3136,7 +4219,20 @@ class bireader {
     * 
     * @return string
     */
-    utf16stringbe = this.unistringbe = function(length, terminateValue, stripNull){
+    utf16stringbe(length?: number, terminateValue?: number, stripNull?: boolean): string{
+        return this.string({stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull})
+    }
+
+    /**
+    * Reads UTF-16 (Unicode) string in big endian order
+    * 
+    * @param {number} length - for fixed length utf strings
+    * @param {number} terminateValue - for non-fixed length utf strings
+    * @param {boolean} stripNull - removes 0x00 characters
+    * 
+    * @return string
+    */
+    unistringbe(length?: number, terminateValue?: number, stripNull?: boolean): string{
         return this.string({stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull})
     }
 
@@ -3149,7 +4245,7 @@ class bireader {
     * 
     * @return string
     */
-    pstring = function(lengthReadSize, stripNull, endian){
+    pstring(lengthReadSize?: number, stripNull?: boolean, endian?: string): string{
         return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian})
     }
 
@@ -3161,7 +4257,7 @@ class bireader {
     * 
     * @return string
     */
-    pstring1 = function(stripNull, endian){
+    pstring1(stripNull?: boolean, endian?: string): string{
         return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: endian})
     }
 
@@ -3172,7 +4268,7 @@ class bireader {
     * 
     * @return string
     */
-    pstring1le = function(stripNull){
+    pstring1le(stripNull?: boolean): string{
         return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "little"})
     }
 
@@ -3183,7 +4279,7 @@ class bireader {
     * 
     * @return string
     */
-    pstring1be = function(stripNull){
+    pstring1be(stripNull?: boolean): string{
         return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "big"})
     }
 
@@ -3195,7 +4291,7 @@ class bireader {
     * 
     * @return string
     */
-    pstring2 = function(stripNull, endian){
+    pstring2(stripNull?: boolean, endian?: string): string{
         return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: endian})
     }
 
@@ -3206,7 +4302,7 @@ class bireader {
     * 
     * @return string
     */
-    pstring2le = function(stripNull){
+    pstring2le(stripNull?: boolean): string{
         return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "little"})
     }
 
@@ -3217,7 +4313,7 @@ class bireader {
     * 
     * @return string
     */
-    pstring2be = function(stripNull){
+    pstring2be(stripNull?: boolean): string{
         return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "big"})
     }
 
@@ -3229,7 +4325,7 @@ class bireader {
     * 
     * @return string
     */
-    pstring4 = function(stripNull, endian){
+    pstring4(stripNull?: boolean, endian?: string): string{
         return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: endian})
     }
 
@@ -3240,7 +4336,7 @@ class bireader {
     * 
     * @return string
     */
-    pstring4le = function(stripNull){
+    pstring4le(stripNull?: boolean): string{
         return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "little"})
     }
 
@@ -3251,7 +4347,7 @@ class bireader {
     * 
     * @return string
     */
-    pstring4be = function(stripNull){
+    pstring4be(stripNull?: boolean): string{
         return this.string({stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "big"})
     }
 
@@ -3264,7 +4360,7 @@ class bireader {
     * 
     * @return string
     */
-    wpstring = function(lengthReadSize, stripNull, endian){
+    wpstring(lengthReadSize?: number, stripNull?: boolean, endian?: string): string{
         return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: lengthReadSize, endian: endian, stripNull: stripNull})
     }
 
@@ -3276,7 +4372,7 @@ class bireader {
     * 
     * @return string
     */
-    wpstring1 = function(stripNull, endian){
+    wpstring1(stripNull?: boolean, endian?: string): string{
         return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: endian, stripNull: stripNull})
     }
 
@@ -3288,7 +4384,7 @@ class bireader {
     * 
     * @return string
     */
-    wpstring2 = function(stripNull, endian){
+    wpstring2(stripNull?: boolean, endian?: string): string{
         return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: endian, stripNull: stripNull})
     }
 
@@ -3299,7 +4395,7 @@ class bireader {
     * 
     * @return string
     */
-    wpstring2le = function(stripNull){
+    wpstring2le(stripNull?: boolean): string{
         return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "little", stripNull: stripNull})
     }
 
@@ -3310,7 +4406,7 @@ class bireader {
     * 
     * @return string
     */
-    wpstring2be = function(stripNull){
+    wpstring2be(stripNull?: boolean): string{
         return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "big", stripNull: stripNull})
     }
 
@@ -3322,7 +4418,7 @@ class bireader {
     * 
     * @return string
     */
-    wpstring4 = function(stripNull, endian){
+    wpstring4(stripNull?: boolean, endian?: string): string{
         return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: endian, stripNull: stripNull})
     }
 
@@ -3333,7 +4429,7 @@ class bireader {
     * 
     * @return string
     */
-    wpstring4be = function(stripNull){
+    wpstring4be(stripNull?: boolean): string{
         return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "big", stripNull: stripNull})
     }
 
@@ -3344,10 +4440,8 @@ class bireader {
     * 
     * @return string
     */
-    wpstring4le = function(stripNull){
+    wpstring4le(stripNull?: boolean): string{
         return this.string({stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "little", stripNull: stripNull})
     }
 
 }
-
-module.exports = bireader

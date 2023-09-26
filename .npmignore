@@ -1,4 +1,8 @@
 node_modules/
-dist/
+src/
+index.ts
 test_reader.js
 test_writer.js
+tsconfig.base.json
+tsconfig.cjs.json
+tsconfig.esm.json

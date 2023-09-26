@@ -18,6 +18,8 @@ Supported data types are:
 
 ```npm install bireader```
 
+Provides both CommonJS and ES modules.
+
 ### Quick Start
 
 Import the reader or writer. Create a new parser with the data and start parsing.
@@ -177,7 +179,7 @@ Common functions for setup and movement shared by both (unless indicated).
    <tr>
     <td>Name</td>
     <td>extract(<b>length</b>)</td>
-    <td align="center" rowspan="2">length of data from current position</td>
+    <td align="center" rowspan="2"><b>length of data from current position</b></td>
     <td rowspan="2">Returns data from current read position to supplied length. <br><b>Note:</b> Does not affect supplied data or current read position.</td>
   </tr>
   <tr>

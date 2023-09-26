@@ -1,19 +1,38 @@
 {
   "name": "bireader",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Read and write data in binary",
-  "main": "index.js",
+  "types": "./lib/cjs/types/index.d.ts",
+  "main": "./lib/cjs/index.js",
   "directories": {
     "lib": "src"
   },
+  "files": [
+    "lib/**/*"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/hearhellacopters/bireader.git"
   },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./lib/esm/types/index.d.ts",
+        "default": "./lib/esm/index.mjs"
+      },
+      "require": {
+        "types": "./lib/cjs/types/index.d.ts",
+        "default": "./lib/cjs/index.js"
+      }
+    }
+  },
   "scripts": {
-    "build": "npm run build:cjs && npm run build:esm",
-    "build:cjs": "tsc --module commonjs --outDir dist",
-    "build:esm": "tsc --module esnext --outDir dist/esm && mv dist/esm/bireader.js dist/esm/bireader.mjs"
+    "clean": "rmdir /s lib",
+    "build": "npm run clean && npm run build:esm && npm run move && npm run build:cjs",
+    "build:esm": "tsc -p ./tsconfig.esm.json",
+    "move": "cd ./lib/esm/ && ren index.js index.mjs && cd ../../",
+    "build:cjs": "tsc -p ./tsconfig.cjs.json",
+    "prepack": "npm run build"
   },
   "keywords": [
     "buffer",
@@ -31,5 +50,9 @@
   "bugs": {
     "url": "https://github.com/hearhellacopters/bireader/issues"
   },
-  "homepage": "https://github.com/hearhellacopters/bireader#readme"
+  "homepage": "https://github.com/hearhellacopters/bireader#readme",
+  "devDependencies": {
+    "@types/node": "^20.7.0",
+    "typescript": "^5.2.2"
+  }
 }
