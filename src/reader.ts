@@ -11,13 +11,15 @@ export class bireader {
     public endian: string = "little";
     public offset: number = 0;
     public bitoffset: number = 0;
-    public size: number = 0
+    public size: number = 0;
+    public errorDump: boolean = true;
     public data: Array<Buffer|Uint8Array>;
 
     private check_size(read_size?: number, read_bits?: number): void{
         const new_off: number = this.offset + (read_size||0) + Math.ceil((this.bitoffset + (read_bits||0) )/ 8)
         if(new_off > this.size){
-            throw new Error(`Reader reached end of data.`);
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+            throw new Error(`Reader reached end of data: reading to ` + new_off + " at " + this.offset + " of " + this.size)
         }
     }
 
@@ -137,7 +139,8 @@ export class bireader {
     skip(bytes: number, bits?: number): void{
         this.check_size(bytes || 0)
         if((((bytes || 0) + this.offset) + Math.ceil((this.bitoffset + (bits||0)) /8) ) > this.size){
-            throw new Error("Seek outside of size of data: "+ this.size)
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+            throw new Error("Seek outside of size of data: "+ this.size )
         }
         this.bitoffset += (bits || 0) % 8
         this.offset += (bytes || 0)
@@ -160,8 +163,10 @@ export class bireader {
     * @param {number} bit - bit to jump to (0-7)
     */
     goto(byte: number, bit?: number): void{
-        if((byte + Math.ceil((bit||0)/8) ) > this.size){
-            throw new Error("Goto outside of size of data: " + this.size)
+        const new_size = (byte + Math.ceil((bit||0)/8) )
+        if(new_size > this.size){
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+            throw new Error("Goto outside of size of data: goto " + new_size + " of " + this.size)
         }
         this.offset = byte
         this.bitoffset = (bit || 0) % 8
@@ -295,6 +300,10 @@ export class bireader {
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
     clip(startOffset?: number, endOffset?: number): Array<Buffer|Uint8Array>{
+        if((endOffset || this.offset) > this.size){
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+            throw new Error("End offset outside of data: endOffset" + endOffset + " of " + this.size)
+        }
         return this.data.slice(startOffset || 0, endOffset || this.offset)
     }
 
@@ -306,6 +315,10 @@ export class bireader {
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
     crop(startOffset?: number, endOffset?: number): Array<Buffer|Uint8Array>{
+        if((endOffset || this.offset) > this.size){
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+            throw new Error("End offset outside of data: endOffset" + endOffset + " of " + this.size)
+        }
         return this.data.slice(startOffset || 0, endOffset || this.offset)
     }
 
@@ -317,6 +330,10 @@ export class bireader {
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
     truncate(startOffset?: number, endOffset?: number): Array<Buffer|Uint8Array>{
+        if((endOffset || this.offset) > this.size){
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+            throw new Error("End offset outside of data: endOffset" + endOffset + " of " + this.size)
+        }
         return this.data.slice(startOffset || 0, endOffset || this.offset)
     }
 
@@ -328,6 +345,10 @@ export class bireader {
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
     slice(startOffset?: number, endOffset?: number): Array<Buffer|Uint8Array>{
+        if((endOffset || this.offset) > this.size){
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+            throw new Error("End offset outside of data: endOffset" + endOffset + " of " + this.size)
+        }
         return this.data.slice(startOffset || 0, endOffset || this.offset)
     }
 
@@ -335,39 +356,41 @@ export class bireader {
     * Extract array from current position to length supplied
     * Note: Does not affect supplied data
     * @param {number} length - length of data to copy from current offset
+    * @param {number} consume - moves offset to end of length
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    extract(length: number): Array<Buffer|Uint8Array>{
+    extract(length: number, consume?: boolean): Array<Buffer|Uint8Array>{
         if(this.offset + (length ||0) > this.size){
-            throw new Error("End offset outside of data: " + this.size)
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+            throw new Error("End offset outside of data: at " + this.offset + " reading " + length + " of" + this.size )
         }
-        return this.data.slice(this.offset, this.offset + (length ||0))
+        const extract = this.data.slice(this.offset, Number(this.offset + (length ||0)))
+        if(consume){
+            this.offset += length
+        }
+        return extract
     }
 
     /**
     * Extract array from current position to length supplied
     * Note: Does not affect supplied data
     * @param {number} length - length of data to copy from current offset
+    * @param {number} consume - moves offset to end of length
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    wrap(length: number): Array<Buffer|Uint8Array>{
-        if(this.offset + (length ||0) > this.size){
-            throw new Error("End offset outside of data: " + this.size)
-        }
-        return this.data.slice(this.offset, this.offset + (length ||0))
+    wrap(length: number, consume?: boolean): Array<Buffer|Uint8Array>{
+        return this.extract(length,consume)
     }
 
     /**
     * Extract array from current position to length supplied
     * Note: Does not affect supplied data
     * @param {number} length - length of data to copy from current offset
+    * @param {number} consume - moves offset to end of length
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    lift(length: number): Array<Buffer|Uint8Array>{
-        if(this.offset + (length ||0) > this.size){
-            throw new Error("End offset outside of data: " + this.size)
-        }
-        return this.data.slice(this.offset, this.offset + (length ||0))
+    lift(length: number, consume?: boolean): Array<Buffer|Uint8Array>{
+        return this.extract(length,consume)
     }
     
     /**
@@ -414,6 +437,204 @@ export class bireader {
         this.data = []
     }
 
+    /**
+    * Turn hexdump on error off, default on
+    */
+    errorDumpOff(): void{
+        this.errorDump = false;
+    }
+
+    /**
+    * Turn hexdump on error on, default on
+    */
+    errorDumpOn(): void{
+        this.errorDump = true;
+    }
+
+    /**
+    * Console logs data as hex dump
+    * 
+    * @param {object} options - options object
+    * ```javascript
+    *   {
+    *       length: 192, // number of bytes to log, default 192 or end of data
+    *       startByte: 0, // byte to start dump, default current position
+    *       supressUnicode: false // Supress unicode character preview for cleaner columns
+    *   }
+    * ```
+    */
+    hexdump(options?: {length?: number, startByte?: number, supressUnicode?: boolean}): void{
+        var length:any = options && options.length
+        var startByte:any = options && options.startByte
+        var supressUnicode:any = options && options.supressUnicode || false
+
+        if((startByte || 0) > this.size){
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+            throw new Error("Hexdump start is outside of data size: " + startByte + " of " + this.size)
+        }
+        const start = startByte || this.offset
+        const end = Math.min(start + (length || 192), this.size)
+        if(start + (length||0) > this.size){
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+            throw new Error("Hexdump amount is outside of data size: " + (start + (length||0))+ " of " + end)
+        }
+        function hex_check(byte:number,bits:number,): number {
+            var value = 0;
+            for (var i = 0; i < bits;) {
+                var remaining = bits - i;
+                var bitOffset = 0;
+                var currentByte = byte
+                var read = Math.min(remaining, 8 - bitOffset);
+                var mask: number, readBits: number;
+                mask = ~(0xFF << read);
+                readBits = (currentByte >> (8 - read - bitOffset)) & mask;
+                value <<= read;
+                value |= readBits;
+                i += read;
+            }
+            value = value >>> 0
+            return value
+        }
+        const rows:Array<string> = [];
+        var header = "   0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  "
+        var ending = "0123456789ABCDEF"
+        var addr: string = "";
+        for (let i = start; i < end; i += 16) {
+            addr = i.toString(16).padStart(5, '0');
+            var row = <unknown>this.data?.slice(i, i + 16) as number[] || []
+            var hex =  Array.from(row, (byte) => byte.toString(16).padStart(2, '0')).join(' ');
+            rows.push(`${addr}  ${hex.padEnd(47)}  `);
+        }
+        let result = '';
+        let make_wide:boolean = false;
+        let i = start;
+        while (i < end) {
+            const byte = <unknown>this.data[i] as number;
+            if(byte < 32 || byte == 127){
+                result += '.';
+            } else
+            if (byte < 127) {
+                // Valid UTF-8 start byte or single-byte character
+                // Convert the byte to a character and add it to the result
+                result += String.fromCharCode(byte);
+            } else
+            if(supressUnicode){
+                result += '.';
+            } else
+            if(hex_check(byte,1) == 0){
+                //Byte 1
+                result += String.fromCharCode(byte);
+            } else 
+            if(hex_check(byte,3) == 6) {
+                //Byte 2
+                if(i + 1 <= end){
+                    //check second byte
+                    const byte2 = <unknown>this.data[i+1] as number
+                    if(hex_check(byte2,2) == 2){
+                        const charCode = ((byte & 0x1f) << 6) | (byte2 & 0x3f);
+                        i++;
+                        make_wide = true;
+                        const read = " "+String.fromCharCode(charCode)
+                        result += read;
+                    } else {
+                        result += "."
+                    }
+                } else {
+                    result += "."
+                }
+            } else 
+            if(hex_check(byte,4) == 14) {
+                //Byte 3
+                if(i + 1 <= end){
+                    //check second byte
+                    const byte2 = <unknown>this.data[i+1] as number
+                    if(hex_check(byte2,2) == 2){
+                        if(i + 2 <= end){
+                            //check third byte
+                            const byte3 = <unknown>this.data[i+2] as number
+                            if(hex_check(byte3,2) == 2){
+                                const charCode =
+                                    ((byte & 0x0f) << 12) |
+                                    ((byte2 & 0x3f) << 6) |
+                                    (byte3 & 0x3f);
+                                    i += 2
+                                    make_wide = true;
+                                    const read = "  "+String.fromCharCode(charCode) 
+                                    result += read;
+                            } else {
+                                i++
+                                result += " ."
+                            }
+                        } else {
+                            i++;
+                            result += " ."
+                        }
+                    } else {
+                        result += "."
+                    }
+                } else {
+                    result += "."
+                }
+            } else 
+            if(hex_check(byte,5) == 28) {
+                //Byte 4
+                if(i + 1 <= end){
+                    //check second byte
+                    const byte2 = <unknown>this.data[i+1] as number
+                    if(hex_check(byte2,2) == 2){
+                        if(i + 2 <= end){
+                            //check third byte
+                            const byte3 = <unknown>this.data[i+2] as number
+                            if(hex_check(byte3,2) == 2){
+                                if(i + 3 <= end){
+                                    //check fourth byte
+                                    const byte4 = <unknown>this.data[i+2] as number
+                                    if(hex_check(byte4,2) == 2){
+                                        const charCode = (((byte4 & 0xFF)<< 24) | ((byte3 & 0xFF) << 16) | ((byte2 & 0xFF) << 8) | (byte & 0xFF))
+                                        i += 3
+                                        make_wide = true;
+                                        const read = "   "+String.fromCharCode(charCode)
+                                        result += read;
+                                    } else {
+                                        i += 2
+                                        result += "  ."
+                                    }
+                                } else {
+                                    i += 2
+                                    result += "  ."
+                                }
+                            } else {
+                                i++;
+                                result += " ."
+                            }
+                        } else {
+                            i++;
+                            result += " ."
+                        }
+                    } else {
+                        result += "."
+                    }
+                } else {
+                    result += "."
+                }
+            } else {
+                // Invalid UTF-8 byte, add a period to the result
+                result += '.';
+            }
+            i++;
+        }
+        const chunks = result.match(new RegExp(`.{1,${16}}`, 'g'));
+        chunks?.forEach((self,i)=>{
+            rows[i] = rows[i] + (make_wide ? "|"+self+"|" : self)
+        })
+        header = "".padStart(addr.length) + header + (make_wide ? "" :ending )
+        rows.unshift(header)
+        if(make_wide){
+            rows.push("*Removed character byte header on unicode detection")
+        }
+        console.log(rows.join("\n"))
+    }
+
     //
     //bit reader
     //
@@ -437,7 +658,8 @@ export class bireader {
         }
         const size_needed = ((((bits-1) + this.bitoffset) / 8) + this.offset)
         if (bits <= 0 || size_needed > this.size) {
-            throw new Error("Invalid number of bits to read: " + size_needed + " of " + this.size);
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+            throw new Error("Invalid number of bits to read: " + size_needed + " of " + this.size)
         }
 
         var off_in_bits = (this.offset * 8) + this.bitoffset
@@ -475,7 +697,7 @@ export class bireader {
         this.offset = this.offset + Math.floor(((bits) + this.bitoffset) / 8) //end byte
         this.bitoffset = ((bits) + this.bitoffset) % 8
 
-        if (unsigned == true) {
+        if (unsigned == true || bits <= 7) {
 
             return value >>> 0;
             
@@ -503,7 +725,7 @@ export class bireader {
         return this.readBit(bits,unsigned,endian)
     }
 
-        /**
+    /**
     * Bit field reader
     * 
     * Note: When returning to a byte read, remaining bits are dropped
@@ -538,6 +760,7 @@ export class bireader {
     bit1be(unsigned?: boolean): number{
         return this.bit(1, unsigned, "big")
     }
+
     /**
     * Bit field reader
     * 
@@ -4082,6 +4305,7 @@ export class bireader {
             } else if(lengthReadSize == 4){
                 maxBytes = this.readInt32(true, endian);
             } else {
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
                 throw new Error("Invalid length read size: " + lengthReadSize)
             }
             

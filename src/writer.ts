@@ -13,6 +13,7 @@ export class biwriter {
     public bitoffset: number = 0;
     public size: number = 0;
     public strict: boolean = false;
+    public errorDump: boolean = true;
     public data: any=[];
 
     private isBuffer(obj: Array<Buffer|Uint8Array>): boolean {
@@ -48,7 +49,8 @@ export class biwriter {
             if(this.strict == false){
                 this.extendArray(dif)
             } else {
-                throw new Error("Location outside of size of data: "+ this.size)
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+                throw new Error(`Reader reached end of data: reading to ` + needed_size + " at " + this.offset + " of " + this.size)
             }
             this.size = this.data.length
         }
@@ -203,7 +205,8 @@ export class biwriter {
         if(new_size > this.size && this.strict == false){
             this.extendArray(new_size - this.size)
         } else {
-            throw new Error("Outside of range of data: "+ this.size)
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+            throw new Error("Outside of range of data: goto " + new_size + " of " + this.size)
         }
         this.offset = byte
         this.bitoffset = (bit || 0) % 8
@@ -355,7 +358,8 @@ export class biwriter {
             if(this.strict == false){
                 this.extendArray((endOffset || this.offset) - this.size)
             } else {
-                throw new Error("End offset outside of data: " + this.size)
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+                throw new Error("End offset outside of data: endOffset" + endOffset + " of " + this.size)
             }
         }
         return this.data.slice(Math.abs(startOffset || 0), endOffset || this.offset)
@@ -373,7 +377,8 @@ export class biwriter {
             if(this.strict == false){
                 this.extendArray((endOffset || this.offset) - this.size)
             } else {
-                throw new Error("End offset outside of data: " + this.size)
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+                throw new Error("End offset outside of data: endOffset" + endOffset + " of " + this.size)
             }
         }
         return this.data.slice(Math.abs(startOffset || 0), endOffset || this.offset)
@@ -391,7 +396,8 @@ export class biwriter {
             if(this.strict == false){
                 this.extendArray((endOffset || this.offset) - this.size)
             } else {
-                throw new Error("End offset outside of data: " + this.size)
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+                throw new Error("End offset outside of data: endOffset" + endOffset + " of " + this.size)
             }
         }
         return this.data.slice(Math.abs(startOffset || 0), endOffset || this.offset)
@@ -410,7 +416,8 @@ export class biwriter {
             if(this.strict == false){
                 this.extendArray((endOffset || this.offset) - this.size)
             } else {
-                throw new Error("End offset outside of data: " + this.size)
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+                throw new Error("End offset outside of data: endOffset" + endOffset + " of " + this.size)
             }
         }
         return this.data.slice(Math.abs(startOffset || 0), endOffset || this.offset)
@@ -421,17 +428,23 @@ export class biwriter {
     * Note: Does not affect supplied data
     * Note: Will extend array if strict mode is off
     * @param {number} length - length of data to copy from current offset
+    * @param {number} consume - moves offset to end of length
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    extract(length:number): Array<Buffer|Uint8Array>{
+    extract(length:number, consume?: boolean): Array<Buffer|Uint8Array>{
         if(this.offset + (length ||0) > this.size){
             if(this.strict == false){
                 this.extendArray(this.offset + (length ||0) - this.size)
             } else {
-                throw new Error("End offset outside of data: " + this.size)
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+                throw new Error("End offset outside of data: at " + this.offset + " reading " + length + " of" + this.size )
             }
         }
-        return this.data.slice(this.offset, this.offset + (length ||0))
+        const extract = this.data.slice(this.offset, this.offset + (length ||0))
+        if(consume){
+            this.offset += length
+        }
+        return extract
     }
 
     /**
@@ -439,10 +452,11 @@ export class biwriter {
     * Note: Does not affect supplied data
     * Note: Will extend array if strict mode is off
     * @param {number} length - length of data to copy from current offset
+    * @param {number} consume - moves offset to end of length
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    wrap(length:number): Array<Buffer|Uint8Array>{
-        return this.extract(length)
+    wrap(length:number, consume?: boolean): Array<Buffer|Uint8Array>{
+        return this.extract(length,consume)
     }
 
     /**
@@ -450,10 +464,11 @@ export class biwriter {
     * Note: Does not affect supplied data
     * Note: Will extend array if strict mode is off
     * @param {number} length - length of data to copy from current offset
+    * @param {number} consume - moves offset to end of length
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    lift(length:number): Array<Buffer|Uint8Array>{
-        return this.extract(length)
+    lift(length:number, consume?: boolean): Array<Buffer|Uint8Array>{
+        return this.extract(length,consume)
     }
     
     /**
@@ -500,6 +515,204 @@ export class biwriter {
         this.data = undefined
     }
 
+    /**
+    * Turn hexdump on error off, default on
+    */
+    errorDumpOff(): void{
+        this.errorDump = false;
+    }
+
+    /**
+    * Turn hexdump on error on, default on
+    */
+    errorDumpOn(): void{
+        this.errorDump = true;
+    }
+
+    /**
+    * Console logs data as hex dump
+    * 
+    * @param {object} options - options object
+    * ```javascript
+    *   {
+    *       length: 192, // number of bytes to log, default 192 or end of data
+    *       startByte: 0, // byte to start dump, default current position
+    *       supressUnicode: false // Supress unicode character preview for cleaner columns
+    *   }
+    * ```
+    */
+    hexdump(options?: {length?: number, startByte?: number, supressUnicode?: boolean}): void{
+        var length:any = options && options.length
+        var startByte:any = options && options.startByte
+        var supressUnicode:any = options && options.supressUnicode || false
+
+        if((startByte || 0) > this.size){
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+            throw new Error("Hexdump start is outside of data size: " + startByte + " of " + this.size)
+        }
+        const start = startByte || this.offset
+        const end = Math.min(start + (length || 192), this.size)
+        if(start + (length||0) > this.size){
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
+            throw new Error("Hexdump amount is outside of data size: " + (start + (length||0))+ " of " + end)
+        }
+        function hex_check(byte:number,bits:number,): number {
+            var value = 0;
+            for (var i = 0; i < bits;) {
+                var remaining = bits - i;
+                var bitOffset = 0;
+                var currentByte = byte
+                var read = Math.min(remaining, 8 - bitOffset);
+                var mask: number, readBits: number;
+                mask = ~(0xFF << read);
+                readBits = (currentByte >> (8 - read - bitOffset)) & mask;
+                value <<= read;
+                value |= readBits;
+                i += read;
+            }
+            value = value >>> 0
+            return value
+        }
+        const rows:Array<string> = [];
+        var header = "   0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  "
+        var ending = "0123456789ABCDEF"
+        var addr: string = "";
+        for (let i = start; i < end; i += 16) {
+            addr = i.toString(16).padStart(5, '0');
+            var row = <unknown>this.data?.slice(i, i + 16) as number[] || []
+            var hex =  Array.from(row, (byte) => byte.toString(16).padStart(2, '0')).join(' ');
+            rows.push(`${addr}  ${hex.padEnd(47)}  `);
+        }
+        let result = '';
+        let make_wide:boolean = false;
+        let i = start;
+        while (i < end) {
+            const byte = <unknown>this.data[i] as number;
+            if(byte < 32 || byte == 127){
+                result += '.';
+            } else
+            if (byte < 127) {
+                // Valid UTF-8 start byte or single-byte character
+                // Convert the byte to a character and add it to the result
+                result += String.fromCharCode(byte);
+            } else
+            if(supressUnicode){
+                result += '.';
+            } else
+            if(hex_check(byte,1) == 0){
+                //Byte 1
+                result += String.fromCharCode(byte);
+            } else 
+            if(hex_check(byte,3) == 6) {
+                //Byte 2
+                if(i + 1 <= end){
+                    //check second byte
+                    const byte2 = <unknown>this.data[i+1] as number
+                    if(hex_check(byte2,2) == 2){
+                        const charCode = ((byte & 0x1f) << 6) | (byte2 & 0x3f);
+                        i++;
+                        make_wide = true;
+                        const read = " "+String.fromCharCode(charCode)
+                        result += read;
+                    } else {
+                        result += "."
+                    }
+                } else {
+                    result += "."
+                }
+            } else 
+            if(hex_check(byte,4) == 14) {
+                //Byte 3
+                if(i + 1 <= end){
+                    //check second byte
+                    const byte2 = <unknown>this.data[i+1] as number
+                    if(hex_check(byte2,2) == 2){
+                        if(i + 2 <= end){
+                            //check third byte
+                            const byte3 = <unknown>this.data[i+2] as number
+                            if(hex_check(byte3,2) == 2){
+                                const charCode =
+                                    ((byte & 0x0f) << 12) |
+                                    ((byte2 & 0x3f) << 6) |
+                                    (byte3 & 0x3f);
+                                    i += 2
+                                    make_wide = true;
+                                    const read = "  "+String.fromCharCode(charCode) 
+                                    result += read;
+                            } else {
+                                i++
+                                result += " ."
+                            }
+                        } else {
+                            i++;
+                            result += " ."
+                        }
+                    } else {
+                        result += "."
+                    }
+                } else {
+                    result += "."
+                }
+            } else 
+            if(hex_check(byte,5) == 28) {
+                //Byte 4
+                if(i + 1 <= end){
+                    //check second byte
+                    const byte2 = <unknown>this.data[i+1] as number
+                    if(hex_check(byte2,2) == 2){
+                        if(i + 2 <= end){
+                            //check third byte
+                            const byte3 = <unknown>this.data[i+2] as number
+                            if(hex_check(byte3,2) == 2){
+                                if(i + 3 <= end){
+                                    //check fourth byte
+                                    const byte4 = <unknown>this.data[i+2] as number
+                                    if(hex_check(byte4,2) == 2){
+                                        const charCode = (((byte4 & 0xFF)<< 24) | ((byte3 & 0xFF) << 16) | ((byte2 & 0xFF) << 8) | (byte & 0xFF))
+                                        i += 3
+                                        make_wide = true;
+                                        const read = "   "+String.fromCharCode(charCode)
+                                        result += read;
+                                    } else {
+                                        i += 2
+                                        result += "  ."
+                                    }
+                                } else {
+                                    i += 2
+                                    result += "  ."
+                                }
+                            } else {
+                                i++;
+                                result += " ."
+                            }
+                        } else {
+                            i++;
+                            result += " ."
+                        }
+                    } else {
+                        result += "."
+                    }
+                } else {
+                    result += "."
+                }
+            } else {
+                // Invalid UTF-8 byte, add a period to the result
+                result += '.';
+            }
+            i++;
+        }
+        const chunks = result.match(new RegExp(`.{1,${16}}`, 'g'));
+        chunks?.forEach((self,i)=>{
+            rows[i] = rows[i] + (make_wide ? "|"+self+"|" : self)
+        })
+        header = "".padStart(addr.length) + header + (make_wide ? "" :ending )
+        rows.unshift(header)
+        if(make_wide){
+            rows.push("*Removed character byte header on unicode detection")
+        }
+        console.log(rows.join("\n"))
+    }
+
     //
     //bit writer
     //
@@ -529,12 +742,14 @@ export class biwriter {
         }
         if (unsigned == true) {
             if (value < 0 || value > Math.pow(2, bits)) {
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
                 throw new Error(`Value is out of range for the specified ${bits}bit length.` +" min: " + 0 + " max: " + Math.pow(2, bits) + " value: "+ value);
             }
         } else {
             const maxValue = Math.pow(2, bits - 1) - 1;
             const minValue = -maxValue - 1;
             if(value < minValue || value > maxValue){
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
                 throw new Error(`Value is out of range for the specified ${bits}bit length.` +" min: " + minValue + " max: " + maxValue + " value: "+ value);
             }
         }
@@ -3268,12 +3483,14 @@ export class biwriter {
         this.check_size(1,0,offset)
         if (unsigned == true) {
             if (value< 0 || value > 255) {
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
                 throw new Error('Value is out of range for the specified 8bit length.' +" min: " + 0 + " max: " + 255 + " value: "+ value);
             }
         } else {
             const maxValue = Math.pow(2, 8 - 1) - 1;
             const minValue = -maxValue - 1;
             if(value < minValue || value > maxValue){
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
                 throw new Error('Value is out of range for the specified 8bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
             }
         }
@@ -3349,12 +3566,14 @@ export class biwriter {
         this.check_size(2,0,offset)
         if (unsigned == true) {
             if (value< 0 || value > 65535) {
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
                 throw new Error('Value is out of range for the specified 16bit length.' +" min: " + 0 + " max: " + 65535 + " value: "+ value);
             }
         } else {
             const maxValue = Math.pow(2, 16 - 1) - 1;
             const minValue = -maxValue - 1;
             if(value < minValue || value > maxValue){
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
                 throw new Error('Value is out of range for the specified 16bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
             }
         }
@@ -3624,6 +3843,7 @@ export class biwriter {
         const maxValue = 65504;
         const minValue = 5.96e-08;
         if(value < minValue || value > maxValue){
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
             throw new Error('Value is out of range for the specified half float length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
         }
         const signMask = 0x8000;
@@ -3761,12 +3981,14 @@ export class biwriter {
         this.check_size(4,0,offset)
         if (unsigned == true) {
             if (value < 0 || value > 4294967295) {
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
                 throw new Error('Value is out of range for the specified 32bit length.' +" min: " + 0 + " max: " + 4294967295 + " value: "+ value);
             }
         } else {
             const maxValue = Math.pow(2, 32 - 1) - 1;
             const minValue = -maxValue - 1;
             if(value < minValue || value > maxValue){
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
                 throw new Error('Value is out of range for the specified 32bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
             }
         }
@@ -4103,6 +4325,7 @@ export class biwriter {
         const maxValue = 3.402823466e+38
         const minValue = 1.175494351e-38
         if(value < minValue || value > maxValue){
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
             throw new Error('Value is out of range for the specified float length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
         }
         let intValue = Float32Array.from([value])[0]; // Convert float to 32-bit integer representation
@@ -4187,12 +4410,14 @@ export class biwriter {
         this.check_size(8,0,offset)
         if (unsigned == true) {
             if (value < 0 || value > Math.pow(2, 64) - 1) {
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
                 throw new Error('Value is out of range for the specified 64bit length.' +" min: " + 0 + " max: " + (Math.pow(2, 64) - 1) + " value: "+ value);
             }
         } else {
             const maxValue = Math.pow(2, 63) - 1;
             const minValue = -Math.pow(2, 63);
             if(value < minValue || value > maxValue){
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
                 throw new Error('Value is out of range for the specified 64bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
             }
         }
@@ -4490,6 +4715,7 @@ export class biwriter {
         const maxValue = 1.7976931348623158e308;
         const minValue = 2.2250738585072014e-308;
         if(value < minValue || value > maxValue){
+            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
             throw new Error('Value is out of range for the specified 64bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
         }
         const intArray = new Int32Array(2);
@@ -4712,9 +4938,11 @@ export class biwriter {
             } else if(lengthWriteSize == 4){
                 maxLength = 4294967295;
             } else {
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
                 throw new Error("Invalid length read size: " + lengthWriteSize)
             }
             if(string.length > maxLength || (length || 0) > maxLength ){
+                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
                 throw new Error("String outsize of max write length: " + maxLength)
             }
             var maxBytes = Math.min(string.length, maxLength);

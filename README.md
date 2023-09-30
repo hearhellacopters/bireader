@@ -20,41 +20,154 @@ Supported data types are:
 
 Provides both CommonJS and ES modules.
 
-### Quick Start
+### Example
 
 Import the reader or writer. Create a new parser with the data and start parsing.
 
-Includes all presents for quick parsing or programmable functions (examples below).
+Includes presents for quick parsing or programmable functions (examples below).
 
 ```javascript
 import {bireader, biwriter} from 'bireader';
 
-//example of using mixed preset function naming and programmable calls
-function header_read(data){
+//parse a webp file example
+function parse_webp(data){
     const br = new bireader(data)
+    br.hexdump({supressUnicode:true}) //console.log data as hex
+
+    //         0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  0123456789ABCDEF
+    // 00000  52 49 46 46 98 3a 00 00 57 45 42 50 56 50 38 58  RIFF.:..WEBPVP8X
+    // 00010  0a 00 00 00 10 00 00 00 ff 00 00 ff 00 00 41 4c  ..............AL
+    // 00020  50 48 26 10 00 00 01 19 45 6d 1b 49 4a 3b cf 0c  PH&.....Em.IJ;..
+    // 00030  7f c0 7b 60 88 e8 ff 04 80 a2 82 65 56 d2 d2 86  ..{`.......eV...
+    // 00040  24 54 61 d0 83 8f 7f 0e 82 b6 6d e3 f0 a7 bd ed  $Ta.......m.....
+    // 00050  87 10 11 13 40 3b 86 8f 26 4b d6 2a b7 6d 24 39  ....@;..&K.*.m$9
+    // 00060  52 4f fe 39 7f 3b 62 4e cc ec 9b 17 31 01 0c 24  RO.9.;bN....1..$
+    // 00070  49 89 23 e0 01 ab 52 64 e3 23 fc 61 db 76 cc 91  I.#...Rd.#.a.v..
+    // 00080  b6 7d fb 51 48 c5 69 db 4c 1b 63 db b6 ed b9 6d  .}.QH.i.L.c....m
+    // 00090  db be 87 8d b1 6d db 9e b6 cd a4 d3 ee 24 95 54  .....m.......$.T
+    // 000a0  52 b8 8e 65 a9 eb 38 ce ab 52 75 9d 67 ff 75 2f  R..e..8..Ru.g.u/
+    // 000b0  77 44 40 94 6d 25 6c 74 91 a8 88 86 58 9b da 6e  wD@.m%lt....X..n
+
     const header = {}
-    header.magic = br.cstring({length:4})
-    const unsigned = header.magic == "foo" ? true : false
-    header.ver = br.int32(unsigned, unsigned == true : "big" : "little")
-    br.skip(2) //reserved
-    if(header.ver == 10){
-      br.endianness("big")
-      header.file_size = br.size
-      header.heigth = br.uint()
-      header.width = br.quad()
-    } else if(header.ver < 9) {
-      br.le()
-      header.file_size = br.ushort()
-      header.heigth = br.uword()
-      header.width = br.uint64()
-    } else {
-      throw new Error('Unknown version of ' + header.ver)
+    header.magic = br.string({length:4})   //RIFF
+    header.size = br.uint32le()             //15000
+    header.fileSize = header.size + 8       //15008
+    header.payload = br.string({length:4}) //WEBP
+    header.format = br.string({length:4})  //VP8X
+    header.formatChunkSize = br.uint32le()  //10
+    switch (header.format){
+      case "VP8 ":
+          header.formatType = "Lossy"
+          var read_size = 0
+          header.frame_tag = ubit24()
+          read_size += 3;
+          header.key_frame = header.frame_tag & 0x1;
+          header.version = (header.frame_tag >> 1) & 0x7;
+          header.show_frame = (header.frame_tag >> 4) & 0x1;
+          header.first_part_size = (header.frame_tag >> 5) & 0x7FFFF;
+          header.start_code = ubit24() //should be 2752925
+          header.horizontal_size_code = ubit16();
+          header.width = header.horizontal_size_code & 0x3FFF;
+          header.horizontal_scale = header.horizontal_size_code >> 14;
+          header.vertical_size_code = ubit16();
+          header.height = header.vertical_size_code & 0x3FFF;
+          header.vertical_scale = header.vertical_size_code >> 14;
+          read_size += 7;
+          header.VP8data = br.extract(header.formatChunkSize - read_size, true)
+          break;
+      case "VP8L":
+          header.formatType = "Lossless"
+          var read_size = 0
+          header.signature = br.ubyte() // should be 47
+          read_size += 1;
+          header.readWidth = ubit14()
+          header.width = header.readWidth+1;
+          header.readHeight = ubit14()
+          header.height = header.readHeight+1;
+          header.alpha_is_used = bit1() 
+          header.version_number = ubit3() 
+          read_size += 4;
+          header.data = br.extract(header.formatChunkSize - read_size, true)
+          break;
+      case "VP8X":
+          header.formatType = "Extended"
+          br.big() //switch to Big Endian bit read
+          header.rsv = br.bit2() //Reserved
+          header.I = br.bit1()    //ICC profile
+          header.L = br.bit1()    //Alpha
+          header.E = br.bit1()    //Exif
+          header.X = br.bit1()    //XMP
+          header.A = br.bit1()    //Animation
+          header.R = br.bit1()    //Reserved
+          br.little() //return to little
+          header.rsv2 = br.ubit24()
+          header.widthMinus1 = br.ubit24()
+          header.width = header.widthMinus1 + 1
+          header.heightMinus1 = br.ubit24()
+          header.height = header.heightMinus1 + 1
+          if(header.I)
+          {
+            header.ICCP = br.string({length:4})  // Should be ICCP
+            header.ICCPChunkSize = br.uint32()
+            header.ICCPData = br.extract(header.ICCPChunkSize, true)
+          }
+          if(header.L)
+          {
+            header.ALPH = br.string({length:4})  // Should be ALPH
+            header.ALPHChunkSize = br.uint32() //4134
+            header.ALPHData = br.extract(header.ALPHChunkSize, true)
+          }
+          if(header.A)
+          {
+            header.ANI = br.string({length:4})  // Should be ANIM or ANIF
+            header.ANIChunkSize = br.uint32()
+            if(header.ANI == "ANIM")
+            {
+              header.BGColor = br.uint32()
+              header.loopCount = br.ushort()
+              header.ANIMData = br.extract(header.ANIChunkSize, true)
+            } else
+            if (header.ANI == "ANIF")
+            {
+              header.FrameX = br.ubit24()
+              header.FrameY = br.ubit24()
+              header.readFrameWidth = br.ubit24()
+              header.readFrameHeight = br.ubit24()
+              header.frameWidth = readFrameWidth + 1
+              header.frameHeight = readFrameHeight + 1
+              header.duration = br.ubit24()
+              header.rsv3 = br.ubit6()
+              header.byte.B = br.bit1() //Blending
+              header.byte.D = br.bit1() //Disposal
+              header.frameData = br.extract(16, true)
+              header.ANIFData = br.extract(header.ANIChunkSize, true)
+            }
+          }
+          header.extFormatStr = br.string({length:4})
+          header.extChunkSize = br.uint32()
+          header.extData = br.extract(header.extChunkSize, true)
+          if(header.E)
+          {
+            header.EXIF = br.string({length:4})  // Should be EXIF
+            header.EXIFChunkSize = br.uint32()
+            header.EXIFData = br.extract(header.EXIFChunkSize, true)
+          }
+          if(header.X)
+          {
+            header.XMP = br.string({length:4})  // Should be XMP
+            header.XMPChunkSize = br.uint32()
+            header.XMPMetaData = br.extract(header.XMPChunkSize, true)
+          }
+          break;
+      default:
+          header.data = br.extract(header.formatChunkSize, true)
+          break;
     }
     br.finished()
     return header
 }
 
-function header_write(size, magic, ver, heigth, width){
+function rite_webp(size, magic, ver, heigth, width){
     const data = new Uint8Array(size)
     const bw = new biwriter(data)
     bw.writeString(magic, {length:4})
@@ -178,13 +291,13 @@ Common functions for setup and movement shared by both (unless indicated).
   </tr>
    <tr>
     <td>Name</td>
-    <td>extract(<b>length</b>)</td>
-    <td align="center" rowspan="2"><b>length of data from current position</b></td>
-    <td rowspan="2">Returns data from current read position to supplied length. <br><b>Note:</b> Does not affect supplied data or current read position.</td>
+    <td>extract(<b>length</b>, consume)</td>
+    <td align="center" rowspan="2"><b>length of data from current position</b>, consume length and move offset (default false)</td>
+    <td rowspan="2">Returns data from current read position to supplied length. <br><b>Note:</b> Does not affect supplied data. Only moves current read position if consume is true.</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>wrap(<b>length</b>)<br>lift(<b>length</b>)</td>
+    <td>wrap(<b>length</b>, consume)<br>lift(<b>length</b>, consume)</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -205,6 +318,24 @@ Common functions for setup and movement shared by both (unless indicated).
   <tr>
     <td>Aliases</td>
     <td>close()<br>done()<br>finished()</td>
+  </tr>
+  <tr>
+  <td>Name</td>
+  <td>hexdump({length, startByte, supressUnicode})</td>
+  <td align="center">Length of dump, Byte to start the dump, Supress unicode character preview for cleaner columns</td>
+  <td >Console logs data. Defaults to current position and 192 bytes in length. Will trigger on error unless turned off (see below)</td>
+  </tr>
+  <tr>
+  <td>Name</td>
+  <td>errorDumpOff()</td>
+  <td align="center" >None</td>
+  <td >Turns hexdump off on error (default true)</td>
+  </tr>
+  <tr>
+  <td>Name</td>
+  <td>errorDumpOn()</td>
+  <td align="center" rowspan="2">None</td>
+  <td rowspan="2">Turns hexdump on on error (default true)</td>
   </tr>
 </tbody>
 </table>

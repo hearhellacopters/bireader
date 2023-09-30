@@ -14,6 +14,7 @@ export declare class biwriter {
     bitoffset: number;
     size: number;
     strict: boolean;
+    errorDump: boolean;
     data: any;
     private isBuffer;
     private isBufferOrUint8Array;
@@ -213,25 +214,28 @@ export declare class biwriter {
     * Note: Does not affect supplied data
     * Note: Will extend array if strict mode is off
     * @param {number} length - length of data to copy from current offset
+    * @param {number} consume - moves offset to end of length
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    extract(length: number): Array<Buffer | Uint8Array>;
+    extract(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
     * Extract array from current position to length supplied
     * Note: Does not affect supplied data
     * Note: Will extend array if strict mode is off
     * @param {number} length - length of data to copy from current offset
+    * @param {number} consume - moves offset to end of length
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    wrap(length: number): Array<Buffer | Uint8Array>;
+    wrap(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
     * Extract array from current position to length supplied
     * Note: Does not affect supplied data
     * Note: Will extend array if strict mode is off
     * @param {number} length - length of data to copy from current offset
+    * @param {number} consume - moves offset to end of length
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    lift(length: number): Array<Buffer | Uint8Array>;
+    lift(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
     * Returns current data
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
@@ -258,6 +262,31 @@ export declare class biwriter {
     * removes writing data
     */
     finished(): void;
+    /**
+    * Turn hexdump on error off, default on
+    */
+    errorDumpOff(): void;
+    /**
+    * Turn hexdump on error on, default on
+    */
+    errorDumpOn(): void;
+    /**
+    * Console logs data as hex dump
+    *
+    * @param {object} options - options object
+    * ```javascript
+    *   {
+    *       length: 192, // number of bytes to log, default 192 or end of data
+    *       startByte: 0, // byte to start dump, default current position
+    *       supressUnicode: false // Supress unicode character preview for cleaner columns
+    *   }
+    * ```
+    */
+    hexdump(options?: {
+        length?: number;
+        startByte?: number;
+        supressUnicode?: boolean;
+    }): void;
     /**
     *
     * Write bits, must have at least value and number of bits

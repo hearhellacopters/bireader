@@ -13,6 +13,7 @@ export declare class bireader {
     offset: number;
     bitoffset: number;
     size: number;
+    errorDump: boolean;
     data: Array<Buffer | Uint8Array>;
     private check_size;
     private isBuffer;
@@ -195,23 +196,26 @@ export declare class bireader {
     * Extract array from current position to length supplied
     * Note: Does not affect supplied data
     * @param {number} length - length of data to copy from current offset
+    * @param {number} consume - moves offset to end of length
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    extract(length: number): Array<Buffer | Uint8Array>;
+    extract(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
     * Extract array from current position to length supplied
     * Note: Does not affect supplied data
     * @param {number} length - length of data to copy from current offset
+    * @param {number} consume - moves offset to end of length
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    wrap(length: number): Array<Buffer | Uint8Array>;
+    wrap(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
     * Extract array from current position to length supplied
     * Note: Does not affect supplied data
     * @param {number} length - length of data to copy from current offset
+    * @param {number} consume - moves offset to end of length
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    lift(length: number): Array<Buffer | Uint8Array>;
+    lift(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
     * Returns current data
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
@@ -239,6 +243,31 @@ export declare class bireader {
     */
     finished(): void;
     /**
+    * Turn hexdump on error off, default on
+    */
+    errorDumpOff(): void;
+    /**
+    * Turn hexdump on error on, default on
+    */
+    errorDumpOn(): void;
+    /**
+    * Console logs data as hex dump
+    *
+    * @param {object} options - options object
+    * ```javascript
+    *   {
+    *       length: 192, // number of bytes to log, default 192 or end of data
+    *       startByte: 0, // byte to start dump, default current position
+    *       supressUnicode: false // Supress unicode character preview for cleaner columns
+    *   }
+    * ```
+    */
+    hexdump(options?: {
+        length?: number;
+        startByte?: number;
+        supressUnicode?: boolean;
+    }): void;
+    /**
     * Bit field reader
     *
     * Note: When returning to a byte read, remaining bits are dropped
@@ -261,13 +290,13 @@ export declare class bireader {
     */
     bit(bits: number, unsigned?: boolean, endian?: string): number;
     /**
-* Bit field reader
-*
-* Note: When returning to a byte read, remaining bits are dropped
-*
-* @param {boolean} unsigned - if the value is unsigned
-* @returns number
-*/
+    * Bit field reader
+    *
+    * Note: When returning to a byte read, remaining bits are dropped
+    *
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
     bit1(unsigned?: boolean): number;
     /**
     * Bit field reader
