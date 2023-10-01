@@ -4,7 +4,12 @@ import {
     remove,
     checkSize,
     addData,
-    hexDump
+    hexDump,
+    xor,
+    and,
+    or,
+    lshift,
+    rshift
     } from './common'
 /**
 * Binary writer, includes bitfields and strings
@@ -300,6 +305,220 @@ export class biwriter {
     */
     unrestrict(): void{
         this.strict = false
+    }
+
+    //
+    //math
+    //
+
+    /**
+    * XOR data
+    * 
+    * @param {number|string|Uint8Array|Buffer} xorKey - Value, string or array to XOR
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    XOR(xorKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
+        var XORKey:any = xorKey;
+        if(typeof xorKey == "number"){
+            //pass
+        } else
+        if(typeof xorKey == "string"){
+            //pass
+        } else
+        if(this.isBufferOrUint8Array(XORKey)){
+            //pass
+        } else {
+            throw new Error("XOR must be a number, string, Uint8Array or Buffer")
+        }
+        return xor(this,xorKey,startOffset||this.offset,endOffset||this.size,consume|| false)
+    }
+
+    /**
+    * XOR data
+    * 
+    * @param {number|string|Uint8Array|Buffer} xorKey - Value, string or array to XOR
+    * @param {number} length - Length in bytes to XOR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    XORThis(xorKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
+        var Length:number = length||1;
+        var XORKey:any = xorKey;
+        if(typeof xorKey == "number"){
+            Length = length||1;
+        } else
+        if(typeof xorKey == "string"){
+            const encoder = new TextEncoder().encode(xorKey);
+            XORKey = encoder
+            Length = length||encoder.length
+        } else
+        if(this.isBufferOrUint8Array(XORKey)){
+            Length = length||xorKey.length
+        } else {
+            throw new Error("XOR must be a number, string, Uint8Array or Buffer")
+        }
+        return xor(this,XORKey,this.offset,this.offset + Length,consume|| false)
+    }
+
+    /**
+    * OR data
+    * 
+    * @param {number|string|Uint8Array|Buffer} orKey - Value, string or array to OR
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    OR(orKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
+        var ORKey:any = orKey;
+        if(typeof orKey == "number"){
+            //pass
+        } else
+        if(typeof orKey == "string"){
+            //pass
+        } else
+        if(this.isBufferOrUint8Array(ORKey)){
+            //pass
+        } else {
+            throw new Error("OR must be a number, string, Uint8Array or Buffer")
+        }
+        return xor(this,orKey,startOffset||this.offset,endOffset||this.size,consume|| false)
+    }
+
+    /**
+    * OR data
+    * 
+    * @param {number|string|Uint8Array|Buffer} orKey - Value, string or array to OR
+    * @param {number} length - Length in bytes to OR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    ORThis(orKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
+        var Length:number = length||1;
+        var ORKey:any = orKey;
+        if(typeof orKey == "number"){
+            Length = length||1;
+        } else
+        if(typeof orKey == "string"){
+            const encoder = new TextEncoder().encode(orKey);
+            ORKey = encoder
+            Length = length||encoder.length
+        } else
+        if(this.isBufferOrUint8Array(ORKey)){
+            Length = length||orKey.length
+        } else {
+            throw new Error("OR must be a number, string, Uint8Array or Buffer")
+        }
+        return or(this,ORKey,this.offset,this.offset + Length,consume|| false)
+    }
+
+    /**
+    * AND data
+    * 
+    * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    AND(andKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
+        var ANDKey:any = andKey;
+        if(typeof andKey == "number"){
+            //pass
+        } else
+        if(typeof andKey == "string"){
+            //pass
+        } else
+        if(this.isBufferOrUint8Array(ANDKey)){
+            //pass
+        } else {
+            throw new Error("AND must be a number, string, Uint8Array or Buffer")
+        }
+        return and(this,andKey,startOffset||this.offset,endOffset||this.size,consume|| false)
+    }
+
+    /**
+    * AND data
+    * 
+    * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
+    * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    ANDThis(andKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
+        var Length:number = length||1;
+        var ANDKey:any = andKey;
+        if(typeof andKey == "number"){
+            Length = length||1;
+        } else
+        if(typeof andKey == "string"){
+            const encoder = new TextEncoder().encode(andKey);
+            ANDKey = encoder
+            Length = length||encoder.length
+        } else
+        if(this.isBufferOrUint8Array(ANDKey)){
+            Length = length||andKey.length
+        } else {
+            throw new Error("XOR must be a number, string, Uint8Array or Buffer")
+        }
+        return and(this,ANDKey,this.offset,this.offset + Length,consume|| false)
+    }
+
+    /**
+    * Left shift data
+    * 
+    * @param {number} shiftValue - Value to left shift
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    LSHIFT(shiftValue: number,startOffset?: number,endOffset?: number,consume?:boolean): void{
+        if(typeof shiftValue != "number"){
+            throw new Error("Shift value must be a number")
+        }
+        return lshift(this,shiftValue,startOffset||this.offset,endOffset||this.size,consume|| false)
+    }
+
+    /**
+    * Left shift data
+    * 
+    * @param {number} shiftValue - Value to left shift
+    * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    LSHIFTThis(shiftValue: number,length?: number,consume?:boolean): void{
+        var Length:number = length||1;
+        if(typeof shiftValue != "number"){
+            throw new Error("Shift value must be a number")
+        }
+        return lshift(this,shiftValue,this.offset,this.offset + Length,consume|| false)
+    }
+
+    /**
+    * Right shift data
+    * 
+    * @param {number} shiftValue - Value to right shift
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    RSHIFT(shiftValue: number,startOffset?: number,endOffset?: number,consume?:boolean): void{
+        if(typeof shiftValue != "number"){
+            throw new Error("Shift value must be a number")
+        }
+        return rshift(this,shiftValue,startOffset||this.offset,endOffset||this.size,consume|| false)
+    }
+
+    /**
+    * Right shift data
+    * 
+    * @param {number} shiftValue - Value to right shift
+    * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    RSHIFTThis(shiftValue: number,length?: number,consume?:boolean): void{
+        var Length:number = length||1;
+        if(typeof shiftValue != "number"){
+            throw new Error("Shift value must be a number")
+        }
+        return rshift(this,shiftValue,this.offset,this.offset + Length,consume|| false)
     }
 
     //

@@ -298,24 +298,22 @@ export function hexDump(_this: any, options?: {length?: number, startByte?: numb
     console.log(rows.join("\n"))
 }
 
-export function AND(_this: any, xor_key: any, start?: number, end?: number):any {
+export function and(_this: any, xor_key: any, start?: number, end?: number, consume?: boolean):any {
     const input = _this.data;
+    if((end||0) > _this.size){
+        if(_this.strict == false){
+            _this.extendArray((end||0) - _this.size)
+        } else {
+            _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : ""
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end||0) + " of " + _this.size)
+        }
+    }
     if (typeof xor_key == "number") {
         for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
             input[i] = input[i] & (xor_key && 0xff);
-        }
-    } else
-    if (typeof xor_key == "string") {
-        const encoder = new TextEncoder();
-        const xor_array = encoder.encode(xor_key)
-        let number = -1
-        for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
-            if (number != xor_array.length - 1) {
-                number = number + 1
-            } else {
-                number = 0
+            if(consume){
+                _this.offset = i
             }
-            input[i] = input[i] & xor_array[number]
         }
     } else {
         if(_this.isBufferOrUint8Array(xor_key)){
@@ -327,6 +325,9 @@ export function AND(_this: any, xor_key: any, start?: number, end?: number):any 
                     number = 0
                 }
                 input[i] = input[i] & xor_key[number]
+                if(consume){
+                    _this.offset = i
+                }
             }
         } else {
             throw new Error("AND key must be a byte value, string, Uint8Array or Buffer")
@@ -334,24 +335,22 @@ export function AND(_this: any, xor_key: any, start?: number, end?: number):any 
     }
 }
 
-export function OR(_this: any, xor_key: any, start?: number, end?: number):any {
+export function or(_this: any, xor_key: any, start?: number, end?: number, consume?: boolean):any {
     const input = _this.data;
+    if((end||0) > _this.size){
+        if(_this.strict == false){
+            _this.extendArray((end||0) - _this.size)
+        } else {
+            _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : ""
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end||0) + " of " + _this.size)
+        }
+    }
     if (typeof xor_key == "number") {
         for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
             input[i] = input[i] | (xor_key && 0xff);
-        }
-    } else
-    if (typeof xor_key == "string") {
-        const encoder = new TextEncoder();
-        const xor_array = encoder.encode(xor_key)
-        let number = -1
-        for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
-            if (number != xor_array.length - 1) {
-                number = number + 1
-            } else {
-                number = 0
+            if(consume){
+                _this.offset = i
             }
-            input[i] = input[i] | xor_array[number]
         }
     } else {
         if(_this.isBufferOrUint8Array(xor_key)){
@@ -363,6 +362,9 @@ export function OR(_this: any, xor_key: any, start?: number, end?: number):any {
                     number = 0
                 }
                 input[i] = input[i] | xor_key[number]
+                if(consume){
+                    _this.offset = i
+                }
             }
         } else {
             throw new Error("OR key must be a byte value, string, Uint8Array or Buffer")
@@ -370,24 +372,22 @@ export function OR(_this: any, xor_key: any, start?: number, end?: number):any {
     }
 }
 
-export function XOR(_this: any, xor_key: any, start?: number, end?: number):any {
+export function xor(_this: any, xor_key: any, start?: number, end?: number, consume?: boolean):any {
     const input = _this.data;
+    if((end||0) > _this.size){
+        if(_this.strict == false){
+            _this.extendArray((end||0) - _this.size)
+        } else {
+            _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : ""
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end||0) + " of " + _this.size)
+        }
+    }
     if (typeof xor_key == "number") {
         for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
             input[i] = input[i] ^ (xor_key && 0xff);
-        }
-    } else
-    if (typeof xor_key == "string") {
-        const encoder = new TextEncoder();
-        const xor_array = encoder.encode(xor_key)
-        let number = -1
-        for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
-            if (number != xor_array.length - 1) {
-                number = number + 1
-            } else {
-                number = 0
+            if(consume){
+                _this.offset = i
             }
-            input[i] = input[i] ^ xor_array[number]
         }
     } else {
         if(_this.isBufferOrUint8Array(xor_key)){
@@ -399,6 +399,9 @@ export function XOR(_this: any, xor_key: any, start?: number, end?: number):any 
                     number = 0
                 }
                 input[i] = input[i] ^ xor_key[number]
+                if(consume){
+                    _this.offset = i
+                }
             }
         } else {
             throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer")
@@ -406,20 +409,53 @@ export function XOR(_this: any, xor_key: any, start?: number, end?: number):any 
     }
 }
 
-export function NOT(_this: any, start?: number, end?: number): any{
+export function not(_this: any, start?: number, end?: number, consume?: boolean): any{
+    if((end||0) > _this.size){
+        if(_this.strict == false){
+            _this.extendArray((end||0) - _this.size)
+        } else {
+            _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : ""
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end||0) + " of " + _this.size)
+        }
+    }
     for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
         _this.data[i] = ~_this.data[i];
+        if(consume){
+            _this.offset = i
+        }
     }
 }
 
-export function LSHIFT(_this: any, value:number, start?: number, end?: number): any{
+export function lshift(_this: any, value:number, start?: number, end?: number, consume?: boolean): any{
+    if((end||0) > _this.size){
+        if(_this.strict == false){
+            _this.extendArray((end||0) - _this.size)
+        } else {
+            _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : ""
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end||0) + " of " + _this.size)
+        }
+    }
     for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
         _this.data[i] = _this.data[i] << value;
+        if(consume){
+            _this.offset = i
+        }
     }
 }
 
-export function RSHIFT(_this: any, value:number, start?: number, end?: number): any{
+export function rshift(_this: any, value:number, start?: number, end?: number, consume?: boolean): any{
+    if((end||0) > _this.size){
+        if(_this.strict == false){
+            _this.extendArray((end||0) - _this.size)
+        } else {
+            _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : ""
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end||0) + " of " + _this.size)
+        }
+    }
     for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
         _this.data[i] = _this.data[i] >> value;
+        if(consume){
+            _this.offset = i
+        }
     }
 }

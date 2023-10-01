@@ -407,25 +407,25 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Name</td>
-    <td>LSHIFT(<b>value</b>, startOffset, endOffset, consume)
+    <td>LSHIFT(<b>shiftValue</b>, startOffset, endOffset, consume)
     <td align="center"><b>Value</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
     <td >Left shift data (per byte)</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>LSHIFTThis(<b>value</b>, length, consume)
+    <td>LSHIFTThis(<b>shiftValue</b>, length, consume)
     <td align="center"><b>Value</b>, length of bytes starting at current byte (default 1), byte position to end (default end of data), move byte position to after operation (default false)</td>
     <td>Left shift data (per byte)</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>RSHIFT(<b>value</b>, startOffset, endOffset, consume)
+    <td>RSHIFT(<b>shiftValue</b>, startOffset, endOffset, consume)
     <td align="center"><b>Value</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
     <td >Right shift data (per byte)</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>RSHIFTThis(<b>value</b>, length, consume)
+    <td>RSHIFTThis(<b>shiftValue</b>, length, consume)
     <td align="center"><b>Value</b>, length of bytes starting at current byte (default 1), byte position to end (default end of data), move byte position to after operation (default false)</td>
     <td>Right shift data (per byte)</td>
   </tr>

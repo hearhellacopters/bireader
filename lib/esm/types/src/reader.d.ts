@@ -146,6 +146,91 @@ export declare class bireader {
     */
     unrestrict(): void;
     /**
+    * XOR data
+    *
+    * @param {number|string|Uint8Array|Buffer} xorKey - Value, string or array to XOR
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    XOR(xorKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    /**
+    * XOR data
+    *
+    * @param {number|string|Uint8Array|Buffer} xorKey - Value, string or array to XOR
+    * @param {number} length - Length in bytes to XOR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    XORThis(xorKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
+    /**
+    * OR data
+    *
+    * @param {number|string|Uint8Array|Buffer} orKey - Value, string or array to OR
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    OR(orKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    /**
+    * OR data
+    *
+    * @param {number|string|Uint8Array|Buffer} orKey - Value, string or array to OR
+    * @param {number} length - Length in bytes to OR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    ORThis(orKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
+    /**
+    * AND data
+    *
+    * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    AND(andKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    /**
+    * AND data
+    *
+    * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
+    * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    ANDThis(andKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
+    /**
+    * Left shift data
+    *
+    * @param {number} shiftValue - Value to left shift
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    LSHIFT(shiftValue: number, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    /**
+    * Left shift data
+    *
+    * @param {number} shiftValue - Value to left shift
+    * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    LSHIFTThis(shiftValue: number, length?: number, consume?: boolean): void;
+    /**
+    * Right shift data
+    *
+    * @param {number} shiftValue - Value to right shift
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    RSHIFT(shiftValue: number, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    /**
+    * Right shift data
+    *
+    * @param {number} shiftValue - Value to right shift
+    * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    RSHIFTThis(shiftValue: number, length?: number, consume?: boolean): void;
+    /**
     * Deletes part of data from start to current byte position unless supplied, returns removed
     * Note: Errors in strict mode
     *
