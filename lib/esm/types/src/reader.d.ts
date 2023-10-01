@@ -1,33 +1,35 @@
 /// <reference types="node" />
 /**
+* Binary reader, includes bitfields and strings
 *
-* byte reader, includes bitfields and strings
-*
-* @param {Buffer|Uint8Array} data - ```Buffer``` or ```Uint8Array```
-* @param {number} byteOffset - byte offset to start reader, default is 0
-* @param {number} bitOffset - bit offset to start reader, 0-7
-* @param {string} endianness - endianness ```big``` or ```little``` (default ```little```)
+* @param {Buffer|Uint8Array} data - ```Buffer``` or ```Uint8Array```. Always found in ``biwriter.data``
+* @param {number} byteOffset - Byte offset to start reader (default 0)
+* @param {number} bitOffset - Bit offset 0-7 to start reader (default 0)
+* @param {string} endianness - Endianness ```big``` or ```little``` (default ```little```)
+* @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default true)
 */
 export declare class bireader {
     endian: string;
     offset: number;
     bitoffset: number;
     size: number;
+    strict: boolean;
     errorDump: boolean;
-    data: Array<Buffer | Uint8Array>;
-    private check_size;
+    data: any;
     private isBuffer;
     private isBufferOrUint8Array;
+    extendArray(to_padd: number): void;
+    private check_size;
     /**
+    * Binary reader, includes bitfields and strings
     *
-    * byte reader, includes bitfields and strings
-    *
-    * @param {Buffer|Uint8Array} data - ```Buffer``` or ```Uint8Array```
-    * @param {number} byteOffset - byte offset to start reader, default is 0
-    * @param {number} bitOffset - bit offset to start reader, 0-7
-    * @param {string} endianness - endianness ```big``` or ```little``` (default ```little```)
+    * @param {Buffer|Uint8Array} data - ```Buffer``` or ```Uint8Array```. Always found in ``biwriter.data``
+    * @param {number} byteOffset - Byte offset to start reader (default 0)
+    * @param {number} bitOffset - Bit offset 0-7 to start reader (default 0)
+    * @param {string} endianness - Endianness ```big``` or ```little``` (default ```little```)
+    * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default true)
     */
-    constructor(data: Array<Buffer | Uint8Array>, byteOffset?: number, bitOffset?: number, endianness?: string);
+    constructor(data: Array<Buffer | Uint8Array>, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean);
     /**
     *
     * Change endian, defaults to little
@@ -62,86 +64,61 @@ export declare class bireader {
     */
     le(): void;
     /**
-    * Move current read byte or bit position
+    * Offset current byte or bit position
+    * Note: Will extend array if strict mode is off and outside of max size
     *
-    * @param {number} bytes - bytes to skip
-    * @param {number} bits - bits to skip
+    * @param {number} bytes - Bytes to skip
+    * @param {number} bits - Bits to skip (0-7)
     */
     skip(bytes: number, bits?: number): void;
     /**
-    * Move current read byte or bit position
+    * Offset current byte or bit position
+    * Note: Will extend array if strict mode is off and outside of max size
     *
-    * @param {number} bytes - bytes to skip
-    * @param {number} bits - bits to skip
+    * @param {number} bytes - Bytes to skip
+    * @param {number} bits - Bits to skip (0-7)
     */
-    fskip(bytes: number, bits?: number): void;
+    jump(bytes: number, bits?: number): void;
     /**
-    * Change current byte or bit read position
+    * Change position directly to address
+    * Note: Will extend array if strict mode is off and outside of max size
     *
-    * @param {number} byte - byte to jump to
-    * @param {number} bit - bit to jump to (0-7)
+    * @param {number} byte - byte to set to
+    * @param {number} bit - bit to set to (0-7)
     */
     goto(byte: number, bit?: number): void;
     /**
-    * Change current byte or bit read position
+    * Change position directly to address
+    * Note: Will extend array if strict mode is off and outside of max size
     *
-    * @param {number} byte - byte to jump to
-    * @param {number} bit - bit to jump to (0-7)
+    * @param {number} byte - byte to set to
+    * @param {number} bit - bit to set to (0-7)
     */
     seek(byte: number, bit?: number): void;
     /**
-    * Change current byte or bit read position
+    * Change position directly to address
+    * Note: Will extend array if strict mode is off and outside of max size
     *
-    * @param {number} byte - byte to jump to
-    * @param {number} bit - bit to jump to (0-7)
-    */
-    fseek(byte: number, bit?: number): void;
-    /**
-    * Change current byte or bit read position
-    *
-    * @param {number} byte - byte to jump to
-    * @param {number} bit - bit to jump to (0-7)
-    */
-    jump(byte: number, bit?: number): void;
-    /**
-    * Change current byte or bit read position
-    *
-    * @param {number} byte - byte to jump to
-    * @param {number} bit - bit to jump to (0-7)
+    * @param {number} byte - byte to set to
+    * @param {number} bit - bit to set to (0-7)
     */
     pointer(byte: number, bit?: number): void;
     /**
-    * Change current byte or bit read position
+    * Change position directly to address
+    * Note: Will extend array if strict mode is off and outside of max size
     *
-    * @param {number} byte - byte to jump to
-    * @param {number} bit - bit to jump to (0-7)
+    * @param {number} byte - byte to set to
+    * @param {number} bit - bit to set to (0-7)
     */
     warp(byte: number, bit?: number): void;
     /**
-    * Change current byte or bit read position
-    *
-    * @param {number} byte - byte to jump to
-    * @param {number} bit - bit to jump to (0-7)
-    */
-    fsetpos(byte: number, bit?: number): void;
-    /**
-    * Set offset to start of file
+    * Set byte and bit position to start of data
     */
     rewind(): void;
     /**
-    * Set offset to start of file
+    * Set byte and bit position to start of data
     */
     gotostart(): void;
-    /**
-    * Set offset to start of file
-    */
-    tostart(): void;
-    /**
-    * Get the current byte position
-    *
-    * @return {number} current byte position
-    */
-    ftell(): number;
     /**
     * Get the current byte position
     *
@@ -153,7 +130,7 @@ export declare class bireader {
     *
     * @return {number} current byte position
     */
-    fgetpos(): number;
+    getOffset(): number;
     /**
     * Get the current byte position
     *
@@ -161,95 +138,176 @@ export declare class bireader {
     */
     saveOffset(): number;
     /**
-    * Truncates array from start to current position unless supplied
-    * Note: Does not affect supplied data
-    * @param {number} startOffset - Start location, default 0
-    * @param {number} endOffset - end location, default current write position
-    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    * Disallows extending data if position is outside of max size
     */
-    clip(startOffset?: number, endOffset?: number): Array<Buffer | Uint8Array>;
+    restrict(): void;
     /**
-    * Truncates array from start to current position unless supplied
-    * Note: Does not affect supplied data
-    * @param {number} startOffset - Start location, default 0
-    * @param {number} endOffset - end location, default current write position
-    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    * Allows extending data if position is outside of max size
     */
-    crop(startOffset?: number, endOffset?: number): Array<Buffer | Uint8Array>;
+    unrestrict(): void;
     /**
-    * Truncates array from start to current position unless supplied
-    * Note: Does not affect supplied data
-    * @param {number} startOffset - Start location, default 0
-    * @param {number} endOffset - end location, default current write position
-    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    * Deletes part of data from start to current byte position unless supplied, returns removed
+    * Note: Errors in strict mode
+    *
+    * @param {number} startOffset - Start location (default 0)
+    * @param {number} endOffset - End location (default current position)
+    * @param {boolean} consume - Move position to end of removed data (default false)
+    * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    truncate(startOffset?: number, endOffset?: number): Array<Buffer | Uint8Array>;
+    delete(startOffset?: number, endOffset?: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
-    * Truncates array from start to current position unless supplied
-    * Note: Does not affect supplied data
-    * @param {number} startOffset - Start location, default 0
-    * @param {number} endOffset - end location, default current write position
-    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    * Deletes part of data from start to current byte position unless supplied, returns removed
+    * Note: Errors in strict mode
+    *
+    * @param {number} startOffset - Start location (default 0)
+    * @param {number} endOffset - End location (default current position)
+    * @param {boolean} consume - Move position to end of removed data (default false)
+    * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    slice(startOffset?: number, endOffset?: number): Array<Buffer | Uint8Array>;
+    clip(startOffset?: number, endOffset?: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
-    * Extract array from current position to length supplied
+    * Deletes part of data from current byte position to supplied length, returns removed
+    * Note: Errors in strict mode
+    *
+    * @param {number} length - Length of data in bytes to remove
+    * @param {boolean} consume - Move position to end of removed data (default false)
+    * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
+    */
+    crop(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    /**
+    * Deletes part of data from current position to supplied length, returns removed
+    * Note: Only works in strict mode
+    *
+    * @param {number} length - Length of data in bytes to remove
+    * @param {boolean} consume - Move position to end of removed data (default false)
+    * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
+    */
+    drop(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    /**
+    * Returns part of data from current byte position to end of data unless supplied
+    *
+    * @param {number} startOffset - Start location (default current position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move position to end of lifted data (default false)
+    * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
+    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    */
+    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Array<Buffer | Uint8Array>;
+    /**
+    * Returns part of data from current byte position to end of data unless supplied
+    *
+    * @param {number} startOffset - Start location (default current position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move position to end of lifted data (default false)
+    * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
+    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    */
+    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Array<Buffer | Uint8Array>;
+    /**
+    * Extract data from current position to length supplied
     * Note: Does not affect supplied data
-    * @param {number} length - length of data to copy from current offset
-    * @param {number} consume - moves offset to end of length
-    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    *
+    * @param {number} length - Length of data in bytes to copy from current offset
+    * @param {number} consume - Moves offset to end of length
+    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
     extract(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
-    * Extract array from current position to length supplied
+    * Extract data from current position to length supplied
     * Note: Does not affect supplied data
-    * @param {number} length - length of data to copy from current offset
-    * @param {number} consume - moves offset to end of length
-    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    *
+    * @param {number} length - Length of data in bytes to copy from current offset
+    * @param {number} consume - Moves offset to end of length
+    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    */
+    slice(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    /**
+    * Extract data from current position to length supplied
+    * Note: Does not affect supplied data
+    *
+    * @param {number} length - Length of data in bytes to copy from current offset
+    * @param {number} consume - Moves offset to end of length
+    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
     wrap(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
-    * Extract array from current position to length supplied
-    * Note: Does not affect supplied data
-    * @param {number} length - length of data to copy from current offset
-    * @param {number} consume - moves offset to end of length
-    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    * Inserts data into data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {boolean} consume - Move current write position to end of data (default false)
+    * @param {number} offset - Offset to add it at (defaults to current position)
     */
-    lift(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    insert(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
+    /**
+    * Inserts data into data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {boolean} consume - Move current write position to end of data (default false)
+    * @param {number} offset - Offset to add it at (defaults to current position)
+    */
+    place(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
+    /**
+    * Adds data to start of supplied data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {boolean} consume - Move current write position to end of data (default false)
+    */
+    unshift(data: Buffer | Uint8Array, consume?: boolean): void;
+    /**
+    * Adds data to start of supplied data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {boolean} consume - Move current write position to end of data (default false)
+    */
+    prepend(data: Buffer | Uint8Array, consume?: boolean): void;
+    /**
+    * Adds data to end of supplied data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {boolean} consume - Move current write position to end of data (default false)
+    */
+    push(data: Buffer | Uint8Array, consume?: boolean): void;
+    /**
+    * Adds data to end of supplied data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {boolean} consume - Move current write position to end of data (default false)
+    */
+    append(data: Buffer | Uint8Array, consume?: boolean): void;
     /**
     * Returns current data
+    *
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
     get(): Array<Buffer | Uint8Array>;
     /**
     * Returns current data
+    *
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
     return(): Array<Buffer | Uint8Array>;
     /**
-    * removes reading data
+    * removes data
     */
     end(): void;
     /**
-    * removes reading data
+    * removes data
     */
     close(): void;
     /**
-    * removes reading data
+    * removes data
     */
     done(): void;
     /**
-    * removes reading data
+    * removes data
     */
     finished(): void;
-    /**
-    * Turn hexdump on error off, default on
-    */
-    errorDumpOff(): void;
-    /**
-    * Turn hexdump on error on, default on
-    */
-    errorDumpOn(): void;
     /**
     * Console logs data as hex dump
     *
@@ -267,6 +325,14 @@ export declare class bireader {
         startByte?: number;
         supressUnicode?: boolean;
     }): void;
+    /**
+    * Turn hexdump on error off (default on)
+    */
+    errorDumpOff(): void;
+    /**
+    * Turn hexdump on error on (default on)
+    */
+    errorDumpOn(): void;
     /**
     * Bit field reader
     *
@@ -2712,6 +2778,23 @@ export declare class bireader {
         encoding?: string;
         endian?: string;
     }): string;
+    /**
+    * Reads string, use options object for different types
+    *
+    * @param {object} options
+    * ```javascript
+    * {
+    *  length: number, //for fixed length, non-terminate value utf strings
+    *  stringType: "utf-8", //utf-8, utf-16, pascal or wide-pascal
+    *  terminateValue: 0x00, // only for non-fixed length utf strings
+    *  lengthReadSize: 1, //for pascal strings. 1, 2 or 4 byte length read size
+    *  stripNull: true, // removes 0x00 characters
+    *  encoding: "utf-8", //TextEncoder accepted types
+    *  endian: "little", //for wide-pascal and utf-16
+    * }
+    * ```
+    * @return string
+    */
     string(options?: {
         length?: number;
         stringType?: string;

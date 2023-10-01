@@ -3,10 +3,10 @@
 * Binary writer, includes bitfields and strings
 *
 * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``biwriter.data``
-* @param {number} byteOffset - byte offset to start writer, default is 0
-* @param {number} bitOffset - bit offset to start writer, 0-7
-* @param {string} endianness - endianness ``big`` or ``little`` (default little)
-* @param {boolean} strict - strict mode: if true does not extend supplied array on outside write (default false)
+* @param {number} byteOffset - Byte offset to start writer, default is 0
+* @param {number} bitOffset - Bit offset to start writer, 0-7
+* @param {string} endianness - Endianness ``big`` or ``little`` (default little)
+* @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default false)
 */
 export declare class biwriter {
     endian: string;
@@ -24,15 +24,14 @@ export declare class biwriter {
     * Binary writer, includes bitfields and strings
     *
     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``biwriter.data``
-    * @param {number} byteOffset - byte offset to start writer, default is 0
-    * @param {number} bitOffset - bit offset to start writer, 0-7
-    * @param {string} endianness - endianness ``big`` or ``little`` (default little)
-    * @param {boolean} strict - strict mode: if true does not extend supplied array on outside write (default false)
+    * @param {number} byteOffset - Byte offset to start writer, default is 0
+    * @param {number} bitOffset - Bit offset to start writer, 0-7
+    * @param {string} endianness - Endianness ``big`` or ``little`` (default little)
+    * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default false)
     */
     constructor(data: Array<Uint8Array>, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean);
     /**
-    *
-    * Change endian, defaults to little
+    * Change endian (default little)
     *
     * Can be changed at any time, doesn't loose position
     *
@@ -40,116 +39,91 @@ export declare class biwriter {
     */
     endianness(endian: string): void;
     /**
-    *
     * Sets endian to big
+    *
     */
     bigEndian(): void;
     /**
-    *
     * Sets endian to big
+    *
     */
     big(): void;
     /**
-    *
     * Sets endian to big
+    *
     */
     be(): void;
     /**
-    *
     * Sets endian to little
+    *
     */
     littleEndian(): void;
     /**
-    *
     * Sets endian to little
+    *
     */
     little(): void;
     /**
-    *
     * Sets endian to little
+    *
     */
     le(): void;
     /**
-    * Move current write byte or bit position, will extend data if outside of current size
+    * Offset current byte or bit position
+    * Note: Will extend array if strict mode is off and outside of max size
     *
-    * @param {number} bytes - bytes to skip
-    * @param {number} bits - bits to skip (0-7)
+    * @param {number} bytes - Bytes to skip
+    * @param {number} bits - Bits to skip (0-7)
     */
     skip(bytes: number, bits?: number): void;
     /**
-    * Move current write byte or bit position, will extend data if outside of current size
+    * Offset current byte or bit position
+    * Note: Will extend array if strict mode is off and outside of max size
     *
-    * @param {number} bytes - bytes to skip
-    * @param {number} bits - bits to skip (0-7)
+    * @param {number} bytes - Bytes to skip
+    * @param {number} bits - Bits to skip (0-7)
     */
-    fskip(bytes: number, bits?: number): void;
+    jump(bytes: number, bits?: number): void;
     /**
-    * Change current byte or bit write position, will extend data if outside of current size
+    * Change position directly to address
+    * Note: Will extend array if strict mode is off and outside of max size
     *
-    * @param {number} byte - byte to jump to
-    * @param {number} bit - bit to jump to (0-7)
+    * @param {number} byte - byte to set to
+    * @param {number} bit - bit to set to (0-7)
     */
     goto(byte: number, bit?: number): void;
     /**
-    * Change current byte or bit write position, will extend data if outside of current size
+    * Change position directly to address
+    * Note: Will extend array if strict mode is off and outside of max size
     *
-    * @param {number} byte - byte to jump to
-    * @param {number} bit - bit to jump to (0-7)
+    * @param {number} byte - byte to set to
+    * @param {number} bit - bit to set to (0-7)
     */
     seek(byte: number, bit?: number): void;
     /**
-    * Change current byte or bit write position, will extend data if outside of current size
+    * Change position directly to address
+    * Note: Will extend array if strict mode is off and outside of max size
     *
-    * @param {number} byte - byte to jump to
-    * @param {number} bit - bit to jump to (0-7)
-    */
-    fseek(byte: number, bit?: number): void;
-    /**
-    * Change current byte or bit write position, will extend data if outside of current size
-    *
-    * @param {number} byte - byte to jump to
-    * @param {number} bit - bit to jump to (0-7)
-    */
-    jump(byte: number, bit?: number): void;
-    /**
-    * Change current byte or bit write position, will extend data if outside of current size
-    *
-    * @param {number} byte - byte to jump to
-    * @param {number} bit - bit to jump to (0-7)
+    * @param {number} byte - byte to set to
+    * @param {number} bit - bit to set to (0-7)
     */
     pointer(byte: number, bit?: number): void;
     /**
-    * Change current byte or bit write position, will extend data if outside of current size
+    * Change position directly to address
+    * Note: Will extend array if strict mode is off and outside of max size
     *
-    * @param {number} byte - byte to jump to
-    * @param {number} bit - bit to jump to (0-7)
+    * @param {number} byte - byte to set to
+    * @param {number} bit - bit to set to (0-7)
     */
     warp(byte: number, bit?: number): void;
     /**
-    * Change current byte or bit write position, will extend data if outside of current size
-    *
-    * @param {number} byte - byte to jump to
-    * @param {number} bit - bit to jump to (0-7)
-    */
-    fsetpos(byte: number, bit?: number): void;
-    /**
-    * Set offset to start of file
+    * Set byte and bit position to start of data
     */
     rewind(): void;
     /**
-    * Set offset to start of file
+    * Set byte and bit position to start of data
     */
     gotostart(): void;
-    /**
-    * Set offset to start of file
-    */
-    tostart(): void;
-    /**
-    * Get the current byte position
-    *
-    * @return {number} current byte position
-    */
-    ftell(): number;
     /**
     * Get the current byte position
     *
@@ -161,7 +135,7 @@ export declare class biwriter {
     *
     * @return {number} current byte position
     */
-    fgetpos(): number;
+    getOffset(): number;
     /**
     * Get the current byte position
     *
@@ -169,107 +143,176 @@ export declare class biwriter {
     */
     saveOffset(): number;
     /**
-    * Disallows extending array if writing outside of max size
+    * Disallows extending data if position is outside of max size
     */
     restrict(): void;
     /**
-    * Allows extending array if writing outside of max size
+    * Allows extending data if position is outside of max size
     */
     unrestrict(): void;
     /**
-    * Truncates array from start to current position unless supplied
-    * Note: Does not affect supplied data
-    * Note: Will extend array if strict mode is off
-    * @param {number} startOffset - Start location, default 0
-    * @param {number} endOffset - end location, default current write position
+    * Deletes part of data from start to current byte position unless supplied, returns removed
+    * Note: Errors in strict mode
+    *
+    * @param {number} startOffset - Start location (default 0)
+    * @param {number} endOffset - End location (default current position)
+    * @param {boolean} consume - Move position to end of removed data (default false)
+    * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    clip(startOffset?: number, endOffset?: number): Array<Buffer | Uint8Array>;
+    delete(startOffset?: number, endOffset?: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
-    * Truncates array from start to current position unless supplied
-    * Note: Does not affect supplied data
-    * Note: Will extend array if strict mode is off
-    * @param {number} startOffset - Start location, default 0
-    * @param {number} endOffset - end location, default current write position
+    * Deletes part of data from start to current byte position unless supplied, returns removed
+    * Note: Errors in strict mode
+    *
+    * @param {number} startOffset - Start location (default 0)
+    * @param {number} endOffset - End location (default current position)
+    * @param {boolean} consume - Move position to end of removed data (default false)
+    * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    crop(startOffset?: number, endOffset?: number): Array<Buffer | Uint8Array>;
+    clip(startOffset?: number, endOffset?: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
-    * Truncates array from start to current position unless supplied
-    * Note: Does not affect supplied data
-    * Note: Will extend array if strict mode is off
-    * @param {number} startOffset - Start location, default 0
-    * @param {number} endOffset - end location, default current write position
+    * Deletes part of data from current byte position to supplied length, returns removed
+    * Note: Errors in strict mode
+    *
+    * @param {number} length - Length of data in bytes to remove
+    * @param {boolean} consume - Move position to end of removed data (default false)
+    * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    truncate(startOffset?: number, endOffset?: number): Array<Buffer | Uint8Array>;
+    crop(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
-    * Truncates array from start to current position unless supplied
-    * Note: Does not affect supplied data
-    * Note: Will extend array if strict mode is off
-    * @param {number} startOffset - Start location, default 0
-    * @param {number} endOffset - end location, default current write position
-    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    * Deletes part of data from current position to supplied length, returns removed
+    * Note: Only works in strict mode
+    *
+    * @param {number} length - Length of data in bytes to remove
+    * @param {boolean} consume - Move position to end of removed data (default false)
+    * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    slice(startOffset?: number, endOffset?: number): Array<Buffer | Uint8Array>;
+    drop(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
-    * Extract array from current position to length supplied
+    * Returns part of data from current byte position to end of data unless supplied
+    *
+    * @param {number} startOffset - Start location (default current position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move position to end of lifted data (default false)
+    * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
+    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    */
+    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Array<Buffer | Uint8Array>;
+    /**
+    * Returns part of data from current byte position to end of data unless supplied
+    *
+    * @param {number} startOffset - Start location (default current position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move position to end of lifted data (default false)
+    * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
+    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    */
+    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Array<Buffer | Uint8Array>;
+    /**
+    * Extract data from current position to length supplied
     * Note: Does not affect supplied data
-    * Note: Will extend array if strict mode is off
-    * @param {number} length - length of data to copy from current offset
-    * @param {number} consume - moves offset to end of length
-    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    *
+    * @param {number} length - Length of data in bytes to copy from current offset
+    * @param {number} consume - Moves offset to end of length
+    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
     extract(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
-    * Extract array from current position to length supplied
+    * Extract data from current position to length supplied
     * Note: Does not affect supplied data
-    * Note: Will extend array if strict mode is off
-    * @param {number} length - length of data to copy from current offset
-    * @param {number} consume - moves offset to end of length
-    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    *
+    * @param {number} length - Length of data in bytes to copy from current offset
+    * @param {number} consume - Moves offset to end of length
+    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    */
+    slice(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    /**
+    * Extract data from current position to length supplied
+    * Note: Does not affect supplied data
+    *
+    * @param {number} length - Length of data in bytes to copy from current offset
+    * @param {number} consume - Moves offset to end of length
+    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
     wrap(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
-    * Extract array from current position to length supplied
-    * Note: Does not affect supplied data
-    * Note: Will extend array if strict mode is off
-    * @param {number} length - length of data to copy from current offset
-    * @param {number} consume - moves offset to end of length
-    * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+    * Inserts data into data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {boolean} consume - Move current write position to end of data (default false)
+    * @param {number} offset - Offset to add it at (defaults to current position)
     */
-    lift(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    insert(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
+    /**
+    * Inserts data into data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {boolean} consume - Move current write position to end of data (default false)
+    * @param {number} offset - Offset to add it at (defaults to current position)
+    */
+    place(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
+    /**
+    * Adds data to start of supplied data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {boolean} consume - Move current write position to end of data (default false)
+    */
+    unshift(data: Buffer | Uint8Array, consume?: boolean): void;
+    /**
+    * Adds data to start of supplied data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {boolean} consume - Move current write position to end of data (default false)
+    */
+    prepend(data: Buffer | Uint8Array, consume?: boolean): void;
+    /**
+    * Adds data to end of supplied data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {boolean} consume - Move current write position to end of data (default false)
+    */
+    push(data: Buffer | Uint8Array, consume?: boolean): void;
+    /**
+    * Adds data to end of supplied data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {boolean} consume - Move current write position to end of data (default false)
+    */
+    append(data: Buffer | Uint8Array, consume?: boolean): void;
     /**
     * Returns current data
+    *
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
     get(): Array<Buffer | Uint8Array>;
     /**
     * Returns current data
+    *
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
     return(): Array<Buffer | Uint8Array>;
     /**
-    * removes writing data
+    * removes data
     */
     end(): void;
     /**
-    * removes writing data
+    * removes data
     */
     close(): void;
     /**
-    * removes writing data
+    * removes data
     */
     done(): void;
     /**
-    * removes writing data
+    * removes data
     */
     finished(): void;
-    /**
-    * Turn hexdump on error off, default on
-    */
-    errorDumpOff(): void;
-    /**
-    * Turn hexdump on error on, default on
-    */
-    errorDumpOn(): void;
     /**
     * Console logs data as hex dump
     *
@@ -287,6 +330,14 @@ export declare class biwriter {
         startByte?: number;
         supressUnicode?: boolean;
     }): void;
+    /**
+    * Turn hexdump on error off (default on)
+    */
+    errorDumpOff(): void;
+    /**
+    * Turn hexdump on error on (default on)
+    */
+    errorDumpOn(): void;
     /**
     *
     * Write bits, must have at least value and number of bits
@@ -316,20 +367,20 @@ export declare class biwriter {
     */
     bit(value: number, bits: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean, endian?: string): void;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte read, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
+    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if value is unsigned or not
+    */
     bit1(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -339,7 +390,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -350,7 +401,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -360,7 +411,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -371,7 +422,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -381,7 +432,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -392,7 +443,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -402,7 +453,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -413,7 +464,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -423,7 +474,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -434,7 +485,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -444,7 +495,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -455,7 +506,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -465,7 +516,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -476,7 +527,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -486,7 +537,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -497,7 +548,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -507,7 +558,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -518,7 +569,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -528,7 +579,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -539,7 +590,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -549,7 +600,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -560,7 +611,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -570,7 +621,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -581,7 +632,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -591,7 +642,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -602,7 +653,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -612,7 +663,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -623,7 +674,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -633,7 +684,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -644,7 +695,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -654,7 +705,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -665,7 +716,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -675,7 +726,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -686,7 +737,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -696,7 +747,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -707,7 +758,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -717,7 +768,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -728,7 +779,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -738,7 +789,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -749,7 +800,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -759,7 +810,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -770,7 +821,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -780,7 +831,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -791,7 +842,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -801,7 +852,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -812,7 +863,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -822,7 +873,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -833,7 +884,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -843,7 +894,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -854,7 +905,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -864,7 +915,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -875,7 +926,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -885,7 +936,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -896,7 +947,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -906,7 +957,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -917,7 +968,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -927,7 +978,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -938,7 +989,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -948,7 +999,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -959,7 +1010,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -969,7 +1020,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -980,7 +1031,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -990,7 +1041,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1001,7 +1052,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1011,7 +1062,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1022,7 +1073,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1032,7 +1083,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1043,7 +1094,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1053,7 +1104,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1064,7 +1115,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1074,7 +1125,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1085,7 +1136,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1095,7 +1146,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1106,7 +1157,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1116,7 +1167,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1127,7 +1178,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1137,7 +1188,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1148,7 +1199,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1158,7 +1209,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1169,7 +1220,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1179,7 +1230,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1190,7 +1241,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1200,7 +1251,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1211,7 +1262,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1221,7 +1272,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1232,7 +1283,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1242,7 +1293,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1253,7 +1304,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1263,7 +1314,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1274,7 +1325,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1284,7 +1335,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1295,7 +1346,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1305,7 +1356,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1316,7 +1367,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1326,7 +1377,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1337,7 +1388,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1347,7 +1398,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1358,7 +1409,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1368,7 +1419,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1379,7 +1430,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1389,7 +1440,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1400,7 +1451,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1410,7 +1461,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1421,7 +1472,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1431,7 +1482,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1442,7 +1493,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1452,7 +1503,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1463,7 +1514,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1473,7 +1524,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1484,7 +1535,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1494,7 +1545,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1505,7 +1556,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1515,7 +1566,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1526,7 +1577,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1536,7 +1587,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1547,7 +1598,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1557,7 +1608,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1568,7 +1619,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1578,7 +1629,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1589,7 +1640,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1599,7 +1650,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1610,7 +1661,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1620,7 +1671,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1631,7 +1682,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1641,7 +1692,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1652,7 +1703,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1662,7 +1713,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1673,7 +1724,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1683,7 +1734,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1694,7 +1745,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1704,7 +1755,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1715,7 +1766,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1725,7 +1776,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1736,7 +1787,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1746,7 +1797,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1757,7 +1808,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1767,7 +1818,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1778,7 +1829,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1788,7 +1839,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1799,7 +1850,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1809,7 +1860,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1820,7 +1871,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1830,7 +1881,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1841,7 +1892,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1851,7 +1902,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1862,7 +1913,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1872,7 +1923,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1883,7 +1934,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1893,7 +1944,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1904,7 +1955,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1914,7 +1965,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1925,7 +1976,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1935,7 +1986,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1946,7 +1997,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1956,7 +2007,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1967,7 +2018,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1977,7 +2028,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1988,7 +2039,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -1998,7 +2049,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2009,7 +2060,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2019,7 +2070,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2030,7 +2081,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2040,7 +2091,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2051,7 +2102,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2061,7 +2112,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2072,7 +2123,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2082,7 +2133,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2093,7 +2144,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2103,7 +2154,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2114,7 +2165,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2124,7 +2175,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2135,7 +2186,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2145,7 +2196,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2156,7 +2207,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2166,7 +2217,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2177,7 +2228,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2187,7 +2238,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2198,7 +2249,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2208,7 +2259,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2219,7 +2270,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2229,7 +2280,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2240,7 +2291,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2250,7 +2301,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2261,7 +2312,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2271,7 +2322,7 @@ export declare class biwriter {
     /**
 * Bit field writer
 *
-* Note: When returning to a byte read, remaining bits are dropped
+* Note: When returning to a byte write, remaining bits are dropped
 *
 * @param {number} value - value as int
 * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2282,7 +2333,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2292,7 +2343,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2303,7 +2354,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2313,7 +2364,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2324,7 +2375,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
@@ -2334,7 +2385,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} bits - number of bits to write
@@ -2346,7 +2397,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} bits - number of bits to write
@@ -2358,7 +2409,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} bits - number of bits to write
@@ -2370,7 +2421,7 @@ export declare class biwriter {
     /**
     * Bit field writer
     *
-    * Note: When returning to a byte read, remaining bits are dropped
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
     * @param {number} bits - number of bits to write

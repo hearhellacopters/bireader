@@ -1,6 +1,6 @@
 # bireader
 
-A simple binary reader and writer that keeps track of your position to quickly create file structures. Includes shared naming conventions and multiple programmable calling for easy data conversions to do low level parsing. Accepts `Uint8Array` or `Buffer`.
+A feature rich binary reader and writer that keeps track of your position to quickly create file structures. Includes shared naming conventions, programmable inputs and advanced math for easy data conversions to do low level parsing. Accepts `Uint8Array` or `Buffer`.
 
 Supported data types are:
 
@@ -167,36 +167,12 @@ function parse_webp(data){
     return header
 }
 
-function rite_webp(size, magic, ver, heigth, width){
-    const data = new Uint8Array(size)
-    const bw = new biwriter(data)
-    bw.writeString(magic, {length:4})
-    const unsigned = true
-    header.ver = bw.uint8(ver)
-    if(header.ver == 10){ 
-      bw.bit16() //reserved
-      bw.uint32be(heigth)
-      bw.quadbe(width)
-    } else if(header.ver < 9) {
-      bw.fskip(2) //reserved
-      bw.uint16le(size)
-      const bitsize = header.magic == "foo" ? 16 : 32
-      const byteOffset = 0
-      const bitOffset = 0
-      bw.bit(heigth, bitsize, byteOffset, bitOffset0, unsigned)
-      bw.int64le(width, byteOffset, unsigned)
-    } else {
-      throw new Error('Unknown version of ' + ver)
-    }
-    const header = bw.crop(0,size)
-    bw.finished()
-    return header
-}
+TODO // write example
 ```
 
 ## Common Functions
 
-Common functions for setup and movement shared by both (unless indicated).
+Common functions for setup, movement, manipulation and math shared by both.
 
 <table>
 <thead>
@@ -208,96 +184,37 @@ Common functions for setup and movement shared by both (unless indicated).
 </thead>
 <tbody>
   <tr>
+  <th align="center" colspan="4"><i>Setup</i></th>
+  <tr>
+  <tr>
     <td>Name</td>
-    <td>new bireader(<b>data</b>, 1, 0, "big")</td>
-    <td align="center" rowspan="2"><b>Buffer or Uint8Array</b>, byte offset, bit offset, endian</td>
+    <td>new bireader(<b>data</b>, byteOffset, bitOffset, endianess, strict)</td>
+    <td align="center" rowspan="2"><b>Buffer or Uint8Array</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending initially supplied data (default true for reader, false for writer)</td>
     <td rowspan="2">new Constructor</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>new biwriter(<b>data</b>, 0, 8, "little")</td>
+    <td>new biwriter(<b>data</b>, byteOffset, bitOffset, endianess, strict)</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>endianness(<b>str</b>)</td>
+    <td>endianness(<b>bigOrLittle</b>)</td>
     <td align="center" rowspan="2"><b>big</b> or <b>little</b> (default little)</td>
     <td rowspan="2">Can be changed at any time.</td>
   </tr>
   <tr>
     <td>Presets</td>
-    <td>bigEndian()<br>big()<br>be()<br>littleEndian()<br>little()<br>le()</td>
+    <td>bigEndian(), big(), be()<br>littleEndian(), little(), le()</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>skip(<b>bytes</b>, bits)</td>
-    <td align="center" rowspan="2"><b>bytes to skip from current position</b>, bits to skip</td>
-    <td rowspan="2">Use negative to go back.<br><b>Note:</b> Remaining bits are dropped when returning to a byte read.</td>
-  </tr>
-  <tr>
-    <td>Aliases</td>
-    <td>fskip(<b>bytes</b>, bits)</td>
-  </tr>
-  <tr>
-    <td>Name</td>
-    <td>goto(<b>byte</b>, bit)</td>
-    <td align="center" rowspan="2"><b>Byte offset from start</b>, bit offset from byte offset</td>
-    <td rowspan="2"><b>Note:</b> Remaining bits are drop when returning to byte data.</td>
-  </tr>
-  <tr>
-    <td>Aliases</td>
-    <td>seek(<b>byte</b>, bit)<br>fseek(<b>byte</b>, bit)<br>pointer(<b>byte</b>, bit)<br>warp(<b>byte</b>, bit)<br>fsetpos(<b>byte</b>, bit)</td>
-  </tr>
-  <tr>
-    <td>Name</td>
-    <td>rewind()</td>
+    <td>tell()</td>
     <td align="center" rowspan="2">none</td>
-    <td rowspan="2">Moves current read position to start of data.</td>
+    <td rowspan="2">Gets current byte position in bytes</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>gotostart()<br>tostart()</td>
-  </tr>
-  <tr>
-    <td>Name</td>
-    <td>ftell()</td>
-    <td align="center" rowspan="2">none</td>
-    <td rowspan="2">Gets current read position in bytes</td>
-  </tr>
-  <tr>
-    <td>Aliases</td>
-    <td>tell()<br>fgetpos()</td>
-  </tr>
-  <tr>
-    <td>Name</td>
-    <td>unrestrict()</td>
-    <td align="center">none</td>
-    <td><b>biwriter only:</b> Will extend array if data is written outside of max size (default on)</td>
-  </tr>
-  <tr>
-    <td>Name</td>
-    <td>restrict()</td>
-    <td align="center">none</td>
-    <td><b>biwriter only:</b> Won't extend array if data is written outside of max size (default off)</td>
-  </tr>
-  <tr>
-    <td>Name</td>
-    <td>crop(startOffset, endOffset)</td>
-    <td align="center" rowspan="2">start byte of data, end byte of data</td>
-    <td rowspan="2">Returns data truncated. defaults to 0 and current read / write position. <br><b>Note:</b> Does not affect supplied data or current read position.</td>
-  </tr>
-  <tr>
-    <td>Aliases</td>
-    <td>clip(startOffset, endOffset)<br>truncate(startOffset, endOffset)<br>slice(startOffset, endOffset)</td>
-  </tr>
-   <tr>
-    <td>Name</td>
-    <td>extract(<b>length</b>, consume)</td>
-    <td align="center" rowspan="2"><b>length of data from current position</b>, consume length and move offset (default false)</td>
-    <td rowspan="2">Returns data from current read position to supplied length. <br><b>Note:</b> Does not affect supplied data. Only moves current read position if consume is true.</td>
-  </tr>
-  <tr>
-    <td>Aliases</td>
-    <td>wrap(<b>length</b>, consume)<br>lift(<b>length</b>, consume)</td>
+    <td>getOffset()<br>saveOffset()</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -311,6 +228,36 @@ Common functions for setup and movement shared by both (unless indicated).
   </tr>
   <tr>
     <td>Name</td>
+    <td>hexdump({length, startByte, supressUnicode})</td>
+    <td align="center">Length of dump, Byte to start the dump, Supress unicode character preview for cleaner columns</td>
+    <td >Console logs data. Defaults to current position and 192 bytes in length. Will trigger on error unless turned off (see below)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>errorDumpOff()</td>
+    <td align="center" >None</td>
+    <td >Does not hexdump on error (default true)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>errorDumpOn()</td>
+    <td align="center" >None</td>
+    <td >While hexdump on error (default true)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>unrestrict()</td>
+    <td align="center">none</td>
+    <td>Sets strict mode to false, will extend array if data is outside of max size (default true for reader, false for writer)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>restrict()</td>
+    <td align="center">none</td>
+    <td>Sets strict mode to true, won't extend array if data is outside of max size (default true for reader, false for writer)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
     <td>end()</td>
     <td align="center" rowspan="2">none</td>
     <td rowspan="2">Removes supplied data.</td>
@@ -319,24 +266,171 @@ Common functions for setup and movement shared by both (unless indicated).
     <td>Aliases</td>
     <td>close()<br>done()<br>finished()</td>
   </tr>
+  <th align="center" colspan="4"><i>Movement</i></th>
   <tr>
-  <td>Name</td>
-  <td>hexdump({length, startByte, supressUnicode})</td>
-  <td align="center">Length of dump, Byte to start the dump, Supress unicode character preview for cleaner columns</td>
-  <td >Console logs data. Defaults to current position and 192 bytes in length. Will trigger on error unless turned off (see below)</td>
+    <td>Name</td>
+    <td>skip(<b>bytes</b>, bits)</td>
+    <td align="center" rowspan="2"><b>bytes to skip from current byte position</b>, bits to skip</td>
+    <td rowspan="2">Use negative to go back.<br><b>Note:</b> Remaining bits are dropped when returning to a byte read.</td>
   </tr>
   <tr>
-  <td>Name</td>
-  <td>errorDumpOff()</td>
-  <td align="center" >None</td>
-  <td >Turns hexdump off on error (default true)</td>
+    <td>Alias</td>
+    <td>jump(<b>bytes</b>, bits)</td>
   </tr>
   <tr>
-  <td>Name</td>
-  <td>errorDumpOn()</td>
-  <td align="center" rowspan="2">None</td>
-  <td rowspan="2">Turns hexdump on on error (default true)</td>
+    <td>Name</td>
+    <td>goto(<b>byte</b>, bit)</td>
+    <td align="center" rowspan="2"><b>Byte offset from start</b>, bit offset from byte offset</td>
+    <td rowspan="2"><b>Note:</b> Remaining bits are drop when returning to byte data.</td>
   </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>seek(<b>byte</b>, bit)<br>pointer(<b>byte</b>, bit)<br>warp(<b>byte</b>, bit)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>rewind()</td>
+    <td align="center" rowspan="2">none</td>
+    <td rowspan="2">Moves current byte position to start of data.</td>
+  </tr>
+  <tr>
+    <td>Alias</td>
+    <td>gotostart()</td>
+  </tr>
+  <th align="center" colspan="4"><i>Manipulation</i></th>
+  <tr>
+    <td>Name</td>
+    <td>delete(startOffset, endOffset, consume)</td>
+    <td align="center" rowspan="2">start byte of data (default 0), end byte of data (default current byte position), move byte position to after data read (default false)</td>
+    <td rowspan="2">Removes and returns data. <br><b>Note:</b> Errors on strict mode</td>
+  </tr>
+  <tr>
+    <td>Alias</td>
+    <td>clip(startOffset, endOffset, consume)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>crop(<b>length</b>, consume)</td>
+    <td align="center" rowspan="2"><b>Number of bytes to read and remove</b>, move byte position to after data read (default false)</td>
+    <td rowspan="2">Removes and returns data from current byte position for length of data</b>.<br><b>Note:</b> Errors on strict mode</td>
+  </tr>
+  <tr>
+    <td>Alias</td>
+    <td>drop(<b>length</b>, consume)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>lift(startByte, endByte, consume, fillValue)</td>
+    <td align="center" rowspan="2"><b>Start of byte read (default current byte position), end of byte read (default end of data)</b>, move current byte position to end of byte read (default false), value to fill bytes (will <b>NOT</b> fill on default)</td>
+    <td rowspan="2">Returns data from supplied byte positions. <br><b>Note:</b> Only moves current byte position if consume is true. Only fills data if value is supplied</td>
+  </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>fill(startByte, endByte, consume, fillValue)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>extract(<b>length</b>, consume)</td>
+    <td align="center" rowspan="2"><b>Number of bytes to read</b>, move byte position to after data read (default false)</td>
+    <td rowspan="2">Returns data from current byte position for length of data</b>.</td>
+  </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>slice(<b>length</b>, consume)<br>wrap(<b>length</b>, consume)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>insert(<b>data</b>, consume, offset)</td>
+    <td align="center" rowspan="2"><b>New data to insert</b>, move byte position to after data read (default false), offset to insert (default current read position)</td>
+    <td rowspan="2"><b>Note:</b> Data type must match supplied data. Errors on strict mode</td>
+  </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>place(<b>data</b>, consume)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>unshift(<b>data</b>, consume)</td>
+    <td align="center" rowspan="2"><b>New data to insert</b>, move byte position to after data read (default false)</td>
+    <td rowspan="2">Adds new data to start of supplied data<br><b>Note:</b> Data type must match supplied data. Errors on strict mode</td>
+  </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>prepend(<b>data</b>, consume)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>push(<b>length</b>, consume)</td>
+    <td align="center" rowspan="2"><b>Number</b>, move byte position to after data read (default false)</td>
+    <td rowspan="2">Adds new data to end of supplied data<br><b>Note:</b> Data type must match supplied data. Errors on strict mode</td>
+  </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>append(<b>data</b>, consume)</td>
+  </tr>
+  <th align="center" colspan="4"><i>Math</i></th>
+  <tr>
+    <td>Name</td>
+    <td>XOR(<b>xorKey</b>, startOffset, endOffset, consume)
+    <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td >XOR data</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>XORThis(<b>xorKey</b>, length, consume)
+    <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, length of bytes starting at current byte (repeats when longer, default 1 byte for byte value, string length or end of data for string, array length or end of data for Uint8Array or Buffer), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td>XOR data</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>OR(<b>orKey</b>, startOffset, endOffset, consume)
+    <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td >OR data</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>ORThis(<b>orKey</b>, length, consume)
+    <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, length of bytes starting at current byte (repeats when longer, default 1 byte for byte value, string length or end of data for string, array length or end of data for Uint8Array or Buffer), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td>OR data</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>AND(<b>andKey</b>, startOffset, endOffset, consume)
+    <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td >AND data</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>ANDThis(<b>andKey</b>, length, consume)
+    <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, length of bytes starting at current byte (repeats when longer, default 1 byte for byte value, string length or end of data for string, array length or end of data for Uint8Array or Buffer), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td>AND data</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>LSHIFT(<b>value</b>, startOffset, endOffset, consume)
+    <td align="center"><b>Value</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td >Left shift data (per byte)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>LSHIFTThis(<b>value</b>, length, consume)
+    <td align="center"><b>Value</b>, length of bytes starting at current byte (default 1), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td>Left shift data (per byte)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>RSHIFT(<b>value</b>, startOffset, endOffset, consume)
+    <td align="center"><b>Value</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td >Right shift data (per byte)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>RSHIFTThis(<b>value</b>, length, consume)
+    <td align="center"><b>Value</b>, length of bytes starting at current byte (default 1), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td>Right shift data (per byte)</td>
+  </tr>
+  
+  
 </tbody>
 </table>
 
@@ -344,7 +438,7 @@ Common functions for setup and movement shared by both (unless indicated).
 
 Parse value as a bit field. There are 32 functions from bit1 to bit32 and can be signed or unsigned (with a ``u`` at the start) and in little or big endian order (``be`` or ``le`` at the end).
 
-**Note:** Remaining bits are dropped when returning to a byte read. Example, after using ``bit4()`` then ``ubyte()``, the read locations drops the remaining 4 bits after ``bit4()`` when reading ``ubyte()``.
+**Note:** Remaining bits are dropped when returning to a byte read. Example, after using ``bit4()`` then ``ubyte()``, the read locations drops the remaining 4 bits after ``bit4()`` when reading ``ubyte()``. Also any bit reading under 8 will always be unsigned.
 
 <table>
 <thead>
