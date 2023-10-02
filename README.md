@@ -29,7 +29,7 @@ Includes presents for quick parsing or programmable functions (examples below).
 ```javascript
 import {bireader, biwriter} from 'bireader';
 
-//parse a webp file example
+//read example - parse a webp file
 function parse_webp(data){
     const br = new bireader(data)
     br.hexdump({supressUnicode:true}) //console.log data as hex
@@ -167,7 +167,8 @@ function parse_webp(data){
     return header
 }
 
-TODO // write example
+//write example - write a webp file
+
 ```
 
 ## Common Functions
@@ -176,7 +177,7 @@ Common functions for setup, movement, manipulation and math shared by both.
 
 <table>
 <thead>
-  <tr>
+  <tr style="background-color:#000000;color:#FFFFFF">
     <th align="center" colspan="2">Function</th>
     <th align="center">Params (bold requires)</th>
     <th align="left">Notes</th>
@@ -184,7 +185,7 @@ Common functions for setup, movement, manipulation and math shared by both.
 </thead>
 <tbody>
   <tr>
-  <th align="center" colspan="4"><i>Setup</i></th>
+  <th align="center" colspan="4" style="background-color:#4c71a2d9"><i>Setup</i></th>
   <tr>
   <tr>
     <td>Name</td>
@@ -235,13 +236,13 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>errorDumpOff()</td>
-    <td align="center" >None</td>
+    <td align="center">None</td>
     <td >Does not hexdump on error (default true)</td>
   </tr>
   <tr>
     <td>Name</td>
     <td>errorDumpOn()</td>
-    <td align="center" >None</td>
+    <td align="center">None</td>
     <td >While hexdump on error (default true)</td>
   </tr>
   <tr>
@@ -266,7 +267,7 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td>Aliases</td>
     <td>close()<br>done()<br>finished()</td>
   </tr>
-  <th align="center" colspan="4"><i>Movement</i></th>
+  <th align="center" colspan="4" style="background-color:#4c71a2d9"><i>Movement</i></th>
   <tr>
     <td>Name</td>
     <td>skip(<b>bytes</b>, bits)</td>
@@ -297,7 +298,7 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td>Alias</td>
     <td>gotostart()</td>
   </tr>
-  <th align="center" colspan="4"><i>Manipulation</i></th>
+  <th align="center" colspan="4" style="background-color:#4c71a2d9"><i>Manipulation</i></th>
   <tr>
     <td>Name</td>
     <td>delete(startOffset, endOffset, consume)</td>
@@ -368,7 +369,7 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td>Aliases</td>
     <td>append(<b>data</b>, consume)</td>
   </tr>
-  <th align="center" colspan="4"><i>Math</i></th>
+  <th align="center" colspan="4" style="background-color:#4c71a2d9"><i>Math</i></th>
   <tr>
     <td>Name</td>
     <td>XOR(<b>xorKey</b>, startOffset, endOffset, consume)
