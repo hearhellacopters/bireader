@@ -801,7 +801,7 @@ export class biwriter {
     * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
     extract(length:number, consume?: boolean): Array<Buffer|Uint8Array>{
-        return remove(this,this.offset,length||0, consume||false, false)
+        return remove(this,this.offset,this.offset + (length||0), consume||false, false)
     }
 
     /**
@@ -813,7 +813,7 @@ export class biwriter {
     * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
     slice(length:number, consume?: boolean): Array<Buffer|Uint8Array>{
-        return remove(this,this.offset,length||0, consume||false, false)
+        return remove(this,this.offset,this.offset + (length||0), consume||false, false)
     }
 
     /**
@@ -825,7 +825,7 @@ export class biwriter {
     * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
     wrap(length:number, consume?: boolean): Array<Buffer|Uint8Array>{
-        return remove(this,this.offset,length||0, consume||false, false)
+        return remove(this,this.offset,this.offset + (length||0), consume||false, false)
     }
 
     //
