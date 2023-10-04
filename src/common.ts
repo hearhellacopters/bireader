@@ -103,8 +103,10 @@ export function remove(_this: any, startOffset?: number, endOffset?: number, con
     if(consume == true){
         if(remove != true){
             _this.offset = new_offset
+            _this.bitoffset = 0
         } else {
             _this.offset = new_start
+            _this.bitoffset = 0
         }
     }
     return data_removed
@@ -157,6 +159,7 @@ export function addData(_this: any, data: Buffer|Uint8Array,consume?: boolean, o
     }
     if(consume){
         _this.offset = needed_size
+        _this.bitoffset = 0
     }
 }
 
@@ -347,6 +350,7 @@ export function AND(_this: any, xor_key: any, start?: number, end?: number, cons
             input[i] = input[i] & (xor_key & 0xff);
             if(consume){
                 _this.offset = i
+                _this.bitoffset = 0
             }
         }
     } else {
@@ -361,6 +365,7 @@ export function AND(_this: any, xor_key: any, start?: number, end?: number, cons
                 input[i] = input[i] & xor_key[number]
                 if(consume){
                     _this.offset = i
+                    _this.bitoffset = 0
                 }
             }
         } else {
@@ -384,6 +389,7 @@ export function OR(_this: any, xor_key: any, start?: number, end?: number, consu
             input[i] = input[i] | (xor_key & 0xff);
             if(consume){
                 _this.offset = i
+                _this.bitoffset = 0
             }
         }
     } else {
@@ -398,6 +404,7 @@ export function OR(_this: any, xor_key: any, start?: number, end?: number, consu
                 input[i] = input[i] | xor_key[number]
                 if(consume){
                     _this.offset = i
+                    _this.bitoffset = 0
                 }
             }
         } else {
@@ -421,6 +428,7 @@ export function XOR(_this: any, xor_key: any, start?: number, end?: number, cons
             input[i] = input[i] ^ (xor_key & 0xff);
             if(consume){
                 _this.offset = i
+                _this.bitoffset = 0
             }
         }
     } else {
@@ -435,6 +443,7 @@ export function XOR(_this: any, xor_key: any, start?: number, end?: number, cons
                 input[i] = input[i] ^ xor_key[number]
                 if(consume){
                     _this.offset = i
+                    _this.bitoffset = 0
                 }
             }
         } else {
@@ -456,6 +465,7 @@ export function NOT(_this: any, start?: number, end?: number, consume?: boolean)
         _this.data[i] = ~_this.data[i];
         if(consume){
             _this.offset = i
+            _this.bitoffset = 0
         }
     }
 }
@@ -473,6 +483,7 @@ export function LSHIFT(_this: any, value:number, start?: number, end?: number, c
         _this.data[i] = _this.data[i] << value;
         if(consume){
             _this.offset = i
+            _this.bitoffset = 0
         }
     }
 }
@@ -490,6 +501,7 @@ export function RSHIFT(_this: any, value:number, start?: number, end?: number, c
         _this.data[i] = _this.data[i] >> value;
         if(consume){
             _this.offset = i
+            _this.bitoffset = 0
         }
     }
 }
@@ -507,6 +519,7 @@ export function ADD(_this: any, value:number, start?: number, end?: number, cons
         _this.data[i] += value;
         if(consume){
             _this.offset = i
+            _this.bitoffset = 0
         }
     }
 }
@@ -658,12 +671,14 @@ export function wbyte(_this:any,value: number, unsigned?: boolean): void{
     }
     _this.data[_this.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
     _this.offset += 1
+    _this.bitoffset = 0
 }
 
 export function rbyte(_this:any,unsigned?: boolean): number{
     _this.check_size(1)
     var read = <unknown> _this.data[_this.offset] as number
     _this.offset += 1
+    _this.bitoffset = 0
     if(unsigned == true){
         return read & 0xFF
     } else {
@@ -694,6 +709,7 @@ export function wint16(_this:any, value: number, unsigned?: boolean, endian?: st
         _this.data[_this.offset + 1] = (unsigned == undefined || unsigned == false) ? value : value& 0xff;
     }
     _this.offset += 2
+    _this.bitoffset = 0
 }
 
 export function rint16(_this:any,unsigned?: boolean, endian?: string): number{
@@ -705,6 +721,7 @@ export function rint16(_this:any,unsigned?: boolean, endian?: string): number{
         read = ((<unknown>_this.data[_this.offset] as number& 0xFFFF) << 8) | (<unknown>_this.data[_this.offset + 1] as number& 0xFFFF);
     }
     _this.offset += 2
+    _this.bitoffset = 0
     if(unsigned == undefined || unsigned == false){
         return read & 0x8000 ? -(0x10000 - read) : read
     } else {
@@ -738,7 +755,8 @@ export function rhalffloat(_this:any,endian?: string): number{
         // Normalized number
         floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x0400);
     }
-
+    _this.offset += 2
+    _this.bitoffset = 0
     return floatValue;
 }
 
@@ -785,6 +803,7 @@ export function whalffloat(_this:any,value: number, endian?: string): void {
     }
 
     _this.offset += 2
+    _this.bitoffset = 0
 }
 
 export function wint32(_this:any, value: number, unsigned?: boolean, endian?: string): void {
@@ -814,6 +833,7 @@ export function wint32(_this:any, value: number, unsigned?: boolean, endian?: st
         _this.data[_this.offset + 3] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
     }
     _this.offset += 4
+    _this.bitoffset = 0
 }
 
 export function rint32(_this:any,unsigned?: boolean, endian?: string): number{
@@ -825,6 +845,7 @@ export function rint32(_this:any,unsigned?: boolean, endian?: string): number{
         read = ((<unknown>_this.data[_this.offset] as number & 0xFF) << 24) | ((<unknown>_this.data[_this.offset + 1] as number & 0xFF) << 16) | ((<unknown>_this.data[_this.offset + 2] as number & 0xFF) << 8) | (<unknown>_this.data[_this.offset + 3] as number & 0xFF)
     }
     _this.offset += 4
+    _this.bitoffset = 0
     if(unsigned == undefined || unsigned == false){
         return read
     } else {
@@ -856,6 +877,8 @@ export function rfloat(_this:any, endian?: string): number{
         floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
     }
 
+    _this.offset += 4
+    _this.bitoffset = 0
     return floatValue;
 }
 
@@ -880,11 +903,12 @@ export function wfloat(_this:any, value: number, endian?: string): void{
     }
 
     _this.offset += 4
+    _this.bitoffset = 0
 }
 
 export function rint64(_this:any, unsigned?: boolean, endian?: string): bigint {
     _this.check_size(8)
-        
+
     // Convert the byte array to a BigInt
     let value: bigint = BigInt(0);
     if((endian == undefined ? _this.endian : endian) == "little"){
@@ -896,24 +920,21 @@ export function rint64(_this:any, unsigned?: boolean, endian?: string): bigint {
             if (value & (BigInt(1) << BigInt(63))) {
                 value -= BigInt(1) << BigInt(64);
             }
-            return value;
-        } else {
-            return value;
         }
     } else {
         for (let i = 0; i < 8; i++) {
             value = (value << BigInt(8)) | BigInt((<unknown>_this.data[_this.offset] as number & 0xFF));
             _this.offset += 1
-            }
+        }
         if(unsigned == undefined || unsigned == false){
             if (value & (BigInt(1) << BigInt(63))) {
                 value -= BigInt(1) << BigInt(64);
             }
-            return value;
-        } else {
-            return value;
         }
     }
+    _this.offset += 8
+    _this.bitoffset = 0
+    return value
 }
 
 export function wint64(_this:any, value: number, unsigned?: boolean, endian?: string): void {
@@ -967,6 +988,7 @@ export function wint64(_this:any, value: number, unsigned?: boolean, endian?: st
     }
 
     _this.offset += 8
+    _this.bitoffset = 0
 }
 
 export function wdfloat(_this:any, value: number, endian?: string): void {
@@ -993,10 +1015,12 @@ export function wdfloat(_this:any, value: number, endian?: string): void {
     }
 
     _this.offset += 8
+    _this.bitoffset = 0
 }
 
 export function rdfloat(_this:any, endian?: string): number{
     _this.check_size(8)
+   
     var uint64Value = _this.readInt64(true, (endian == undefined ? _this.endian : endian))
     const sign = (uint64Value & 0x8000000000000000n) >> 63n;
     const exponent = Number((uint64Value & 0x7FF0000000000000n) >> 52n) - 1023;
@@ -1022,6 +1046,8 @@ export function rdfloat(_this:any, endian?: string): number{
         floatValue = (sign == 0n ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
     }
 
+    _this.offset += 8
+    _this.bitoffset = 0
     return floatValue;
 }
 
@@ -1231,6 +1257,7 @@ export function wstring(_this:any, string: string, options?: {
         }
 
         _this.offset += totalLength
+        _this.bitoffset = 0
     
     } else if (stringType == 'pascal' || stringType == 'wide-pascal') {
 
@@ -1299,6 +1326,7 @@ export function wstring(_this:any, string: string, options?: {
         }
 
         _this.offset += totalLength    
+        _this.bitoffset = 0
     } else {
         throw new Error('Unsupported string type: ' + stringType);
     }
