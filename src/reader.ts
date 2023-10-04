@@ -976,7 +976,7 @@ export class bireader {
     * @returns number
     */
     bit(bits: number, unsigned?: boolean, endian?: string): number{
-        return this.bit(bits,unsigned,endian)
+        return this.readBit(bits,unsigned,endian)
     }
 
     /**

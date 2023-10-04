@@ -543,7 +543,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit(value: number, bits: number, unsigned?: boolean, endian?: string): number;
+    bit(value: number, bits: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -553,7 +553,7 @@ export declare class biwriter {
     * @param {number} bits - bits to write
     * @returns number
     */
-    writeUBitBE(value: number, bits: number): number;
+    writeUBitBE(value: number, bits: number): void;
     /**
     * Bit field writer
     *
@@ -563,18 +563,7 @@ export declare class biwriter {
     * @param {number} bits - bits to write
     * @returns number
     */
-    ubitbe(value: number, bits: number): number;
-    /**
-    * Bit field writer
-    *
-    * Note: When returning to a byte write, remaining bits are dropped
-    *
-    * @param {number} value - value as int
-    * @param {number} bits - bits to write
-    * @param {boolean} unsigned - if the value is unsigned
-    * @returns number
-    */
-    writeBitBE(value: number, bits: number, unsigned?: boolean): number;
+    ubitbe(value: number, bits: number): void;
     /**
     * Bit field writer
     *
@@ -585,27 +574,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bitbe(value: number, bits: number, unsigned?: boolean): number;
-    /**
-    * Bit field writer
-    *
-    * Note: When returning to a byte write, remaining bits are dropped
-    *
-    * @param {number} value - value as int
-    * @param {number} bits - bits to write
-    * @returns number
-    */
-    writeUBitLE(value: number, bits: number): number;
-    /**
-    * Bit field writer
-    *
-    * Note: When returning to a byte write, remaining bits are dropped
-    *
-    * @param {number} value - value as int
-    * @param {number} bits - bits to write
-    * @returns number
-    */
-    ubitle(value: number, bits: number): number;
+    writeBitBE(value: number, bits: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -616,7 +585,27 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    writeBitLE(value: number, bits: number, unsigned?: boolean): number;
+    bitbe(value: number, bits: number, unsigned?: boolean): void;
+    /**
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {number} bits - bits to write
+    * @returns number
+    */
+    writeUBitLE(value: number, bits: number): void;
+    /**
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {number} bits - bits to write
+    * @returns number
+    */
+    ubitle(value: number, bits: number): void;
     /**
     * Bit field writer
     *
@@ -627,18 +616,29 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bitle(value: number, bits: number, unsigned?: boolean): number;
+    writeBitLE(value: number, bits: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
+    * @param {number} bits - bits to write
     * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bitle(value: number, bits: number, unsigned?: boolean): void;
+    /**
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit1(value: number, unsigned?: boolean, endian?: string): number;
+    bit1(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -648,7 +648,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit1le(value: number, unsigned?: boolean): number;
+    bit1le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -658,7 +658,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit1be(value: number, unsigned?: boolean): number;
+    bit1be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -668,7 +668,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit1(value: number, endian?: string): number;
+    ubit1(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -677,7 +677,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit1le(value: number): number;
+    ubit1le(value: number): void;
     /**
     * Bit field writer
     *
@@ -686,7 +686,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit1be(value: number): number;
+    ubit1be(value: number): void;
     /**
     * Bit field writer
     *
@@ -697,7 +697,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit2(value: number, unsigned?: boolean, endian?: string): number;
+    bit2(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -707,7 +707,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit2le(value: number, unsigned?: boolean): number;
+    bit2le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -717,7 +717,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit2be(value: number, unsigned?: boolean): number;
+    bit2be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -727,7 +727,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit2(value: number, endian?: string): number;
+    ubit2(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -736,7 +736,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit2le(value: number): number;
+    ubit2le(value: number): void;
     /**
     * Bit field writer
     *
@@ -745,7 +745,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit2be(value: number): number;
+    ubit2be(value: number): void;
     /**
     * Bit field writer
     *
@@ -756,7 +756,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit3(value: number, unsigned?: boolean, endian?: string): number;
+    bit3(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -766,7 +766,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit3le(value: number, unsigned?: boolean): number;
+    bit3le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -776,7 +776,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit3be(value: number, unsigned?: boolean): number;
+    bit3be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -786,7 +786,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit3(value: number, endian?: string): number;
+    ubit3(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -795,7 +795,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit3le(value: number): number;
+    ubit3le(value: number): void;
     /**
     * Bit field writer
     *
@@ -804,7 +804,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit3be(value: number): number;
+    ubit3be(value: number): void;
     /**
     * Bit field writer
     *
@@ -815,7 +815,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit4(value: number, unsigned?: boolean, endian?: string): number;
+    bit4(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -825,7 +825,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit4le(value: number, unsigned?: boolean): number;
+    bit4le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -835,7 +835,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit4be(value: number, unsigned?: boolean): number;
+    bit4be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -845,7 +845,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit4(value: number, endian?: string): number;
+    ubit4(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -854,7 +854,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit4le(value: number): number;
+    ubit4le(value: number): void;
     /**
     * Bit field writer
     *
@@ -863,7 +863,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit4be(value: number): number;
+    ubit4be(value: number): void;
     /**
     * Bit field writer
     *
@@ -874,7 +874,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit5(value: number, unsigned?: boolean, endian?: string): number;
+    bit5(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -884,7 +884,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit5le(value: number, unsigned?: boolean): number;
+    bit5le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -894,7 +894,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit5be(value: number, unsigned?: boolean): number;
+    bit5be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -904,7 +904,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit5(value: number, endian?: string): number;
+    ubit5(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -913,7 +913,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit5le(value: number): number;
+    ubit5le(value: number): void;
     /**
     * Bit field writer
     *
@@ -922,7 +922,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit5be(value: number): number;
+    ubit5be(value: number): void;
     /**
     * Bit field writer
     *
@@ -933,7 +933,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit6(value: number, unsigned?: boolean, endian?: string): number;
+    bit6(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -943,7 +943,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit6le(value: number, unsigned?: boolean): number;
+    bit6le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -953,7 +953,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit6be(value: number, unsigned?: boolean): number;
+    bit6be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -963,7 +963,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit6(value: number, endian?: string): number;
+    ubit6(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -972,7 +972,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit6le(value: number): number;
+    ubit6le(value: number): void;
     /**
     * Bit field writer
     *
@@ -981,7 +981,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit6be(value: number): number;
+    ubit6be(value: number): void;
     /**
     * Bit field writer
     *
@@ -992,7 +992,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit7(value: number, unsigned?: boolean, endian?: string): number;
+    bit7(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1002,7 +1002,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit7le(value: number, unsigned?: boolean): number;
+    bit7le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1012,7 +1012,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit7be(value: number, unsigned?: boolean): number;
+    bit7be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1022,7 +1022,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit7(value: number, endian?: string): number;
+    ubit7(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1031,7 +1031,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit7le(value: number): number;
+    ubit7le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1040,7 +1040,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit7be(value: number): number;
+    ubit7be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1051,7 +1051,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit8(value: number, unsigned?: boolean, endian?: string): number;
+    bit8(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1061,7 +1061,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit8le(value: number, unsigned?: boolean): number;
+    bit8le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1071,7 +1071,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit8be(value: number, unsigned?: boolean): number;
+    bit8be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1081,7 +1081,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit8(value: number, endian?: string): number;
+    ubit8(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1090,7 +1090,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit8le(value: number): number;
+    ubit8le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1099,7 +1099,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit8be(value: number): number;
+    ubit8be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1110,7 +1110,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit9(value: number, unsigned?: boolean, endian?: string): number;
+    bit9(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1120,7 +1120,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit9le(value: number, unsigned?: boolean): number;
+    bit9le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1130,7 +1130,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit9be(value: number, unsigned?: boolean): number;
+    bit9be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1140,7 +1140,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit9(value: number, endian?: string): number;
+    ubit9(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1149,7 +1149,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit9le(value: number): number;
+    ubit9le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1158,7 +1158,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit9be(value: number): number;
+    ubit9be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1169,7 +1169,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit10(value: number, unsigned?: boolean, endian?: string): number;
+    bit10(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1179,7 +1179,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit10le(value: number, unsigned?: boolean): number;
+    bit10le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1189,7 +1189,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit10be(value: number, unsigned?: boolean): number;
+    bit10be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1199,7 +1199,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit10(value: number, endian?: string): number;
+    ubit10(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1208,7 +1208,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit10le(value: number): number;
+    ubit10le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1217,7 +1217,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit10be(value: number): number;
+    ubit10be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1228,7 +1228,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit11(value: number, unsigned?: boolean, endian?: string): number;
+    bit11(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1238,7 +1238,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit11le(value: number, unsigned?: boolean): number;
+    bit11le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1248,7 +1248,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit11be(value: number, unsigned?: boolean): number;
+    bit11be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1258,7 +1258,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit11(value: number, endian?: string): number;
+    ubit11(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1267,7 +1267,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit11le(value: number): number;
+    ubit11le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1276,7 +1276,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit11be(value: number): number;
+    ubit11be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1287,7 +1287,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit12(value: number, unsigned?: boolean, endian?: string): number;
+    bit12(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1297,7 +1297,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit12le(value: number, unsigned?: boolean): number;
+    bit12le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1307,7 +1307,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit12be(value: number, unsigned?: boolean): number;
+    bit12be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1317,7 +1317,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit12(value: number, endian?: string): number;
+    ubit12(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1326,7 +1326,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit12le(value: number): number;
+    ubit12le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1335,7 +1335,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit12be(value: number): number;
+    ubit12be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1346,7 +1346,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit13(value: number, unsigned?: boolean, endian?: string): number;
+    bit13(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1356,7 +1356,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit13le(value: number, unsigned?: boolean): number;
+    bit13le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1366,7 +1366,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit13be(value: number, unsigned?: boolean): number;
+    bit13be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1376,7 +1376,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit13(value: number, endian?: string): number;
+    ubit13(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1385,7 +1385,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit13le(value: number): number;
+    ubit13le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1394,7 +1394,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit13be(value: number): number;
+    ubit13be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1405,7 +1405,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit14(value: number, unsigned?: boolean, endian?: string): number;
+    bit14(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1415,7 +1415,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit14le(value: number, unsigned?: boolean): number;
+    bit14le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1425,7 +1425,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit14be(value: number, unsigned?: boolean): number;
+    bit14be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1435,7 +1435,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit14(value: number, endian?: string): number;
+    ubit14(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1444,7 +1444,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit14le(value: number): number;
+    ubit14le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1453,7 +1453,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit14be(value: number): number;
+    ubit14be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1464,7 +1464,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit15(value: number, unsigned?: boolean, endian?: string): number;
+    bit15(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1474,7 +1474,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit15le(value: number, unsigned?: boolean): number;
+    bit15le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1484,7 +1484,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit15be(value: number, unsigned?: boolean): number;
+    bit15be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1494,7 +1494,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit15(value: number, endian?: string): number;
+    ubit15(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1503,7 +1503,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit15le(value: number): number;
+    ubit15le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1512,7 +1512,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit15be(value: number): number;
+    ubit15be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1523,7 +1523,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit16(value: number, unsigned?: boolean, endian?: string): number;
+    bit16(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1533,7 +1533,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit16le(value: number, unsigned?: boolean): number;
+    bit16le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1543,7 +1543,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit16be(value: number, unsigned?: boolean): number;
+    bit16be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1553,7 +1553,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit16(value: number, endian?: string): number;
+    ubit16(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1562,7 +1562,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit16le(value: number): number;
+    ubit16le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1571,7 +1571,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit16be(value: number): number;
+    ubit16be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1582,7 +1582,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit17(value: number, unsigned?: boolean, endian?: string): number;
+    bit17(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1592,7 +1592,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit17le(value: number, unsigned?: boolean): number;
+    bit17le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1602,7 +1602,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit17be(value: number, unsigned?: boolean): number;
+    bit17be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1612,7 +1612,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit17(value: number, endian?: string): number;
+    ubit17(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1621,7 +1621,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit17le(value: number): number;
+    ubit17le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1630,7 +1630,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit17be(value: number): number;
+    ubit17be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1641,7 +1641,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit18(value: number, unsigned?: boolean, endian?: string): number;
+    bit18(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1651,7 +1651,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit18le(value: number, unsigned?: boolean): number;
+    bit18le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1661,7 +1661,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit18be(value: number, unsigned?: boolean): number;
+    bit18be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1671,7 +1671,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit18(value: number, endian?: string): number;
+    ubit18(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1680,7 +1680,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit18le(value: number): number;
+    ubit18le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1689,7 +1689,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit18be(value: number): number;
+    ubit18be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1700,7 +1700,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit19(value: number, unsigned?: boolean, endian?: string): number;
+    bit19(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1710,7 +1710,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit19le(value: number, unsigned?: boolean): number;
+    bit19le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1720,7 +1720,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit19be(value: number, unsigned?: boolean): number;
+    bit19be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1730,7 +1730,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit19(value: number, endian?: string): number;
+    ubit19(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1739,7 +1739,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit19le(value: number): number;
+    ubit19le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1748,7 +1748,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit19be(value: number): number;
+    ubit19be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1759,7 +1759,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit20(value: number, unsigned?: boolean, endian?: string): number;
+    bit20(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1769,7 +1769,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit20le(value: number, unsigned?: boolean): number;
+    bit20le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1779,7 +1779,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit20be(value: number, unsigned?: boolean): number;
+    bit20be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1789,7 +1789,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit20(value: number, endian?: string): number;
+    ubit20(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1798,7 +1798,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit20le(value: number): number;
+    ubit20le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1807,7 +1807,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit20be(value: number): number;
+    ubit20be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1818,7 +1818,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit21(value: number, unsigned?: boolean, endian?: string): number;
+    bit21(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1828,7 +1828,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit21le(value: number, unsigned?: boolean): number;
+    bit21le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1838,7 +1838,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit21be(value: number, unsigned?: boolean): number;
+    bit21be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1848,7 +1848,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit21(value: number, endian?: string): number;
+    ubit21(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1857,7 +1857,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit21le(value: number): number;
+    ubit21le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1866,7 +1866,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit21be(value: number): number;
+    ubit21be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1877,7 +1877,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit22(value: number, unsigned?: boolean, endian?: string): number;
+    bit22(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1887,7 +1887,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit22le(value: number, unsigned?: boolean): number;
+    bit22le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1897,7 +1897,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit22be(value: number, unsigned?: boolean): number;
+    bit22be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1907,7 +1907,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit22(value: number, endian?: string): number;
+    ubit22(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1916,7 +1916,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit22le(value: number): number;
+    ubit22le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1925,7 +1925,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit22be(value: number): number;
+    ubit22be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1936,7 +1936,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit23(value: number, unsigned?: boolean, endian?: string): number;
+    bit23(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1946,7 +1946,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit23le(value: number, unsigned?: boolean): number;
+    bit23le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1956,7 +1956,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit23be(value: number, unsigned?: boolean): number;
+    bit23be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -1966,7 +1966,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit23(value: number, endian?: string): number;
+    ubit23(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -1975,7 +1975,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit23le(value: number): number;
+    ubit23le(value: number): void;
     /**
     * Bit field writer
     *
@@ -1984,7 +1984,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit23be(value: number): number;
+    ubit23be(value: number): void;
     /**
     * Bit field writer
     *
@@ -1995,7 +1995,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit24(value: number, unsigned?: boolean, endian?: string): number;
+    bit24(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2005,7 +2005,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit24le(value: number, unsigned?: boolean): number;
+    bit24le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2015,7 +2015,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit24be(value: number, unsigned?: boolean): number;
+    bit24be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2025,7 +2025,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit24(value: number, endian?: string): number;
+    ubit24(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2034,7 +2034,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit24le(value: number): number;
+    ubit24le(value: number): void;
     /**
     * Bit field writer
     *
@@ -2043,7 +2043,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit24be(value: number): number;
+    ubit24be(value: number): void;
     /**
     * Bit field writer
     *
@@ -2054,7 +2054,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit25(value: number, unsigned?: boolean, endian?: string): number;
+    bit25(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2064,7 +2064,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit25le(value: number, unsigned?: boolean): number;
+    bit25le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2074,7 +2074,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit25be(value: number, unsigned?: boolean): number;
+    bit25be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2084,7 +2084,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit25(value: number, endian?: string): number;
+    ubit25(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2093,7 +2093,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit25le(value: number): number;
+    ubit25le(value: number): void;
     /**
     * Bit field writer
     *
@@ -2102,7 +2102,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit25be(value: number): number;
+    ubit25be(value: number): void;
     /**
     * Bit field writer
     *
@@ -2113,7 +2113,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit26(value: number, unsigned?: boolean, endian?: string): number;
+    bit26(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2123,7 +2123,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit26le(value: number, unsigned?: boolean): number;
+    bit26le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2133,7 +2133,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit26be(value: number, unsigned?: boolean): number;
+    bit26be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2143,7 +2143,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit26(value: number, endian?: string): number;
+    ubit26(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2152,7 +2152,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit26le(value: number): number;
+    ubit26le(value: number): void;
     /**
     * Bit field writer
     *
@@ -2161,7 +2161,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit26be(value: number): number;
+    ubit26be(value: number): void;
     /**
     * Bit field writer
     *
@@ -2172,7 +2172,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit27(value: number, unsigned?: boolean, endian?: string): number;
+    bit27(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2182,7 +2182,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit27le(value: number, unsigned?: boolean): number;
+    bit27le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2192,7 +2192,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit27be(value: number, unsigned?: boolean): number;
+    bit27be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2202,7 +2202,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit27(value: number, endian?: string): number;
+    ubit27(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2211,7 +2211,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit27le(value: number): number;
+    ubit27le(value: number): void;
     /**
     * Bit field writer
     *
@@ -2220,7 +2220,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit27be(value: number): number;
+    ubit27be(value: number): void;
     /**
     * Bit field writer
     *
@@ -2231,7 +2231,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit28(value: number, unsigned?: boolean, endian?: string): number;
+    bit28(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2241,7 +2241,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit28le(value: number, unsigned?: boolean): number;
+    bit28le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2251,7 +2251,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit28be(value: number, unsigned?: boolean): number;
+    bit28be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2261,7 +2261,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit28(value: number, endian?: string): number;
+    ubit28(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2270,7 +2270,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit28le(value: number): number;
+    ubit28le(value: number): void;
     /**
     * Bit field writer
     *
@@ -2279,7 +2279,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit28be(value: number): number;
+    ubit28be(value: number): void;
     /**
     * Bit field writer
     *
@@ -2290,7 +2290,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit29(value: number, unsigned?: boolean, endian?: string): number;
+    bit29(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2300,7 +2300,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit29le(value: number, unsigned?: boolean): number;
+    bit29le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2310,7 +2310,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit29be(value: number, unsigned?: boolean): number;
+    bit29be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2320,7 +2320,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit29(value: number, endian?: string): number;
+    ubit29(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2329,7 +2329,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit29le(value: number): number;
+    ubit29le(value: number): void;
     /**
     * Bit field writer
     *
@@ -2338,7 +2338,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit29be(value: number): number;
+    ubit29be(value: number): void;
     /**
     * Bit field writer
     *
@@ -2349,7 +2349,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit30(value: number, unsigned?: boolean, endian?: string): number;
+    bit30(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2359,7 +2359,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit30le(value: number, unsigned?: boolean): number;
+    bit30le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2369,7 +2369,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit30be(value: number, unsigned?: boolean): number;
+    bit30be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2379,7 +2379,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit30(value: number, endian?: string): number;
+    ubit30(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2388,7 +2388,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit30le(value: number): number;
+    ubit30le(value: number): void;
     /**
     * Bit field writer
     *
@@ -2397,7 +2397,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit30be(value: number): number;
+    ubit30be(value: number): void;
     /**
     * Bit field writer
     *
@@ -2408,7 +2408,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit31(value: number, unsigned?: boolean, endian?: string): number;
+    bit31(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2418,7 +2418,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit31le(value: number, unsigned?: boolean): number;
+    bit31le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2428,7 +2428,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit31be(value: number, unsigned?: boolean): number;
+    bit31be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2438,7 +2438,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit31(value: number, endian?: string): number;
+    ubit31(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2447,7 +2447,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit31le(value: number): number;
+    ubit31le(value: number): void;
     /**
     * Bit field writer
     *
@@ -2456,7 +2456,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit31be(value: number): number;
+    ubit31be(value: number): void;
     /**
     * Bit field writer
     *
@@ -2467,7 +2467,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit32(value: number, unsigned?: boolean, endian?: string): number;
+    bit32(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2477,7 +2477,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit32le(value: number, unsigned?: boolean): number;
+    bit32le(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2487,7 +2487,7 @@ export declare class biwriter {
     * @param {boolean} unsigned - if the value is unsigned
     * @returns number
     */
-    bit32be(value: number, unsigned?: boolean): number;
+    bit32be(value: number, unsigned?: boolean): void;
     /**
     * Bit field writer
     *
@@ -2497,7 +2497,7 @@ export declare class biwriter {
     * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    ubit32(value: number, endian?: string): number;
+    ubit32(value: number, endian?: string): void;
     /**
     * Bit field writer
     *
@@ -2506,7 +2506,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit32le(value: number): number;
+    ubit32le(value: number): void;
     /**
     * Bit field writer
     *
@@ -2515,7 +2515,7 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @returns number
     */
-    ubit32be(value: number): number;
+    ubit32be(value: number): void;
     /**
     * Write byte
     *
