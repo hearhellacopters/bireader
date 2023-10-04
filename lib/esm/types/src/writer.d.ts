@@ -223,20 +223,20 @@ export declare class biwriter {
     /**
     * AND data
     *
-    * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
+    * @param {number|string|Array<number>|Buffer} andKey - Value, string or array to AND
     * @param {number} startOffset - Start location (default current byte position)
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    and(andKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    and(andKey: number | string | Array<number> | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
     * AND data
     *
-    * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
+    * @param {number|string|Array<number>|Buffer} andKey - Value, string or array to AND
     * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    andThis(andKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
+    andThis(andKey: number | string | Array<number> | Buffer, length?: number, consume?: boolean): void;
     /**
     * Not data
     *
@@ -255,54 +255,54 @@ export declare class biwriter {
     /**
     * Left shift data
     *
-    * @param {number} shiftValue - Value to left shift
+    * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to left shift data
     * @param {number} startOffset - Start location (default current byte position)
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    lShift(shiftValue: number, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    lShift(shiftKey: number | string | Array<number> | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
     * Left shift data
     *
-    * @param {number} shiftValue - Value to left shift
+    * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to left shift data
     * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    lShiftThis(shiftValue: number, length?: number, consume?: boolean): void;
+    lShiftThis(shiftKey: number | string | Array<number> | Buffer, length?: number, consume?: boolean): void;
     /**
     * Right shift data
     *
-    * @param {number} shiftValue - Value to right shift
+    * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to right shift data
     * @param {number} startOffset - Start location (default current byte position)
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    rShift(shiftValue: number, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    rShift(shiftKey: number | string | Array<number> | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
     * Right shift data
     *
-    * @param {number} shiftValue - Value to right shift
+    * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to right shift data
     * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    rShiftThis(shiftValue: number, length?: number, consume?: boolean): void;
+    rShiftThis(shiftKey: number | string | Array<number> | Buffer, length?: number, consume?: boolean): void;
     /**
     * Add value to data
     *
-    * @param {number} addValue - Value to add
+    * @param {number|string|Array<number>|Buffer} addKey - Value, string or array to add to data
     * @param {number} startOffset - Start location (default current byte position)
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    add(addValue: number, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    add(addKey: number | string | Array<number> | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
     * Add value to data
     *
-    * @param {number} addValue - Value to add
+    * @param {number|string|Array<number>|Buffer} addKey - Value, string or array to add to data
     * @param {number} length - Length in bytes to add from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    addThis(addValue: number, length?: number, consume?: boolean): void;
+    addThis(addKey: number | string | Array<number> | Buffer, length?: number, consume?: boolean): void;
     /**
     * Deletes part of data from start to current byte position unless supplied, returns removed
     * Note: Errors in strict mode
@@ -314,15 +314,19 @@ export declare class biwriter {
     */
     delete(startOffset?: number, endOffset?: number, consume?: boolean): Array<Buffer | Uint8Array>;
     /**
-    * Deletes part of data from start to current byte position unless supplied, returns removed
+    * Deletes part of data from current byte position to end, returns removed
     * Note: Errors in strict mode
     *
-    * @param {number} startOffset - Start location (default 0)
-    * @param {number} endOffset - End location (default current position)
-    * @param {boolean} consume - Move position to end of removed data (default false)
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    clip(startOffset?: number, endOffset?: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    clip(): Array<Buffer | Uint8Array>;
+    /**
+    * Deletes part of data from current byte position to end, returns removed
+    * Note: Errors in strict mode
+    *
+    * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
+    */
+    trim(): Array<Buffer | Uint8Array>;
     /**
     * Deletes part of data from current byte position to supplied length, returns removed
     * Note: Errors in strict mode

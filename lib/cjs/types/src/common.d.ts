@@ -12,13 +12,13 @@ export declare function hexDump(_this: any, options?: {
     startByte?: number;
     supressUnicode?: boolean;
 }): void;
-export declare function AND(_this: any, xor_key: any, start?: number, end?: number, consume?: boolean): any;
-export declare function OR(_this: any, xor_key: any, start?: number, end?: number, consume?: boolean): any;
+export declare function AND(_this: any, and_key: any, start?: number, end?: number, consume?: boolean): any;
+export declare function OR(_this: any, or_key: any, start?: number, end?: number, consume?: boolean): any;
 export declare function XOR(_this: any, xor_key: any, start?: number, end?: number, consume?: boolean): any;
 export declare function NOT(_this: any, start?: number, end?: number, consume?: boolean): any;
-export declare function LSHIFT(_this: any, value: number, start?: number, end?: number, consume?: boolean): any;
-export declare function RSHIFT(_this: any, value: number, start?: number, end?: number, consume?: boolean): any;
-export declare function ADD(_this: any, value: number, start?: number, end?: number, consume?: boolean): any;
+export declare function LSHIFT(_this: any, shift_key: any, start?: number, end?: number, consume?: boolean): any;
+export declare function RSHIFT(_this: any, shift_key: any, start?: number, end?: number, consume?: boolean): any;
+export declare function ADD(_this: any, add_key: any, start?: number, end?: number, consume?: boolean): any;
 export declare function wbit(_this: any, value: number, bits: number, unsigned?: boolean, endian?: string): void;
 export declare function rbit(_this: any, bits?: number, unsigned?: boolean, endian?: string): number;
 export declare function wbyte(_this: any, value: number, unsigned?: boolean): void;

@@ -389,7 +389,7 @@ export class bireader {
             //pass
         } else
         if(typeof xorKey == "string"){
-            //pass
+            xorKey = new TextEncoder().encode(xorKey);
         } else
         if(this.isBufferOrUint8Array(XORKey)){
             //pass
@@ -439,7 +439,7 @@ export class bireader {
             //pass
         } else
         if(typeof orKey == "string"){
-            //pass
+            orKey = new TextEncoder().encode(orKey);
         } else
         if(this.isBufferOrUint8Array(ORKey)){
             //pass
@@ -478,23 +478,23 @@ export class bireader {
     /**
     * AND data
     * 
-    * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
+    * @param {number|string|Array<number>|Buffer} andKey - Value, string or array to AND
     * @param {number} startOffset - Start location (default current byte position)
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    and(andKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
+    and(andKey: number|string|Array<number>|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
         var ANDKey:any = andKey;
-        if(typeof andKey == "number"){
+        if(typeof ANDKey == "number"){
             //pass
         } else
-        if(typeof andKey == "string"){
-            //pass
+        if(typeof ANDKey == "string"){
+            ANDKey = new TextEncoder().encode(ANDKey);
         } else
-        if(this.isBufferOrUint8Array(ANDKey)){
+        if(typeof ANDKey == "object"){
             //pass
         } else {
-            throw new Error("AND must be a number, string, Uint8Array or Buffer")
+            throw new Error("AND must be a number, string, number array or Buffer")
         }
         return AND(this,andKey,startOffset||this.offset,endOffset||this.size,consume|| false)
     }
@@ -502,11 +502,11 @@ export class bireader {
     /**
     * AND data
     * 
-    * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
+    * @param {number|string|Array<number>|Buffer} andKey - Value, string or array to AND
     * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    andThis(andKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
+    andThis(andKey: number|string|Array<number>|Buffer,length?: number,consume?:boolean): void{
         var Length:number = length||1;
         var ANDKey:any = andKey;
         if(typeof andKey == "number"){
@@ -517,10 +517,10 @@ export class bireader {
             ANDKey = encoder
             Length = length||encoder.length
         } else
-        if(this.isBufferOrUint8Array(ANDKey)){
+        if(typeof andKey == "object"){
             Length = length||andKey.length
         } else {
-            throw new Error("XOR must be a number, string, Uint8Array or Buffer")
+            throw new Error("AND must be a number, string, number array or Buffer")
         }
         return AND(this,ANDKey,this.offset,this.offset + Length,consume|| false)
     }
@@ -549,91 +549,151 @@ export class bireader {
     /**
     * Left shift data
     * 
-    * @param {number} shiftValue - Value to left shift
+    * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to left shift data
     * @param {number} startOffset - Start location (default current byte position)
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    lShift(shiftValue: number,startOffset?: number,endOffset?: number,consume?:boolean): void{
-        if(typeof shiftValue != "number"){
-            throw new Error("Shift value must be a number")
+    lShift(shiftKey: number|string|Array<number>|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
+        var lShiftKey:any = shiftKey;
+        if(typeof lShiftKey == "number"){
+            //pass
+        } else
+        if(typeof lShiftKey == "string"){
+            lShiftKey = new TextEncoder().encode(lShiftKey);
+        } else
+        if(typeof lShiftKey == "object"){
+            //pass
+        } else {
+            throw new Error("Left shift must be a number, string, number array or Buffer")
         }
-        return LSHIFT(this,shiftValue,startOffset||this.offset,endOffset||this.size,consume|| false)
+        return LSHIFT(this,lShiftKey,startOffset||this.offset,endOffset||this.size,consume|| false)
     }
 
     /**
     * Left shift data
     * 
-    * @param {number} shiftValue - Value to left shift
+    * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to left shift data
     * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    lShiftThis(shiftValue: number,length?: number,consume?:boolean): void{
+    lShiftThis(shiftKey: number|string|Array<number>|Buffer,length?: number,consume?:boolean): void{
         var Length:number = length||1;
-        if(typeof shiftValue != "number"){
-            throw new Error("Shift value must be a number")
+        var lShiftKey:any = shiftKey;
+        if(typeof lShiftKey == "number"){
+            Length = length||1;
+        } else
+        if(typeof lShiftKey == "string"){
+            const encoder = new TextEncoder().encode(lShiftKey);
+            lShiftKey = encoder
+            Length = length||encoder.length
+        } else
+        if(typeof lShiftKey == "object"){
+            Length = length||lShiftKey.length
+        } else {
+            throw new Error("Left shift must be a number, string, number array or Buffer")
         }
-        return LSHIFT(this,shiftValue,this.offset,this.offset + Length,consume|| false)
+        return LSHIFT(this,shiftKey,this.offset,this.offset + Length,consume|| false)
     }
 
     /**
     * Right shift data
     * 
-    * @param {number} shiftValue - Value to right shift
+    * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to right shift data
     * @param {number} startOffset - Start location (default current byte position)
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    rShift(shiftValue: number,startOffset?: number,endOffset?: number,consume?:boolean): void{
-        if(typeof shiftValue != "number"){
-            throw new Error("Shift value must be a number")
+    rShift(shiftKey: number|string|Array<number>|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
+        var rShiftKey:any = shiftKey;
+        if(typeof rShiftKey == "number"){
+            //pass
+        } else
+        if(typeof rShiftKey == "string"){
+            rShiftKey = new TextEncoder().encode(rShiftKey);
+        } else
+        if(typeof rShiftKey == "object"){
+            //pass
+        } else {
+            throw new Error("Right shift must be a number, string, number array or Buffer")
         }
-        return RSHIFT(this,shiftValue,startOffset||this.offset,endOffset||this.size,consume|| false)
+        return RSHIFT(this,rShiftKey,startOffset||this.offset,endOffset||this.size,consume|| false)
     }
 
     /**
     * Right shift data
     * 
-    * @param {number} shiftValue - Value to right shift
+    * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to right shift data
     * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    rShiftThis(shiftValue: number,length?: number,consume?:boolean): void{
+    rShiftThis(shiftKey: number|string|Array<number>|Buffer,length?: number,consume?:boolean): void{
         var Length:number = length||1;
-        if(typeof shiftValue != "number"){
-            throw new Error("Shift value must be a number")
+        var lShiftKey:any = shiftKey;
+        if(typeof lShiftKey == "number"){
+            Length = length||1;
+        } else
+        if(typeof lShiftKey == "string"){
+            const encoder = new TextEncoder().encode(lShiftKey);
+            lShiftKey = encoder
+            Length = length||encoder.length
+        } else
+        if(typeof lShiftKey == "object"){
+            Length = length||lShiftKey.length
+        } else {
+            throw new Error("Right shift must be a number, string, number array or Buffer")
         }
-        return RSHIFT(this,shiftValue,this.offset,this.offset + Length,consume|| false)
+        return RSHIFT(this,lShiftKey,this.offset,this.offset + Length,consume|| false)
     }
 
     /**
     * Add value to data
     * 
-    * @param {number} addValue - Value to add
+    * @param {number|string|Array<number>|Buffer} addKey - Value, string or array to add to data
     * @param {number} startOffset - Start location (default current byte position)
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    add(addValue: number,startOffset?: number,endOffset?: number,consume?:boolean): void{
-        if(typeof addValue != "number"){
-            throw new Error("Add value must be a number")
+    add(addKey: number|string|Array<number>|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
+        var addedKey:any = addKey;
+        if(typeof addedKey == "number"){
+            //pass
+        } else
+        if(typeof addedKey == "string"){
+            addedKey = new TextEncoder().encode(addedKey);
+        } else
+        if(typeof addedKey == "object"){
+            //pass
+        } else {
+            throw new Error("Add key must be a number, string, number array or Buffer")
         }
-        return ADD(this,addValue,startOffset||this.offset,endOffset||this.size,consume|| false)
+        return ADD(this,addedKey,startOffset||this.offset,endOffset||this.size,consume|| false)
     }
 
     /**
     * Add value to data
     * 
-    * @param {number} addValue - Value to add
+    * @param {number|string|Array<number>|Buffer} addKey - Value, string or array to add to data
     * @param {number} length - Length in bytes to add from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    addThis(addValue: number,length?: number,consume?:boolean): void{
+    addThis(addKey: number|string|Array<number>|Buffer,length?: number,consume?:boolean): void{
         var Length:number = length||1;
-        if(typeof addValue != "number"){
-            throw new Error("Add value must be a number")
+        var AddedKey:any = addKey;
+        if(typeof AddedKey == "number"){
+            Length = length||1;
+        } else
+        if(typeof AddedKey == "string"){
+            const encoder = new TextEncoder().encode(AddedKey);
+            AddedKey = encoder
+            Length = length||encoder.length
+        } else
+        if(typeof AddedKey == "object"){
+            Length = length||AddedKey.length
+        } else {
+            throw new Error("Add key must be a number, string, number array or Buffer")
         }
-        return ADD(this,addValue,this.offset,this.offset + Length,consume|| false)
+        return ADD(this,AddedKey,this.offset,this.offset + Length,consume|| false)
     }
 
     //
@@ -654,16 +714,23 @@ export class bireader {
     }
 
     /**
-    * Deletes part of data from start to current byte position unless supplied, returns removed
+    * Deletes part of data from current byte position to end, returns removed
     * Note: Errors in strict mode
     * 
-    * @param {number} startOffset - Start location (default 0)
-    * @param {number} endOffset - End location (default current position)
-    * @param {boolean} consume - Move position to end of removed data (default false)
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    clip(startOffset?: number, endOffset?: number, consume?:boolean): Array<Buffer|Uint8Array>{
-        return remove(this,startOffset||0,endOffset||this.offset,consume||false, true)
+    clip(): Array<Buffer|Uint8Array>{
+        return remove(this,this.offset,this.size,false,true)
+    }
+
+    /**
+    * Deletes part of data from current byte position to end, returns removed
+    * Note: Errors in strict mode
+    * 
+    * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
+    */
+    trim(): Array<Buffer|Uint8Array>{
+        return remove(this,this.offset,this.size,false,true)
     }
 
     /**

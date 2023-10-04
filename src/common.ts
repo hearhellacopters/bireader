@@ -335,7 +335,7 @@ export function hexDump(_this: any, options?: {length?: number, startByte?: numb
     console.log(rows.join("\n"))
 }
 
-export function AND(_this: any, xor_key: any, start?: number, end?: number, consume?: boolean):any {
+export function AND(_this: any, and_key: any, start?: number, end?: number, consume?: boolean):any {
     const input = _this.data;
     if((end||0) > _this.size){
         if(_this.strict == false){
@@ -345,24 +345,24 @@ export function AND(_this: any, xor_key: any, start?: number, end?: number, cons
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end||0) + " of " + _this.size)
         }
     }
-    if (typeof xor_key == "number") {
+    if (typeof and_key == "number") {
         for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
-            input[i] = input[i] & (xor_key & 0xff);
+            input[i] = input[i] & (and_key & 0xff);
             if(consume){
                 _this.offset = i
                 _this.bitoffset = 0
             }
         }
     } else {
-        if(_this.isBufferOrUint8Array(xor_key)){
+        if(_this.isBufferOrUint8Array(and_key)){
             let number = -1
             for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
-                if (number != xor_key.length - 1) {
+                if (number != and_key.length - 1) {
                     number = number + 1
                 } else {
                     number = 0
                 }
-                input[i] = input[i] & xor_key[number]
+                input[i] = input[i] & and_key[number]
                 if(consume){
                     _this.offset = i
                     _this.bitoffset = 0
@@ -374,7 +374,7 @@ export function AND(_this: any, xor_key: any, start?: number, end?: number, cons
     }
 }
 
-export function OR(_this: any, xor_key: any, start?: number, end?: number, consume?: boolean):any {
+export function OR(_this: any, or_key: any, start?: number, end?: number, consume?: boolean):any {
     const input = _this.data;
     if((end||0) > _this.size){
         if(_this.strict == false){
@@ -384,24 +384,24 @@ export function OR(_this: any, xor_key: any, start?: number, end?: number, consu
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end||0) + " of " + _this.size)
         }
     }
-    if (typeof xor_key == "number") {
+    if (typeof or_key == "number") {
         for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
-            input[i] = input[i] | (xor_key & 0xff);
+            input[i] = input[i] | (or_key & 0xff);
             if(consume){
                 _this.offset = i
                 _this.bitoffset = 0
             }
         }
     } else {
-        if(_this.isBufferOrUint8Array(xor_key)){
+        if(_this.isBufferOrUint8Array(or_key)){
             let number = -1
             for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
-                if (number != xor_key.length - 1) {
+                if (number != or_key.length - 1) {
                     number = number + 1
                 } else {
                     number = 0
                 }
-                input[i] = input[i] | xor_key[number]
+                input[i] = input[i] | or_key[number]
                 if(consume){
                     _this.offset = i
                     _this.bitoffset = 0
@@ -470,7 +470,8 @@ export function NOT(_this: any, start?: number, end?: number, consume?: boolean)
     }
 }
 
-export function LSHIFT(_this: any, value:number, start?: number, end?: number, consume?: boolean): any{
+export function LSHIFT(_this: any, shift_key:any, start?: number, end?: number, consume?: boolean): any{
+    const input = _this.data;
     if((end||0) > _this.size){
         if(_this.strict == false){
             _this.extendArray((end||0) - _this.size)
@@ -479,16 +480,37 @@ export function LSHIFT(_this: any, value:number, start?: number, end?: number, c
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end||0) + " of " + _this.size)
         }
     }
-    for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
-        _this.data[i] = _this.data[i] << value;
-        if(consume){
-            _this.offset = i
-            _this.bitoffset = 0
+    if (typeof shift_key == "number") {
+        for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
+            input[i] = input[i] << shift_key;
+            if(consume){
+                _this.offset = i
+                _this.bitoffset = 0
+            }
+        }
+    } else {
+        if(_this.isBufferOrUint8Array(shift_key)){
+            let number = -1
+            for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
+                if (number != shift_key.length - 1) {
+                    number = number + 1
+                } else {
+                    number = 0
+                }
+                input[i] = input[i] << shift_key[number]
+                if(consume){
+                    _this.offset = i
+                    _this.bitoffset = 0
+                }
+            }
+        } else {
+            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer")
         }
     }
 }
 
-export function RSHIFT(_this: any, value:number, start?: number, end?: number, consume?: boolean): any{
+export function RSHIFT(_this: any, shift_key:any, start?: number, end?: number, consume?: boolean): any{
+    const input = _this.data;
     if((end||0) > _this.size){
         if(_this.strict == false){
             _this.extendArray((end||0) - _this.size)
@@ -497,16 +519,37 @@ export function RSHIFT(_this: any, value:number, start?: number, end?: number, c
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end||0) + " of " + _this.size)
         }
     }
-    for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
-        _this.data[i] = _this.data[i] >> value;
-        if(consume){
-            _this.offset = i
-            _this.bitoffset = 0
+    if (typeof shift_key == "number") {
+        for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
+            input[i] = input[i] >> shift_key;
+            if(consume){
+                _this.offset = i
+                _this.bitoffset = 0
+            }
+        }
+    } else {
+        if(_this.isBufferOrUint8Array(shift_key)){
+            let number = -1
+            for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
+                if (number != shift_key.length - 1) {
+                    number = number + 1
+                } else {
+                    number = 0
+                }
+                input[i] = input[i] >> shift_key[number]
+                if(consume){
+                    _this.offset = i
+                    _this.bitoffset = 0
+                }
+            }
+        } else {
+            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer")
         }
     }
 }
 
-export function ADD(_this: any, value:number, start?: number, end?: number, consume?: boolean): any{
+export function ADD(_this: any, add_key:any, start?: number, end?: number, consume?: boolean): any{
+    const input = _this.data;
     if((end||0) > _this.size){
         if(_this.strict == false){
             _this.extendArray((end||0) - _this.size)
@@ -515,11 +558,31 @@ export function ADD(_this: any, value:number, start?: number, end?: number, cons
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end||0) + " of " + _this.size)
         }
     }
-    for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
-        _this.data[i] += value;
-        if(consume){
-            _this.offset = i
-            _this.bitoffset = 0
+    if (typeof add_key == "number") {
+        for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
+            input[i] = input[i] + add_key;
+            if(consume){
+                _this.offset = i
+                _this.bitoffset = 0
+            }
+        }
+    } else {
+        if(_this.isBufferOrUint8Array(add_key)){
+            let number = -1
+            for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
+                if (number != add_key.length - 1) {
+                    number = number + 1
+                } else {
+                    number = 0
+                }
+                input[i] = input[i] + add_key[number]
+                if(consume){
+                    _this.offset = i
+                    _this.bitoffset = 0
+                }
+            }
+        } else {
+            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer")
         }
     }
 }

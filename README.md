@@ -420,12 +420,14 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>delete(startOffset, endOffset, consume)</td>
-    <td align="center" rowspan="2">Start byte of data (default 0), end byte of data (default current byte position), move byte position to after data read (default false)</td>
-    <td rowspan="2">Removes and returns data. <br><b>Note:</b> Errors on strict mode</td>
+    <td align="center">Start byte of data (default 0), end byte of data (default current byte position), move byte position to after data read (default false)</td>
+    <td >Removes and returns data. <br><b>Note:</b> Errors on strict mode</td>
   </tr>
   <tr>
-    <td>Alias</td>
-    <td>clip(startOffset, endOffset, consume)</td>
+    <td>Preset</td>
+    <td>clip()<br>trim()</td>
+    <td align="center">None</td>
+    <td >Removes data after the current byte position and returns data. <br><b>Note:</b> Errors on strict mode</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -507,7 +509,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>xorThis(<b>xorKey</b>, length, consume)
-    <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, length of bytes starting at current byte (repeats when longer, default 1 byte for byte value, string length or end of data for string, array length or end of data for Uint8Array or Buffer), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, length of bytes starting at current byte (repeats when longer, default 1 byte for byte value, string length or end of data for string, array length or end of data for array or Buffer), byte position to end (default end of data), move byte position to after operation (default false)</td>
     <td>XOR data <b>Note:</b> Will loop if operation length is longer than supplied key.</td>
   </tr>
   <tr>
@@ -519,31 +521,31 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>orThis(<b>orKey</b>, length, consume)
-    <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, length of bytes starting at current byte (repeats when longer, default 1 byte for byte value, string length or end of data for string, array length or end of data for Uint8Array or Buffer), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, length of bytes starting at current byte (repeats when longer, default 1 byte for byte value, string length or end of data for string, array length or end of data for array or Buffer), byte position to end (default end of data), move byte position to after operation (default false)</td>
     <td>OR data <b>Note:</b> Will loop if operation length is longer than supplied key.</td>
   </tr>
   <tr>
     <td>Name</td>
     <td>and(<b>andKey</b>, startOffset, endOffset, consume)
-    <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td align="center"><b>Byte value, string, number array or Buffer</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
     <td >AND data <b>Note:</b> Will loop if operation length is longer than supplied key.</td>
   </tr>
   <tr>
     <td>Name</td>
     <td>andThis(<b>andKey</b>, length, consume)
-    <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, length of bytes starting at current byte (repeats when longer, default 1 byte for byte value, string length or end of data for string, array length or end of data for Uint8Array or Buffer), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td align="center"><b>Byte value, string, number array or Buffer</b>, length of bytes starting at current byte (repeats when longer, default 1 byte for byte value, string length or end of data for string, array length or end of data for array or Buffer), byte position to end (default end of data), move byte position to after operation (default false)</td>
     <td>AND data <b>Note:</b> Will loop if operation length is longer than supplied key.</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>add(<b>shiftValue</b>, startOffset, endOffset, consume)
-    <td align="center"><b>Value</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
-    <td >Add value to data (per byte)</td>
+    <td>add(<b>addKey</b>, startOffset, endOffset, consume)
+    <td align="center"><b>Byte value, string, number array or Buffer</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td >Add value to data (per byte). <b>Note:</b> Will loop if operation length is longer than supplied key.</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>addThis(<b>shiftValue</b>, length, consume)
-    <td align="center"><b>Value</b>, length of bytes starting at current byte (default 1), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td>addThis(<b>addKey</b>, length, consume)
+    <td align="center"><b>Byte value, string, number array or Buffer</b>, length of bytes starting at current byte (repeats when longer, default 1 byte for byte value, string length or end of data for string, array length or end of data for array or Buffer), byte position to end (default end of data), move byte position to after operation (default false)</td>
     <td>Add value to data (per byte)</td>
   </tr>
   <tr>
@@ -560,26 +562,26 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Name</td>
-    <td>lShift(<b>shiftValue</b>, startOffset, endOffset, consume)
-    <td align="center"><b>Value</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
-    <td >Left shift data (per byte)</td>
+    <td>lShift(<b>shiftKey</b>, startOffset, endOffset, consume)
+    <td align="center"><b>Byte value, string, number array or Buffer</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td >Left shift data (per byte). <b>Note:</b> Will loop if operation length is longer than supplied key.</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>lShiftThis(<b>shiftValue</b>, length, consume)
-    <td align="center"><b>Value</b>, length of bytes starting at current byte (default 1), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td>lShiftThis(<b>shiftKey</b>, length, consume)
+    <td align="center"><b>Byte value, string, number array or Buffer</b>, length of bytes starting at current byte (repeats when longer, default 1 byte for byte value, string length or end of data for string, array length or end of data for array or Buffer), byte position to end (default end of data), move byte position to after operation (default false)</td>
     <td>Left shift data (per byte)</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>rShift(<b>shiftValue</b>, startOffset, endOffset, consume)
-    <td align="center"><b>Value</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
-    <td >Right shift data (per byte)</td>
+    <td>rShift(<b>shiftKey</b>, startOffset, endOffset, consume)
+    <td align="center"><b>Byte value, string, number array or Buffer</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td >Right shift data (per byte). <b>Note:</b> Will loop if operation length is longer than supplied key.</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>rShiftThis(<b>shiftValue</b>, length, consume)
-    <td align="center"><b>Value</b>, length of bytes starting at current byte (default 1), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td>rShiftThis(<b>shiftKey</b>, length, consume)
+    <td align="center"><b>Byte value, string, number array or Buffer</b>, length of bytes starting at current byte (repeats when longer, default 1 byte for byte value, string length or end of data for string, array length or end of data for array or Buffer), byte position to end (default end of data), move byte position to after operation (default false)</td>
     <td>Right shift data (per byte)</td>
   </tr>
 </tbody>
