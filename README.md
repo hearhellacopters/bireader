@@ -31,144 +31,242 @@ import {bireader, biwriter} from 'bireader';
 
 //read example - parse a webp file
 function parse_webp(data){
-    const br = new bireader(data)
-    br.hexdump({supressUnicode:true}) //console.log data as hex
+  const br = new bireader(data)
+  br.hexdump({supressUnicode:true}) //console.log data as hex
 
-    //         0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  0123456789ABCDEF
-    // 00000  52 49 46 46 98 3a 00 00 57 45 42 50 56 50 38 58  RIFF.:..WEBPVP8X
-    // 00010  0a 00 00 00 10 00 00 00 ff 00 00 ff 00 00 41 4c  ..............AL
-    // 00020  50 48 26 10 00 00 01 19 45 6d 1b 49 4a 3b cf 0c  PH&.....Em.IJ;..
-    // 00030  7f c0 7b 60 88 e8 ff 04 80 a2 82 65 56 d2 d2 86  ..{`.......eV...
-    // 00040  24 54 61 d0 83 8f 7f 0e 82 b6 6d e3 f0 a7 bd ed  $Ta.......m.....
-    // 00050  87 10 11 13 40 3b 86 8f 26 4b d6 2a b7 6d 24 39  ....@;..&K.*.m$9
-    // 00060  52 4f fe 39 7f 3b 62 4e cc ec 9b 17 31 01 0c 24  RO.9.;bN....1..$
-    // 00070  49 89 23 e0 01 ab 52 64 e3 23 fc 61 db 76 cc 91  I.#...Rd.#.a.v..
-    // 00080  b6 7d fb 51 48 c5 69 db 4c 1b 63 db b6 ed b9 6d  .}.QH.i.L.c....m
-    // 00090  db be 87 8d b1 6d db 9e b6 cd a4 d3 ee 24 95 54  .....m.......$.T
-    // 000a0  52 b8 8e 65 a9 eb 38 ce ab 52 75 9d 67 ff 75 2f  R..e..8..Ru.g.u/
-    // 000b0  77 44 40 94 6d 25 6c 74 91 a8 88 86 58 9b da 6e  wD@.m%lt....X..n
+  //         0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  0123456789ABCDEF
+  // 00000  52 49 46 46 98 3a 00 00 57 45 42 50 56 50 38 58  RIFF.:..WEBPVP8X
+  // 00010  0a 00 00 00 10 00 00 00 ff 00 00 ff 00 00 41 4c  ..............AL
+  // 00020  50 48 26 10 00 00 01 19 45 6d 1b 49 4a 3b cf 0c  PH&.....Em.IJ;..
+  // 00030  7f c0 7b 60 88 e8 ff 04 80 a2 82 65 56 d2 d2 86  ..{`.......eV...
+  // 00040  24 54 61 d0 83 8f 7f 0e 82 b6 6d e3 f0 a7 bd ed  $Ta.......m.....
+  // 00050  87 10 11 13 40 3b 86 8f 26 4b d6 2a b7 6d 24 39  ....@;..&K.*.m$9
+  // 00060  52 4f fe 39 7f 3b 62 4e cc ec 9b 17 31 01 0c 24  RO.9.;bN....1..$
+  // 00070  49 89 23 e0 01 ab 52 64 e3 23 fc 61 db 76 cc 91  I.#...Rd.#.a.v..
+  // 00080  b6 7d fb 51 48 c5 69 db 4c 1b 63 db b6 ed b9 6d  .}.QH.i.L.c....m
+  // 00090  db be 87 8d b1 6d db 9e b6 cd a4 d3 ee 24 95 54  .....m.......$.T
+  // 000a0  52 b8 8e 65 a9 eb 38 ce ab 52 75 9d 67 ff 75 2f  R..e..8..Ru.g.u/
+  // 000b0  77 44 40 94 6d 25 6c 74 91 a8 88 86 58 9b da 6e  wD@.m%lt....X..n
 
-    const header = {}
-    header.magic = br.string({length:4})   //RIFF
-    header.size = br.uint32le()             //15000
-    header.fileSize = header.size + 8       //15008
-    header.payload = br.string({length:4}) //WEBP
-    header.format = br.string({length:4})  //VP8X
-    header.formatChunkSize = br.uint32le()  //10
-    switch (header.format){
-      case "VP8 ":
-          header.formatType = "Lossy"
-          var read_size = 0
-          header.frame_tag = ubit24()
-          read_size += 3;
-          header.key_frame = header.frame_tag & 0x1;
-          header.version = (header.frame_tag >> 1) & 0x7;
-          header.show_frame = (header.frame_tag >> 4) & 0x1;
-          header.first_part_size = (header.frame_tag >> 5) & 0x7FFFF;
-          header.start_code = ubit24() //should be 2752925
-          header.horizontal_size_code = ubit16();
-          header.width = header.horizontal_size_code & 0x3FFF;
-          header.horizontal_scale = header.horizontal_size_code >> 14;
-          header.vertical_size_code = ubit16();
-          header.height = header.vertical_size_code & 0x3FFF;
-          header.vertical_scale = header.vertical_size_code >> 14;
-          read_size += 7;
-          header.VP8data = br.extract(header.formatChunkSize - read_size, true)
-          break;
-      case "VP8L":
-          header.formatType = "Lossless"
-          var read_size = 0
-          header.signature = br.ubyte() // should be 47
-          read_size += 1;
-          header.readWidth = ubit14()
-          header.width = header.readWidth+1;
-          header.readHeight = ubit14()
-          header.height = header.readHeight+1;
-          header.alpha_is_used = bit1() 
-          header.version_number = ubit3() 
-          read_size += 4;
-          header.data = br.extract(header.formatChunkSize - read_size, true)
-          break;
-      case "VP8X":
-          header.formatType = "Extended"
-          br.big() //switch to Big Endian bit read
-          header.rsv = br.bit2() //Reserved
-          header.I = br.bit1()    //ICC profile
-          header.L = br.bit1()    //Alpha
-          header.E = br.bit1()    //Exif
-          header.X = br.bit1()    //XMP
-          header.A = br.bit1()    //Animation
-          header.R = br.bit1()    //Reserved
-          br.little() //return to little
-          header.rsv2 = br.ubit24()
-          header.widthMinus1 = br.ubit24()
-          header.width = header.widthMinus1 + 1
-          header.heightMinus1 = br.ubit24()
-          header.height = header.heightMinus1 + 1
-          if(header.I)
+  const header = {}
+  header.magic = br.string({length:4})    //RIFF
+  header.size = br.uint32le()             //15000
+  header.fileSize = header.size + 8       //15008
+  header.payload = br.string({length:4})  //WEBP
+  header.format = br.string({length:4})   //VP8X
+  header.formatChunkSize = br.uint32le()  //10
+  switch (header.format){
+    case "VP8 ":
+        header.formatType = "Lossy"
+        var read_size = 0
+        header.frame_tag = br.ubit24()
+        read_size += 3;
+        header.key_frame = header.frame_tag & 0x1;
+        header.version = (header.frame_tag >> 1) & 0x7;
+        header.show_frame = (header.frame_tag >> 4) & 0x1;
+        header.first_part_size = (header.frame_tag >> 5) & 0x7FFFF;
+        header.start_code = br.ubit24() //should be 2752925
+        header.horizontal_size_code = br.ubit16();
+        header.width = header.horizontal_size_code & 0x3FFF;
+        header.horizontal_scale = header.horizontal_size_code >> 14;
+        header.vertical_size_code = br.ubit16();
+        header.height = header.vertical_size_code & 0x3FFF;
+        header.vertical_scale = header.vertical_size_code >> 14;
+        read_size += 7;
+        header.VP8data = br.extract(header.formatChunkSize - read_size, true)
+        break;
+    case "VP8L":
+        header.formatType = "Lossless"
+        var read_size = 0
+        header.signature = br.ubyte() //should be 47
+        read_size += 1;
+        header.readWidth =  br.ubit14()
+        header.width = header.readWidth+1;
+        header.readHeight =  br.ubit14()
+        header.height = header.readHeight+1;
+        header.alpha_is_used =  br.bit1() 
+        header.version_number =  br.ubit3() 
+        read_size += 4;
+        header.VP8Ldata = br.extract(header.formatChunkSize - read_size, true)
+        break;
+    case "VP8X":
+        header.formatType = "Extended"
+        br.big() //switch to Big Endian bit read
+        header.rsv = br.bit2()  //Reserved
+        header.I = br.bit1()    //ICC profile
+        header.L = br.bit1()    //Alpha
+        header.E = br.bit1()    //Exif
+        header.X = br.bit1()    //XMP
+        header.A = br.bit1()    //Animation
+        header.R = br.bit1()    //Reserved
+        br.little() //return to little
+        header.rsv2 = br.ubit24()
+        header.widthMinus1 = br.ubit24()
+        header.width = header.widthMinus1 + 1
+        header.heightMinus1 = br.ubit24()
+        header.height = header.heightMinus1 + 1
+        if(header.I)
+        {
+          header.ICCP = br.string({length:4})  // Should be ICCP
+          header.ICCPChunkSize = br.uint32()
+          header.ICCPData = br.extract(header.ICCPChunkSize, true)
+        }
+        if(header.L)
+        {
+          header.ALPH = br.string({length:4})  // Should be ALPH
+          header.ALPHChunkSize = br.uint32() //4134
+          header.ALPHData = br.extract(header.ALPHChunkSize, true)
+        }
+        if(header.A)
+        {
+          header.ANI = br.string({length:4})  // Should be ANIM or ANIF
+          header.ANIChunkSize = br.uint32()
+          if(header.ANI == "ANIM")
           {
-            header.ICCP = br.string({length:4})  // Should be ICCP
-            header.ICCPChunkSize = br.uint32()
-            header.ICCPData = br.extract(header.ICCPChunkSize, true)
-          }
-          if(header.L)
+            header.BGColor = br.uint32()
+            header.loopCount = br.ushort()
+            header.ANIMData = br.extract(header.ANIChunkSize, true)
+          } else
+          if (header.ANI == "ANIF")
           {
-            header.ALPH = br.string({length:4})  // Should be ALPH
-            header.ALPHChunkSize = br.uint32() //4134
-            header.ALPHData = br.extract(header.ALPHChunkSize, true)
+            header.FrameX = br.ubit24()
+            header.FrameY = br.ubit24()
+            header.readFrameWidth = br.ubit24()
+            header.readFrameHeight = br.ubit24()
+            header.frameWidth = readFrameWidth + 1
+            header.frameHeight = readFrameHeight + 1
+            header.duration = br.ubit24()
+            header.rsv3 = br.ubit6()
+            header.byte.B = br.bit1() //Blending
+            header.byte.D = br.bit1() //Disposal
+            header.frameData = br.extract(16, true)
+            header.ANIFData = br.extract(header.ANIChunkSize, true)
           }
-          if(header.A)
-          {
-            header.ANI = br.string({length:4})  // Should be ANIM or ANIF
-            header.ANIChunkSize = br.uint32()
-            if(header.ANI == "ANIM")
-            {
-              header.BGColor = br.uint32()
-              header.loopCount = br.ushort()
-              header.ANIMData = br.extract(header.ANIChunkSize, true)
-            } else
-            if (header.ANI == "ANIF")
-            {
-              header.FrameX = br.ubit24()
-              header.FrameY = br.ubit24()
-              header.readFrameWidth = br.ubit24()
-              header.readFrameHeight = br.ubit24()
-              header.frameWidth = readFrameWidth + 1
-              header.frameHeight = readFrameHeight + 1
-              header.duration = br.ubit24()
-              header.rsv3 = br.ubit6()
-              header.byte.B = br.bit1() //Blending
-              header.byte.D = br.bit1() //Disposal
-              header.frameData = br.extract(16, true)
-              header.ANIFData = br.extract(header.ANIChunkSize, true)
-            }
-          }
-          header.extFormatStr = br.string({length:4})
-          header.extChunkSize = br.uint32()
-          header.extData = br.extract(header.extChunkSize, true)
-          if(header.E)
-          {
-            header.EXIF = br.string({length:4})  // Should be EXIF
-            header.EXIFChunkSize = br.uint32()
-            header.EXIFData = br.extract(header.EXIFChunkSize, true)
-          }
-          if(header.X)
-          {
-            header.XMP = br.string({length:4})  // Should be XMP
-            header.XMPChunkSize = br.uint32()
-            header.XMPMetaData = br.extract(header.XMPChunkSize, true)
-          }
-          break;
-      default:
-          header.data = br.extract(header.formatChunkSize, true)
-          break;
-    }
-    br.finished()
-    return header
+        }
+        header.extFormatStr = br.string({length:4})
+        header.extChunkSize = br.uint32()
+        header.extData = br.extract(header.extChunkSize, true)
+        if(header.E)
+        {
+          header.EXIF = br.string({length:4})  // Should be EXIF
+          header.EXIFChunkSize = br.uint32()
+          header.EXIFData = br.extract(header.EXIFChunkSize, true)
+        }
+        if(header.X)
+        {
+          header.XMP = br.string({length:4})  // Should be XMP
+          header.XMPChunkSize = br.uint32()
+          header.XMPMetaData = br.extract(header.XMPChunkSize, true)
+        }
+        break;
+    default:
+        header.data = br.extract(header.formatChunkSize, true)
+        break;
+  }
+  br.finished()
+  return header
 }
 
-//write example - write a webp file
-
+//write example - write a webp file from read data
+function write_webp(data){
+  const bw = new biwriter(new Uint8Arry(1)) //extends array as we write by default
+  bw.string("RIFF",{length:4})
+  bw.uint32le(0) //dummy for now, will be final size - 8
+  bw.string("WEBP",{length:4})
+  switch(data.format){
+    case "VP8 ":
+      bw.string("VP8 ",{length:4})
+      bw.uint32le(data.VP8data.length)
+      bw.ubit24(data.key_frame)
+      bw.ubit24(data.start_code)
+      bw.ubit16(data.horizontal_size_code)
+      bw.ubit16(data.vertical_size_code)
+      bw.overwrite(data.VP8data ,true)
+      break;
+    case "VP8L":
+      bw.string("VP8L",{length:4})
+      bw.uint32le(data.VP8Ldata.length - 4)
+      bw.ubyte(47)
+      bw.ubit14(data.width - 1)
+      bw.ubit14(data.heigth - 1)
+      bw.ubit1(data.alpha_is_used)
+      bw.bit3(data.version_number)
+      bw.overwrite(data.VP8Ldata,true)
+      break;
+    case "VP8X":
+      bw.string("VP8X",{length:4})
+      bw.uint32le(10)
+      bw.big()
+      bw.bit2(0)
+      bw.bit1(data.I)
+      bw.bit1(data.L)
+      bw.bit1(data.E)
+      bw.bit1(data.X)
+      bw.bit1(data.A)
+      bw.bit1(0)
+      bw.little()
+      bw.ubit24(data.rsv2)
+      bw.ubit24(data.width - 1)
+      bw.ubit24(data.height - 1)
+      if(data.I)
+      {
+        bw.string(data.ICCP, {length:4})
+        bw.uint32(data.ICCPData.length)
+        bw.replace(data.ICCPData, true)
+      }
+      if(data.L)
+      {
+        bw.string(data.ALPH, {length:4})
+        bw.uint32(data.ALPHData.length) 
+        bw.replace(data.ALPHData)
+      }
+      if(data.A)
+      {
+        bw.string(data.ANI, {length:4})
+        bw.uint32(data.ANIChunkSize)
+        if(data.ANI == "ANIM")
+        {
+          bw.uint32(data.BGColor)
+          bw.ushort(data.loopCount)
+          bw.replace(data.ANIMData)
+        } else
+        if (data.ANI == "ANIF")
+        {
+          bw.ubit24(data.FrameX)
+          bw.ubit24(data.FrameY)
+          bw.ubit24(data.frameWidth - 1)
+          bw.ubit24(data.frameHeigh - 1)
+          bw.ubit24(data.duration)
+          bw.ubit6(data.rsv3)
+          bw.bit1(data.byte.B)
+          bw.bit1(data.byte.D) 
+          bw.replace(data.frameData, true)
+          bw.replace(data.ANIFData, true)
+        }
+      }
+      bw.string(data.extFormatStr, {length:4})
+      bw.uint32(data.extData.length)
+      bw.replace(data.extData, true)
+      if(data.E)
+      {
+        bw.string(data.EXIF, {length:4})
+        bw.uint32(data.EXIFData.length)
+        bw.replace( data.EXIFData, true)
+      }
+      if(data.X)
+      {
+        bw.string(data.XMP, {length:4})
+        bw.uint32(data.XMPMetaData.length)
+        bw.replace(data.XMPMetaData, true)
+      }
+      break;
+    default:
+      break;
+  }
+  bw.goto(4)
+  bw.uint32le(bw.size - 8) //write file size
+  return bw.return()
+}
 ```
 
 ## Common Functions
@@ -177,21 +275,21 @@ Common functions for setup, movement, manipulation and math shared by both.
 
 <table>
 <thead>
-  <tr style="background-color:#000000;color:#FFFFFF">
+  <tr>
     <th align="center" colspan="2">Function</th>
     <th align="center">Params (bold requires)</th>
-    <th align="left">Notes</th>
+    <th align="left">Desc</th>
   </tr>
 </thead>
 <tbody>
   <tr>
-  <th align="center" colspan="4" style="background-color:#4c71a2d9"><i>Setup</i></th>
+  <th align="center" colspan="4"><i>Setup</i></th>
   <tr>
   <tr>
     <td>Name</td>
     <td>new bireader(<b>data</b>, byteOffset, bitOffset, endianess, strict)</td>
     <td align="center" rowspan="2"><b>Buffer or Uint8Array</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending initially supplied data (default true for reader, false for writer)</td>
-    <td rowspan="2">new Constructor</td>
+    <td rowspan="2">Start with new Constructor.<br><b>Note:</b> Data can always be found with .data</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -201,7 +299,7 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td>Name</td>
     <td>endianness(<b>bigOrLittle</b>)</td>
     <td align="center" rowspan="2"><b>big</b> or <b>little</b> (default little)</td>
-    <td rowspan="2">Can be changed at any time.</td>
+    <td rowspan="2">Set or change Endian. Can be changed at any time.</td>
   </tr>
   <tr>
     <td>Presets</td>
@@ -209,13 +307,33 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Name</td>
-    <td>tell()</td>
+    <td>getOffset()</td>
     <td align="center" rowspan="2">none</td>
-    <td rowspan="2">Gets current byte position in bytes</td>
+    <td rowspan="2">Gets current byte position.</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>getOffset()<br>saveOffset()</td>
+    <td>tell(), saveOffset()</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>getOffsetBit()</td>
+    <td align="center" rowspan="2">none</td>
+    <td rowspan="2">Gets current bit position (0-7).</td>
+  </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>tellB(), saveOffsetBit()</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>getOffsetAbsBit()</td>
+    <td align="center" rowspan="2">none</td>
+    <td rowspan="2">Gets current absolute bit position from start of data.</td>
+  </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>tellAbsB(), saveOffsetAbsBit()</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -225,13 +343,13 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>return()<br>data</td>
+    <td>return()</td>
   </tr>
   <tr>
     <td>Name</td>
     <td>hexdump({length, startByte, supressUnicode})</td>
-    <td align="center">Length of dump, Byte to start the dump, Supress unicode character preview for cleaner columns</td>
-    <td >Console logs data. Defaults to current position and 192 bytes in length. Will trigger on error unless turned off (see below)</td>
+    <td align="center">Length of dump in bytes (default 192), byte position to start the dump (default current byte position), supress unicode character preview for cleaner columns (default false)</td>
+    <td >Console logs data. Will trigger on error unless turned off (see below)</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -243,19 +361,19 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td>Name</td>
     <td>errorDumpOn()</td>
     <td align="center">None</td>
-    <td >While hexdump on error (default true)</td>
+    <td >Will hexdump on error (default true)</td>
   </tr>
   <tr>
     <td>Name</td>
     <td>unrestrict()</td>
     <td align="center">none</td>
-    <td>Sets strict mode to false, will extend array if data is outside of max size (default true for reader, false for writer)</td>
+    <td>Sets strict mode to false, will extend array if data is outside of max size (<b>default true for reader, false for writer</b>)</td>
   </tr>
   <tr>
     <td>Name</td>
     <td>restrict()</td>
     <td align="center">none</td>
-    <td>Sets strict mode to true, won't extend array if data is outside of max size (default true for reader, false for writer)</td>
+    <td>Sets strict mode to true, won't extend array if data is outside of max size (<b>default true for reader, false for writer</b>)</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -265,14 +383,14 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>close()<br>done()<br>finished()</td>
+    <td>close(), done(), finished()</td>
   </tr>
-  <th align="center" colspan="4" style="background-color:#4c71a2d9"><i>Movement</i></th>
+  <th align="center" colspan="4"><i>Movement</i></th>
   <tr>
     <td>Name</td>
     <td>skip(<b>bytes</b>, bits)</td>
-    <td align="center" rowspan="2"><b>bytes to skip from current byte position</b>, bits to skip</td>
-    <td rowspan="2">Use negative to go back.<br><b>Note:</b> Remaining bits are dropped when returning to a byte read.</td>
+    <td align="center" rowspan="2"><b>Bytes to skip from current byte position</b>, bits to skip (default 0)</td>
+    <td rowspan="2">Use negative to go back.<br><b>Note:</b> Remaining bits are dropped when returning to a byte function.</td>
   </tr>
   <tr>
     <td>Alias</td>
@@ -282,7 +400,7 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td>Name</td>
     <td>goto(<b>byte</b>, bit)</td>
     <td align="center" rowspan="2"><b>Byte offset from start</b>, bit offset from byte offset</td>
-    <td rowspan="2"><b>Note:</b> Remaining bits are drop when returning to byte data.</td>
+    <td rowspan="2"><b>Note:</b> Remaining bits are drop when returning to byte function.</td>
   </tr>
   <tr>
     <td>Aliases</td>
@@ -298,11 +416,11 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td>Alias</td>
     <td>gotostart()</td>
   </tr>
-  <th align="center" colspan="4" style="background-color:#4c71a2d9"><i>Manipulation</i></th>
+  <th align="center" colspan="4"><i>Manipulation</i></th>
   <tr>
     <td>Name</td>
     <td>delete(startOffset, endOffset, consume)</td>
-    <td align="center" rowspan="2">start byte of data (default 0), end byte of data (default current byte position), move byte position to after data read (default false)</td>
+    <td align="center" rowspan="2">Start byte of data (default 0), end byte of data (default current byte position), move byte position to after data read (default false)</td>
     <td rowspan="2">Removes and returns data. <br><b>Note:</b> Errors on strict mode</td>
   </tr>
   <tr>
@@ -312,7 +430,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>crop(<b>length</b>, consume)</td>
-    <td align="center" rowspan="2"><b>Number of bytes to read and remove</b>, move byte position to after data read (default false)</td>
+    <td align="center" rowspan="2"><b>Number of bytes to read and remove from current byte position</b>, move byte position to after data read (default false)</td>
     <td rowspan="2">Removes and returns data from current byte position for length of data</b>.<br><b>Note:</b> Errors on strict mode</td>
   </tr>
   <tr>
@@ -321,8 +439,18 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Name</td>
+    <td>replace(<b>data</b>, consume, offset)</td>
+    <td align="center" rowspan="2"><b>Data to replace in supplied data</b>, move byte position to after data read (default false), byte position to start replace (default current byte position)</td>
+    <td rowspan="2">Replaces data at current byte or supplied offset.<br><b>Note:</b> Errors on strict mode</td>
+  </tr>
+  <tr>
+    <td>Alias</td>
+    <td>overwrite(<b>data</b>, consume, offset)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
     <td>lift(startByte, endByte, consume, fillValue)</td>
-    <td align="center" rowspan="2"><b>Start of byte read (default current byte position), end of byte read (default end of data)</b>, move current byte position to end of byte read (default false), value to fill bytes (will <b>NOT</b> fill on default)</td>
+    <td align="center" rowspan="2">Start of byte read (default current byte position), end of byte read (default end of data), move current byte position to end of byte read (default false), value to fill bytes (will <b>NOT</b> fill on default)</td>
     <td rowspan="2">Returns data from supplied byte positions. <br><b>Note:</b> Only moves current byte position if consume is true. Only fills data if value is supplied</td>
   </tr>
   <tr>
@@ -342,12 +470,12 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>insert(<b>data</b>, consume, offset)</td>
-    <td align="center" rowspan="2"><b>New data to insert</b>, move byte position to after data read (default false), offset to insert (default current read position)</td>
-    <td rowspan="2"><b>Note:</b> Data type must match supplied data. Errors on strict mode</td>
+    <td align="center" rowspan="2"><b>New data to insert</b>, move byte position to after data read (default false), byte position to insert (default current byte position)</td>
+    <td rowspan="2">Inserts new data into supplied data. <b>Note:</b> Data type must match supplied data. Errors on strict mode</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>place(<b>data</b>, consume)</td>
+    <td>place(<b>data</b>, consume, offset)</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -369,69 +497,91 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td>Aliases</td>
     <td>append(<b>data</b>, consume)</td>
   </tr>
-  <th align="center" colspan="4" style="background-color:#4c71a2d9"><i>Math</i></th>
+  <th align="center" colspan="4"><i>Math</i></th>
   <tr>
     <td>Name</td>
-    <td>XOR(<b>xorKey</b>, startOffset, endOffset, consume)
+    <td>xor(<b>xorKey</b>, startOffset, endOffset, consume)
     <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
-    <td >XOR data</td>
+    <td >XOR data. <b>Note:</b> Will loop if operation length is longer than supplied key.</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>XORThis(<b>xorKey</b>, length, consume)
+    <td>xorThis(<b>xorKey</b>, length, consume)
     <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, length of bytes starting at current byte (repeats when longer, default 1 byte for byte value, string length or end of data for string, array length or end of data for Uint8Array or Buffer), byte position to end (default end of data), move byte position to after operation (default false)</td>
-    <td>XOR data</td>
+    <td>XOR data <b>Note:</b> Will loop if operation length is longer than supplied key.</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>OR(<b>orKey</b>, startOffset, endOffset, consume)
+    <td>or(<b>orKey</b>, startOffset, endOffset, consume)
     <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
-    <td >OR data</td>
+    <td >OR data <b>Note:</b> Will loop if operation length is longer than supplied key.</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>ORThis(<b>orKey</b>, length, consume)
+    <td>orThis(<b>orKey</b>, length, consume)
     <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, length of bytes starting at current byte (repeats when longer, default 1 byte for byte value, string length or end of data for string, array length or end of data for Uint8Array or Buffer), byte position to end (default end of data), move byte position to after operation (default false)</td>
-    <td>OR data</td>
+    <td>OR data <b>Note:</b> Will loop if operation length is longer than supplied key.</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>AND(<b>andKey</b>, startOffset, endOffset, consume)
+    <td>and(<b>andKey</b>, startOffset, endOffset, consume)
     <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
-    <td >AND data</td>
+    <td >AND data <b>Note:</b> Will loop if operation length is longer than supplied key.</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>ANDThis(<b>andKey</b>, length, consume)
+    <td>andThis(<b>andKey</b>, length, consume)
     <td align="center"><b>Byte value, string, Uint8Array or Buffer</b>, length of bytes starting at current byte (repeats when longer, default 1 byte for byte value, string length or end of data for string, array length or end of data for Uint8Array or Buffer), byte position to end (default end of data), move byte position to after operation (default false)</td>
-    <td>AND data</td>
+    <td>AND data <b>Note:</b> Will loop if operation length is longer than supplied key.</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>LSHIFT(<b>shiftValue</b>, startOffset, endOffset, consume)
+    <td>add(<b>shiftValue</b>, startOffset, endOffset, consume)
+    <td align="center"><b>Value</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td >Add value to data (per byte)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>addThis(<b>shiftValue</b>, length, consume)
+    <td align="center"><b>Value</b>, length of bytes starting at current byte (default 1), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td>Add value to data (per byte)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>not(startOffset, endOffset, consume)
+    <td align="center">Byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td >NOT data (per byte)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>notThis(length, consume)
+    <td align="center">Length of bytes starting at current byte position (default 1), byte position to end (default end of data), move byte position to after operation (default false)</td>
+    <td>NOT data (per byte)</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>lShift(<b>shiftValue</b>, startOffset, endOffset, consume)
     <td align="center"><b>Value</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
     <td >Left shift data (per byte)</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>LSHIFTThis(<b>shiftValue</b>, length, consume)
+    <td>lShiftThis(<b>shiftValue</b>, length, consume)
     <td align="center"><b>Value</b>, length of bytes starting at current byte (default 1), byte position to end (default end of data), move byte position to after operation (default false)</td>
     <td>Left shift data (per byte)</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>RSHIFT(<b>shiftValue</b>, startOffset, endOffset, consume)
+    <td>rShift(<b>shiftValue</b>, startOffset, endOffset, consume)
     <td align="center"><b>Value</b>, byte position to start (default current position), byte position to end (default end of data), move byte position to after operation (default false)</td>
     <td >Right shift data (per byte)</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>RSHIFTThis(<b>shiftValue</b>, length, consume)
+    <td>rShiftThis(<b>shiftValue</b>, length, consume)
     <td align="center"><b>Value</b>, length of bytes starting at current byte (default 1), byte position to end (default end of data), move byte position to after operation (default false)</td>
     <td>Right shift data (per byte)</td>
   </tr>
-  
-  
 </tbody>
 </table>
 
@@ -439,7 +589,7 @@ Common functions for setup, movement, manipulation and math shared by both.
 
 Parse value as a bit field. There are 32 functions from bit1 to bit32 and can be signed or unsigned (with a ``u`` at the start) and in little or big endian order (``be`` or ``le`` at the end).
 
-**Note:** Remaining bits are dropped when returning to a byte read. Example, after using ``bit4()`` then ``ubyte()``, the read locations drops the remaining 4 bits after ``bit4()`` when reading ``ubyte()``. Also any bit reading under 8 will always be unsigned.
+**Note:** Remaining bits are dropped when returning to a byte read. Example, after using ``bit4()`` then ``ubyte()``, the read locations drops the remaining 4 bits after ``bit4()`` when reading ``ubyte()``. Any bit reading under 8 will always be unsigned.
 
 <table>
 <thead>
@@ -456,8 +606,8 @@ Parse value as a bit field. There are 32 functions from bit1 to bit32 and can be
     <td><b>number of bits</b>, if the value is returned unsigned, big or little endian</td>
   </tr>
   <tr>
-    <td>writeBit(<b>value, bits</b>, offsetBits, offsetBytes, unsigned, endian)</td>
-    <td><b>value to write, number of bits</b>, bits offset from current position, byte offset from current position, if the value is written unsigned, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
+    <td>writeBit(<b>value, bits</b>, unsigned, endian)</td>
+    <td><b>value to write, number of bits</b>, if the value is written unsigned, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
@@ -466,8 +616,8 @@ Parse value as a bit field. There are 32 functions from bit1 to bit32 and can be
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>[u]bit{1-32}{le|be}(<b>value</b>, offsetBits, offsetBytes, *unsigned)</td>
-    <td><b>value to write</b>, byte offset from current position, if value is unsigned or not.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>fourth</i> augment</td>
+    <td>[u]bit{1-32}{le|be}(<b>value</b>, *unsigned)</td>
+    <td><b>value to write</b>, if value is unsigned or not.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>fourth</i> augment</td>
   </tr>
 </tbody>
 </table>
@@ -501,8 +651,8 @@ Parse value as a byte (aka int8). Can be signed or unsigned (with a ``u`` at the
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>[u]{byte|int8}(<b>value</b>, offsetBytes, *unsigned)</td>
-    <td><b>value to write</b>, byte offset from current position, if value is signed or not.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment</td>
+    <td>[u]{byte|int8}(<b>value</b>, *unsigned)</td>
+    <td><b>value to write</b>, if value is signed or not.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment</td>
   </tr>
 </tbody>
 </table>
@@ -526,8 +676,8 @@ Parse value as a int16 (aka short or word). Can be signed or unsigned (with a ``
     <td>if the value is returned unsigned, big or little endian</td>
   </tr>
   <tr>
-    <td>writeInt16(<b>value</b>, offsetBytes, unsigned, endian)</td>
-    <td><b>value to write</b>, byte offset from current position, if the value is written unsigned, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
+    <td>writeInt16(<b>value</b>, unsigned, endian)</td>
+    <td><b>value to write</b>, if the value is written unsigned, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
@@ -536,7 +686,7 @@ Parse value as a int16 (aka short or word). Can be signed or unsigned (with a ``
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>[u]{int16|word|short}{be|le}(<b>value</b>, offsetBytes, *unsigned, *endian)</td>
+    <td>[u]{int16|word|short}{be|le}(<b>value</b>, *unsigned, *endian)</td>
     <td><b>value to write</b>, if value is unsigned, big or little endian.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>fourth</i> augment (does not overwite set endian).</td>
   </tr>
 </tbody>
@@ -561,8 +711,8 @@ Parse value as a half float (aka half). Can be in little or big endian order (``
     <td>big or little endian</td>
   </tr>
   <tr>
-    <td>writeHalfFloat(<b>value</b>, offsetBytes, endian)</td>
-    <td><b>value to write</b>, byte offset from current position, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
+    <td>writeHalfFloat(<b>value</b>, endian)</td>
+    <td><b>value to write</b>, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
@@ -571,8 +721,8 @@ Parse value as a half float (aka half). Can be in little or big endian order (``
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>{halffloat|half}{be|le}(<b>value</b>, offsetBytes, *endian)</td>
-    <td><b>value to write</b>, byte offset from current position, big or little endian.<br>*Note: and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>second</i> augment (does not overwite set endian).</td>
+    <td>{halffloat|half}{be|le}(<b>value</b>, *endian)</td>
+    <td><b>value to write</b>, big or little endian.<br>*Note: and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>second</i> augment (does not overwite set endian).</td>
   </tr>
 </tbody>
 </table>
@@ -596,8 +746,8 @@ Parse value as a int32 (aka int, long or  double). Can be signed or unsigned (wi
     <td>if the value is returned unsigned, big or little endian</td>
   </tr>
   <tr>
-    <td>writeInt32(<b>value</b>, offsetBytes, unsigned, endian)</td>
-    <td><b>value to write</b>, byte offset from current position, if the value is written unsigned, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
+    <td>writeInt32(<b>value</b>, unsigned, endian)</td>
+    <td><b>value to write</b>, if the value is written unsigned, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
@@ -606,8 +756,8 @@ Parse value as a int32 (aka int, long or  double). Can be signed or unsigned (wi
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>[u]{int32|long|int|double}{be|le}(<b>value</b>, offsetBytes, *unsigned, *endian)</td>
-    <td><b>value to write</b>, byte offset from current position, if value is unsigned, little or big endian<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>fourth</i> augment (does not overwite set endian).</td>
+    <td>[u]{int32|long|int|double}{be|le}(<b>value</b>,  *unsigned, *endian)</td>
+    <td><b>value to write</b>, if value is unsigned, little or big endian<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>fourth</i> augment (does not overwite set endian).</td>
   </tr>
 </tbody>
 </table>
@@ -631,8 +781,8 @@ Parse value as a float. Can be in little or big endian order (``be`` or ``le`` a
     <td>big or little endian</td>
   </tr>
   <tr>
-    <td>writeInt64(<b>value</b>, offsetBytes, endian)</td>
-    <td><b>value to write</b>, byte offset from current position, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
+    <td>writeInt64(<b>value</b>, endian)</td>
+    <td><b>value to write</b>, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
@@ -641,8 +791,8 @@ Parse value as a float. Can be in little or big endian order (``be`` or ``le`` a
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>float{be|le}(<b>value</b>, offsetBytes, *endian)</td>
-    <td><b>value to write</b>, byte offset from current position, big or little endian.<br>*Note: functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>third</i> augment (does not overwite set endian).</td>
+    <td>float{be|le}(<b>value</b>,  *endian)</td>
+    <td><b>value to write</b>, big or little endian.<br>*Note: functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>third</i> augment (does not overwite set endian).</td>
   </tr>
 </tbody>
 </table>
@@ -666,8 +816,8 @@ Parse value as a int64 (aka quad or bigint). Can be signed or unsigned (with a `
     <td>if the value is returned unsigned, big or little endian</td>
   </tr>
   <tr>
-    <td>writeInt64(<b>value</b>, offsetBytes, unsigned, endian)</td>
-    <td><b>value to write</b>, byte offset from current position, if the value is written unsigned, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
+    <td>writeInt64(<b>value</b>, unsigned, endian)</td>
+    <td><b>value to write</b>, if the value is written unsigned, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
@@ -676,8 +826,8 @@ Parse value as a int64 (aka quad or bigint). Can be signed or unsigned (with a `
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>[u]{int64|quad|bigint}{be|le}(<b>value</b>, offsetBytes, *unsigned, *endian)</td>
-    <td><b>value to write</b>, byte offset from current position, if value is unsigned, big or little endian.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>fourth</i> augment (does not overwite set endian).</td>
+    <td>[u]{int64|quad|bigint}{be|le}(<b>value</b>, *unsigned, *endian)</td>
+    <td><b>value to write</b>, if value is unsigned, big or little endian.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>fourth</i> augment (does not overwite set endian).</td>
   </tr>
 </tbody>
 </table>
@@ -701,8 +851,8 @@ Parse value as a double float (aka dfloat). Can be in little or big endian order
     <td>big or little endian</td>
   </tr>
   <tr>
-    <td>writeDoubleFloat(<b>value</b>, offsetBytes, endian)</td>
-    <td><b>value to write</b>, byte offset from current position, big or little endian.<br>Note: Will throw error if value is outside of size of data</td>
+    <td>writeDoubleFloat(<b>value</b>, endian)</td>
+    <td><b>value to write</b>, big or little endian.<br>Note: Will throw error if value is outside of size of data</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
@@ -711,8 +861,8 @@ Parse value as a double float (aka dfloat). Can be in little or big endian order
   </tr>
   <tr>
    <td align="center"><b>Presets (writer)</b></td>
-    <td>{doublefloat|dfloat}{be|le}(<b>value</b>, offsetBytes, *endian)</td>
-    <td><b>Value to write</b>, byte offset from current position, big or little endian.<br>*Note: functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>third</i> augment (does not overwite set endian).</td>
+    <td>{doublefloat|dfloat}{be|le}(<b>value</b>, *endian)</td>
+    <td><b>Value to write</b>, big or little endian.<br>*Note: functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>third</i> augment (does not overwite set endian).</td>
   </tr>
 </tbody>
 </table>
@@ -775,13 +925,13 @@ Presents include C or Unicode, Ansi and multiple pascals.
   <tr>
   <td align="center"><b>Presets (writer)</b></td>
     <td>
-    {c|utf8}string(<b>string</b>, offset, length, terminateValue)<br><br>
-    ansistring(<b>string</b>, offset, length, terminateValue)<br><br>
-    {utf16|uni}string{be|le}(<b>string</b>, offset, length, terminateValue, *endian)<br><br>
-    pstring(<b>string</b>, offset, lengthWriteSize, *endian)<br><br>
-    pstring{1|2|4}{be|le}(<b>string</b>,offset, *endian)<br><br>
-    wpstring{be|le}(<b>string</b>, offset, lengthWriteSize, *endian)<br><br>
-    wpstring{1|2|4}{be|le}(<b>string</b>, offset, *endian)
+    {c|utf8}string(<b>string</b>, length, terminateValue)<br><br>
+    ansistring(<b>string</b>, length, terminateValue)<br><br>
+    {utf16|uni}string{be|le}(<b>string</b>,length, terminateValue, *endian)<br><br>
+    pstring(<b>string</b>, lengthWriteSize, *endian)<br><br>
+    pstring{1|2|4}{be|le}(<b>string</b>, *endian)<br><br>
+    wpstring{be|le}(<b>string</b>, lengthWriteSize, *endian)<br><br>
+    wpstring{1|2|4}{be|le}(<b>string</b>, *endian)
     </td>
     <td>Based on above.<br><b>Note:</b> Presets use augments not a single object. Endian only needed when not part of function name. Does not override set endian.</td>
   </tr>

@@ -138,6 +138,42 @@ export declare class bireader {
     */
     saveOffset(): number;
     /**
+    * Get the current bit position (0-7)
+    *
+    * @return {number} current bit position
+    */
+    tellB(): number;
+    /**
+    * Get the current bit position (0-7)
+    *
+    * @return {number} current bit position
+    */
+    getOffsetBit(): number;
+    /**
+    * Get the current bit position (0-7)
+    *
+    * @return {number} current bit position
+    */
+    saveOffsetAbsBit(): number;
+    /**
+    * Get the current absolute bit position (from start of data)
+    *
+    * @return {number} current absolute bit position
+    */
+    tellAbsB(): number;
+    /**
+    * Get the current absolute bit position (from start of data)
+    *
+    * @return {number} current absolute bit position
+    */
+    getOffsetAbsBit(): number;
+    /**
+    * Get the current absolute bit position (from start of data)
+    *
+    * @return {number} current absolute bit position
+    */
+    saveOffsetBit(): number;
+    /**
     * Disallows extending data if position is outside of max size
     */
     restrict(): void;
@@ -153,7 +189,7 @@ export declare class bireader {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    XOR(xorKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    xor(xorKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
     * XOR data
     *
@@ -161,7 +197,7 @@ export declare class bireader {
     * @param {number} length - Length in bytes to XOR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    XORThis(xorKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
+    xorThis(xorKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
     /**
     * OR data
     *
@@ -170,7 +206,7 @@ export declare class bireader {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    OR(orKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    or(orKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
     * OR data
     *
@@ -178,7 +214,7 @@ export declare class bireader {
     * @param {number} length - Length in bytes to OR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    ORThis(orKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
+    orThis(orKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
     /**
     * AND data
     *
@@ -187,7 +223,7 @@ export declare class bireader {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    AND(andKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    and(andKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
     * AND data
     *
@@ -195,7 +231,22 @@ export declare class bireader {
     * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    ANDThis(andKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
+    andThis(andKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
+    /**
+    * Not data
+    *
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    not(startOffset?: number, endOffset?: number, consume?: boolean): void;
+    /**
+    * Not data
+    *
+    * @param {number} length - Length in bytes to NOT from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    notThis(length?: number, consume?: boolean): void;
     /**
     * Left shift data
     *
@@ -204,7 +255,7 @@ export declare class bireader {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    LSHIFT(shiftValue: number, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    lShift(shiftValue: number, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
     * Left shift data
     *
@@ -212,7 +263,7 @@ export declare class bireader {
     * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    LSHIFTThis(shiftValue: number, length?: number, consume?: boolean): void;
+    lShiftThis(shiftValue: number, length?: number, consume?: boolean): void;
     /**
     * Right shift data
     *
@@ -221,7 +272,7 @@ export declare class bireader {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    RSHIFT(shiftValue: number, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    rShift(shiftValue: number, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
     * Right shift data
     *
@@ -229,7 +280,24 @@ export declare class bireader {
     * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    RSHIFTThis(shiftValue: number, length?: number, consume?: boolean): void;
+    rShiftThis(shiftValue: number, length?: number, consume?: boolean): void;
+    /**
+    * Add value to data
+    *
+    * @param {number} addValue - Value to add
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    add(addValue: number, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    /**
+    * Add value to data
+    *
+    * @param {number} addValue - Value to add
+    * @param {number} length - Length in bytes to add from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    addThis(addValue: number, length?: number, consume?: boolean): void;
     /**
     * Deletes part of data from start to current byte position unless supplied, returns removed
     * Note: Errors in strict mode
@@ -320,8 +388,8 @@ export declare class bireader {
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
-    * @param {boolean} consume - Move current write position to end of data (default false)
-    * @param {number} offset - Offset to add it at (defaults to current position)
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Byte position to add at (defaults to current position)
     */
     insert(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
     /**
@@ -329,10 +397,28 @@ export declare class bireader {
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
-    * @param {boolean} consume - Move current write position to end of data (default false)
-    * @param {number} offset - Offset to add it at (defaults to current position)
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Byte position to add at (defaults to current position)
     */
     place(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
+    /**
+    * Replaces data in data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to replace in data
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Offset to add it at (defaults to current position)
+    */
+    replace(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
+    /**
+    * Replaces data in data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to replace in data
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Offset to add it at (defaults to current position)
+    */
+    overwrite(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
     /**
     * Adds data to start of supplied data
     * Note: Must be same data type as supplied data. Errors on strict mode.
@@ -396,12 +482,12 @@ export declare class bireader {
     /**
     * Console logs data as hex dump
     *
-    * @param {object} options - options object
+    * @param {object} options
     * ```javascript
     *   {
     *       length: 192, // number of bytes to log, default 192 or end of data
-    *       startByte: 0, // byte to start dump, default current position
-    *       supressUnicode: false // Supress unicode character preview for cleaner columns
+    *       startByte: 0, // byte to start dump (default current byte position)
+    *       supressUnicode: false // Supress unicode character preview for even columns
     *   }
     * ```
     */
@@ -418,6 +504,18 @@ export declare class bireader {
     * Turn hexdump on error on (default on)
     */
     errorDumpOn(): void;
+    /**
+    *
+    * Write bits, must have at least value and number of bits
+    *
+    * ``Note``: When returning to a byte write, remaining bits are skipped
+    *
+    * @param {number} value - value as int
+    * @param {number} bits - number of bits to write
+    * @param {boolean} unsigned - if value is unsigned
+    * @param {string} endian - ``big`` or ``little``
+    */
+    writeBit(value: number, bits: number, unsigned?: boolean, endian?: string): void;
     /**
     * Bit field reader
     *
@@ -446,9 +544,10 @@ export declare class bireader {
     * Note: When returning to a byte read, remaining bits are dropped
     *
     * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit1(unsigned?: boolean): number;
+    bit1(unsigned?: boolean, endian?: string): number;
     /**
     * Bit field reader
     *
@@ -2156,6 +2255,13 @@ export declare class bireader {
     */
     readByte(unsigned?: boolean): number;
     /**
+    * Write byte
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    */
+    writeByte(value: number, unsigned?: boolean): void;
+    /**
     * Read byte
     *
     * @param {boolean} unsigned - if value is unsigned or not
@@ -2195,6 +2301,14 @@ export declare class bireader {
     * @returns number
     */
     readInt16(unsigned?: boolean, endian?: string): number;
+    /**
+    * Write int16
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    */
+    writeInt16(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Read short
     *
@@ -2355,6 +2469,13 @@ export declare class bireader {
     */
     readHalfFloat(endian?: string): number;
     /**
+    * Writes half float
+    *
+    * @param {number} value - value as int
+    * @param {string} endian - ``big`` or ``little`
+    */
+    writeHalfFloat(value: number, endian?: string): void;
+    /**
     * Read half float
     *
     * @param {string} endian - ```big``` or ```little```
@@ -2412,6 +2533,14 @@ export declare class bireader {
     * @returns number
     */
     readInt32(unsigned?: boolean, endian?: string): number;
+    /**
+    * Write int32
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    */
+    writeInt32(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Read 32 bit integer
     *
@@ -2602,6 +2731,13 @@ export declare class bireader {
     */
     readFloat(endian?: string): number;
     /**
+   * Write float
+   *
+   * @param {number} value - value as int
+   * @param {string} endian - ``big`` or ``little`
+   */
+    writeFloat(value: number, endian?: string): void;
+    /**
     * Read float
     *
     * @param {string} endian - ```big``` or ```little```
@@ -2639,6 +2775,14 @@ export declare class bireader {
     * @returns number
     */
     readInt64(unsigned?: boolean, endian?: string): bigint;
+    /**
+    * Write 64 bit integer
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    */
+    writeInt64(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Read signed 64 bit integer
     * @param {boolean} unsigned - if value is unsigned or not
@@ -2788,6 +2932,14 @@ export declare class bireader {
     */
     readDoubleFloat(endian?: string): number;
     /**
+    * Writes double float
+    *
+    * @param {number} value - value as int
+    * @param {number} offset - byte offset (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    */
+    writeDoubleFloat(value: number, endian?: string): void;
+    /**
     * Read double float
     *
     * @param {string} endian - ```big``` or ```little```
@@ -2863,6 +3015,32 @@ export declare class bireader {
         encoding?: string;
         endian?: string;
     }): string;
+    /**
+    * Writes string, use options object for different types
+    *
+    *
+    * @param {string} string - text string
+    * @param {object} options - options:
+    * ```javascript
+    * {
+    *  length: string.length,  //for fixed length, non-terminate value utf strings
+    *  stringType: "utf-8", //utf-8, utf-16, pascal or wide-pascal
+    *  terminateValue: 0x00, // only with stringType: "utf"
+    *  lengthWriteSize: 1, //for pascal strings. 1, 2 or 4 byte length write size
+    *  encoding: "utf-8", //TextEncoder accepted types
+    *  endian: "little", //for wide-pascal and utf-16
+    * }
+    * ```
+    */
+    writeString(string: string, options?: {
+        length?: number;
+        stringType?: string;
+        terminateValue?: number;
+        lengthWriteSize?: number;
+        stripNull?: boolean;
+        encoding?: string;
+        endian?: string;
+    }): void;
     /**
     * Reads string, use options object for different types
     *

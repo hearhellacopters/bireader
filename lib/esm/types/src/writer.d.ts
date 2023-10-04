@@ -31,40 +31,40 @@ export declare class biwriter {
     */
     constructor(data: Array<Uint8Array>, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean);
     /**
-    * Change endian (default little)
+    * Change Endian (default little)
     *
     * Can be changed at any time, doesn't loose position
     *
-    * @param {string} endian - endianness ```big``` or ```little```
+    * @param {string} endian - Endianness ```big``` or ```little```
     */
     endianness(endian: string): void;
     /**
-    * Sets endian to big
+    * Sets Endian to big
     *
     */
     bigEndian(): void;
     /**
-    * Sets endian to big
+    * Sets Endian to big
     *
     */
     big(): void;
     /**
-    * Sets endian to big
+    * Sets Endian to big
     *
     */
     be(): void;
     /**
-    * Sets endian to little
+    * Sets Endian to little
     *
     */
     littleEndian(): void;
     /**
-    * Sets endian to little
+    * Sets Endian to little
     *
     */
     little(): void;
     /**
-    * Sets endian to little
+    * Sets Endian to little
     *
     */
     le(): void;
@@ -143,6 +143,42 @@ export declare class biwriter {
     */
     saveOffset(): number;
     /**
+    * Get the current bit position (0-7)
+    *
+    * @return {number} current bit position
+    */
+    tellB(): number;
+    /**
+    * Get the current bit position (0-7)
+    *
+    * @return {number} current bit position
+    */
+    getOffsetBit(): number;
+    /**
+    * Get the current bit position (0-7)
+    *
+    * @return {number} current bit position
+    */
+    saveOffsetAbsBit(): number;
+    /**
+    * Get the current absolute bit position (from start of data)
+    *
+    * @return {number} current absolute bit position
+    */
+    tellAbsB(): number;
+    /**
+    * Get the current absolute bit position (from start of data)
+    *
+    * @return {number} current absolute bit position
+    */
+    getOffsetAbsBit(): number;
+    /**
+    * Get the current absolute bit position (from start of data)
+    *
+    * @return {number} current absolute bit position
+    */
+    saveOffsetBit(): number;
+    /**
     * Disallows extending data if position is outside of max size
     */
     restrict(): void;
@@ -158,7 +194,7 @@ export declare class biwriter {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    XOR(xorKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    xor(xorKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
     * XOR data
     *
@@ -166,7 +202,7 @@ export declare class biwriter {
     * @param {number} length - Length in bytes to XOR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    XORThis(xorKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
+    xorThis(xorKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
     /**
     * OR data
     *
@@ -175,7 +211,7 @@ export declare class biwriter {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    OR(orKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    or(orKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
     * OR data
     *
@@ -183,7 +219,7 @@ export declare class biwriter {
     * @param {number} length - Length in bytes to OR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    ORThis(orKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
+    orThis(orKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
     /**
     * AND data
     *
@@ -192,7 +228,7 @@ export declare class biwriter {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    AND(andKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    and(andKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
     * AND data
     *
@@ -200,7 +236,22 @@ export declare class biwriter {
     * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    ANDThis(andKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
+    andThis(andKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
+    /**
+    * Not data
+    *
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    not(startOffset?: number, endOffset?: number, consume?: boolean): void;
+    /**
+    * Not data
+    *
+    * @param {number} length - Length in bytes to NOT from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    notThis(length?: number, consume?: boolean): void;
     /**
     * Left shift data
     *
@@ -209,7 +260,7 @@ export declare class biwriter {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    LSHIFT(shiftValue: number, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    lShift(shiftValue: number, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
     * Left shift data
     *
@@ -217,7 +268,7 @@ export declare class biwriter {
     * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    LSHIFTThis(shiftValue: number, length?: number, consume?: boolean): void;
+    lShiftThis(shiftValue: number, length?: number, consume?: boolean): void;
     /**
     * Right shift data
     *
@@ -226,7 +277,7 @@ export declare class biwriter {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    RSHIFT(shiftValue: number, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    rShift(shiftValue: number, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
     * Right shift data
     *
@@ -234,7 +285,24 @@ export declare class biwriter {
     * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    RSHIFTThis(shiftValue: number, length?: number, consume?: boolean): void;
+    rShiftThis(shiftValue: number, length?: number, consume?: boolean): void;
+    /**
+    * Add value to data
+    *
+    * @param {number} addValue - Value to add
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    add(addValue: number, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    /**
+    * Add value to data
+    *
+    * @param {number} addValue - Value to add
+    * @param {number} length - Length in bytes to add from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    addThis(addValue: number, length?: number, consume?: boolean): void;
     /**
     * Deletes part of data from start to current byte position unless supplied, returns removed
     * Note: Errors in strict mode
@@ -325,8 +393,8 @@ export declare class biwriter {
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
-    * @param {boolean} consume - Move current write position to end of data (default false)
-    * @param {number} offset - Offset to add it at (defaults to current position)
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Byte position to add at (defaults to current position)
     */
     insert(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
     /**
@@ -334,10 +402,28 @@ export declare class biwriter {
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
-    * @param {boolean} consume - Move current write position to end of data (default false)
-    * @param {number} offset - Offset to add it at (defaults to current position)
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Byte position to add at (defaults to current position)
     */
     place(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
+    /**
+    * Replaces data in data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to replace in data
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Offset to add it at (defaults to current position)
+    */
+    replace(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
+    /**
+    * Replaces data in data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    *
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to replace in data
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Offset to add it at (defaults to current position)
+    */
+    overwrite(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
     /**
     * Adds data to start of supplied data
     * Note: Must be same data type as supplied data. Errors on strict mode.
@@ -401,12 +487,12 @@ export declare class biwriter {
     /**
     * Console logs data as hex dump
     *
-    * @param {object} options - options object
+    * @param {object} options
     * ```javascript
     *   {
     *       length: 192, // number of bytes to log, default 192 or end of data
-    *       startByte: 0, // byte to start dump, default current position
-    *       supressUnicode: false // Supress unicode character preview for cleaner columns
+    *       startByte: 0, // byte to start dump (default current byte position)
+    *       supressUnicode: false // Supress unicode character preview for even columns
     *   }
     * ```
     */
@@ -431,2192 +517,2109 @@ export declare class biwriter {
     *
     * @param {number} value - value as int
     * @param {number} bits - number of bits to write
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
     * @param {boolean} unsigned - if value is unsigned
     * @param {string} endian - ``big`` or ``little``
     */
-    writeBit(value: number, bits: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean, endian?: string): void;
+    writeBit(value: number, bits: number, unsigned?: boolean, endian?: string): void;
     /**
+    * Bit field reader
     *
-    * Write bits, must have at least value and number of bits
+    * Note: When returning to a byte read, remaining bits are dropped
     *
-    * ``Note``: When returning to a byte write, remaining bits are skipped
+    * @param {number} bits - bits to read
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
+    */
+    readBit(bits?: number, unsigned?: boolean, endian?: string): number;
+    /**
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {number} bits - bits to write
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
+    */
+    bit(value: number, bits: number, unsigned?: boolean, endian?: string): number;
+    /**
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {number} bits - bits to write
+    * @returns number
+    */
+    writeUBitBE(value: number, bits: number): number;
+    /**
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {number} bits - bits to write
+    * @returns number
+    */
+    ubitbe(value: number, bits: number): number;
+    /**
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {number} bits - bits to write
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    writeBitBE(value: number, bits: number, unsigned?: boolean): number;
+    /**
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} bits - number of bits to write
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned
-    * @param {string} endian - ``big`` or ``little``
+    * @param {number} bits - bits to write
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit(value: number, bits: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean, endian?: string): void;
+    bitbe(value: number, bits: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {number} bits - bits to write
+    * @returns number
     */
-    bit1(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    writeUBitLE(value: number, bits: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {number} bits - bits to write
+    * @returns number
     */
-    ubit1(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubitle(value: number, bits: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {number} bits - bits to write
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit1le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    writeBitLE(value: number, bits: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {number} bits - bits to write
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit1le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bitle(value: number, bits: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit1be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit1(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit1be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit1le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit2(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit1be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit2(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit1(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit2le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit1le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit2le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit1be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit2be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit2(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit2be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit2le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit3(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit2be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit3(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit2(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit3le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit2le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit3le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit2be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit3be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit3(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit3be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit3le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit4(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit3be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit4(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit3(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit4le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit3le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit4le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit3be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit4be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit4(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit4be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit4le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit5(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit4be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit5(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit4(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit5le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit4le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit5le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit4be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit5be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit5(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit5be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit5le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit6(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit5be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit6(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit5(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit6le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit5le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit6le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit5be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit6be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit6(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit6be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit6le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit7(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit6be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit7(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit6(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit7le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit6le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit7le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit6be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit7be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit7(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit7be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit7le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit8(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit7be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit8(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit7(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit8le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit7le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit8le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit7be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit8be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit8(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit8be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit8le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit9(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit8be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit9(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit8(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit9le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit8le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit9le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit8be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit9be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit9(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit9be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit9le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit10(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit9be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit10(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit9(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit10le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit9le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit10le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit9be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit10be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit10(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit10be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit10le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit11(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit10be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit11(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit10(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit11le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit10le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit11le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit10be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit11be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit11(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit11be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit11le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit12(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit11be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit12(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit11(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit12le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit11le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit12le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit11be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit12be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit12(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit12be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit12le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit13(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit12be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit13(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit12(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit13le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit12le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit13le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit12be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit13be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit13(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit13be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit13le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit14(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit13be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit14(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit13(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit14le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit13le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit14le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit13be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit14be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit14(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit14be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit14le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit15(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit14be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit15(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit14(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit15le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit14le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit15le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit14be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit15be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit15(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit15be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit15le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit16(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit15be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit16(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit15(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit16le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit15le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit16le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit15be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit16be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit16(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit16be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit16le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit17(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit16be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit17(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit16(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit17le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit16le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit17le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit16be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit17be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit17(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit17be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit17le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit18(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit17be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit18(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit17(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit18le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit17le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit18le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit17be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit18be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit18(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit18be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit18le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit19(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit18be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit19(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit18(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit19le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit18le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit19le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit18be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit19be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit19(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit19be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit19le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit20(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit19be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit20(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit19(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit20le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit19le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit20le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit19be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit20be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit20(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit20be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit20le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit21(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit20be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit21(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit20(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit21le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit20le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit21le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit20be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit21be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit21(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit21be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit21le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit22(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit21be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit22(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit21(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit22le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit21le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit22le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit21be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit22be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit22(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit22be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit22le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit23(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit22be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit23(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit22(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit23le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit22le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit23le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit22be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit23be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit23(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit23be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit23le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit24(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit23be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit24(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit23(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit24le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit23le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit24le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit23be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit24be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit24(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit24be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit24le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit25(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit24be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit25(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit24(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit25le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit24le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit25le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit24be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit25be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit25(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit25be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit25le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit26(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit25be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit26(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit25(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit26le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit25le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit26le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit25be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit26be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit26(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit26be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit26le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit27(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit26be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit27(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit26(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit27le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit26le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit27le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit26be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit27be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit27(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit27be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit27le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit28(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit27be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit28(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit27(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit28le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit27le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit28le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit27be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit28be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit28(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit28be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit28le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit29(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit28be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit29(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit28(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit29le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit28le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit29le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit28be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit29be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit29(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit29be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit29le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit30(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit29be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit30(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit29(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit30le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit29le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit30le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit29be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit30be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit30(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit30be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit30le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit31(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit30be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit31(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit30(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit31le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit30le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit31le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit30be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit31be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit31(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit31be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit31le(value: number, unsigned?: boolean): number;
     /**
-* Bit field writer
-*
-* Note: When returning to a byte write, remaining bits are dropped
-*
-* @param {number} value - value as int
-* @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-* @param {number} offsetBytes - byte offset to start the write (default last write position)
-* @param {boolean} unsigned - if value is unsigned or not
-*/
-    bit32(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit31be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit32(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit31(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit32le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit31le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit32le(value: number, offsetBits?: number, offsetBytes?: number): void;
+    ubit31be(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit32be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit32(value: number, unsigned?: boolean, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit32be(value: number, offsetBits?: number, offsetBytes?: number): void;
+    bit32le(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} bits - number of bits to write
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    writeBitBE(value: number, bits: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    bit32be(value: number, unsigned?: boolean): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} bits - number of bits to write
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bitbe(value: number, bits: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit32(value: number, endian?: string): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} bits - number of bits to write
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    writeBitLE(value: number, bits: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit32le(value: number): number;
     /**
     * Bit field writer
     *
     * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int
-    * @param {number} bits - number of bits to write
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bitle(value: number, bits: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void;
+    ubit32be(value: number): number;
     /**
     * Write byte
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     */
-    writeByte(value: number, offset?: number, unsigned?: boolean): void;
+    writeByte(value: number, unsigned?: boolean): void;
+    /**
+    * Read byte
+    *
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
+    */
+    readByte(unsigned?: boolean): number;
     /**
     * Write byte
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     */
-    byte(value: number, offset?: number, unsigned?: boolean): void;
+    byte(value: number, unsigned?: boolean): void;
     /**
     * Write byte
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     */
-    int8(value: number, offset?: number, unsigned?: boolean): void;
+    int8(value: number, unsigned?: boolean): void;
     /**
     * Write unsigned byte
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeUByte(value: number, offset?: number): void;
+    writeUByte(value: number): void;
     /**
     * Write unsigned byte
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    uint8(value: number, offset?: number): void;
+    uint8(value: number): void;
     /**
     * Write unsigned byte
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    ubyte(value: number, offset?: number): void;
+    ubyte(value: number): void;
     /**
     * Write int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    writeInt16(value: number, offset?: number, unsigned?: boolean, endian?: string): void;
+    writeInt16(value: number, unsigned?: boolean, endian?: string): void;
+    /**
+    * Read short
+    *
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    readInt16(unsigned?: boolean, endian?: string): number;
     /**
     * Write int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    int16(value: number, offset?: number, unsigned?: boolean, endian?: string): void;
+    int16(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Write int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    short(value: number, offset?: number, unsigned?: boolean, endian?: string): void;
+    short(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Write int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    word(value: number, offset?: number, unsigned?: boolean, endian?: string): void;
+    word(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    writeUInt16(value: number, offset?: number, endian?: string): void;
+    writeUInt16(value: number, endian?: string): void;
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    uint16(value: number, offset?: number, endian?: string): void;
+    uint16(value: number, endian?: string): void;
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
     ushort(value: number, offset?: number, endian?: string): void;
@@ -2624,7 +2627,6 @@ export declare class biwriter {
     * Write unsigned int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
     uword(value: number, offset?: number, endian?: string): void;
@@ -2632,629 +2634,573 @@ export declare class biwriter {
     * Write signed int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeInt16BE(value: number, offset?: number): void;
+    writeInt16BE(value: number): void;
     /**
     * Write signed int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    int16be(value: number, offset?: number): void;
+    int16be(value: number): void;
     /**
     * Write signed int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    shortbe(value: number, offset?: number): void;
+    shortbe(value: number): void;
     /**
     * Write signed int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    wordbe(value: number, offset?: number): void;
+    wordbe(value: number): void;
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeUInt16BE(value: number, offset?: number): void;
+    writeUInt16BE(value: number): void;
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    uint16be(value: number, offset?: number): void;
+    uint16be(value: number): void;
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    ushortbe(value: number, offset?: number): void;
+    ushortbe(value: number): void;
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    uwordbe(value: number, offset?: number): void;
+    uwordbe(value: number): void;
     /**
     * Write signed int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeInt16LE(value: number, offset?: number): void;
+    writeInt16LE(value: number): void;
     /**
     * Write signed int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    int16le(value: number, offset?: number): void;
+    int16le(value: number): void;
     /**
     * Write signed int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    shortle(value: number, offset?: number): void;
+    shortle(value: number): void;
     /**
     * Write signed int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    wordle(value: number, offset?: number): void;
+    wordle(value: number): void;
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeUInt16LE(value: number, offset?: number): void;
+    writeUInt16LE(value: number): void;
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    uint16le(value: number, offset?: number): void;
+    uint16le(value: number): void;
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    ushortle(value: number, offset?: number): void;
+    ushortle(value: number): void;
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    uwordle(value: number, offset?: number): void;
+    uwordle(value: number): void;
     /**
     * Writes half float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    writeHalfFloat(value: number, offset?: number, endian?: string): void;
+    writeHalfFloat(value: number, endian?: string): void;
+    /**
+    * Read half float
+    *
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    readHalfFloat(endian?: string): number;
     /**
     * Writes half float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    half(value: number, offset?: number, endian?: string): void;
+    half(value: number, endian?: string): void;
     /**
     * Writes half float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    halffloat(value: number, offset?: number, endian?: string): void;
+    halffloat(value: number, endian?: string): void;
     /**
     * Writes half float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
     writeHalfFloatBE(value: number, offset?: number): void;
     /**
     * Writes half float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
     halffloatbe(value: number, offset?: number): void;
     /**
     * Writes half float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    halfbe(value: number, offset?: number): void;
+    halfbe(value: number): void;
     /**
     * Writes half float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeHalfFloatLE(value: number, offset?: number): void;
+    writeHalfFloatLE(value: number): void;
     /**
     * Writes half float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    halffloatle(value: number, offset?: number): void;
+    halffloatle(value: number): void;
     /**
     * Writes half float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    halfle(value: number, offset?: number): void;
+    halfle(value: number): void;
     /**
     * Write int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    writeInt32(value: number, offset?: number, unsigned?: boolean, endian?: string): void;
+    writeInt32(value: number, unsigned?: boolean, endian?: string): void;
+    /**
+    * Read 32 bit integer
+    *
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    readInt32(unsigned?: boolean, endian?: string): number;
     /**
     * Write int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    int(value: number, offset?: number, unsigned?: boolean, endian?: string): void;
+    int(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Write int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    int32(value: number, offset?: number, unsigned?: boolean, endian?: string): void;
+    int32(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Write int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    double(value: number, offset?: number, unsigned?: boolean, endian?: string): void;
+    double(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Write int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    long(value: number, offset?: number, unsigned?: boolean, endian?: string): void;
+    long(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    writeUInt32(value: number, offset?: number, endian?: string): void;
+    writeUInt32(value: number, endian?: string): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    uint32(value: number, offset?: number, endian?: string): void;
+    uint32(value: number, endian?: string): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    uint(value: number, offset?: number, endian?: string): void;
+    uint(value: number, endian?: string): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    udouble(value: number, offset?: number, endian?: string): void;
+    udouble(value: number, endian?: string): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    ulong(value: number, offset?: number, endian?: string): void;
+    ulong(value: number, endian?: string): void;
     /**
     * Write signed int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeInt32LE(value: number, offset?: number): void;
+    writeInt32LE(value: number): void;
     /**
     * Write signed int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    int32le(value: number, offset?: number): void;
+    int32le(value: number): void;
     /**
     * Write signed int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    intle(value: number, offset?: number): void;
+    intle(value: number): void;
     /**
     * Write signed int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    doublele(value: number, offset?: number): void;
+    doublele(value: number): void;
     /**
     * Write signed int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    longle(value: number, offset?: number): void;
+    longle(value: number): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeUInt32LE(value: number, offset?: number): void;
+    writeUInt32LE(value: number): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    uint32le(value: number, offset?: number): void;
+    uint32le(value: number): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    uintle(value: number, offset?: number): void;
+    uintle(value: number): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    udoublele(value: number, offset?: number): void;
+    udoublele(value: number): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    ulongle(value: number, offset?: number): void;
+    ulongle(value: number): void;
     /**
     * Write signed int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeInt32BE(value: number, offset?: number): void;
+    writeInt32BE(value: number): void;
     /**
     * Write signed int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    intbe(value: number, offset?: number): void;
+    intbe(value: number): void;
     /**
     * Write signed int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    int32be(value: number, offset?: number): void;
+    int32be(value: number): void;
     /**
     * Write signed int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    doublebe(value: number, offset?: number): void;
+    doublebe(value: number): void;
     /**
     * Write signed int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    longbe(value: number, offset?: number): void;
+    longbe(value: number): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
     writeUInt32BE(value: number, offset?: number): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
     uint32be(value: number, offset?: number): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    uintbe(value: number, offset?: number): void;
+    uintbe(value: number): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    udoublebe(value: number, offset?: number): void;
+    udoublebe(value: number): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    ulongbe(value: number, offset?: number): void;
+    ulongbe(value: number): void;
     /**
     * Write float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    writeFloat(value: number, offset?: number, endian?: string): void;
+    writeFloat(value: number, endian?: string): void;
+    /**
+    * Read float
+    *
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    readFloat(endian?: string): number;
     /**
     * Write float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    float(value: number, offset?: number, endian?: string): void;
+    float(value: number, endian?: string): void;
     /**
     * Write float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeFloatLE(value: number, offset?: number): void;
+    writeFloatLE(value: number): void;
     /**
     * Write float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    floatle(value: number, offset?: number): void;
+    floatle(value: number): void;
     /**
     * Write float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeFloatBE(value: number, offset?: number): void;
+    writeFloatBE(value: number): void;
     /**
     * Write float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    floatbe(value: number, offset?: number): void;
+    floatbe(value: number): void;
     /**
     * Write 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    writeInt64(value: number, offset?: number, unsigned?: boolean, endian?: string): void;
+    writeInt64(value: number, unsigned?: boolean, endian?: string): void;
+    /**
+    * Read signed 64 bit integer
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    readInt64(unsigned?: boolean, endian?: string): bigint;
     /**
     * Write 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    int64(value: number, offset?: number, unsigned?: boolean, endian?: string): void;
+    int64(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Write 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    quad(value: number, offset?: number, unsigned?: boolean, endian?: string): void;
+    quad(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Write 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    bigint(value: number, offset?: number, unsigned?: boolean, endian?: string): void;
+    bigint(value: number, unsigned?: boolean, endian?: string): void;
     /**
     * Write unsigned 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    writeUInt64(value: number, offset?: number, endian?: string): void;
+    writeUInt64(value: number, endian?: string): void;
     /**
     * Write unsigned 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    uint64(value: number, offset?: number, endian?: string): void;
+    uint64(value: number, endian?: string): void;
     /**
     * Write unsigned 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    ubigint(value: number, offset?: number, endian?: string): void;
+    ubigint(value: number, endian?: string): void;
     /**
     * Write unsigned 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    uquad(value: number, offset?: number, endian?: string): void;
+    uquad(value: number, endian?: string): void;
     /**
     * Write signed 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeInt64LE(value: number, offset?: number): void;
+    writeInt64LE(value: number): void;
     /**
     * Write signed 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    int64le(value: number, offset?: number): void;
+    int64le(value: number): void;
     /**
     * Write signed 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    bigintle(value: number, offset?: number): void;
+    bigintle(value: number): void;
     /**
     * Write signed 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    quadle(value: number, offset?: number): void;
+    quadle(value: number): void;
     /**
     * Write unsigned 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeUInt64LE(value: number, offset?: number): void;
+    writeUInt64LE(value: number): void;
     /**
     * Write unsigned 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    uint64le(value: number, offset?: number): void;
+    uint64le(value: number): void;
     /**
     * Write unsigned 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    ubigintle(value: number, offset?: number): void;
+    ubigintle(value: number): void;
     /**
     * Write unsigned 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    uquadle(value: number, offset?: number): void;
+    uquadle(value: number): void;
     /**
     * Write signed 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeInt64BE(value: number, offset?: number): void;
+    writeInt64BE(value: number): void;
     /**
     * Write signed 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    int64be(value: number, offset?: number): void;
+    int64be(value: number): void;
     /**
     * Write signed 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    bigintbe(value: number, offset?: number): void;
+    bigintbe(value: number): void;
     /**
     * Write signed 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    quadbe(value: number, offset?: number): void;
+    quadbe(value: number): void;
     /**
     * Write unsigned 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeUInt64BE(value: number, offset?: number): void;
+    writeUInt64BE(value: number): void;
     /**
     * Write unsigned 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    uint64be(value: number, offset?: number): void;
+    uint64be(value: number): void;
     /**
     * Write unsigned 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    ubigintbe(value: number, offset?: number): void;
+    ubigintbe(value: number): void;
     /**
     * Write unsigned 64 bit integer
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    uquadbe(value: number, offset?: number): void;
+    uquadbe(value: number): void;
     /**
     * Writes double float
     *
@@ -3262,65 +3208,64 @@ export declare class biwriter {
     * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    writeDoubleFloat(value: number, offset?: number, endian?: string): void;
+    writeDoubleFloat(value: number, endian?: string): void;
+    /**
+    * Read double float
+    *
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    readDoubleFloat(endian?: string): number;
     /**
     * Writes double float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    doublefloat(value: number, offset?: number, endian?: string): void;
+    doublefloat(value: number, endian?: string): void;
     /**
     * Writes double float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    dfloat(value: number, offset?: number, endian?: string): void;
+    dfloat(value: number, endian?: string): void;
     /**
     * Writes double float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeDoubleFloatBE(value: number, offset?: number): void;
+    writeDoubleFloatBE(value: number): void;
     /**
     * Writes double float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    dfloatbe(value: number, offset?: number): void;
+    dfloatbe(value: number): void;
     /**
     * Writes double float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    doublefloatbe(value: number, offset?: number): void;
+    doublefloatbe(value: number): void;
     /**
     * Writes double float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeDoubleFloatLE(value: number, offset?: number): void;
+    writeDoubleFloatLE(value: number): void;
     /**
     * Writes double float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    dfloatle(value: number, offset?: number): void;
+    dfloatle(value: number): void;
     /**
     * Writes double float
     *
     * @param {number} value - value as int
-    * @param {number} offset - byte offset (default last write position)
     */
-    doublefloatle(value: number, offset?: number): void;
+    doublefloatle(value: number): void;
     /**
     * Writes string, use options object for different types
     *
@@ -3329,7 +3274,6 @@ export declare class biwriter {
     * @param {object} options - options:
     * ```javascript
     * {
-    *  offset: 0, //byte offset from current position
     *  length: string.length,  //for fixed length, non-terminate value utf strings
     *  stringType: "utf-8", //utf-8, utf-16, pascal or wide-pascal
     *  terminateValue: 0x00, // only with stringType: "utf"
@@ -3340,7 +3284,6 @@ export declare class biwriter {
     * ```
     */
     writeString(string: string, options?: {
-        offset?: number;
         length?: number;
         stringType?: string;
         terminateValue?: number;
@@ -3350,6 +3293,32 @@ export declare class biwriter {
         endian?: string;
     }): void;
     /**
+    * Reads string, use options object for different types
+    *
+    * @param {object} options
+    * ```javascript
+    * {
+    *  length: number, //for fixed length, non-terminate value utf strings
+    *  stringType: "utf-8", //utf-8, utf-16, pascal or wide-pascal
+    *  terminateValue: 0x00, // only for non-fixed length utf strings
+    *  lengthReadSize: 1, //for pascal strings. 1, 2 or 4 byte length read size
+    *  stripNull: true, // removes 0x00 characters
+    *  encoding: "utf-8", //TextEncoder accepted types
+    *  endian: "little", //for wide-pascal and utf-16
+    * }
+    * ```
+    * @return string
+    */
+    readString(options?: {
+        length?: number;
+        stringType?: string;
+        terminateValue?: number;
+        lengthReadSize?: number;
+        stripNull?: boolean;
+        encoding?: string;
+        endian?: string;
+    }): string;
+    /**
     * Writes string, use options object for different types
     *
     *
@@ -3357,7 +3326,6 @@ export declare class biwriter {
     * @param {object} options - options:
     * ```javascript
     * {
-    *  offset: 0, //byte offset from current position
     *  length: string.length,  //for fixed length, non-terminate value utf strings
     *  stringType: "utf-8", //utf-8, utf-16, pascal or wide-pascal
     *  terminateValue: 0x00, // only with stringType: "utf"
@@ -3368,7 +3336,6 @@ export declare class biwriter {
     * ```
     */
     string(string: string, options?: {
-        offset?: number;
         length?: number;
         stringType?: string;
         terminateValue?: number;
@@ -3381,254 +3348,223 @@ export declare class biwriter {
     * Writes UTF-8 (C) string
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     *
     * @return string
     */
-    utf8string(string: string, offset?: number, length?: number, terminateValue?: number): void;
+    utf8string(string: string, length?: number, terminateValue?: number): void;
     /**
     * Writes UTF-8 (C) string
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     *
     * @return string
     */
-    cstring(string: string, offset?: number, length?: number, terminateValue?: number): void;
+    cstring(string: string, length?: number, terminateValue?: number): void;
     /**
     * Writes ANSI string
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     */
-    ansistring(string: string, offset?: number, length?: number, terminateValue?: number): void;
+    ansistring(string: string, length?: number, terminateValue?: number): void;
     /**
     * Writes UTF-16 (Unicode) string
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     * @param {string} endian - ``big`` or ``little``
     */
-    utf16string(string: string, offset?: number, length?: number, terminateValue?: number, endian?: string): void;
+    utf16string(string: string, length?: number, terminateValue?: number, endian?: string): void;
     /**
     * Writes UTF-16 (Unicode) string
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     * @param {string} endian - ``big`` or ``little``
     */
-    unistring(string: string, offset?: number, length?: number, terminateValue?: number, endian?: string): void;
+    unistring(string: string, length?: number, terminateValue?: number, endian?: string): void;
     /**
     * Writes UTF-16 (Unicode) string in little endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     */
-    utf16stringle(string: string, offset?: number, length?: number, terminateValue?: number): void;
+    utf16stringle(string: string, length?: number, terminateValue?: number): void;
     /**
     * Writes UTF-16 (Unicode) string in little endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     */
-    unistringle(string: string, offset?: number, length?: number, terminateValue?: number): void;
+    unistringle(string: string, length?: number, terminateValue?: number): void;
     /**
     * Writes UTF-16 (Unicode) string in big endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     */
-    utf16stringbe(string: string, offset?: number, length?: number, terminateValue?: number): void;
+    utf16stringbe(string: string, length?: number, terminateValue?: number): void;
     /**
     * Writes UTF-16 (Unicode) string in big endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     */
-    unistringbe(string: string, offset?: number, length?: number, terminateValue?: number): void;
+    unistringbe(string: string, length?: number, terminateValue?: number): void;
     /**
     * Writes Pascal string
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     * @param {string} endian - ``big`` or ``little`` for 2 or 4 byte length write size
     */
-    pstring(string: string, offset?: number, lengthWriteSize?: number, endian?: string): void;
+    pstring(string: string, lengthWriteSize?: number, endian?: string): void;
     /**
     * Writes Pascal string 1 byte length read
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`` for 2 or 4 byte length write size
     */
-    pstring1(string: string, offset?: number, endian?: string): void;
+    pstring1(string: string, endian?: string): void;
     /**
     * Writes Pascal string 1 byte length read in little endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    pstring1le(string: string, offset?: number): void;
+    pstring1le(string: string): void;
     /**
     * Writes Pascal string 1 byte length read in big endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    pstring1be(string: string, offset?: number): void;
+    pstring1be(string: string): void;
     /**
     * Writes Pascal string 2 byte length read
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    pstring2(string: string, offset?: number, endian?: string): void;
+    pstring2(string: string, endian?: string): void;
     /**
     * Writes Pascal string 2 byte length read in little endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    pstring2le(string: string, offset?: number): void;
+    pstring2le(string: string): void;
     /**
     * Writes Pascal string 2 byte length read in big endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    pstring2be(string: string, offset?: number): void;
+    pstring2be(string: string): void;
     /**
     * Writes Pascal string 4 byte length read
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    pstring4(string: string, offset?: number, endian?: string): void;
+    pstring4(string: string, endian?: string): void;
     /**
     * Writes Pascal string 4 byte length read in big endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    pstring4be(string: string, offset?: number): void;
+    pstring4be(string: string): void;
     /**
     * Writes Pascal string 4 byte length read in little endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    pstring4le(string: string, offset?: number): void;
+    pstring4le(string: string): void;
     /**
     * Writes Wide-Pascal string
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     * @param {string} endian - ``big`` or ``little``
     */
-    wpstring(string: string, offset?: number, lengthWriteSize?: number, endian?: string): void;
+    wpstring(string: string, lengthWriteSize?: number, endian?: string): void;
     /**
     * Writes Wide-Pascal string in big endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     */
-    wpstringbe(string: string, offset?: number, lengthWriteSize?: number): void;
+    wpstringbe(string: string, lengthWriteSize?: number): void;
     /**
     * Writes Wide-Pascal string in little endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     */
-    wpstringle(string: string, offset?: number, lengthWriteSize?: number): void;
+    wpstringle(string: string, lengthWriteSize?: number): void;
     /**
     * Writes Wide-Pascal string
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    wpstring1(string: string, offset?: number, endian?: string): void;
+    wpstring1(string: string, endian?: string): void;
     /**
     * Writes Wide-Pascal string 1 byte length read in big endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    wpstring1be(string: string, offset?: number): void;
+    wpstring1be(string: string): void;
     /**
     * Writes Wide-Pascal string 1 byte length read in little endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    wpstring1le(string: string, offset?: number): void;
+    wpstring1le(string: string): void;
     /**
     * Writes Wide-Pascal string 2 byte length read
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    wpstring2(string: string, offset?: number, endian?: string): void;
+    wpstring2(string: string, endian?: string): void;
     /**
     * Writes Wide-Pascal string 2 byte length read in little endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    wpstring2le(string: string, offset?: number): void;
+    wpstring2le(string: string): void;
     /**
     * Writes Wide-Pascal string 2 byte length read in big endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    wpstring2be(string: string, offset?: number): void;
+    wpstring2be(string: string): void;
     /**
     * Writes Wide-Pascal string 4 byte length read
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    wpstring4(string: string, offset?: number, endian?: string): void;
+    wpstring4(string: string, endian?: string): void;
     /**
     * Writes Wide-Pascal string 4 byte length read in little endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    wpstring4le(string: string, offset?: number): void;
+    wpstring4le(string: string): void;
     /**
     * Writes Wide-Pascal string 4 byte length read in big endian order
     *
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    wpstring4be(string: string, offset?: number): void;
+    wpstring4be(string: string): void;
 }
 //# sourceMappingURL=writer.d.ts.map

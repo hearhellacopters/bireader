@@ -1,15 +1,38 @@
 import {
+    buffcheck,
+    arraybuffcheck,
+    extendarray,
     skip,
     goto,
     remove,
     checkSize,
     addData,
     hexDump,
-    xor,
-    and,
-    or,
-    lshift,
-    rshift
+    XOR,
+    AND,
+    OR,
+    NOT,
+    LSHIFT,
+    RSHIFT,
+    ADD,
+    wbit,
+    rbit,
+    rbyte,
+    wbyte,
+    wint16,
+    rint16,
+    whalffloat,
+    rhalffloat,
+    rint32,
+    wint32,
+    rfloat,
+    wfloat,
+    wint64,
+    rint64,
+    rdfloat,
+    wdfloat,
+    wstring,
+    rstring
     } from './common'
 /**
 * Binary reader, includes bitfields and strings
@@ -30,25 +53,19 @@ export class bireader {
     public data: any=[];
 
     private isBuffer(obj: Array<Buffer|Uint8Array>): boolean {
-        return (typeof Buffer !== 'undefined' && obj instanceof Buffer);
+        return buffcheck(obj)
     }
 
     private isBufferOrUint8Array(obj:  Array<Buffer|Uint8Array>): boolean {
-        return obj instanceof Uint8Array || this.isBuffer(obj);
+        return arraybuffcheck(this,obj)
     }
 
     extendArray(to_padd: number): void {
-        if((typeof Buffer !== 'undefined' && this.data instanceof Buffer)){
-            var paddbuffer = Buffer.alloc(to_padd);
-            this.data = Buffer.concat([this.data, paddbuffer]);
-        } else {
-            const addArray = new Array(to_padd);
-            this.data = new Uint8Array([...this.data, ...addArray]);
-        }
+        return extendarray(this, to_padd)
     }
 
-    private check_size(read_size?: number, read_bits?: number): number{
-        return checkSize(this,read_size||0,read_bits||0, this.offset)
+    private check_size(write_bytes:number, write_bit?:number, offset?:number): number{
+        return checkSize(this,write_bytes||0,write_bit||0,offset||this.offset)
     }
 
     /**
@@ -282,6 +299,60 @@ export class bireader {
         return this.offset
     }
 
+    /**
+    * Get the current bit position (0-7)
+    *
+    * @return {number} current bit position
+    */
+    tellB(): number{
+        return this.bitoffset
+    }
+
+    /**
+    * Get the current bit position (0-7)
+    *
+    * @return {number} current bit position
+    */
+    getOffsetBit(): number{
+        return this.bitoffset
+    }
+
+    /**
+    * Get the current bit position (0-7)
+    *
+    * @return {number} current bit position
+    */
+    saveOffsetAbsBit(): number{
+        return (this.offset *8 ) + this.bitoffset
+    }
+
+    /**
+    * Get the current absolute bit position (from start of data)
+    *
+    * @return {number} current absolute bit position
+    */
+     tellAbsB(): number{
+        return (this.offset *8 ) + this.bitoffset
+    }
+
+    /**
+    * Get the current absolute bit position (from start of data)
+    *
+    * @return {number} current absolute bit position
+    */
+    getOffsetAbsBit(): number{
+        return (this.offset *8 ) + this.bitoffset
+    }
+
+    /**
+    * Get the current absolute bit position (from start of data)
+    *
+    * @return {number} current absolute bit position
+    */
+    saveOffsetBit(): number{
+        return (this.offset *8 ) + this.bitoffset
+    }
+
     //
     //strict mode change
     //
@@ -312,7 +383,7 @@ export class bireader {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    XOR(xorKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
+    xor(xorKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
         var XORKey:any = xorKey;
         if(typeof xorKey == "number"){
             //pass
@@ -325,7 +396,7 @@ export class bireader {
         } else {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer")
         }
-        return xor(this,xorKey,startOffset||this.offset,endOffset||this.size,consume|| false)
+        return XOR(this,xorKey,startOffset||this.offset,endOffset||this.size,consume|| false)
     }
 
     /**
@@ -335,7 +406,7 @@ export class bireader {
     * @param {number} length - Length in bytes to XOR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    XORThis(xorKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
+    xorThis(xorKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
         var Length:number = length||1;
         var XORKey:any = xorKey;
         if(typeof xorKey == "number"){
@@ -351,7 +422,7 @@ export class bireader {
         } else {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer")
         }
-        return xor(this,XORKey,this.offset,this.offset + Length,consume|| false)
+        return XOR(this,XORKey,this.offset,this.offset + Length,consume|| false)
     }
 
     /**
@@ -362,7 +433,7 @@ export class bireader {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    OR(orKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
+    or(orKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
         var ORKey:any = orKey;
         if(typeof orKey == "number"){
             //pass
@@ -375,7 +446,7 @@ export class bireader {
         } else {
             throw new Error("OR must be a number, string, Uint8Array or Buffer")
         }
-        return xor(this,orKey,startOffset||this.offset,endOffset||this.size,consume|| false)
+        return OR(this,orKey,startOffset||this.offset,endOffset||this.size,consume|| false)
     }
 
     /**
@@ -385,7 +456,7 @@ export class bireader {
     * @param {number} length - Length in bytes to OR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    ORThis(orKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
+    orThis(orKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
         var Length:number = length||1;
         var ORKey:any = orKey;
         if(typeof orKey == "number"){
@@ -401,7 +472,7 @@ export class bireader {
         } else {
             throw new Error("OR must be a number, string, Uint8Array or Buffer")
         }
-        return or(this,ORKey,this.offset,this.offset + Length,consume|| false)
+        return OR(this,ORKey,this.offset,this.offset + Length,consume|| false)
     }
 
     /**
@@ -412,7 +483,7 @@ export class bireader {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    AND(andKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
+    and(andKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
         var ANDKey:any = andKey;
         if(typeof andKey == "number"){
             //pass
@@ -425,7 +496,7 @@ export class bireader {
         } else {
             throw new Error("AND must be a number, string, Uint8Array or Buffer")
         }
-        return and(this,andKey,startOffset||this.offset,endOffset||this.size,consume|| false)
+        return AND(this,andKey,startOffset||this.offset,endOffset||this.size,consume|| false)
     }
 
     /**
@@ -435,7 +506,7 @@ export class bireader {
     * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    ANDThis(andKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
+    andThis(andKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
         var Length:number = length||1;
         var ANDKey:any = andKey;
         if(typeof andKey == "number"){
@@ -451,7 +522,28 @@ export class bireader {
         } else {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer")
         }
-        return and(this,ANDKey,this.offset,this.offset + Length,consume|| false)
+        return AND(this,ANDKey,this.offset,this.offset + Length,consume|| false)
+    }
+
+    /**
+    * Not data
+    * 
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    not(startOffset?: number,endOffset?: number,consume?:boolean): void{
+        return NOT(this,startOffset||this.offset,endOffset||this.size,consume|| false)
+    }
+
+    /**
+    * Not data
+    * 
+    * @param {number} length - Length in bytes to NOT from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    notThis(length?: number,consume?:boolean): void{
+        return NOT(this,this.offset,this.offset + (length||1),consume|| false)
     }
 
     /**
@@ -462,11 +554,11 @@ export class bireader {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    LSHIFT(shiftValue: number,startOffset?: number,endOffset?: number,consume?:boolean): void{
+    lShift(shiftValue: number,startOffset?: number,endOffset?: number,consume?:boolean): void{
         if(typeof shiftValue != "number"){
             throw new Error("Shift value must be a number")
         }
-        return lshift(this,shiftValue,startOffset||this.offset,endOffset||this.size,consume|| false)
+        return LSHIFT(this,shiftValue,startOffset||this.offset,endOffset||this.size,consume|| false)
     }
 
     /**
@@ -476,12 +568,12 @@ export class bireader {
     * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    LSHIFTThis(shiftValue: number,length?: number,consume?:boolean): void{
+    lShiftThis(shiftValue: number,length?: number,consume?:boolean): void{
         var Length:number = length||1;
         if(typeof shiftValue != "number"){
             throw new Error("Shift value must be a number")
         }
-        return lshift(this,shiftValue,this.offset,this.offset + Length,consume|| false)
+        return LSHIFT(this,shiftValue,this.offset,this.offset + Length,consume|| false)
     }
 
     /**
@@ -492,11 +584,11 @@ export class bireader {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    RSHIFT(shiftValue: number,startOffset?: number,endOffset?: number,consume?:boolean): void{
+    rShift(shiftValue: number,startOffset?: number,endOffset?: number,consume?:boolean): void{
         if(typeof shiftValue != "number"){
             throw new Error("Shift value must be a number")
         }
-        return rshift(this,shiftValue,startOffset||this.offset,endOffset||this.size,consume|| false)
+        return RSHIFT(this,shiftValue,startOffset||this.offset,endOffset||this.size,consume|| false)
     }
 
     /**
@@ -506,12 +598,42 @@ export class bireader {
     * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    RSHIFTThis(shiftValue: number,length?: number,consume?:boolean): void{
+    rShiftThis(shiftValue: number,length?: number,consume?:boolean): void{
         var Length:number = length||1;
         if(typeof shiftValue != "number"){
             throw new Error("Shift value must be a number")
         }
-        return rshift(this,shiftValue,this.offset,this.offset + Length,consume|| false)
+        return RSHIFT(this,shiftValue,this.offset,this.offset + Length,consume|| false)
+    }
+
+    /**
+    * Add value to data
+    * 
+    * @param {number} addValue - Value to add
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    add(addValue: number,startOffset?: number,endOffset?: number,consume?:boolean): void{
+        if(typeof addValue != "number"){
+            throw new Error("Add value must be a number")
+        }
+        return ADD(this,addValue,startOffset||this.offset,endOffset||this.size,consume|| false)
+    }
+
+    /**
+    * Add value to data
+    * 
+    * @param {number} addValue - Value to add
+    * @param {number} length - Length in bytes to add from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    addThis(addValue: number,length?: number,consume?:boolean): void{
+        var Length:number = length||1;
+        if(typeof addValue != "number"){
+            throw new Error("Add value must be a number")
+        }
+        return ADD(this,addValue,this.offset,this.offset + Length,consume|| false)
     }
 
     //
@@ -643,8 +765,8 @@ export class bireader {
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
-    * @param {boolean} consume - Move current write position to end of data (default false)
-    * @param {number} offset - Offset to add it at (defaults to current position)
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Byte position to add at (defaults to current position)
     */
     insert(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
         return addData(this,data,consume||false,offset||this.offset)
@@ -655,11 +777,35 @@ export class bireader {
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
-    * @param {boolean} consume - Move current write position to end of data (default false)
-    * @param {number} offset - Offset to add it at (defaults to current position)
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Byte position to add at (defaults to current position)
     */
     place(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
         return addData(this,data,consume||false,offset||this.offset)
+    }
+
+    /**
+    * Replaces data in data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    * 
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to replace in data
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Offset to add it at (defaults to current position)
+    */
+    replace(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
+        return addData(this,data,consume||false,offset||this.offset,true)
+    }
+
+    /**
+    * Replaces data in data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    * 
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to replace in data
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Offset to add it at (defaults to current position)
+    */
+    overwrite(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
+        return addData(this,data,consume||false,offset||this.offset,true)
     }
 
     /**
@@ -759,12 +905,12 @@ export class bireader {
     /**
     * Console logs data as hex dump
     * 
-    * @param {object} options - options object
+    * @param {object} options 
     * ```javascript
     *   {
     *       length: 192, // number of bytes to log, default 192 or end of data
-    *       startByte: 0, // byte to start dump, default current position
-    *       supressUnicode: false // Supress unicode character preview for cleaner columns
+    *       startByte: 0, // byte to start dump (default current byte position)
+    *       supressUnicode: false // Supress unicode character preview for even columns
     *   }
     * ```
     */
@@ -791,6 +937,21 @@ export class bireader {
     //
 
     /**
+    *
+    * Write bits, must have at least value and number of bits
+    * 
+    * ``Note``: When returning to a byte write, remaining bits are skipped
+    *
+    * @param {number} value - value as int 
+    * @param {number} bits - number of bits to write
+    * @param {boolean} unsigned - if value is unsigned
+    * @param {string} endian - ``big`` or ``little``
+    */
+    writeBit(value: number, bits: number, unsigned?: boolean, endian?: string): void {
+        return wbit(this, value, bits, unsigned, endian)
+    }
+
+    /**
     * Bit field reader
     * 
     * Note: When returning to a byte read, remaining bits are dropped
@@ -801,65 +962,7 @@ export class bireader {
     * @returns number
     */
     readBit(bits?: number, unsigned?: boolean, endian?: string): number{
-        if(bits == undefined || typeof bits != "number"){
-            throw new Error("Enter number of bits to read")
-        }
-        if (bits <= 0 || bits > 32) {
-            throw new Error('Bit length must be between 1 and 32.');
-        }
-        const size_needed = ((((bits-1) + this.bitoffset) / 8) + this.offset)
-        if (bits <= 0 || size_needed > this.size) {
-            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-            throw new Error("Invalid number of bits to read: " + size_needed + " of " + this.size)
-        }
-
-        var off_in_bits = (this.offset * 8) + this.bitoffset
-
-        var value = 0;
-
-        for (var i = 0; i < bits;) {
-            var remaining = bits - i;
-            var bitOffset = off_in_bits & 7;
-            var currentByte = <unknown> this.data[off_in_bits >> 3] as number
-
-            var read = Math.min(remaining, 8 - bitOffset);
-
-            var mask: number, readBits: number;
-
-            if ((endian != undefined ? endian : this.endian)  == "big") {
-
-                mask = ~(0xFF << read);
-                readBits = (currentByte >> (8 - read - bitOffset)) & mask;
-                value <<= read;
-                value |= readBits;
-
-            } else {
-
-                mask = ~(0xFF << read);
-                readBits = (currentByte >> bitOffset) & mask;
-                value |= readBits << i;
-
-            }
-
-            off_in_bits += read;
-            i += read;
-        }
-
-        this.offset = this.offset + Math.floor(((bits) + this.bitoffset) / 8) //end byte
-        this.bitoffset = ((bits) + this.bitoffset) % 8
-
-        if (unsigned == true || bits <= 7) {
-
-            return value >>> 0;
-            
-        } 
-
-        if (bits !== 32 && value & (1 << (bits - 1))) {
-            value |= -1 ^ ((1 << bits) - 1);
-        }
-
-        return value;        
-
+        return rbit(this,bits,unsigned,endian)
     }
 
     /**
@@ -873,7 +976,7 @@ export class bireader {
     * @returns number
     */
     bit(bits: number, unsigned?: boolean, endian?: string): number{
-        return this.readBit(bits,unsigned,endian)
+        return this.bit(bits,unsigned,endian)
     }
 
     /**
@@ -882,10 +985,11 @@ export class bireader {
     * Note: When returning to a byte read, remaining bits are dropped
     * 
     * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
     * @returns number
     */
-    bit1(unsigned?: boolean): number{
-        return this.bit(1, unsigned)
+    bit1(unsigned?: boolean, endian?: string): number{
+        return this.bit(1, unsigned, endian)
     }
 
     /**
@@ -3062,7 +3166,7 @@ export class bireader {
     * @returns number
     */
     readUBitBE(bits: number): number{
-        return this.readBit(bits, true, "big")
+        return this.bit(bits, true, "big")
     }
 
     /**
@@ -3074,7 +3178,7 @@ export class bireader {
     * @returns number
     */
     ubitbe(bits: number): number{
-        return this.readBit(bits, true, "big")
+        return this.bit(bits, true, "big")
     }
 
     /**
@@ -3087,7 +3191,7 @@ export class bireader {
     * @returns number
     */
     readBitBE(bits: number, unsigned?: boolean): number{
-        return this.readBit(bits, unsigned, "big")
+        return this.bit(bits, unsigned, "big")
     }
 
     /**
@@ -3100,7 +3204,7 @@ export class bireader {
     * @returns number
     */
     bitbe(bits: number, unsigned?: boolean): number{
-        return this.readBit(bits, unsigned, "big")
+        return this.bit(bits, unsigned, "big")
     }
 
     /**
@@ -3112,7 +3216,7 @@ export class bireader {
     * @returns number
     */
     readUBitLE(bits: number): number{
-        return this.readBit(bits, true, "little")
+        return this.bit(bits, true, "little")
     }
 
     /**
@@ -3124,7 +3228,7 @@ export class bireader {
     * @returns number
     */
     ubitle(bits: number): number{
-        return this.readBit(bits, true, "little")
+        return this.bit(bits, true, "little")
     }
 
     /**
@@ -3137,7 +3241,7 @@ export class bireader {
     * @returns number
     */
     readBitLE(bits: number, unsigned?: boolean): number{
-        return this.readBit(bits, unsigned, "little")
+        return this.bit(bits, unsigned, "little")
     }
 
     /**
@@ -3150,7 +3254,7 @@ export class bireader {
     * @returns number
     */
     bitle(bits: number, unsigned?: boolean): number{
-        return this.readBit(bits, unsigned, "little")
+        return this.bit(bits, unsigned, "little")
     }
 
     //
@@ -3164,14 +3268,17 @@ export class bireader {
     * @returns number
     */
     readByte(unsigned?: boolean): number{
-        this.check_size(1)
-        var read = <unknown> this.data[this.offset] as number
-        this.offset += 1
-        if(unsigned == true){
-            return read & 0xFF
-        } else {
-            return read > 127 ? read - 256 : read; 
-        }
+        return rbyte(this, unsigned)
+    }
+
+    /**
+    * Write byte
+    *
+    * @param {number} value - value as int 
+    * @param {boolean} unsigned - if the value is unsigned
+    */
+    writeByte(value: number, unsigned?: boolean): void{
+        return wbyte(this,value,unsigned)
     }
 
     /**
@@ -3233,19 +3340,18 @@ export class bireader {
     * @returns number
     */
     readInt16(unsigned?: boolean, endian?: string): number{
-        this.check_size(2)
-        var read: number;
-        if((endian != undefined ? endian : this.endian)  == "little"){
-            read = ((<unknown>this.data[this.offset + 1] as number & 0xFFFF) << 8) | (<unknown>this.data[this.offset] as number & 0xFFFF);
-        } else {
-            read = ((<unknown>this.data[this.offset] as number& 0xFFFF) << 8) | (<unknown>this.data[this.offset + 1] as number& 0xFFFF);
-        }
-        this.offset += 2
-        if(unsigned == undefined || unsigned == false){
-            return read & 0x8000 ? -(0x10000 - read) : read
-        } else {
-            return read & 0xFFFF
-        }
+        return rint16(this,unsigned,endian)
+    }
+
+    /**
+    * Write int16
+    *
+    * @param {number} value - value as int 
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    */
+    writeInt16(value: number, unsigned?: boolean, endian?: string): void {
+        return wint16(this,value,unsigned,endian)
     }
 
     /**
@@ -3480,33 +3586,17 @@ export class bireader {
     * @returns number
     */
     readHalfFloat(endian?: string): number{
-        this.check_size(2)
-        var uint16Value = this.readInt16(true, (endian != undefined ? endian : this.endian))
-        const sign = (uint16Value & 0x8000) >> 15;
-        const exponent = (uint16Value & 0x7C00) >> 10;
-        const fraction = uint16Value & 0x03FF;
+        return rhalffloat(this, endian)
+    }
 
-        let floatValue;
-
-        if (exponent === 0) {
-            if (fraction === 0) {
-            floatValue = (sign === 0) ? 0 : -0; // +/-0
-            } else {
-            // Denormalized number
-            floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, -14) * (fraction / 0x0400);
-            }
-        } else if (exponent === 0x1F) {
-            if (fraction === 0) {
-            floatValue = (sign === 0) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-            } else {
-            floatValue = Number.NaN;
-            }
-        } else {
-            // Normalized number
-            floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x0400);
-        }
-
-        return floatValue;
+    /**
+    * Writes half float
+    * 
+    * @param {number} value - value as int 
+    * @param {string} endian - ``big`` or ``little`
+    */
+    writeHalfFloat(value: number, endian?: string): void {
+        return whalffloat(this, value, endian)
     }
 
     /**
@@ -3595,19 +3685,18 @@ export class bireader {
     * @returns number
     */
     readInt32(unsigned?: boolean, endian?: string): number{
-        this.check_size(4)
-        var read: number;
-        if((endian != undefined ? endian : this.endian) == "little"){
-            read = (((<unknown>this.data[this.offset + 3] as number & 0xFF)<< 24) | ((<unknown>this.data[this.offset + 2] as number & 0xFF) << 16) | ((<unknown>this.data[this.offset + 1] as number & 0xFF) << 8) | (<unknown>this.data[this.offset] as number & 0xFF))
-        } else {
-            read = ((<unknown>this.data[this.offset] as number & 0xFF) << 24) | ((<unknown>this.data[this.offset + 1] as number & 0xFF) << 16) | ((<unknown>this.data[this.offset + 2] as number & 0xFF) << 8) | (<unknown>this.data[this.offset + 3] as number & 0xFF)
-        }
-        this.offset += 4
-        if(unsigned == undefined || unsigned == false){
-            return read
-        } else {
-            return read >>> 0
-        }
+        return rint32(this, unsigned, endian)
+    }
+
+    /**
+    * Write int32
+    *
+    * @param {number} value - value as int 
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    */
+    writeInt32(value: number, unsigned?: boolean, endian?: string): void {
+        return wint32(this, value, unsigned, endian)
     }
 
     /**
@@ -3890,30 +3979,17 @@ export class bireader {
     * @returns number
     */
     readFloat(endian?: string): number{
-        this.check_size(4)
-        var uint32Value = this.readInt32(true, (endian == undefined ? this.endian : endian))
-        // Check if the value is negative (i.e., the most significant bit is set)
-        const isNegative = (uint32Value & 0x80000000) !== 0 ? 1: 0;
+        return rfloat(this, endian)
+    }
 
-        // Extract the exponent and fraction parts
-        const exponent = (uint32Value >> 23) & 0xFF;
-        const fraction = uint32Value & 0x7FFFFF;
-
-        // Calculate the float value
-        let floatValue: number;
-
-        if (exponent === 0) {
-            // Denormalized number (exponent is 0)
-            floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
-        } else if (exponent === 0xFF) {
-            // Infinity or NaN (exponent is 255)
-            floatValue = fraction === 0 ? (isNegative ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : Number.NaN;
-        } else {
-            // Normalized number
-            floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
-        }
-
-        return floatValue;
+     /**
+    * Write float
+    * 
+    * @param {number} value - value as int 
+    * @param {string} endian - ``big`` or ``little`
+    */
+     writeFloat(value: number, endian?: string): void{
+        return wfloat(this, value, endian)
     }
 
     /**
@@ -3973,37 +4049,18 @@ export class bireader {
     * @returns number
     */
     readInt64(unsigned?: boolean, endian?: string): bigint {
-        this.check_size(8)
-        
-        // Convert the byte array to a BigInt
-        let value: bigint = BigInt(0);
-        if((endian == undefined ? this.endian : endian) == "little"){
-            for (let i = 0; i < 8; i++) {
-                value = value | BigInt((<unknown>this.data[this.offset]  as number & 0xFF)) << BigInt(8 * i);
-                this.offset += 1
-            }
-            if(unsigned == undefined || unsigned == false){
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-                return value;
-            } else {
-                return value;
-            }
-        } else {
-            for (let i = 0; i < 8; i++) {
-                value = (value << BigInt(8)) | BigInt((<unknown>this.data[this.offset] as number & 0xFF));
-                this.offset += 1
-                }
-            if(unsigned == undefined || unsigned == false){
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-                return value;
-            } else {
-                return value;
-            }
-        }
+        return rint64(this, unsigned, endian)
+    }
+
+    /**
+    * Write 64 bit integer
+    * 
+    * @param {number} value - value as int 
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    */
+    writeInt64(value: number, unsigned?: boolean, endian?: string): void {
+        return wint64(this, value, unsigned, endian)
     }
 
     /**
@@ -4227,33 +4284,18 @@ export class bireader {
     * @returns number
     */
     readDoubleFloat(endian?: string): number{
-        this.check_size(8)
-        var uint64Value = this.readInt64(true, (endian == undefined ? this.endian : endian))
-        const sign = (uint64Value & 0x8000000000000000n) >> 63n;
-        const exponent = Number((uint64Value & 0x7FF0000000000000n) >> 52n) - 1023;
-        const fraction = Number(uint64Value & 0x000FFFFFFFFFFFFFn) / Math.pow(2, 52);
+        return rdfloat(this, endian)
+    }
 
-        var floatValue: number;
-
-        if (exponent == -1023) {
-            if (fraction == 0) {
-            floatValue = (sign == 0n) ? 0 : -0; // +/-0
-            } else {
-            // Denormalized number
-            floatValue = (sign == 0n ? 1 : -1) * Math.pow(2, -1022) * fraction;
-            }
-        } else if (exponent == 1024) {
-            if (fraction == 0) {
-            floatValue = (sign == 0n) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-            } else {
-            floatValue = Number.NaN;
-            }
-        } else {
-            // Normalized number
-            floatValue = (sign == 0n ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
-        }
-
-        return floatValue;
+    /**
+    * Writes double float
+    * 
+    * @param {number} value - value as int 
+    * @param {number} offset - byte offset (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    */
+    writeDoubleFloat(value: number, endian?: string): void {
+        return wdfloat(this, value, endian)
     }
 
     /**
@@ -4362,130 +4404,36 @@ export class bireader {
             endian?:string,
         } ): string{
 
-        var length:any = options && options.length
-        var stringType:any = options && options.stringType || 'utf-8'
-        var terminateValue:any = options && options.terminateValue
-        var lengthReadSize:any = options && options.lengthReadSize || 1
-        var stripNull: any = options && options.stripNull || true
-        var encoding: any = options && options.encoding || 'utf-8'
-        var endian:any = options && options.endian || this.endian
-        
-        var terminate = terminateValue
+        return rstring(this, options)
+    }
 
-        if(length != undefined){
-            this.check_size(length)
-        }
-        
-        if(typeof terminateValue == "number"){
-            terminate = terminateValue & 0xFF
-        } else {
-            if(terminateValue != undefined){
-                throw new Error("terminateValue must be a number")
-            }
-        }
-
-        if (stringType == 'utf-8' || stringType == 'utf-16') {
-
-            if(encoding == undefined){
-                if(stringType == 'utf-8'){
-                    encoding = 'utf-8'
-                }
-                if(stringType == 'utf-16'){
-                    encoding = 'utf-16'
-                }
-            }
-
-            // Read the string as UTF-8 encoded untill 0 or terminateValue
-            const encodedBytes: Array<number> = [];
-
-            if(length == undefined && terminateValue == undefined){
-                terminate = 0
-            }
-
-            var read_length = 0;
-
-            if(length != undefined){
-                read_length = length
-            } else {
-                read_length = this.data.length - this.offset
-            }
-
-            for (let i = 0; i < read_length; i++) {
-                if (stringType === 'utf-8') {
-                    var read = this.readUByte();
-                    if(read == terminate){
-                        break;
-                    } else {
-                        if(!(stripNull == true && read == 0)){
-                            encodedBytes.push(read);
-                        }
-                    }
-                } else {
-                    var read = this.readInt16(true, endian);
-                    var read1 = read & 0xFF
-                    var read2 = (read >> 8) & 0xFF
-                    if(read == terminate){
-                        break;
-                    } else {
-                        if(!(stripNull == true && read == 0)){
-                            encodedBytes.push(read1);
-                            encodedBytes.push(read2);
-                        }
-                    }
-                }
-            }
-
-            return new TextDecoder(encoding).decode(new Uint8Array(encodedBytes));
-
-        } else if (stringType == 'pascal' || stringType == 'wide-pascal') {
-
-            if(encoding == undefined){
-                if(stringType == 'pascal'){
-                    encoding = 'utf-8'
-                }
-                if(stringType == 'wide-pascal'){
-                    encoding = 'utf-16'
-                }
-            }
-
-            var maxBytes;
-            if(lengthReadSize == 1){
-                maxBytes = this.readUByte();
-            } else if(lengthReadSize == 2){
-                maxBytes = this.readInt16(true, endian);
-            } else if(lengthReadSize == 4){
-                maxBytes = this.readInt32(true, endian);
-            } else {
-                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-                throw new Error("Invalid length read size: " + lengthReadSize)
-            }
-            
-            // Read the string as Pascal or Delphi encoded
-            const encodedBytes: Array<number> = [];
-            for (let i = 0; i < maxBytes; i++) {
-              if (stringType == 'wide-pascal') {
-                const read = this.readInt16(true, endian)
-                if(!(stripNull == true && read == 0)){
-                    encodedBytes.push(read)
-                }
-              } else {
-                const read = this.readUByte()
-                if(!(stripNull == true && read == 0)){
-                    encodedBytes.push(read)
-                }
-              }
-            }
-            var str_return: string
-            if(stringType == 'wide-pascal'){
-                str_return = new TextDecoder(encoding).decode(new Uint16Array(encodedBytes));
-            } else {
-                str_return = new TextDecoder(encoding).decode(new Uint8Array(encodedBytes));
-            }
-        
-            return str_return
-        } else {
-            throw new Error('Unsupported string type: '+ stringType);
-        }
+    /**
+    * Writes string, use options object for different types
+    * 
+    * 
+    * @param {string} string - text string
+    * @param {object} options - options: 
+    * ```javascript
+    * {
+    *  length: string.length,  //for fixed length, non-terminate value utf strings
+    *  stringType: "utf-8", //utf-8, utf-16, pascal or wide-pascal
+    *  terminateValue: 0x00, // only with stringType: "utf"
+    *  lengthWriteSize: 1, //for pascal strings. 1, 2 or 4 byte length write size
+    *  encoding: "utf-8", //TextEncoder accepted types 
+    *  endian: "little", //for wide-pascal and utf-16
+    * }
+    * ```
+    */
+    writeString(string: string, options?: {   
+        length?: number,
+        stringType?: string,
+        terminateValue?: number,
+        lengthWriteSize?: number,
+        stripNull?: boolean,
+        encoding?: string,
+        endian?:string,
+    } ): void{
+        return wstring(this, string, options)
     }
 
     /**

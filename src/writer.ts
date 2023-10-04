@@ -1,15 +1,38 @@
 import {
+    buffcheck,
+    arraybuffcheck,
+    extendarray,
     skip,
     goto,
     remove,
     checkSize,
     addData,
     hexDump,
-    xor,
-    and,
-    or,
-    lshift,
-    rshift
+    XOR,
+    AND,
+    OR,
+    NOT,
+    LSHIFT,
+    RSHIFT,
+    ADD,
+    wbit,
+    rbit,
+    rbyte,
+    wbyte,
+    wint16,
+    rint16,
+    whalffloat,
+    rhalffloat,
+    rint32,
+    wint32,
+    rfloat,
+    wfloat,
+    wint64,
+    rint64,
+    rdfloat,
+    wdfloat,
+    wstring,
+    rstring
     } from './common'
 /**
 * Binary writer, includes bitfields and strings
@@ -30,23 +53,15 @@ export class biwriter {
     public data: any=[];
 
     private isBuffer(obj: Array<Buffer|Uint8Array>): boolean {
-        return (typeof Buffer !== 'undefined' && obj instanceof Buffer);
+        return buffcheck(obj)
     }
 
     private isBufferOrUint8Array(obj:  Array<Buffer|Uint8Array>): boolean {
-        return obj instanceof Uint8Array || this.isBuffer(obj);
+        return arraybuffcheck(this,obj)
     }
 
     extendArray(to_padd: number): void {
-        if((typeof Buffer !== 'undefined' && this.data instanceof Buffer)){
-            var paddbuffer = Buffer.alloc(to_padd);
-            this.data = Buffer.concat([this.data, paddbuffer]);
-            this.size = this.data.length
-        } else {
-            const addArray = new Array(to_padd);
-            this.data = new Uint8Array([...this.data, ...addArray]);
-            this.size = this.data.length
-        }
+        return extendarray(this, to_padd)
     }
 
     private check_size(write_bytes:number, write_bit?:number, offset?:number): number{
@@ -100,11 +115,11 @@ export class biwriter {
     }
 
     /**
-    * Change endian (default little)
+    * Change Endian (default little)
     * 
     * Can be changed at any time, doesn't loose position
     *
-    * @param {string} endian - endianness ```big``` or ```little```
+    * @param {string} endian - Endianness ```big``` or ```little```
     */
     endianness(endian: string): void{
         if(endian == undefined || typeof endian != "string"){
@@ -117,7 +132,7 @@ export class biwriter {
     }
 
     /**
-    * Sets endian to big
+    * Sets Endian to big
     * 
     */
     bigEndian(): void{
@@ -125,7 +140,7 @@ export class biwriter {
     }
 
     /**
-    * Sets endian to big
+    * Sets Endian to big
     * 
     */
     big(): void{
@@ -133,7 +148,7 @@ export class biwriter {
     }
 
     /**
-    * Sets endian to big
+    * Sets Endian to big
     * 
     */
     be(): void{
@@ -141,7 +156,7 @@ export class biwriter {
     }
 
     /**
-    * Sets endian to little
+    * Sets Endian to little
     * 
     */
     littleEndian(): void{
@@ -149,7 +164,7 @@ export class biwriter {
     }
 
     /**
-    * Sets endian to little
+    * Sets Endian to little
     * 
     */
     little(): void{
@@ -157,7 +172,7 @@ export class biwriter {
     }
 
     /**
-    * Sets endian to little
+    * Sets Endian to little
     * 
     */
     le(): void{
@@ -289,6 +304,60 @@ export class biwriter {
         return this.offset
     }
 
+    /**
+    * Get the current bit position (0-7)
+    *
+    * @return {number} current bit position
+    */
+    tellB(): number{
+        return this.bitoffset
+    }
+
+    /**
+    * Get the current bit position (0-7)
+    *
+    * @return {number} current bit position
+    */
+    getOffsetBit(): number{
+        return this.bitoffset
+    }
+
+    /**
+    * Get the current bit position (0-7)
+    *
+    * @return {number} current bit position
+    */
+    saveOffsetAbsBit(): number{
+        return (this.offset *8 ) + this.bitoffset
+    }
+
+    /**
+    * Get the current absolute bit position (from start of data)
+    *
+    * @return {number} current absolute bit position
+    */
+     tellAbsB(): number{
+        return (this.offset *8 ) + this.bitoffset
+    }
+
+    /**
+    * Get the current absolute bit position (from start of data)
+    *
+    * @return {number} current absolute bit position
+    */
+    getOffsetAbsBit(): number{
+        return (this.offset *8 ) + this.bitoffset
+    }
+
+    /**
+    * Get the current absolute bit position (from start of data)
+    *
+    * @return {number} current absolute bit position
+    */
+    saveOffsetBit(): number{
+        return (this.offset *8 ) + this.bitoffset
+    }
+
     //
     //strict mode change
     //
@@ -319,7 +388,7 @@ export class biwriter {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    XOR(xorKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
+    xor(xorKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
         var XORKey:any = xorKey;
         if(typeof xorKey == "number"){
             //pass
@@ -332,7 +401,7 @@ export class biwriter {
         } else {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer")
         }
-        return xor(this,xorKey,startOffset||this.offset,endOffset||this.size,consume|| false)
+        return XOR(this,xorKey,startOffset||this.offset,endOffset||this.size,consume|| false)
     }
 
     /**
@@ -342,7 +411,7 @@ export class biwriter {
     * @param {number} length - Length in bytes to XOR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    XORThis(xorKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
+    xorThis(xorKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
         var Length:number = length||1;
         var XORKey:any = xorKey;
         if(typeof xorKey == "number"){
@@ -358,7 +427,7 @@ export class biwriter {
         } else {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer")
         }
-        return xor(this,XORKey,this.offset,this.offset + Length,consume|| false)
+        return XOR(this,XORKey,this.offset,this.offset + Length,consume|| false)
     }
 
     /**
@@ -369,7 +438,7 @@ export class biwriter {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    OR(orKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
+    or(orKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
         var ORKey:any = orKey;
         if(typeof orKey == "number"){
             //pass
@@ -382,7 +451,7 @@ export class biwriter {
         } else {
             throw new Error("OR must be a number, string, Uint8Array or Buffer")
         }
-        return xor(this,orKey,startOffset||this.offset,endOffset||this.size,consume|| false)
+        return OR(this,orKey,startOffset||this.offset,endOffset||this.size,consume|| false)
     }
 
     /**
@@ -392,7 +461,7 @@ export class biwriter {
     * @param {number} length - Length in bytes to OR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    ORThis(orKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
+    orThis(orKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
         var Length:number = length||1;
         var ORKey:any = orKey;
         if(typeof orKey == "number"){
@@ -408,7 +477,7 @@ export class biwriter {
         } else {
             throw new Error("OR must be a number, string, Uint8Array or Buffer")
         }
-        return or(this,ORKey,this.offset,this.offset + Length,consume|| false)
+        return OR(this,ORKey,this.offset,this.offset + Length,consume|| false)
     }
 
     /**
@@ -419,7 +488,7 @@ export class biwriter {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    AND(andKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
+    and(andKey: number|string|Uint8Array|Buffer,startOffset?: number,endOffset?: number,consume?:boolean): void{
         var ANDKey:any = andKey;
         if(typeof andKey == "number"){
             //pass
@@ -432,7 +501,7 @@ export class biwriter {
         } else {
             throw new Error("AND must be a number, string, Uint8Array or Buffer")
         }
-        return and(this,andKey,startOffset||this.offset,endOffset||this.size,consume|| false)
+        return AND(this,andKey,startOffset||this.offset,endOffset||this.size,consume|| false)
     }
 
     /**
@@ -442,7 +511,7 @@ export class biwriter {
     * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    ANDThis(andKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
+    andThis(andKey: number|string|Uint8Array|Buffer,length?: number,consume?:boolean): void{
         var Length:number = length||1;
         var ANDKey:any = andKey;
         if(typeof andKey == "number"){
@@ -458,7 +527,28 @@ export class biwriter {
         } else {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer")
         }
-        return and(this,ANDKey,this.offset,this.offset + Length,consume|| false)
+        return AND(this,ANDKey,this.offset,this.offset + Length,consume|| false)
+    }
+
+    /**
+    * Not data
+    * 
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    not(startOffset?: number,endOffset?: number,consume?:boolean): void{
+        return NOT(this,startOffset||this.offset,endOffset||this.size,consume|| false)
+    }
+
+    /**
+    * Not data
+    * 
+    * @param {number} length - Length in bytes to NOT from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    notThis(length?: number,consume?:boolean): void{
+        return NOT(this,this.offset,this.offset + (length||1),consume|| false)
     }
 
     /**
@@ -469,11 +559,11 @@ export class biwriter {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    LSHIFT(shiftValue: number,startOffset?: number,endOffset?: number,consume?:boolean): void{
+    lShift(shiftValue: number,startOffset?: number,endOffset?: number,consume?:boolean): void{
         if(typeof shiftValue != "number"){
             throw new Error("Shift value must be a number")
         }
-        return lshift(this,shiftValue,startOffset||this.offset,endOffset||this.size,consume|| false)
+        return LSHIFT(this,shiftValue,startOffset||this.offset,endOffset||this.size,consume|| false)
     }
 
     /**
@@ -483,12 +573,12 @@ export class biwriter {
     * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    LSHIFTThis(shiftValue: number,length?: number,consume?:boolean): void{
+    lShiftThis(shiftValue: number,length?: number,consume?:boolean): void{
         var Length:number = length||1;
         if(typeof shiftValue != "number"){
             throw new Error("Shift value must be a number")
         }
-        return lshift(this,shiftValue,this.offset,this.offset + Length,consume|| false)
+        return LSHIFT(this,shiftValue,this.offset,this.offset + Length,consume|| false)
     }
 
     /**
@@ -499,11 +589,11 @@ export class biwriter {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    RSHIFT(shiftValue: number,startOffset?: number,endOffset?: number,consume?:boolean): void{
+    rShift(shiftValue: number,startOffset?: number,endOffset?: number,consume?:boolean): void{
         if(typeof shiftValue != "number"){
             throw new Error("Shift value must be a number")
         }
-        return rshift(this,shiftValue,startOffset||this.offset,endOffset||this.size,consume|| false)
+        return RSHIFT(this,shiftValue,startOffset||this.offset,endOffset||this.size,consume|| false)
     }
 
     /**
@@ -513,12 +603,42 @@ export class biwriter {
     * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
     * @param {boolean} consume - Move current position to end of data (default false)
     */
-    RSHIFTThis(shiftValue: number,length?: number,consume?:boolean): void{
+    rShiftThis(shiftValue: number,length?: number,consume?:boolean): void{
         var Length:number = length||1;
         if(typeof shiftValue != "number"){
             throw new Error("Shift value must be a number")
         }
-        return rshift(this,shiftValue,this.offset,this.offset + Length,consume|| false)
+        return RSHIFT(this,shiftValue,this.offset,this.offset + Length,consume|| false)
+    }
+
+    /**
+    * Add value to data
+    * 
+    * @param {number} addValue - Value to add
+    * @param {number} startOffset - Start location (default current byte position)
+    * @param {number} endOffset - End location (default end of data)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    add(addValue: number,startOffset?: number,endOffset?: number,consume?:boolean): void{
+        if(typeof addValue != "number"){
+            throw new Error("Add value must be a number")
+        }
+        return ADD(this,addValue,startOffset||this.offset,endOffset||this.size,consume|| false)
+    }
+
+    /**
+    * Add value to data
+    * 
+    * @param {number} addValue - Value to add
+    * @param {number} length - Length in bytes to add from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
+    * @param {boolean} consume - Move current position to end of data (default false)
+    */
+    addThis(addValue: number,length?: number,consume?:boolean): void{
+        var Length:number = length||1;
+        if(typeof addValue != "number"){
+            throw new Error("Add value must be a number")
+        }
+        return ADD(this,addValue,this.offset,this.offset + Length,consume|| false)
     }
 
     //
@@ -650,8 +770,8 @@ export class biwriter {
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
-    * @param {boolean} consume - Move current write position to end of data (default false)
-    * @param {number} offset - Offset to add it at (defaults to current position)
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Byte position to add at (defaults to current position)
     */
     insert(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
         return addData(this,data,consume||false,offset||this.offset)
@@ -662,11 +782,35 @@ export class biwriter {
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
-    * @param {boolean} consume - Move current write position to end of data (default false)
-    * @param {number} offset - Offset to add it at (defaults to current position)
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Byte position to add at (defaults to current position)
     */
     place(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
         return addData(this,data,consume||false,offset||this.offset)
+    }
+
+    /**
+    * Replaces data in data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    * 
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to replace in data
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Offset to add it at (defaults to current position)
+    */
+    replace(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
+        return addData(this,data,consume||false,offset||this.offset,true)
+    }
+
+    /**
+    * Replaces data in data
+    * Note: Must be same data type as supplied data. Errors on strict mode.
+    * 
+    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to replace in data
+    * @param {boolean} consume - Move current byte position to end of data (default false)
+    * @param {number} offset - Offset to add it at (defaults to current position)
+    */
+    overwrite(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
+        return addData(this,data,consume||false,offset||this.offset,true)
     }
 
     /**
@@ -766,12 +910,12 @@ export class biwriter {
     /**
     * Console logs data as hex dump
     * 
-    * @param {object} options - options object
+    * @param {object} options 
     * ```javascript
     *   {
     *       length: 192, // number of bytes to log, default 192 or end of data
-    *       startByte: 0, // byte to start dump, default current position
-    *       supressUnicode: false // Supress unicode character preview for cleaner columns
+    *       startByte: 0, // byte to start dump (default current byte position)
+    *       supressUnicode: false // Supress unicode character preview for even columns
     *   }
     * ```
     */
@@ -805,95 +949,148 @@ export class biwriter {
     *
     * @param {number} value - value as int 
     * @param {number} bits - number of bits to write
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
     * @param {boolean} unsigned - if value is unsigned
     * @param {string} endian - ``big`` or ``little``
     */
-    writeBit(value: number, bits: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean, endian?: string): void {
-        if(value == undefined){
-            throw new Error('Must supply value.');
-        }
-        if(bits == undefined){
-            throw new Error('Must supply bits.');
-        }
-        if (bits <= 0 || bits > 32) {
-            throw new Error('Bit length must be between 1 and 32.');
-        }
-        if (unsigned == true) {
-            if (value < 0 || value > Math.pow(2, bits)) {
-                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-                throw new Error(`Value is out of range for the specified ${bits}bit length.` +" min: " + 0 + " max: " + Math.pow(2, bits) + " value: "+ value);
-            }
-        } else {
-            const maxValue = Math.pow(2, bits - 1) - 1;
-            const minValue = -maxValue - 1;
-            if(value < minValue || value > maxValue){
-                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-                throw new Error(`Value is out of range for the specified ${bits}bit length.` +" min: " + minValue + " max: " + maxValue + " value: "+ value);
-            }
-        }
-        if(unsigned == true){
-            const maxValue = Math.pow(2, bits) - 1;
-            value = value & maxValue
-        }
-
-        const size_needed = (((((offsetBits || 0) + (bits-1)) + this.bitoffset) / 8) + (offsetBytes || this.offset))
-        if (size_needed > this.size) {
-            //add size
-            this.extendArray(size_needed-this.size)
-        }
-
-        var off_in_bits = (this.offset * 8) + this.bitoffset
-
-        for (var i = 0; i < bits;) {
-            var remaining = bits - i;
-            var bitOffset = off_in_bits & 7;
-            var byteOffset = off_in_bits >> 3;
-            var written = Math.min(remaining, 8 - bitOffset);
-    
-            var mask:number, writeBits:number, destMask:number;
-            if ((endian != undefined ? endian : this.endian) == "big") {
-                
-                mask = ~(~0 << written);
-                writeBits = (value >> (bits - i - written)) & mask;
-                var destShift = 8 - bitOffset - written;
-                destMask = ~(mask << destShift);
-                this.data[byteOffset] = (this.data[byteOffset] & destMask) | (writeBits << destShift);
-    
-            } else {
-                
-                mask = ~(0xFF << written);
-                writeBits = value & mask;
-                value >>= written;
-                destMask = ~(mask << bitOffset);
-                this.data[byteOffset] = (this.data[byteOffset] & destMask) | (writeBits << bitOffset);
-            
-            }
-    
-            off_in_bits += written;
-            i += written;
-        }
-
-        this.offset = this.offset + Math.floor(((bits) + this.bitoffset) / 8) //end byte
-        this.bitoffset = ((bits) + this.bitoffset) % 8    
+    writeBit(value: number, bits: number, unsigned?: boolean, endian?: string): void {
+        return wbit(this, value, bits, unsigned, endian)   
     }
 
     /**
-    *
-    * Write bits, must have at least value and number of bits
+    * Bit field reader
     * 
-    * ``Note``: When returning to a byte write, remaining bits are skipped
+    * Note: When returning to a byte read, remaining bits are dropped
+    *
+    * @param {number} bits - bits to read
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
+    */
+    readBit(bits?: number, unsigned?: boolean, endian?: string): number{
+        return rbit(this,bits,unsigned,endian)
+    }
+
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
     *
     * @param {number} value - value as int 
-    * @param {number} bits - number of bits to write
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned
-    * @param {string} endian - ``big`` or ``little``
+    * @param {number} bits - bits to write
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit(value: number, bits: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean, endian?: string): void {
-        return this.writeBit(value, bits, offsetBits, offsetBytes, unsigned, endian)
+    bit(value:number, bits: number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, bits, unsigned, endian)
+    }  
+    
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int 
+    * @param {number} bits - bits to write
+    * @returns number
+    */
+    writeUBitBE(value: number, bits: number): number{
+        return this.bit(value, bits, true, "big")
+    }
+
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int 
+    * @param {number} bits - bits to write
+    * @returns number
+    */
+    ubitbe(value: number, bits: number): number{
+        return this.bit(value, bits, true, "big")
+    }
+
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int 
+    * @param {number} bits - bits to write
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    writeBitBE(value: number, bits: number, unsigned?: boolean): number{
+        return this.bit(value, bits, unsigned, "big")
+    }
+
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {number} bits - bits to write
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bitbe(value: number,bits: number, unsigned?: boolean): number{
+        return this.bit(value, bits, unsigned, "big")
+    }
+
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {number} bits - bits to write
+    * @returns number
+    */
+    writeUBitLE(value: number,bits: number): number{
+        return this.bit(value, bits, true, "little")
+    }
+
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {number} bits - bits to write
+    * @returns number
+    */
+    ubitle(value: number,bits: number): number{
+        return this.bit(value, bits, true, "little")
+    }
+
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {number} bits - bits to write
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    writeBitLE(value: number,bits: number, unsigned?: boolean): number{
+        return this.bit(value, bits, unsigned, "little")
+    }
+
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {number} bits - bits to write
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bitle(value: number, bits: number, unsigned?: boolean): number{
+        return this.bit(value, bits, unsigned, "little")
     }
 
     /**
@@ -902,12 +1099,12 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit1(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 1, offsetBits, offsetBytes, unsigned)
+    bit1(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 1, unsigned, endian)
     }
 
     /**
@@ -916,11 +1113,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit1(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 1, offsetBits, offsetBytes, true)
+    bit1le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 1, unsigned, "little")
     }
 
     /**
@@ -929,12 +1126,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit1le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 1, offsetBits, offsetBytes, unsigned, "little")
+    bit1be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 1, unsigned, "big")
     }
 
     /**
@@ -943,11 +1139,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit1le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 1, offsetBits, offsetBytes, true, "little")
+    ubit1(value: number, endian?: string): number{
+        return this.bit(value, 1, true, endian)
     }
 
     /**
@@ -956,12 +1152,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit1be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 1, offsetBits, offsetBytes, unsigned, "big")
+    ubit1le(value: number): number{
+        return this.bit(value, 1, true, "little")
     }
 
     /**
@@ -970,25 +1164,101 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit1be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 1, offsetBits, offsetBytes, true, "big")
+    ubit1be(value: number): number{
+        return this.bit(value, 1, true, "big")
+    }
+
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
+    * 
+    * @param {number} value - value as int 
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
+    */
+    bit2(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 2, unsigned, endian)
+    }
+
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
+    * 
+    * @param {number} value - value as int 
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit2le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 2, unsigned, "little")
+    }
+
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
+    * 
+    * @param {number} value - value as int 
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
+    */
+    bit2be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 2, unsigned, "big")
+    }
+
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
+    * 
+    * @param {number} value - value as int 
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
+    */
+    ubit2(value: number, endian?: string): number{
+        return this.bit(value, 2, true, endian)
+    }
+
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
+    * 
+    * @param {number} value - value as int 
+    * @returns number
+    */
+    ubit2le(value: number): number{
+        return this.bit(value, 2, true, "little")
+    }
+
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
+    * 
+    * @param {number} value - value as int 
+    * @returns number
+    */
+    ubit2be(value: number): number{
+        return this.bit(value, 2, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit2(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 2, offsetBits, offsetBytes, unsigned)
+    bit3(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 3, unsigned, endian)
     }
 
     /**
@@ -997,11 +1267,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit2(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 2, offsetBits, offsetBytes, true)
+    bit3le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 3, unsigned, "little")
     }
 
     /**
@@ -1010,12 +1280,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit2le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 2, offsetBits, offsetBytes, unsigned, "little")
+    bit3be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 3, unsigned, "big")
     }
 
     /**
@@ -1024,11 +1293,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit2le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 2, offsetBits, offsetBytes, true, "little")
+    ubit3(value: number, endian?: string): number{
+        return this.bit(value, 3, true, endian)
     }
 
     /**
@@ -1037,12 +1306,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit2be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 2, offsetBits, offsetBytes, unsigned, "big")
+    ubit3le(value: number): number{
+        return this.bit(value, 3, true, "little")
     }
 
     /**
@@ -1051,25 +1318,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit2be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 2, offsetBits, offsetBytes, true, "big")
+    ubit3be(value: number): number{
+        return this.bit(value, 3, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit3(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 3, offsetBits, offsetBytes, unsigned)
+    bit4(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 4, unsigned, endian)
     }
 
     /**
@@ -1078,11 +1344,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit3(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 3, offsetBits, offsetBytes, true)
+    bit4le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 4, unsigned, "little")
     }
 
     /**
@@ -1091,12 +1357,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit3le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 3, offsetBits, offsetBytes, unsigned, "little")
+    bit4be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 4, unsigned, "big")
     }
 
     /**
@@ -1105,11 +1370,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit3le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 3, offsetBits, offsetBytes, true, "little")
+    ubit4(value: number, endian?: string): number{
+        return this.bit(value, 4, true, endian)
     }
 
     /**
@@ -1118,12 +1383,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit3be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 3, offsetBits, offsetBytes, unsigned, "big")
+    ubit4le(value: number): number{
+        return this.bit(value, 4, true, "little")
     }
 
     /**
@@ -1132,25 +1395,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit3be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 3, offsetBits, offsetBytes, true, "big")
+    ubit4be(value: number): number{
+        return this.bit(value, 4, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit4(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 4, offsetBits, offsetBytes, unsigned)
+    bit5(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 5, unsigned, endian)
     }
 
     /**
@@ -1159,11 +1421,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit4(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 4, offsetBits, offsetBytes, true)
+    bit5le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 5, unsigned, "little")
     }
 
     /**
@@ -1172,12 +1434,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit4le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 4, offsetBits, offsetBytes, unsigned, "little")
+    bit5be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 5, unsigned, "big")
     }
 
     /**
@@ -1186,11 +1447,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit4le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 4, offsetBits, offsetBytes, true, "little")
+    ubit5(value: number, endian?: string): number{
+        return this.bit(value, 5, true, endian)
     }
 
     /**
@@ -1199,12 +1460,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit4be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 4, offsetBits, offsetBytes, unsigned, "big")
+    ubit5le(value: number): number{
+        return this.bit(value, 5, true, "little")
     }
 
     /**
@@ -1213,25 +1472,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit4be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 4, offsetBits, offsetBytes, true, "big")
+    ubit5be(value: number): number{
+        return this.bit(value, 5, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit5(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 5, offsetBits, offsetBytes, unsigned)
+    bit6(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 6, unsigned, endian)
     }
 
     /**
@@ -1240,11 +1498,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit5(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 5, offsetBits, offsetBytes, true)
+    bit6le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 6, unsigned, "little")
     }
 
     /**
@@ -1253,12 +1511,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit5le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 5, offsetBits, offsetBytes, unsigned, "little")
+    bit6be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 6, unsigned, "big")
     }
 
     /**
@@ -1267,11 +1524,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit5le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 5, offsetBits, offsetBytes, true, "little")
+    ubit6(value: number, endian?: string): number{
+        return this.bit(value, 6, true, endian)
     }
 
     /**
@@ -1280,12 +1537,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit5be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 5, offsetBits, offsetBytes, unsigned, "big")
+    ubit6le(value: number): number{
+        return this.bit(value, 6, true, "little")
     }
 
     /**
@@ -1294,25 +1549,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit5be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 5, offsetBits, offsetBytes, true, "big")
+    ubit6be(value: number): number{
+        return this.bit(value, 6, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit6(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 6, offsetBits, offsetBytes, unsigned)
+    bit7(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 7, unsigned, endian)
     }
 
     /**
@@ -1321,11 +1575,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit6(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 6, offsetBits, offsetBytes, true)
+    bit7le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 7, unsigned, "little")
     }
 
     /**
@@ -1334,12 +1588,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit6le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 6, offsetBits, offsetBytes, unsigned, "little")
+    bit7be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 7, unsigned, "big")
     }
 
     /**
@@ -1348,11 +1601,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit6le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 6, offsetBits, offsetBytes, true, "little")
+    ubit7(value: number, endian?: string): number{
+        return this.bit(value, 7, true, endian)
     }
 
     /**
@@ -1361,12 +1614,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit6be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 6, offsetBits, offsetBytes, unsigned, "big")
+    ubit7le(value: number): number{
+        return this.bit(value, 7, true, "little")
     }
 
     /**
@@ -1375,25 +1626,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit6be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 6, offsetBits, offsetBytes, true, "big")
+    ubit7be(value: number): number{
+        return this.bit(value, 7, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit7(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 7, offsetBits, offsetBytes, unsigned)
+    bit8(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 8, unsigned, endian)
     }
 
     /**
@@ -1402,11 +1652,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit7(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 7, offsetBits, offsetBytes, true)
+    bit8le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 8, unsigned, "little")
     }
 
     /**
@@ -1415,12 +1665,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit7le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 7, offsetBits, offsetBytes, unsigned, "little")
+    bit8be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 8, unsigned, "big")
     }
 
     /**
@@ -1429,11 +1678,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit7le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 7, offsetBits, offsetBytes, true, "little")
+    ubit8(value: number, endian?: string): number{
+        return this.bit(value, 8, true, endian)
     }
 
     /**
@@ -1442,12 +1691,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit7be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 7, offsetBits, offsetBytes, unsigned, "big")
+    ubit8le(value: number): number{
+        return this.bit(value, 8, true, "little")
     }
 
     /**
@@ -1456,25 +1703,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit7be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 7, offsetBits, offsetBytes, true, "big")
+    ubit8be(value: number): number{
+        return this.bit(value, 8, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit8(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 8, offsetBits, offsetBytes, unsigned)
+    bit9(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 9, unsigned, endian)
     }
 
     /**
@@ -1483,11 +1729,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit8(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 8, offsetBits, offsetBytes, true)
+    bit9le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 9, unsigned, "little")
     }
 
     /**
@@ -1496,12 +1742,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit8le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 8, offsetBits, offsetBytes, unsigned, "little")
+    bit9be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 9, unsigned, "big")
     }
 
     /**
@@ -1510,11 +1755,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit8le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 8, offsetBits, offsetBytes, true, "little")
+    ubit9(value: number, endian?: string): number{
+        return this.bit(value, 9, true, endian)
     }
 
     /**
@@ -1523,12 +1768,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit8be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 8, offsetBits, offsetBytes, unsigned, "big")
+    ubit9le(value: number): number{
+        return this.bit(value, 9, true, "little")
     }
 
     /**
@@ -1537,25 +1780,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit8be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 8, offsetBits, offsetBytes, true, "big")
+    ubit9be(value: number): number{
+        return this.bit(value, 9, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit9(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 9, offsetBits, offsetBytes, unsigned)
+    bit10(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 10, unsigned, endian)
     }
 
     /**
@@ -1564,11 +1806,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit9(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 9, offsetBits, offsetBytes, true)
+    bit10le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 10, unsigned, "little")
     }
 
     /**
@@ -1577,12 +1819,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit9le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 9, offsetBits, offsetBytes, unsigned, "little")
+    bit10be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 10, unsigned, "big")
     }
 
     /**
@@ -1591,11 +1832,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit9le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 9, offsetBits, offsetBytes, true, "little")
+    ubit10(value: number, endian?: string): number{
+        return this.bit(value, 10, true, endian)
     }
 
     /**
@@ -1604,12 +1845,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit9be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 9, offsetBits, offsetBytes, unsigned, "big")
+    ubit10le(value: number): number{
+        return this.bit(value, 10, true, "little")
     }
 
     /**
@@ -1618,25 +1857,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit9be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 9, offsetBits, offsetBytes, true, "big")
+    ubit10be(value: number): number{
+        return this.bit(value, 10, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit10(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 10, offsetBits, offsetBytes, unsigned)
+    bit11(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 11, unsigned, endian)
     }
 
     /**
@@ -1645,11 +1883,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit10(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 10, offsetBits, offsetBytes, true)
+    bit11le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 11, unsigned, "little")
     }
 
     /**
@@ -1658,12 +1896,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit10le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 10, offsetBits, offsetBytes, unsigned, "little")
+    bit11be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 11, unsigned, "big")
     }
 
     /**
@@ -1672,11 +1909,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit10le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 10, offsetBits, offsetBytes, true, "little")
+    ubit11(value: number, endian?: string): number{
+        return this.bit(value, 11, true, endian)
     }
 
     /**
@@ -1685,12 +1922,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit10be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 10, offsetBits, offsetBytes, unsigned, "big")
+    ubit11le(value: number): number{
+        return this.bit(value, 11, true, "little")
     }
 
     /**
@@ -1699,25 +1934,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit10be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 10, offsetBits, offsetBytes, true, "big")
+    ubit11be(value: number): number{
+        return this.bit(value, 11, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit11(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 11, offsetBits, offsetBytes, unsigned)
+    bit12(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 12, unsigned, endian)
     }
 
     /**
@@ -1726,11 +1960,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit11(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 11, offsetBits, offsetBytes, true)
+    bit12le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 12, unsigned, "little")
     }
 
     /**
@@ -1739,12 +1973,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit11le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 11, offsetBits, offsetBytes, unsigned, "little")
+    bit12be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 12, unsigned, "big")
     }
 
     /**
@@ -1753,11 +1986,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit11le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 11, offsetBits, offsetBytes, true, "little")
+    ubit12(value: number, endian?: string): number{
+        return this.bit(value, 12, true, endian)
     }
 
     /**
@@ -1766,12 +1999,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit11be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 11, offsetBits, offsetBytes, unsigned, "big")
+    ubit12le(value: number): number{
+        return this.bit(value, 12, true, "little")
     }
 
     /**
@@ -1780,25 +2011,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit11be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 11, offsetBits, offsetBytes, true, "big")
+    ubit12be(value: number): number{
+        return this.bit(value, 12, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit12(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 12, offsetBits, offsetBytes, unsigned)
+    bit13(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 13, unsigned, endian)
     }
 
     /**
@@ -1807,11 +2037,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit12(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 12, offsetBits, offsetBytes, true)
+    bit13le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 13, unsigned, "little")
     }
 
     /**
@@ -1820,12 +2050,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit12le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 12, offsetBits, offsetBytes, unsigned, "little")
+    bit13be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 13, unsigned, "big")
     }
 
     /**
@@ -1834,11 +2063,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit12le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 12, offsetBits, offsetBytes, true, "little")
+    ubit13(value: number, endian?: string): number{
+        return this.bit(value, 13, true, endian)
     }
 
     /**
@@ -1847,12 +2076,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit12be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 12, offsetBits, offsetBytes, unsigned, "big")
+    ubit13le(value: number): number{
+        return this.bit(value, 13, true, "little")
     }
 
     /**
@@ -1861,25 +2088,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit12be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 12, offsetBits, offsetBytes, true, "big")
+    ubit13be(value: number): number{
+        return this.bit(value, 13, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit13(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 13, offsetBits, offsetBytes, unsigned)
+    bit14(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 14, unsigned, endian)
     }
 
     /**
@@ -1888,11 +2114,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit13(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 13, offsetBits, offsetBytes, true)
+    bit14le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 14, unsigned, "little")
     }
 
     /**
@@ -1901,12 +2127,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit13le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 13, offsetBits, offsetBytes, unsigned, "little")
+    bit14be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 14, unsigned, "big")
     }
 
     /**
@@ -1915,11 +2140,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit13le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 13, offsetBits, offsetBytes, true, "little")
+    ubit14(value: number, endian?: string): number{
+        return this.bit(value, 14, true, endian)
     }
 
     /**
@@ -1928,12 +2153,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit13be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 13, offsetBits, offsetBytes, unsigned, "big")
+    ubit14le(value: number): number{
+        return this.bit(value, 14, true, "little")
     }
 
     /**
@@ -1942,25 +2165,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit13be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 13, offsetBits, offsetBytes, true, "big")
+    ubit14be(value: number): number{
+        return this.bit(value, 14, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit14(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 14, offsetBits, offsetBytes, unsigned)
+    bit15(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 15, unsigned, endian)
     }
 
     /**
@@ -1969,11 +2191,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit14(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 14, offsetBits, offsetBytes, true)
+    bit15le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 15, unsigned, "little")
     }
 
     /**
@@ -1982,12 +2204,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit14le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 14, offsetBits, offsetBytes, unsigned, "little")
+    bit15be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 15, unsigned, "big")
     }
 
     /**
@@ -1996,11 +2217,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit14le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 14, offsetBits, offsetBytes, true, "little")
+    ubit15(value: number, endian?: string): number{
+        return this.bit(value, 15, true, endian)
     }
 
     /**
@@ -2009,12 +2230,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit14be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 14, offsetBits, offsetBytes, unsigned, "big")
+    ubit15le(value: number): number{
+        return this.bit(value, 15, true, "little")
     }
 
     /**
@@ -2023,25 +2242,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit14be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 14, offsetBits, offsetBytes, true, "big")
+    ubit15be(value: number): number{
+        return this.bit(value, 15, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit15(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 15, offsetBits, offsetBytes, unsigned)
+    bit16(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 16, unsigned, endian)
     }
 
     /**
@@ -2050,11 +2268,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit15(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 15, offsetBits, offsetBytes, true)
+    bit16le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 16, unsigned, "little")
     }
 
     /**
@@ -2063,12 +2281,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit15le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 15, offsetBits, offsetBytes, unsigned, "little")
+    bit16be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 16, unsigned, "big")
     }
 
     /**
@@ -2077,11 +2294,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit15le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 15, offsetBits, offsetBytes, true, "little")
+    ubit16(value: number, endian?: string): number{
+        return this.bit(value, 16, true, endian)
     }
 
     /**
@@ -2090,12 +2307,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit15be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 15, offsetBits, offsetBytes, unsigned, "big")
+    ubit16le(value: number): number{
+        return this.bit(value, 16, true, "little")
     }
 
     /**
@@ -2104,25 +2319,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit15be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 15, offsetBits, offsetBytes, true, "big")
+    ubit16be(value: number): number{
+        return this.bit(value, 16, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit16(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 16, offsetBits, offsetBytes, unsigned)
+    bit17(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 17, unsigned, endian)
     }
 
     /**
@@ -2131,11 +2345,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit16(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 16, offsetBits, offsetBytes, true)
+    bit17le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 17, unsigned, "little")
     }
 
     /**
@@ -2144,12 +2358,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit16le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 16, offsetBits, offsetBytes, unsigned, "little")
+    bit17be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 17, unsigned, "big")
     }
 
     /**
@@ -2158,11 +2371,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit16le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 16, offsetBits, offsetBytes, true, "little")
+    ubit17(value: number, endian?: string): number{
+        return this.bit(value, 17, true, endian)
     }
 
     /**
@@ -2171,12 +2384,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit16be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 16, offsetBits, offsetBytes, unsigned, "big")
+    ubit17le(value: number): number{
+        return this.bit(value, 17, true, "little")
     }
 
     /**
@@ -2185,25 +2396,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit16be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 16, offsetBits, offsetBytes, true, "big")
+    ubit17be(value: number): number{
+        return this.bit(value, 17, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit17(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 17, offsetBits, offsetBytes, unsigned)
+    bit18(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 18, unsigned, endian)
     }
 
     /**
@@ -2212,11 +2422,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit17(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 17, offsetBits, offsetBytes, true)
+    bit18le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 18, unsigned, "little")
     }
 
     /**
@@ -2225,12 +2435,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit17le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 17, offsetBits, offsetBytes, unsigned, "little")
+    bit18be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 18, unsigned, "big")
     }
 
     /**
@@ -2239,11 +2448,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit17le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 17, offsetBits, offsetBytes, true, "little")
+    ubit18(value: number, endian?: string): number{
+        return this.bit(value, 18, true, endian)
     }
 
     /**
@@ -2252,12 +2461,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit17be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 17, offsetBits, offsetBytes, unsigned, "big")
+    ubit18le(value: number): number{
+        return this.bit(value, 18, true, "little")
     }
 
     /**
@@ -2266,25 +2473,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit17be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 17, offsetBits, offsetBytes, true, "big")
+    ubit18be(value: number): number{
+        return this.bit(value, 18, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit18(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 18, offsetBits, offsetBytes, unsigned)
+    bit19(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 19, unsigned, endian)
     }
 
     /**
@@ -2293,11 +2499,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit18(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 18, offsetBits, offsetBytes, true)
+    bit19le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 19, unsigned, "little")
     }
 
     /**
@@ -2306,12 +2512,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit18le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 18, offsetBits, offsetBytes, unsigned, "little")
+    bit19be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 19, unsigned, "big")
     }
 
     /**
@@ -2320,11 +2525,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit18le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 18, offsetBits, offsetBytes, true, "little")
+    ubit19(value: number, endian?: string): number{
+        return this.bit(value, 19, true, endian)
     }
 
     /**
@@ -2333,12 +2538,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit18be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 18, offsetBits, offsetBytes, unsigned, "big")
+    ubit19le(value: number): number{
+        return this.bit(value, 19, true, "little")
     }
 
     /**
@@ -2347,25 +2550,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit18be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 18, offsetBits, offsetBytes, true, "big")
+    ubit19be(value: number): number{
+        return this.bit(value, 19, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit19(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 19, offsetBits, offsetBytes, unsigned)
+    bit20(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 20, unsigned, endian)
     }
 
     /**
@@ -2374,11 +2576,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit19(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 19, offsetBits, offsetBytes, true)
+    bit20le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 20, unsigned, "little")
     }
 
     /**
@@ -2387,12 +2589,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit19le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 19, offsetBits, offsetBytes, unsigned, "little")
+    bit20be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 20, unsigned, "big")
     }
 
     /**
@@ -2401,11 +2602,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit19le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 19, offsetBits, offsetBytes, true, "little")
+    ubit20(value: number, endian?: string): number{
+        return this.bit(value, 20, true, endian)
     }
 
     /**
@@ -2414,12 +2615,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit19be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 19, offsetBits, offsetBytes, unsigned, "big")
+    ubit20le(value: number): number{
+        return this.bit(value, 20, true, "little")
     }
 
     /**
@@ -2428,25 +2627,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit19be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 19, offsetBits, offsetBytes, true, "big")
+    ubit20be(value: number): number{
+        return this.bit(value, 20, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit20(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 20, offsetBits, offsetBytes, unsigned)
+    bit21(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 21, unsigned, endian)
     }
 
     /**
@@ -2455,11 +2653,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit20(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 20, offsetBits, offsetBytes, true)
+    bit21le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 21, unsigned, "little")
     }
 
     /**
@@ -2468,12 +2666,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit20le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 20, offsetBits, offsetBytes, unsigned, "little")
+    bit21be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 21, unsigned, "big")
     }
 
     /**
@@ -2482,11 +2679,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit20le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 20, offsetBits, offsetBytes, true, "little")
+    ubit21(value: number, endian?: string): number{
+        return this.bit(value, 21, true, endian)
     }
 
     /**
@@ -2495,12 +2692,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit20be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 20, offsetBits, offsetBytes, unsigned, "big")
+    ubit21le(value: number): number{
+        return this.bit(value, 21, true, "little")
     }
 
     /**
@@ -2509,25 +2704,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit20be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 20, offsetBits, offsetBytes, true, "big")
+    ubit21be(value: number): number{
+        return this.bit(value, 21, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit21(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 21, offsetBits, offsetBytes, unsigned)
+    bit22(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 22, unsigned, endian)
     }
 
     /**
@@ -2536,11 +2730,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit21(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 21, offsetBits, offsetBytes, true)
+    bit22le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 22, unsigned, "little")
     }
 
     /**
@@ -2549,12 +2743,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit21le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 21, offsetBits, offsetBytes, unsigned, "little")
+    bit22be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 22, unsigned, "big")
     }
 
     /**
@@ -2563,11 +2756,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit21le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 21, offsetBits, offsetBytes, true, "little")
+    ubit22(value: number, endian?: string): number{
+        return this.bit(value, 22, true, endian)
     }
 
     /**
@@ -2576,12 +2769,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit21be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 21, offsetBits, offsetBytes, unsigned, "big")
+    ubit22le(value: number): number{
+        return this.bit(value, 22, true, "little")
     }
 
     /**
@@ -2590,25 +2781,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit21be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 21, offsetBits, offsetBytes, true, "big")
+    ubit22be(value: number): number{
+        return this.bit(value, 22, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit22(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 22, offsetBits, offsetBytes, unsigned)
+    bit23(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 23, unsigned, endian)
     }
 
     /**
@@ -2617,11 +2807,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit22(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 22, offsetBits, offsetBytes, true)
+    bit23le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 23, unsigned, "little")
     }
 
     /**
@@ -2630,12 +2820,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit22le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 22, offsetBits, offsetBytes, unsigned, "little")
+    bit23be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 23, unsigned, "big")
     }
 
     /**
@@ -2644,11 +2833,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit22le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 22, offsetBits, offsetBytes, true, "little")
+    ubit23(value: number, endian?: string): number{
+        return this.bit(value, 23, true, endian)
     }
 
     /**
@@ -2657,12 +2846,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit22be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 22, offsetBits, offsetBytes, unsigned, "big")
+    ubit23le(value: number): number{
+        return this.bit(value, 23, true, "little")
     }
 
     /**
@@ -2671,25 +2858,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit22be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 22, offsetBits, offsetBytes, true, "big")
+    ubit23be(value: number): number{
+        return this.bit(value, 23, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit23(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 23, offsetBits, offsetBytes, unsigned)
+    bit24(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 24, unsigned, endian)
     }
 
     /**
@@ -2698,11 +2884,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit23(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 23, offsetBits, offsetBytes, true)
+    bit24le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 24, unsigned, "little")
     }
 
     /**
@@ -2711,12 +2897,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit23le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 23, offsetBits, offsetBytes, unsigned, "little")
+    bit24be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 24, unsigned, "big")
     }
 
     /**
@@ -2725,11 +2910,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit23le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 23, offsetBits, offsetBytes, true, "little")
+    ubit24(value: number, endian?: string): number{
+        return this.bit(value, 24, true, endian)
     }
 
     /**
@@ -2738,12 +2923,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit23be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 23, offsetBits, offsetBytes, unsigned, "big")
+    ubit24le(value: number): number{
+        return this.bit(value, 24, true, "little")
     }
 
     /**
@@ -2752,25 +2935,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit23be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 23, offsetBits, offsetBytes, true, "big")
+    ubit24be(value: number): number{
+        return this.bit(value, 24, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit24(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 24, offsetBits, offsetBytes, unsigned)
+    bit25(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 25, unsigned, endian)
     }
 
     /**
@@ -2779,11 +2961,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit24(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 24, offsetBits, offsetBytes, true)
+    bit25le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 25, unsigned, "little")
     }
 
     /**
@@ -2792,12 +2974,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit24le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 24, offsetBits, offsetBytes, unsigned, "little")
+    bit25be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 25, unsigned, "big")
     }
 
     /**
@@ -2806,11 +2987,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit24le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 24, offsetBits, offsetBytes, true, "little")
+    ubit25(value: number, endian?: string): number{
+        return this.bit(value, 25, true, endian)
     }
 
     /**
@@ -2819,12 +3000,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit24be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 24, offsetBits, offsetBytes, unsigned, "big")
+    ubit25le(value: number): number{
+        return this.bit(value, 25, true, "little")
     }
 
     /**
@@ -2833,25 +3012,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit24be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 24, offsetBits, offsetBytes, true, "big")
+    ubit25be(value: number): number{
+        return this.bit(value, 25, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit25(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 25, offsetBits, offsetBytes, unsigned)
+    bit26(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 26, unsigned, endian)
     }
 
     /**
@@ -2860,11 +3038,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit25(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 25, offsetBits, offsetBytes, true)
+    bit26le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 26, unsigned, "little")
     }
 
     /**
@@ -2873,12 +3051,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit25le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 25, offsetBits, offsetBytes, unsigned, "little")
+    bit26be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 26, unsigned, "big")
     }
 
     /**
@@ -2887,11 +3064,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit25le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 25, offsetBits, offsetBytes, true, "little")
+    ubit26(value: number, endian?: string): number{
+        return this.bit(value, 26, true, endian)
     }
 
     /**
@@ -2900,12 +3077,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit25be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 25, offsetBits, offsetBytes, unsigned, "big")
+    ubit26le(value: number): number{
+        return this.bit(value, 26, true, "little")
     }
 
     /**
@@ -2914,25 +3089,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit25be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 25, offsetBits, offsetBytes, true, "big")
+    ubit26be(value: number): number{
+        return this.bit(value, 26, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit26(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 26, offsetBits, offsetBytes, unsigned)
+    bit27(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 27, unsigned, endian)
     }
 
     /**
@@ -2941,11 +3115,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit26(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 26, offsetBits, offsetBytes, true)
+    bit27le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 27, unsigned, "little")
     }
 
     /**
@@ -2954,12 +3128,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit26le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 26, offsetBits, offsetBytes, unsigned, "little")
+    bit27be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 27, unsigned, "big")
     }
 
     /**
@@ -2968,11 +3141,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit26le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 26, offsetBits, offsetBytes, true, "little")
+    ubit27(value: number, endian?: string): number{
+        return this.bit(value, 27, true, endian)
     }
 
     /**
@@ -2981,12 +3154,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit26be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 26, offsetBits, offsetBytes, unsigned, "big")
+    ubit27le(value: number): number{
+        return this.bit(value, 27, true, "little")
     }
 
     /**
@@ -2995,25 +3166,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit26be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 26, offsetBits, offsetBytes, true, "big")
+    ubit27be(value: number): number{
+        return this.bit(value, 27, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit27(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 27, offsetBits, offsetBytes, unsigned)
+    bit28(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 28, unsigned, endian)
     }
 
     /**
@@ -3022,11 +3192,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit27(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 27, offsetBits, offsetBytes, true)
+    bit28le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 28, unsigned, "little")
     }
 
     /**
@@ -3035,12 +3205,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit27le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 27, offsetBits, offsetBytes, unsigned, "little")
+    bit28be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 28, unsigned, "big")
     }
 
     /**
@@ -3049,11 +3218,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit27le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 27, offsetBits, offsetBytes, true, "little")
+    ubit28(value: number, endian?: string): number{
+        return this.bit(value, 28, true, endian)
     }
 
     /**
@@ -3062,12 +3231,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit27be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 27, offsetBits, offsetBytes, unsigned, "big")
+    ubit28le(value: number): number{
+        return this.bit(value, 28, true, "little")
     }
 
     /**
@@ -3076,25 +3243,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit27be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 27, offsetBits, offsetBytes, true, "big")
+    ubit28be(value: number): number{
+        return this.bit(value, 28, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit28(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 28, offsetBits, offsetBytes, unsigned)
+    bit29(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 29, unsigned, endian)
     }
 
     /**
@@ -3103,11 +3269,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit28(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 28, offsetBits, offsetBytes, true)
+    bit29le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 29, unsigned, "little")
     }
 
     /**
@@ -3116,12 +3282,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit28le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 28, offsetBits, offsetBytes, unsigned, "little")
+    bit29be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 29, unsigned, "big")
     }
 
     /**
@@ -3130,11 +3295,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit28le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 28, offsetBits, offsetBytes, true, "little")
+    ubit29(value: number, endian?: string): number{
+        return this.bit(value, 29, true, endian)
     }
 
     /**
@@ -3143,12 +3308,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit28be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 28, offsetBits, offsetBytes, unsigned, "big")
+    ubit29le(value: number): number{
+        return this.bit(value, 29, true, "little")
     }
 
     /**
@@ -3157,25 +3320,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit28be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 28, offsetBits, offsetBytes, true, "big")
+    ubit29be(value: number): number{
+        return this.bit(value, 29, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit29(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 29, offsetBits, offsetBytes, unsigned)
+    bit30(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 30, unsigned, endian)
     }
 
     /**
@@ -3184,11 +3346,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit29(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 29, offsetBits, offsetBytes, true)
+    bit30le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 30, unsigned, "little")
     }
 
     /**
@@ -3197,12 +3359,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit29le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 29, offsetBits, offsetBytes, unsigned, "little")
+    bit30be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 30, unsigned, "big")
     }
 
     /**
@@ -3211,11 +3372,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit29le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 29, offsetBits, offsetBytes, true, "little")
+    ubit30(value: number, endian?: string): number{
+        return this.bit(value, 30, true, endian)
     }
 
     /**
@@ -3224,12 +3385,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit29be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 29, offsetBits, offsetBytes, unsigned, "big")
+    ubit30le(value: number): number{
+        return this.bit(value, 30, true, "little")
     }
 
     /**
@@ -3238,25 +3397,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit29be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 29, offsetBits, offsetBytes, true, "big")
+    ubit30be(value: number): number{
+        return this.bit(value, 30, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit30(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 30, offsetBits, offsetBytes, unsigned)
+    bit31(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 31, unsigned, endian)
     }
 
     /**
@@ -3265,11 +3423,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit30(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 30, offsetBits, offsetBytes, true)
+    bit31le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 31, unsigned, "little")
     }
 
     /**
@@ -3278,12 +3436,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit30le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 30, offsetBits, offsetBytes, unsigned, "little")
+    bit31be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 31, unsigned, "big")
     }
 
     /**
@@ -3292,11 +3449,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit30le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 30, offsetBits, offsetBytes, true, "little")
+    ubit31(value: number, endian?: string): number{
+        return this.bit(value, 31, true, endian)
     }
 
     /**
@@ -3305,12 +3462,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit30be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 30, offsetBits, offsetBytes, unsigned, "big")
+    ubit31le(value: number): number{
+        return this.bit(value, 31, true, "little")
     }
 
     /**
@@ -3319,25 +3474,24 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit30be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 30, offsetBits, offsetBytes, true, "big")
+    ubit31be(value: number): number{
+        return this.bit(value, 31, true, "big")
     }
     
-        /**
+    /**
     * Bit field writer
     * 
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    bit31(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 31, offsetBits, offsetBytes, unsigned)
+    bit32(value:number, unsigned?: boolean, endian?: string): number{
+        return this.bit(value, 32, unsigned, endian)
     }
 
     /**
@@ -3346,11 +3500,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    ubit31(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 31, offsetBits, offsetBytes, true)
+    bit32le(value:number, unsigned?: boolean): number{
+        return this.bit(value, 32, unsigned, "little")
     }
 
     /**
@@ -3359,12 +3513,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {boolean} unsigned - if the value is unsigned
+    * @returns number
     */
-    bit31le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 31, offsetBits, offsetBytes, unsigned, "little")
+    bit32be(value:number, unsigned?: boolean): number{
+        return this.bit(value, 32, unsigned, "big")
     }
 
     /**
@@ -3373,11 +3526,11 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
     */
-    ubit31le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 31, offsetBits, offsetBytes, true, "little")
+    ubit32(value: number, endian?: string): number{
+        return this.bit(value, 32, true, endian)
     }
 
     /**
@@ -3386,12 +3539,10 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
     */
-    bit31be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 31, offsetBits, offsetBytes, unsigned, "big")
+    ubit32le(value: number): number{
+        return this.bit(value, 32, true, "little")
     }
 
     /**
@@ -3400,154 +3551,12 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
+    * @returns number
     */
-    ubit31be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 31, offsetBits, offsetBytes, true, "big")
+    ubit32be(value: number): number{
+        return this.bit(value, 32, true, "big")
     }
     
-        /**
-    * Bit field writer
-    * 
-    * Note: When returning to a byte write, remaining bits are dropped
-    * 
-    * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
-    */
-    bit32(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 32, offsetBits, offsetBytes, unsigned)
-    }
-
-    /**
-    * Bit field writer
-    * 
-    * Note: When returning to a byte write, remaining bits are dropped
-    * 
-    * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    */
-    ubit32(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 32, offsetBits, offsetBytes, true)
-    }
-
-    /**
-    * Bit field writer
-    * 
-    * Note: When returning to a byte write, remaining bits are dropped
-    * 
-    * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
-    */
-    bit32le(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean){
-        return this.bit(value, 32, offsetBits, offsetBytes, unsigned, "little")
-    }
-
-    /**
-    * Bit field writer
-    * 
-    * Note: When returning to a byte write, remaining bits are dropped
-    * 
-    * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    */
-    ubit32le(value: number, offsetBits?: number, offsetBytes?: number): void{
-        return this.bit(value, 32, offsetBits, offsetBytes, true, "little")
-    }
-
-    /**
-    * Bit field writer
-    * 
-    * Note: When returning to a byte write, remaining bits are dropped
-    * 
-    * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
-    */
-    bit32be(value: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, 32, offsetBits, offsetBytes, unsigned, "big")
-    }
-
-    /**
-    * Bit field writer
-    * 
-    * Note: When returning to a byte write, remaining bits are dropped
-    * 
-    * @param {number} value - value as int 
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    */
-    ubit32be(value: number, offsetBits?: number, offsetBytes?: number){
-        return this.bit(value, 32, offsetBits, offsetBytes, true, "big")
-    }
-
-    /**
-    * Bit field writer
-    * 
-    * Note: When returning to a byte write, remaining bits are dropped
-    * 
-    * @param {number} value - value as int 
-    * @param {number} bits - number of bits to write
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
-    */
-    writeBitBE(value: number, bits: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, bits, offsetBits, offsetBytes, unsigned, "big")
-    }
-
-    /**
-    * Bit field writer
-    * 
-    * Note: When returning to a byte write, remaining bits are dropped
-    * 
-    * @param {number} value - value as int 
-    * @param {number} bits - number of bits to write
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
-    */
-    bitbe(value: number, bits: number, offsetBits?: number, offsetBytes?: number, unsigned?: boolean): void{
-        return this.bit(value, bits, offsetBits, offsetBytes, unsigned, "big")
-    }
-
-    /**
-    * Bit field writer
-    * 
-    * Note: When returning to a byte write, remaining bits are dropped
-    * 
-    * @param {number} value - value as int 
-    * @param {number} bits - number of bits to write
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
-    */
-    writeBitLE(value: number, bits: number, offsetBits?: number, offsetBytes?: number, unsigned?:boolean): void{
-        return this.bit(value, bits, offsetBits, offsetBytes, unsigned, "little")
-    }
-
-    /**
-    * Bit field writer
-    * 
-    * Note: When returning to a byte write, remaining bits are dropped
-    * 
-    * @param {number} value - value as int 
-    * @param {number} bits - number of bits to write
-    * @param {number} offsetBits - bit offset from current byte position to start the write (defaults last bit position)
-    * @param {number} offsetBytes - byte offset to start the write (default last write position)
-    * @param {boolean} unsigned - if value is unsigned or not
-    */
-    bitle(value: number, bits: number, offsetBits?: number, offsetBytes?: number, unsigned?:boolean): void{
-        return this.bit(value, bits, offsetBits, offsetBytes, unsigned, "little")
-    }
-
     //
     //byte write
     //
@@ -3556,78 +3565,67 @@ export class biwriter {
     * Write byte
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     */
-    writeByte(value: number, offset?: number, unsigned?: boolean): void{
-        this.check_size(1,0,offset)
-        if (unsigned == true) {
-            if (value< 0 || value > 255) {
-                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-                throw new Error('Value is out of range for the specified 8bit length.' +" min: " + 0 + " max: " + 255 + " value: "+ value);
-            }
-        } else {
-            const maxValue = Math.pow(2, 8 - 1) - 1;
-            const minValue = -maxValue - 1;
-            if(value < minValue || value > maxValue){
-                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-                throw new Error('Value is out of range for the specified 8bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
-            }
-        }
-        this.data[this.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-        this.offset += 1
+    writeByte(value: number, unsigned?: boolean): void{
+        return wbyte(this,value,unsigned)
+    }
+
+    /**
+    * Read byte
+    * 
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @returns number
+    */
+    readByte(unsigned?: boolean): number{
+        return rbyte(this, unsigned)
     }
 
     /**
     * Write byte
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     */
-    byte(value: number, offset?: number, unsigned?: boolean): void{
-        return this.writeByte(value,offset,unsigned)
+    byte(value: number, unsigned?: boolean): void{
+        return this.writeByte(value,unsigned)
     }
 
     /**
     * Write byte
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     */
-    int8(value: number, offset?: number, unsigned?: boolean): void{
-        return this.writeByte(value,offset,unsigned)
+    int8(value: number, unsigned?: boolean): void{
+        return this.writeByte(value,unsigned)
     }
 
     /**
     * Write unsigned byte
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeUByte(value: number, offset?: number): void{
-        return this.writeByte(value, offset, true)
+    writeUByte(value: number): void{
+        return this.writeByte(value, true)
     }
 
     /**
     * Write unsigned byte
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    uint8(value: number, offset?: number): void{
-        return this.writeByte(value, offset, true)
+    uint8(value: number): void{
+        return this.writeByte(value, true)
     }
 
     /**
     * Write unsigned byte
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    ubyte(value: number, offset?: number): void{
-        return this.writeByte(value, offset, true)
+    ubyte(value: number): void{
+        return this.writeByte(value, true)
     }
 
     //
@@ -3638,273 +3636,240 @@ export class biwriter {
     * Write int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    writeInt16(value: number, offset?: number, unsigned?: boolean, endian?: string): void {
-        this.check_size(2,0,offset)
-        if (unsigned == true) {
-            if (value< 0 || value > 65535) {
-                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-                throw new Error('Value is out of range for the specified 16bit length.' +" min: " + 0 + " max: " + 65535 + " value: "+ value);
-            }
-        } else {
-            const maxValue = Math.pow(2, 16 - 1) - 1;
-            const minValue = -maxValue - 1;
-            if(value < minValue || value > maxValue){
-                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-                throw new Error('Value is out of range for the specified 16bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
-            }
-        }
-        if((endian != undefined ? endian : this.endian) == "little"){
-            this.data[this.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xff;
-            this.data[this.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff; 
-        } else {
-            this.data[this.offset] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff;
-            this.data[this.offset + 1] = (unsigned == undefined || unsigned == false) ? value : value& 0xff;
-        }
-        this.offset += 2
+    writeInt16(value: number, unsigned?: boolean, endian?: string): void {
+        return wint16(this,value,unsigned,endian)
+    }
+
+    /**
+    * Read short
+    * 
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    readInt16(unsigned?: boolean, endian?: string): number{
+        return rint16(this,unsigned,endian)
+    }
+
+
+    /**
+    * Write int16
+    *
+    * @param {number} value - value as int 
+    * @param {boolean} unsigned - if the value is unsigned
+    * @param {string} endian - ``big`` or ``little`
+    */
+    int16(value: number, unsigned?: boolean, endian?: string): void {
+        return this.writeInt16(value,unsigned,endian)
     }
 
     /**
     * Write int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    int16(value: number, offset?: number, unsigned?: boolean, endian?: string): void {
-        return this.writeInt16(value,offset,unsigned,endian)
+    short(value: number, unsigned?: boolean, endian?: string): void {
+        return this.writeInt16(value,unsigned,endian)
     }
 
     /**
     * Write int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    short(value: number, offset?: number, unsigned?: boolean, endian?: string): void {
-        return this.writeInt16(value,offset,unsigned,endian)
-    }
-
-    /**
-    * Write int16
-    *
-    * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
-    * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
-    */
-    word(value: number, offset?: number, unsigned?: boolean, endian?: string): void {
-        return this.writeInt16(value,offset,unsigned,endian)
+    word(value: number, unsigned?: boolean, endian?: string): void {
+        return this.writeInt16(value,unsigned,endian)
     }
 
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    writeUInt16(value: number, offset?: number, endian?: string): void {
-        return this.writeInt16(value, offset, true, endian)
+    writeUInt16(value: number, endian?: string): void {
+        return this.writeInt16(value, true, endian)
     }
 
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    uint16(value: number, offset?: number, endian?: string): void {
-        return this.writeInt16(value, offset, true, endian)
+    uint16(value: number, endian?: string): void {
+        return this.writeInt16(value, true, endian)
     }
 
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
     ushort(value: number, offset?: number, endian?: string): void {
-        return this.writeInt16(value, offset, true, endian)
+        return this.writeInt16(value, true, endian)
     }
 
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
     uword(value: number, offset?: number, endian?: string): void {
-        return this.writeInt16(value, offset, true, endian)
+        return this.writeInt16(value, true, endian)
     }
 
     /**
     * Write signed int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeInt16BE(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, false, "big")
+    writeInt16BE(value: number): void {
+        return this.writeInt16(value, false, "big")
     }
 
     /**
     * Write signed int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    int16be(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, false, "big")
+    int16be(value: number): void {
+        return this.writeInt16(value, false, "big")
     }
 
     /**
     * Write signed int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    shortbe(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, false, "big")
+    shortbe(value: number): void {
+        return this.writeInt16(value, false, "big")
     }
 
     /**
     * Write signed int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    wordbe(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, false, "big")
+    wordbe(value: number): void {
+        return this.writeInt16(value, false, "big")
     }
 
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeUInt16BE(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, true, "big")
+    writeUInt16BE(value: number): void {
+        return this.writeInt16(value, true, "big")
     }
 
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    uint16be(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, true, "big")
+    uint16be(value: number): void {
+        return this.writeInt16(value, true, "big")
     }
 
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    ushortbe(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, true, "big")
+    ushortbe(value: number): void {
+        return this.writeInt16(value, true, "big")
     }
 
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    uwordbe(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, true, "big")
+    uwordbe(value: number): void {
+        return this.writeInt16(value, true, "big")
     }
 
     /**
     * Write signed int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeInt16LE(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, false, "little")
+    writeInt16LE(value: number): void {
+        return this.writeInt16(value, false, "little")
     }
 
     /**
     * Write signed int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    int16le(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, false, "little")
+    int16le(value: number): void {
+        return this.writeInt16(value, false, "little")
     }
 
     /**
     * Write signed int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    shortle(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, false, "little")
+    shortle(value: number): void {
+        return this.writeInt16(value, false, "little")
     }
 
     /**
     * Write signed int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    wordle(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, false, "little")
+    wordle(value: number): void {
+        return this.writeInt16(value, false, "little")
     }
 
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeUInt16LE(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, true, "little")
+    writeUInt16LE(value: number): void {
+        return this.writeInt16(value, true, "little")
     }
 
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    uint16le(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, true, "little")
+    uint16le(value: number): void {
+        return this.writeInt16(value, true, "little")
     }
 
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    ushortle(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, true, "little")
+    ushortle(value: number): void {
+        return this.writeInt16(value, true, "little")
     }
 
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    uwordle(value: number, offset?: number): void {
-        return this.writeInt16(value, offset, true, "little")
+    uwordle(value: number): void {
+        return this.writeInt16(value, true, "little")
     }
 
     //
@@ -3915,134 +3880,94 @@ export class biwriter {
     * Writes half float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    writeHalfFloat(value: number, offset?: number, endian?: string): void {
-        this.check_size(2,0,offset)
-        const maxValue = 65504;
-        const minValue = 5.96e-08;
-        if(value < minValue || value > maxValue){
-            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-            throw new Error('Value is out of range for the specified half float length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
-        }
-        const signMask = 0x8000;
-        const exponentMask = 0x7C00;
-        const fractionMask = 0x03FF;
-      
-        // Determine sign, exponent, and fraction bits
-        let signBit = (value & signMask) >> 15;
-        let exponentBits = (value & exponentMask) >> 10;
-        let fractionBits = value & fractionMask;
-      
-        // Special cases for NaN and Infinity
-        if (exponentBits === 0x1F) {
-          // NaN or Infinity, copy exponent and fraction
-          exponentBits = 0xFF;
-        } else if (exponentBits === 0x00) {
-          // Denormalized numbers, exponent is 0, adjust exponent bits
-          exponentBits = 0x00;
-          fractionBits = 0x00; // Clear fraction for denormals
-        } else {
-          // Normalized number, subtract exponent bias
-          exponentBits -= 15;
-        }
-      
-        // Combine sign, exponent, and fraction bits into half float format
-        let halfFloatBits = (signBit << 15) | (exponentBits << 10) | fractionBits;
-      
-        // Write bytes based on endianness
-        if ((endian = undefined ? endian : this.endian ) == "little") {
-          this.data[this.offset] = halfFloatBits & 0xFF;
-          this.data[this.offset + 1] = (halfFloatBits >> 8) & 0xFF;
-        } else {
-          this.data[this.offset] = (halfFloatBits >> 8) & 0xFF;
-          this.data[this.offset + 1] = halfFloatBits & 0xFF;
-        }
+    writeHalfFloat(value: number, endian?: string): void {
+        return whalffloat(this, value, endian)
+    }
 
-        this.offset += 2
+    /**
+    * Read half float
+    * 
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    readHalfFloat(endian?: string): number{
+        return rhalffloat(this, endian)
     }
 
     /**
     * Writes half float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    half(value: number, offset?: number, endian?: string): void {
-        return this.writeHalfFloat(value,offset,endian)
+    half(value: number, endian?: string): void {
+        return this.writeHalfFloat(value,endian)
     }
 
     /**
     * Writes half float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    halffloat(value: number, offset?: number, endian?: string): void {
-        return this.writeHalfFloat(value,offset,endian)
+    halffloat(value: number, endian?: string): void {
+        return this.writeHalfFloat(value,endian)
     }
 
     /**
     * Writes half float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
     writeHalfFloatBE(value: number, offset?: number): void{
-        return this.writeHalfFloat(value, offset, "big")
+        return this.writeHalfFloat(value, "big")
     }
 
     /**
     * Writes half float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
     halffloatbe(value: number, offset?: number): void{
-        return this.writeHalfFloat(value, offset, "big")
+        return this.writeHalfFloat(value, "big")
     }
 
     /**
     * Writes half float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    halfbe(value: number, offset?: number): void{
-        return this.writeHalfFloat(value, offset, "big")
+    halfbe(value: number): void{
+        return this.writeHalfFloat(value, "big")
     }
 
     /**
     * Writes half float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeHalfFloatLE(value: number, offset?: number): void{
-        return this.writeHalfFloat(value, offset, "little")
+    writeHalfFloatLE(value: number): void{
+        return this.writeHalfFloat(value, "little")
     }
 
     /**
     * Writes half float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    halffloatle(value: number, offset?: number): void{
-        return this.writeHalfFloat(value, offset, "little")
+    halffloatle(value: number): void{
+        return this.writeHalfFloat(value, "little")
     }
 
     /**
     * Writes half float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    halfle(value: number, offset?: number): void{
-        return this.writeHalfFloat(value, offset, "little")
+    halfle(value: number): void{
+        return this.writeHalfFloat(value, "little")
     }
 
     //
@@ -4053,340 +3978,296 @@ export class biwriter {
     * Write int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    writeInt32(value: number, offset?: number, unsigned?: boolean, endian?: string): void {
-        this.check_size(4,0,offset)
-        if (unsigned == true) {
-            if (value < 0 || value > 4294967295) {
-                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-                throw new Error('Value is out of range for the specified 32bit length.' +" min: " + 0 + " max: " + 4294967295 + " value: "+ value);
-            }
-        } else {
-            const maxValue = Math.pow(2, 32 - 1) - 1;
-            const minValue = -maxValue - 1;
-            if(value < minValue || value > maxValue){
-                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-                throw new Error('Value is out of range for the specified 32bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
-            }
-        }
-        if ((endian = undefined ? endian : this.endian ) == "little") {
-            this.data[this.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-            this.data[this.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
-            this.data[this.offset + 2] = (unsigned == undefined || unsigned == false) ? (value >> 16) : (value >> 16) & 0xFF;
-            this.data[this.offset + 3] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
-        } else {
-            this.data[this.offset] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
-            this.data[this.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 16): (value >> 16) & 0xFF;
-            this.data[this.offset + 2] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
-            this.data[this.offset + 3] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-        }
-        this.offset += 4
+    writeInt32(value: number, unsigned?: boolean, endian?: string): void {
+        return wint32(this, value, unsigned, endian)
+    }
+
+    /**
+    * Read 32 bit integer
+    * 
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    readInt32(unsigned?: boolean, endian?: string): number{
+        return rint32(this, unsigned, endian)
     }
 
     /**
     * Write int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    int(value: number, offset?: number, unsigned?: boolean, endian?: string): void {
-        return this.writeInt32(value, offset, unsigned, endian)
+    int(value: number, unsigned?: boolean, endian?: string): void {
+        return this.writeInt32(value, unsigned, endian)
     }
 
     /**
     * Write int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    int32(value: number, offset?: number, unsigned?: boolean, endian?: string): void {
-        return this.writeInt32(value, offset, unsigned, endian)
+    int32(value: number, unsigned?: boolean, endian?: string): void {
+        return this.writeInt32(value, unsigned, endian)
     }
 
     /**
     * Write int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    double(value: number, offset?: number, unsigned?: boolean, endian?: string): void {
-        return this.writeInt32(value, offset, unsigned, endian)
+    double(value: number, unsigned?: boolean, endian?: string): void {
+        return this.writeInt32(value, unsigned, endian)
     }
 
     /**
     * Write int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    long(value: number, offset?: number, unsigned?: boolean, endian?: string): void {
-        return this.writeInt32(value, offset, unsigned, endian)
+    long(value: number, unsigned?: boolean, endian?: string): void {
+        return this.writeInt32(value, unsigned, endian)
     }
 
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    writeUInt32(value: number, offset?: number, endian?: string): void {
-        return this.writeInt32(value, offset, true, endian)
+    writeUInt32(value: number, endian?: string): void {
+        return this.writeInt32(value, true, endian)
     }
 
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    uint32(value: number, offset?: number, endian?: string): void {
-        return this.writeInt32(value, offset, true, endian)
+    uint32(value: number, endian?: string): void {
+        return this.writeInt32(value, true, endian)
     }
 
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    uint(value: number, offset?: number, endian?: string): void {
-        return this.writeInt32(value, offset, true, endian)
+    uint(value: number, endian?: string): void {
+        return this.writeInt32(value, true, endian)
     }
 
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    udouble(value: number, offset?: number, endian?: string): void {
-        return this.writeInt32(value, offset, true, endian)
+    udouble(value: number, endian?: string): void {
+        return this.writeInt32(value, true, endian)
     }
 
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    ulong(value: number, offset?: number, endian?: string): void {
-        return this.writeInt32(value, offset, true, endian)
+    ulong(value: number, endian?: string): void {
+        return this.writeInt32(value, true, endian)
     }
 
     /**
     * Write signed int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeInt32LE(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, false, "little")
+    writeInt32LE(value: number): void {
+        return this.writeInt32(value, false, "little")
     }
 
     /**
     * Write signed int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    int32le(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, false, "little")
+    int32le(value: number): void {
+        return this.writeInt32(value, false, "little")
     }
 
     /**
     * Write signed int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    intle(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, false, "little")
+    intle(value: number): void {
+        return this.writeInt32(value, false, "little")
     }
 
     /**
     * Write signed int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    doublele(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, false, "little")
+    doublele(value: number): void {
+        return this.writeInt32(value, false, "little")
     }
 
     /**
     * Write signed int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    longle(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, false, "little")
+    longle(value: number): void {
+        return this.writeInt32(value, false, "little")
     }
 
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeUInt32LE(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, true, "little")
+    writeUInt32LE(value: number): void {
+        return this.writeInt32(value, true, "little")
     }
 
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    uint32le(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, true, "little")
+    uint32le(value: number): void {
+        return this.writeInt32(value, true, "little")
     }
 
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    uintle(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, true, "little")
+    uintle(value: number): void {
+        return this.writeInt32(value, true, "little")
     }
 
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    udoublele(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, true, "little")
+    udoublele(value: number): void {
+        return this.writeInt32(value, true, "little")
     }
 
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    ulongle(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, true, "little")
+    ulongle(value: number): void {
+        return this.writeInt32(value, true, "little")
     }
 
     /**
     * Write signed int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeInt32BE(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, false, "big")
+    writeInt32BE(value: number): void {
+        return this.writeInt32(value, false, "big")
     }
 
     /**
     * Write signed int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    intbe(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, false, "big")
+    intbe(value: number): void {
+        return this.writeInt32(value, false, "big")
     }
 
     /**
     * Write signed int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    int32be(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, false, "big")
+    int32be(value: number): void {
+        return this.writeInt32(value,false, "big")
     }
 
     /**
     * Write signed int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    doublebe(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, false, "big")
+    doublebe(value: number): void {
+        return this.writeInt32(value, false, "big")
     }
 
     /**
     * Write signed int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    longbe(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, false, "big")
+    longbe(value: number): void {
+        return this.writeInt32(value, false, "big")
     }
 
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
     writeUInt32BE(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, true, "big")
+        return this.writeInt32(value, true, "big")
     }
 
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
     uint32be(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, true, "big")
+        return this.writeInt32(value, true, "big")
     }
 
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    uintbe(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, true, "big")
+    uintbe(value: number): void {
+        return this.writeInt32(value, true, "big")
     }
 
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    udoublebe(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, true, "big")
+    udoublebe(value: number): void {
+        return this.writeInt32(value, true, "big")
     }
 
     /**
     * Write unsigned int32
     *
-    * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
+    * @param {number} value - value as int
     */
-    ulongbe(value: number, offset?: number): void {
-        return this.writeInt32(value, offset, true, "big")
+    ulongbe(value: number): void {
+        return this.writeInt32(value, true, "big")
     }
 
     //
@@ -4397,81 +4278,66 @@ export class biwriter {
     * Write float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    writeFloat(value: number, offset?: number, endian?: string): void{
-        this.check_size(4,0,offset)
-        const maxValue = 3.402823466e+38
-        const minValue = 1.175494351e-38
-        if(value < minValue || value > maxValue){
-            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-            throw new Error('Value is out of range for the specified float length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
-        }
-        let intValue = Float32Array.from([value])[0]; // Convert float to 32-bit integer representation
-        let shift = 0;
-    
-        for (let i = 0; i < 4; i++) {
-            if ((endian = undefined ? endian : this.endian ) == "little") {
-                this.data[this.offset + i] = (intValue >> shift) & 0xFF;
-            } else {
-                this.data[this.offset + (3 - i)] = (intValue >> shift) & 0xFF;
-            }
-            shift += 8;
-        }
+    writeFloat(value: number, endian?: string): void{
+        return wfloat(this, value, endian)
+    }
 
-        this.offset += 4
+    /**
+    * Read float
+    * 
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    readFloat(endian?: string): number{
+        return rfloat(this, endian)
     }
 
     /**
     * Write float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    float(value: number, offset?: number, endian?: string): void{
-        return this.writeFloat(value,offset,endian)
+    float(value: number, endian?: string): void{
+        return this.writeFloat(value,endian)
     }
 
     /**
     * Write float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeFloatLE(value: number, offset?: number): void{
-        return this.writeFloat(value, offset, "little")
+    writeFloatLE(value: number): void{
+        return this.writeFloat(value, "little")
     }
 
     /**
     * Write float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    floatle(value: number, offset?: number): void{
-        return this.writeFloat(value, offset, "little")
+    floatle(value: number): void{
+        return this.writeFloat(value, "little")
     }
 
     /**
     * Write float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeFloatBE(value: number, offset?: number): void{
-        return this.writeFloat(value, offset, "big")
+    writeFloatBE(value: number): void{
+        return this.writeFloat(value, "big")
     }
 
     /**
     * Write float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    floatbe(value: number, offset?: number): void{
-        return this.writeFloat(value, offset, "big")
+    floatbe(value: number): void{
+        return this.writeFloat(value, "big")
     }
 
     //
@@ -4482,301 +4348,238 @@ export class biwriter {
     * Write 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    writeInt64(value: number, offset?: number, unsigned?: boolean, endian?: string): void {
-        this.check_size(8,0,offset)
-        if (unsigned == true) {
-            if (value < 0 || value > Math.pow(2, 64) - 1) {
-                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-                throw new Error('Value is out of range for the specified 64bit length.' +" min: " + 0 + " max: " + (Math.pow(2, 64) - 1) + " value: "+ value);
-            }
-        } else {
-            const maxValue = Math.pow(2, 63) - 1;
-            const minValue = -Math.pow(2, 63);
-            if(value < minValue || value > maxValue){
-                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-                throw new Error('Value is out of range for the specified 64bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
-            }
-        }
-        // Convert the BigInt to a 64-bit signed integer
-        const bigIntArray = new BigInt64Array(1);
-        bigIntArray[0] = BigInt(value);
-      
-        // Use two 32-bit views to write the Int64
-        const int32Array = new Int32Array(bigIntArray.buffer);
-      
-        for (let i = 0; i < 2; i++) {
-            if ((endian = undefined ? endian : this.endian ) == "little") {
-                if(unsigned == undefined || unsigned == false){
-                    this.data[this.offset + i * 4 + 0] = int32Array[i];
-                    this.data[this.offset + i * 4 + 1] = (int32Array[i] >> 8);
-                    this.data[this.offset + i * 4 + 2] = (int32Array[i] >> 16);
-                    this.data[this.offset + i * 4 + 3] = (int32Array[i] >> 24);
-                } else {
-                    this.data[this.offset + i * 4 + 0] = int32Array[i] & 0xFF;
-                    this.data[this.offset + i * 4 + 1] = (int32Array[i] >> 8) & 0xFF;
-                    this.data[this.offset + i * 4 + 2] = (int32Array[i] >> 16) & 0xFF;
-                    this.data[this.offset + i * 4 + 3] = (int32Array[i] >> 24) & 0xFF;
-                }
-            } else {
-                if(unsigned == undefined || unsigned == false){
-                    this.data[this.offset + (1 - i) * 4 + 0] = int32Array[i];
-                    this.data[this.offset + (1 - i) * 4 + 1] = (int32Array[i] >> 8);
-                    this.data[this.offset + (1 - i) * 4 + 2] = (int32Array[i] >> 16);
-                    this.data[this.offset + (1 - i) * 4 + 3] = (int32Array[i] >> 24);
-                } else {
-                    this.data[this.offset + (1 - i) * 4 + 0] = int32Array[i] & 0xFF;
-                    this.data[this.offset + (1 - i) * 4 + 1] = (int32Array[i] >> 8) & 0xFF;
-                    this.data[this.offset + (1 - i) * 4 + 2] = (int32Array[i] >> 16) & 0xFF;
-                    this.data[this.offset + (1 - i) * 4 + 3] = (int32Array[i] >> 24) & 0xFF;
-                }
-            }
-        }
+    writeInt64(value: number, unsigned?: boolean, endian?: string): void {
+        return wint64(this, value, unsigned, endian)
+    }
 
-        this.offset += 8
+    /**
+    * Read signed 64 bit integer
+    * @param {boolean} unsigned - if value is unsigned or not
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    readInt64(unsigned?: boolean, endian?: string): bigint {
+        return rint64(this, unsigned, endian)
     }
 
     /**
     * Write 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    int64(value: number, offset?: number, unsigned?: boolean, endian?: string): void {
-        return this.writeInt64(value,offset,unsigned,endian)
+    int64(value: number, unsigned?: boolean, endian?: string): void {
+        return this.writeInt64(value,unsigned,endian)
     }
 
     /**
     * Write 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    quad(value: number, offset?: number, unsigned?: boolean, endian?: string): void {
-        return this.writeInt64(value,offset,unsigned,endian)
+    quad(value: number, unsigned?: boolean, endian?: string): void {
+        return this.writeInt64(value,unsigned,endian)
     }
 
     /**
     * Write 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     */
-    bigint(value: number, offset?: number, unsigned?: boolean, endian?: string): void {
-        return this.writeInt64(value,offset,unsigned,endian)
+    bigint(value: number, unsigned?: boolean, endian?: string): void {
+        return this.writeInt64(value,unsigned,endian)
     }
 
     /**
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    writeUInt64(value: number, offset?: number, endian?: string) {
-        return this.writeInt64(value, offset, true, endian)
+    writeUInt64(value: number, endian?: string) {
+        return this.writeInt64(value, true, endian)
     }
 
     /**
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    uint64(value: number, offset?: number, endian?: string) {
-        return this.writeInt64(value, offset, true, endian)
+    uint64(value: number, endian?: string) {
+        return this.writeInt64(value, true, endian)
     }
 
     /**
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    ubigint(value: number, offset?: number, endian?: string) {
-        return this.writeInt64(value, offset, true, endian)
+    ubigint(value: number, endian?: string) {
+        return this.writeInt64(value, true, endian)
     }
 
     /**
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    uquad(value: number, offset?: number, endian?: string) {
-        return this.writeInt64(value, offset, true, endian)
+    uquad(value: number, endian?: string) {
+        return this.writeInt64(value, true, endian)
     }
 
     /**
     * Write signed 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeInt64LE(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, false, "little")
+    writeInt64LE(value: number): void {
+        return this.writeInt64(value, false, "little")
     }
 
     /**
     * Write signed 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    int64le(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, false, "little")
+    int64le(value: number): void {
+        return this.writeInt64(value, false, "little")
     }
 
     /**
     * Write signed 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    bigintle(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, false, "little")
+    bigintle(value: number): void {
+        return this.writeInt64(value, false, "little")
     }
 
     /**
     * Write signed 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    quadle(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, false, "little")
+    quadle(value: number): void {
+        return this.writeInt64(value, false, "little")
     }
 
     /**
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeUInt64LE(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, true, "little")
+    writeUInt64LE(value: number): void {
+        return this.writeInt64(value, true, "little")
     }
 
     /**
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    uint64le(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, true, "little")
+    uint64le(value: number): void {
+        return this.writeInt64(value, true, "little")
     }
 
     /**
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    ubigintle(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, true, "little")
+    ubigintle(value: number): void {
+        return this.writeInt64(value, true, "little")
     }
 
     /**
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    uquadle(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, true, "little")
+    uquadle(value: number): void {
+        return this.writeInt64(value, true, "little")
     }
 
     /**
     * Write signed 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeInt64BE(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, false, "big")
+    writeInt64BE(value: number): void {
+        return this.writeInt64(value, false, "big")
     }
 
     /**
     * Write signed 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    int64be(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, false, "big")
+    int64be(value: number): void {
+        return this.writeInt64(value, false, "big")
     }
 
     /**
     * Write signed 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    bigintbe(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, false, "big")
+    bigintbe(value: number): void {
+        return this.writeInt64(value, false, "big")
     }
 
     /**
     * Write signed 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    quadbe(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, false, "big")
+    quadbe(value: number): void {
+        return this.writeInt64(value, false, "big")
     }
 
     /**
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeUInt64BE(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, true, "big")
+    writeUInt64BE(value: number): void {
+        return this.writeInt64(value, true, "big")
     }
 
     /**
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    uint64be(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, true, "big")
+    uint64be(value: number): void {
+        return this.writeInt64(value, true, "big")
     }
 
     /**
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    ubigintbe(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, true, "big")
+    ubigintbe(value: number): void {
+        return this.writeInt64(value, true, "big")
     }
 
     /**
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    uquadbe(value: number, offset?: number): void {
-        return this.writeInt64(value, offset, true, "big")
+    uquadbe(value: number): void {
+        return this.writeInt64(value, true, "big")
     }
 
     //
@@ -4790,112 +4593,92 @@ export class biwriter {
     * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    writeDoubleFloat(value: number, offset?: number, endian?: string): void {
-        this.check_size(8,0,offset)
-        const maxValue = 1.7976931348623158e308;
-        const minValue = 2.2250738585072014e-308;
-        if(value < minValue || value > maxValue){
-            this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-            throw new Error('Value is out of range for the specified 64bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
-        }
-        const intArray = new Int32Array(2);
-        const floatArray = new Float64Array(intArray.buffer);
+    writeDoubleFloat(value: number, endian?: string): void {
+        return wdfloat(this, value, endian)
+    }
 
-        floatArray[0] = value;
-
-        const bytes = new Uint8Array(intArray.buffer);
-
-        for (let i = 0; i < 8; i++) {
-            if ((endian = undefined ? endian : this.endian ) == "little") {
-                this.data[this.offset + i] = bytes[i];
-            } else {
-                this.data[this.offset + (7 - i)] = bytes[i];
-            }
-        }
-
-        this.offset += 8
+    /**
+    * Read double float
+    * 
+    * @param {string} endian - ```big``` or ```little```
+    * @returns number
+    */
+    readDoubleFloat(endian?: string): number{
+        return rdfloat(this, endian)
     }
 
     /**
     * Writes double float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    doublefloat(value: number, offset?: number, endian?: string): void {
-        return this.writeDoubleFloat(value, offset, endian)
+    doublefloat(value: number, endian?: string): void {
+        return this.writeDoubleFloat(value, endian)
     }
 
     /**
     * Writes double float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`
     */
-    dfloat(value: number, offset?: number, endian?: string): void {
-        return this.writeDoubleFloat(value, offset, endian)
+    dfloat(value: number, endian?: string): void {
+        return this.writeDoubleFloat(value, endian)
     }
 
     /**
     * Writes double float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeDoubleFloatBE(value: number, offset?: number): void{
-        return this.writeDoubleFloat(value, offset, "big")
+    writeDoubleFloatBE(value: number): void{
+        return this.writeDoubleFloat(value, "big")
     }
 
     /**
     * Writes double float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    dfloatbe(value: number, offset?: number): void{
-        return this.writeDoubleFloat(value, offset, "big")
+    dfloatbe(value: number): void{
+        return this.writeDoubleFloat(value, "big")
     }
 
     /**
     * Writes double float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    doublefloatbe(value: number, offset?: number): void{
-        return this.writeDoubleFloat(value, offset, "big")
+    doublefloatbe(value: number): void{
+        return this.writeDoubleFloat(value, "big")
     }
 
     /**
     * Writes double float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    writeDoubleFloatLE(value: number, offset?: number): void{
-        return this.writeDoubleFloat(value, offset, "little")
+    writeDoubleFloatLE(value: number): void{
+        return this.writeDoubleFloat(value, "little")
     }
 
     /**
     * Writes double float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    dfloatle(value: number, offset?: number): void{
-        return this.writeDoubleFloat(value, offset, "little")
+    dfloatle(value: number): void{
+        return this.writeDoubleFloat(value, "little")
     }
 
     /**
     * Writes double float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
     */
-    doublefloatle(value: number, offset?: number): void{
-        return this.writeDoubleFloat(value, offset, "little")
+    doublefloatle(value: number): void{
+        return this.writeDoubleFloat(value, "little")
     }
 
     //
@@ -4910,7 +4693,6 @@ export class biwriter {
     * @param {object} options - options: 
     * ```javascript
     * {
-    *  offset: 0, //byte offset from current position
     *  length: string.length,  //for fixed length, non-terminate value utf strings
     *  stringType: "utf-8", //utf-8, utf-16, pascal or wide-pascal
     *  terminateValue: 0x00, // only with stringType: "utf"
@@ -4921,7 +4703,6 @@ export class biwriter {
     * ```
     */
     writeString(string: string, options?: {   
-        offset?: number
         length?: number,
         stringType?: string,
         terminateValue?: number,
@@ -4930,140 +4711,38 @@ export class biwriter {
         encoding?: string,
         endian?:string,
     } ): void{
+        return wstring(this, string, options)
+    }
 
-        var offset: any = options && options.offset
-        var length:any = options && options.length
-        var stringType:any = options && options.stringType || 'utf-8'
-        var terminateValue:any = options && options.terminateValue
-        var lengthWriteSize:any = options && options.lengthWriteSize || 1
-        var encoding: any = options && options.encoding || 'utf-8'
-        var endian:any = options && options.endian || this.endian
-      
-        if (stringType === 'utf-8' || stringType === 'utf-16') {
-            // Encode the string in the specified encoding
+    /**
+    * Reads string, use options object for different types
+    * 
+    * @param {object} options 
+    * ```javascript
+    * {
+    *  length: number, //for fixed length, non-terminate value utf strings
+    *  stringType: "utf-8", //utf-8, utf-16, pascal or wide-pascal
+    *  terminateValue: 0x00, // only for non-fixed length utf strings
+    *  lengthReadSize: 1, //for pascal strings. 1, 2 or 4 byte length read size
+    *  stripNull: true, // removes 0x00 characters
+    *  encoding: "utf-8", //TextEncoder accepted types 
+    *  endian: "little", //for wide-pascal and utf-16
+    * }
+    * ```
+    * @return string
+    */
+    readString(
+        options?: {   
+            length?: number,
+            stringType?: string,
+            terminateValue?: number,
+            lengthReadSize?: number,
+            stripNull?: boolean,
+            encoding?: string,
+            endian?:string,
+        } ): string{
 
-            if(encoding == undefined){
-                if(stringType == 'utf-8'){
-                    encoding = 'utf-8'
-                }
-                if(stringType == 'utf-16'){
-                    encoding = 'utf-16'
-                }
-            }
-
-            const encoder = new TextEncoder();
-
-            const encodedString = encoder.encode(string);
-
-            if(length == undefined && terminateValue == undefined){
-                terminateValue = 0
-            }
-
-            var totalLength = (length || encodedString.length) + (terminateValue != undefined ? 1 : 0)
-
-            if(stringType == 'utf-16'){
-                totalLength = (length || (encodedString.length*2)) + (terminateValue != undefined ? 2 : 0)
-            }
-
-            this.check_size(totalLength, 0, offset) 
-        
-            // Write the string bytes to the Uint8Array
-            for (let i = 0; i < encodedString.length; i++) {
-                if (stringType === 'utf-16') {
-                    const charCode = encodedString[i];
-                    if(endian == "little"){
-                        this.data[this.offset + i * 2 ] = charCode & 0xFF;
-                        this.data[this.offset + i * 2 + 1] = (charCode >> 8) & 0xFF;
-                    } else {
-                        this.data[this.offset + i * 2 + 1] = charCode & 0xFF;
-                        this.data[this.offset + i * 2] = (charCode >> 8) & 0xFF;
-                    }
-                } else {
-                    this.data[this.offset + i] = encodedString[i];
-                }
-            }
-
-            if(terminateValue != undefined){
-                if (stringType === 'utf-16') {
-                    this.data[this.offset + totalLength - 1] = terminateValue & 0xFF;
-                    this.data[this.offset + totalLength] = (terminateValue >> 8) & 0xFF;
-                } else {
-                    this.data[this.offset + totalLength] = terminateValue
-                }
-            }
-
-            this.offset += totalLength
-      
-        } else if (stringType == 'pascal' || stringType == 'wide-pascal') {
-
-            if(encoding == undefined){
-                if(stringType == 'pascal'){
-                    encoding = 'utf-8'
-                }
-                if(stringType == 'wide-pascal'){
-                    encoding = 'utf-16'
-                }
-            }
-
-            const encoder = new TextEncoder();
-
-            // Calculate the length of the string based on the specified max length
-            var maxLength;
-         
-            // Encode the string in the specified encoding
-            if(lengthWriteSize == 1){
-                maxLength = 255;
-            } else if(lengthWriteSize == 2){
-                maxLength = 65535;
-            } else if(lengthWriteSize == 4){
-                maxLength = 4294967295;
-            } else {
-                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-                throw new Error("Invalid length write size: " + lengthWriteSize)
-            }
-            if(string.length > maxLength || (length || 0) > maxLength ){
-                this.errorDump ? "[Error], hexdump:\n" + this.hexdump() : ""
-                throw new Error("String outsize of max write length: " + maxLength)
-            }
-            var maxBytes = Math.min(string.length, maxLength);
-            const encodedString = encoder.encode(string.substring(0, maxBytes));
-
-            var totalLength = (length || encodedString.length) + lengthWriteSize
-
-            if(stringType == 'wide-pascal'){
-                totalLength = (length || (encodedString.length*2)) + lengthWriteSize
-            }
-
-            this.check_size(totalLength, 0, offset)  
-
-            if(lengthWriteSize == 1){
-                this.writeUByte(maxBytes, 0);
-            } else if(lengthWriteSize == 2){
-                this.writeUInt16(maxBytes, 0, endian);
-            } else if(lengthWriteSize == 4){
-                this.writeUInt32(maxBytes, 0, endian);
-            }
-        
-            // Write the string bytes to the Uint8Array
-            for (let i = 0; i < encodedString.length; i++) {
-                if (stringType == 'wide-pascal') {
-                    const charCode = encodedString[i];
-                    if(endian == "little"){
-                        this.data[this.offset + i * 2 ] = charCode & 0xFF;
-                        this.data[this.offset + i * 2 + 1] = (charCode >> 8) & 0xFF;
-                    } else {
-                        this.data[this.offset + i * 2 + 1] = charCode & 0xFF;
-                        this.data[this.offset + i * 2] = (charCode >> 8) & 0xFF;
-                    }
-                } else {
-                    this.data[this.offset + i] = encodedString[i];
-                }
-            }
-
-            this.offset += totalLength    
-        } else {
-            throw new Error('Unsupported string type: ' + stringType);
-        }
+        return rstring(this, options)
     }
 
     /**
@@ -5074,7 +4753,6 @@ export class biwriter {
     * @param {object} options - options: 
     * ```javascript
     * {
-    *  offset: 0, //byte offset from current position
     *  length: string.length,  //for fixed length, non-terminate value utf strings
     *  stringType: "utf-8", //utf-8, utf-16, pascal or wide-pascal
     *  terminateValue: 0x00, // only with stringType: "utf"
@@ -5085,7 +4763,6 @@ export class biwriter {
     * ```
     */
     string(string: string, options?: {   
-        offset?: number
         length?: number,
         stringType?: string,
         terminateValue?: number,
@@ -5101,346 +4778,315 @@ export class biwriter {
     * Writes UTF-8 (C) string
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     * 
     * @return string
     */
-    utf8string(string: string, offset?: number, length?: number, terminateValue?: number): void{
-        return this.string(string, {offset: offset, stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue})
+    utf8string(string: string, length?: number, terminateValue?: number): void{
+        return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue})
     }
 
     /**
     * Writes UTF-8 (C) string
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     * 
     * @return string
     */
-    cstring(string: string, offset?: number, length?: number, terminateValue?: number): void{
-        return this.string(string, {offset: offset, stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue})
+    cstring(string: string, length?: number, terminateValue?: number): void{
+        return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue})
     }
 
     /**
     * Writes ANSI string
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     */
-    ansistring(string: string, offset?: number, length?: number, terminateValue?: number): void{
-        return this.string(string, {offset: offset, stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue})
+    ansistring(string: string,  length?: number, terminateValue?: number): void{
+        return this.string(string, { stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue})
     }
 
     /**
     * Writes UTF-16 (Unicode) string
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     * @param {string} endian - ``big`` or ``little``
     */
-    utf16string(string: string, offset?: number, length?: number, terminateValue?: number, endian?: string): void{
-        return this.string(string, {offset: offset, stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian})
+    utf16string(string: string, length?: number, terminateValue?: number, endian?: string): void{
+        return this.string(string, {stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian})
     }
 
     /**
     * Writes UTF-16 (Unicode) string
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     * @param {string} endian - ``big`` or ``little``
     */
-    unistring(string: string, offset?: number, length?: number, terminateValue?: number, endian?: string): void{
-        return this.string(string, {offset: offset, stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian})
+    unistring(string: string, length?: number, terminateValue?: number, endian?: string): void{
+        return this.string(string, {stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian})
     }
 
     /**
     * Writes UTF-16 (Unicode) string in little endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     */
-    utf16stringle(string: string, offset?: number, length?: number, terminateValue?: number): void{
-        return this.string(string, {offset: offset, stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little"})
+    utf16stringle(string: string, length?: number, terminateValue?: number): void{
+        return this.string(string, {stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little"})
     }
 
     /**
     * Writes UTF-16 (Unicode) string in little endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     */
-    unistringle(string: string, offset?: number, length?: number, terminateValue?: number): void{
-        return this.string(string, {offset: offset, stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little"})
+    unistringle(string: string, length?: number, terminateValue?: number): void{
+        return this.string(string, {stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little"})
     }
 
     /**
     * Writes UTF-16 (Unicode) string in big endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     */
-    utf16stringbe(string: string, offset?: number, length?: number, terminateValue?: number): void{
-        return this.string(string, {offset: offset, stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big"})
+    utf16stringbe(string: string, length?: number, terminateValue?: number): void{
+        return this.string(string, {stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big"})
     }
 
     /**
     * Writes UTF-16 (Unicode) string in big endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} length - for fixed length utf strings
     * @param {number} terminateValue - for non-fixed length utf strings
     */
-    unistringbe(string: string, offset?: number, length?: number, terminateValue?: number): void{
-        return this.string(string, {offset: offset, stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big"})
+    unistringbe(string: string, length?: number, terminateValue?: number): void{
+        return this.string(string, {stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big"})
     }
 
     /**
     * Writes Pascal string
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     * @param {string} endian - ``big`` or ``little`` for 2 or 4 byte length write size
     */
-    pstring(string: string, offset?: number, lengthWriteSize?: number, endian?: string): void{
-        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: lengthWriteSize, endian: endian})
+    pstring(string: string, lengthWriteSize?: number, endian?: string): void{
+        return this.string(string, {stringType: "pascal", encoding: "utf-8", lengthWriteSize: lengthWriteSize, endian: endian})
     }
 
     /**
     * Writes Pascal string 1 byte length read
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little`` for 2 or 4 byte length write size
     */
-    pstring1(string: string, offset?: number, endian?: string): void{
-        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: endian})
+    pstring1(string: string, endian?: string): void{
+        return this.string(string, {stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: endian})
     }
 
     /**
     * Writes Pascal string 1 byte length read in little endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    pstring1le(string: string, offset?: number): void{
-        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "little"})
+    pstring1le(string: string): void{
+        return this.string(string, {stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "little"})
     }
 
     /**
     * Writes Pascal string 1 byte length read in big endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    pstring1be(string: string, offset?: number): void{
-        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "big"})
+    pstring1be(string: string): void{
+        return this.string(string, {stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "big"})
     }
 
     /**
     * Writes Pascal string 2 byte length read
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    pstring2(string: string, offset?: number, endian?: string): void{
-        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2,endian: endian})
+    pstring2(string: string, endian?: string): void{
+        return this.string(string, {stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2,endian: endian})
     }
 
     /**
     * Writes Pascal string 2 byte length read in little endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    pstring2le(string: string, offset?: number): void{
-        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "little"})
+    pstring2le(string: string): void{
+        return this.string(string, {stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "little"})
     }
 
     /**
     * Writes Pascal string 2 byte length read in big endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    pstring2be(string: string, offset?: number): void{
-        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "big"})
+    pstring2be(string: string): void{
+        return this.string(string, {stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "big"})
     }
 
     /**
     * Writes Pascal string 4 byte length read
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    pstring4(string: string, offset?: number, endian?: string): void{
-        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: endian})
+    pstring4(string: string, endian?: string): void{
+        return this.string(string, {stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: endian})
     }
 
     /**
     * Writes Pascal string 4 byte length read in big endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    pstring4be(string: string, offset?: number): void{
-        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "big"})
+    pstring4be(string: string): void{
+        return this.string(string, {stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "big"})
     }
 
     /**
     * Writes Pascal string 4 byte length read in little endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    pstring4le(string: string, offset?: number): void{
-        return this.string(string, {offset: offset, stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "little"})
+    pstring4le(string: string): void{
+        return this.string(string, {stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "little"})
     }
 
     /**
     * Writes Wide-Pascal string
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     * @param {string} endian - ``big`` or ``little``
     */
-    wpstring(string:string, offset?: number, lengthWriteSize?: number, endian?: string): void{
-        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: endian})
+    wpstring(string:string, lengthWriteSize?: number, endian?: string): void{
+        return this.string(string, {stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: endian})
     }
 
     /**
     * Writes Wide-Pascal string in big endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     */
-    wpstringbe(string:string, offset?: number, lengthWriteSize?: number): void{
-        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "big"})
+    wpstringbe(string:string, lengthWriteSize?: number): void{
+        return this.string(string, {stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "big"})
     }
 
     /**
     * Writes Wide-Pascal string in little endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {number} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     */
-    wpstringle(string:string, offset?: number, lengthWriteSize?: number): void{
-        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "little"})
+    wpstringle(string:string, lengthWriteSize?: number): void{
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "little"})
     }
 
     /**
     * Writes Wide-Pascal string
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    wpstring1(string:string, offset?: number, endian?: string): void{
-        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: endian})
+    wpstring1(string:string,  endian?: string): void{
+        return this.string(string, {stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: endian})
     }
 
     /**
     * Writes Wide-Pascal string 1 byte length read in big endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    wpstring1be(string: string, offset?: number): void{
-        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "big"})
+    wpstring1be(string: string, ): void{
+        return this.string(string, {stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "big"})
     }
 
     /**
     * Writes Wide-Pascal string 1 byte length read in little endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    wpstring1le(string: string, offset?: number): void{
-        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "little"})
+    wpstring1le(string: string,): void{
+        return this.string(string, {stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "little"})
     }
 
     /**
     * Writes Wide-Pascal string 2 byte length read
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    wpstring2(string: string, offset?: number, endian?: string): void{
-        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: endian})
+    wpstring2(string: string, endian?: string): void{
+        return this.string(string, {stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: endian})
     }
 
     /**
     * Writes Wide-Pascal string 2 byte length read in little endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    wpstring2le(string: string, offset?: number): void{
-        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "little"})
+    wpstring2le(string: string): void{
+        return this.string(string, {stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "little"})
     }
 
     /**
     * Writes Wide-Pascal string 2 byte length read in big endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    wpstring2be(string: string, offset?: number): void{
-        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "big"})
+    wpstring2be(string: string): void{
+        return this.string(string, {stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "big"})
     }
 
     /**
     * Writes Wide-Pascal string 4 byte length read
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     * @param {string} endian - ``big`` or ``little``
     */
-    wpstring4(string: string, offset?: number, endian?: string): void{
-        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: endian})
+    wpstring4(string: string, endian?: string): void{
+        return this.string(string, {stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: endian})
     }
 
     /**
     * Writes Wide-Pascal string 4 byte length read in little endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    wpstring4le(string: string, offset?: number): void{
-        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "little"})
+    wpstring4le(string: string): void{
+        return this.string(string, {stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "little"})
     }
 
     /**
     * Writes Wide-Pascal string 4 byte length read in big endian order
     * 
     * @param {string} string - text string
-    * @param {number} offset - byte offset (default last write position)
     */
-    wpstring4be(string: string, offset?: number): void{
-        return this.string(string, {offset: offset, stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "big"})
+    wpstring4be(string: string): void{
+        return this.string(string, {stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "big"})
     }
 
 }
