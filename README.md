@@ -263,6 +263,7 @@ function write_webp(data){
     default:
       break;
   }
+  bw.trim() //remove any remaining bytes
   bw.goto(4)
   bw.uint32le(bw.size - 8) //write file size
   return bw.return()
