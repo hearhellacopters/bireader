@@ -803,7 +803,7 @@ export function rint16(_this:any,unsigned?: boolean, endian?: string): number{
 }
 
 export function rhalffloat(_this:any,endian?: string): number{
-    _this.check_size(2)
+
     var uint16Value = _this.readInt16(true, (endian != undefined ? endian : _this.endian))
     const sign = (uint16Value & 0x8000) >> 15;
     const exponent = (uint16Value & 0x7C00) >> 10;
@@ -828,8 +828,7 @@ export function rhalffloat(_this:any,endian?: string): number{
         // Normalized number
         floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x0400);
     }
-    _this.offset += 2
-    _this.bitoffset = 0
+
     return floatValue;
 }
 
@@ -927,7 +926,7 @@ export function rint32(_this:any,unsigned?: boolean, endian?: string): number{
 }
 
 export function rfloat(_this:any, endian?: string): number{
-    _this.check_size(4)
+
     var uint32Value = _this.readInt32(true, (endian == undefined ? _this.endian : endian))
     // Check if the value is negative (i.e., the most significant bit is set)
     const isNegative = (uint32Value & 0x80000000) !== 0 ? 1: 0;
@@ -950,8 +949,6 @@ export function rfloat(_this:any, endian?: string): number{
         floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
     }
 
-    _this.offset += 4
-    _this.bitoffset = 0
     return floatValue;
 }
 
@@ -1092,8 +1089,7 @@ export function wdfloat(_this:any, value: number, endian?: string): void {
 }
 
 export function rdfloat(_this:any, endian?: string): number{
-    _this.check_size(8)
-   
+
     var uint64Value = _this.readInt64(true, (endian == undefined ? _this.endian : endian))
     const sign = (uint64Value & 0x8000000000000000n) >> 63n;
     const exponent = Number((uint64Value & 0x7FF0000000000000n) >> 52n) - 1023;
@@ -1119,8 +1115,6 @@ export function rdfloat(_this:any, endian?: string): number{
         floatValue = (sign == 0n ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
     }
 
-    _this.offset += 8
-    _this.bitoffset = 0
     return floatValue;
 }
 
