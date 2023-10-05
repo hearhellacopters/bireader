@@ -221,14 +221,14 @@ export class biwriter {
     }
 
     /**
-    * Change position directly to address
+    * Offset current byte or bit position
     * Note: Will extend array if strict mode is off and outside of max size
     * 
-    * @param {number} byte - byte to set to
-    * @param {number} bit - bit to set to (0-7)
+    * @param {number} bytes - Bytes to skip
+    * @param {number} bits - Bits to skip (0-7)
     */
-    seek(byte: number, bit?: number): void{
-        return this.goto(byte,bit)
+    seek(bytes: number, bits?: number): void{
+        return this.skip(bytes, bits)
     }
 
     /**

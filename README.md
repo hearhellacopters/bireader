@@ -395,7 +395,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Alias</td>
-    <td>jump(<b>bytes</b>, bits)</td>
+    <td>seek(<b>byte</b>, bit)<br>jump(<b>bytes</b>, bits)</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -405,7 +405,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>seek(<b>byte</b>, bit)<br>pointer(<b>byte</b>, bit)<br>warp(<b>byte</b>, bit)</td>
+    <td>pointer(<b>byte</b>, bit)<br>warp(<b>byte</b>, bit)</td>
   </tr>
   <tr>
     <td>Name</td>
