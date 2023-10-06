@@ -16,10 +16,8 @@ export declare class biwriter {
     strict: boolean;
     errorDump: boolean;
     data: any;
-    private isBuffer;
     private isBufferOrUint8Array;
     extendArray(to_padd: number): void;
-    private check_size;
     /**
     * Binary writer, includes bitfields and strings
     *
@@ -2626,14 +2624,14 @@ export declare class biwriter {
     * @param {number} value - value as int
     * @param {string} endian - ``big`` or ``little`
     */
-    ushort(value: number, offset?: number, endian?: string): void;
+    ushort(value: number, endian?: string): void;
     /**
     * Write unsigned int16
     *
     * @param {number} value - value as int
     * @param {string} endian - ``big`` or ``little`
     */
-    uword(value: number, offset?: number, endian?: string): void;
+    uword(value: number, endian?: string): void;
     /**
     * Write signed int16
     *
@@ -2763,13 +2761,13 @@ export declare class biwriter {
     *
     * @param {number} value - value as int
     */
-    writeHalfFloatBE(value: number, offset?: number): void;
+    writeHalfFloatBE(value: number): void;
     /**
     * Writes half float
     *
     * @param {number} value - value as int
     */
-    halffloatbe(value: number, offset?: number): void;
+    halffloatbe(value: number): void;
     /**
     * Writes half float
     *
@@ -2972,13 +2970,13 @@ export declare class biwriter {
     *
     * @param {number} value - value as int
     */
-    writeUInt32BE(value: number, offset?: number): void;
+    writeUInt32BE(value: number): void;
     /**
     * Write unsigned int32
     *
     * @param {number} value - value as int
     */
-    uint32be(value: number, offset?: number): void;
+    uint32be(value: number): void;
     /**
     * Write unsigned int32
     *

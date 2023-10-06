@@ -1,4 +1,6 @@
 /// <reference types="node" />
+export declare function isBuffer(obj: Array<Buffer | Uint8Array>): boolean;
+export declare function check_size(_this: any, write_bytes: number, write_bit?: number, offset?: number): number;
 export declare function buffcheck(obj: Array<Buffer | Uint8Array>): boolean;
 export declare function arraybuffcheck(_this: any, obj: Array<Buffer | Uint8Array>): boolean;
 export declare function extendarray(_this: any, to_padd: number): void;

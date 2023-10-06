@@ -1,11 +1,9 @@
 import {
-    buffcheck,
     arraybuffcheck,
     extendarray,
     skip,
     goto,
     remove,
-    checkSize,
     addData,
     hexDump,
     XOR,
@@ -52,20 +50,12 @@ export class biwriter {
     public errorDump: boolean = true;
     public data: any=[];
 
-    private isBuffer(obj: Array<Buffer|Uint8Array>): boolean {
-        return buffcheck(obj)
-    }
-
     private isBufferOrUint8Array(obj:  Array<Buffer|Uint8Array>): boolean {
         return arraybuffcheck(this,obj)
     }
 
     extendArray(to_padd: number): void {
         return extendarray(this, to_padd)
-    }
-
-    private check_size(write_bytes:number, write_bit?:number, offset?:number): number{
-        return checkSize(this,write_bytes||0,write_bit||0,offset||this.offset)
     }
 
     /**
@@ -3781,7 +3771,7 @@ export class biwriter {
     * @param {number} value - value as int 
     * @param {string} endian - ``big`` or ``little`
     */
-    ushort(value: number, offset?: number, endian?: string): void {
+    ushort(value: number, endian?: string): void {
         return this.writeInt16(value, true, endian)
     }
 
@@ -3791,7 +3781,7 @@ export class biwriter {
     * @param {number} value - value as int 
     * @param {string} endian - ``big`` or ``little`
     */
-    uword(value: number, offset?: number, endian?: string): void {
+    uword(value: number, endian?: string): void {
         return this.writeInt16(value, true, endian)
     }
 
@@ -3988,7 +3978,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     */
-    writeHalfFloatBE(value: number, offset?: number): void{
+    writeHalfFloatBE(value: number): void{
         return this.writeHalfFloat(value, "big")
     }
 
@@ -3997,7 +3987,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     */
-    halffloatbe(value: number, offset?: number): void{
+    halffloatbe(value: number): void{
         return this.writeHalfFloat(value, "big")
     }
 
@@ -4297,7 +4287,7 @@ export class biwriter {
     *
     * @param {number} value - value as int 
     */
-    writeUInt32BE(value: number, offset?: number): void {
+    writeUInt32BE(value: number): void {
         return this.writeInt32(value, true, "big")
     }
 
@@ -4306,7 +4296,7 @@ export class biwriter {
     *
     * @param {number} value - value as int 
     */
-    uint32be(value: number, offset?: number): void {
+    uint32be(value: number): void {
         return this.writeInt32(value, true, "big")
     }
 

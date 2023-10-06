@@ -1,6 +1,6 @@
 {
   "name": "bireader",
-  "version": "1.0.25",
+  "version": "1.0.26",
   "description": "Read and write data in binary",
   "types": "./lib/esm/types/index.d.ts",
   "module": "./lib/esm/index.mjs",
@@ -9,7 +9,8 @@
     "lib": "src"
   },
   "files": [
-    "lib/**/*"
+    "lib",
+    "src"
   ],
   "repository": {
     "type": "git",
@@ -26,9 +27,9 @@
   "scripts": {
     "clean": "rmdir /s lib",
     "build": "npm run clean && npm run build:esm && npm run move && npm run build:cjs",
-    "build:esm": "tsc -p ./tsconfig.esm.json",
+    "build:esm": "tsc --module esnext --outDir lib/esm",
     "move": "cd ./lib/esm/ && ren index.js index.mjs && cd ../../",
-    "build:cjs": "tsc -p ./tsconfig.cjs.json",
+    "build:cjs": "tsc --module commonjs --outDir lib/cjs",
     "prepack": ""
   },
   "keywords": [
@@ -49,7 +50,9 @@
   },
   "homepage": "https://github.com/hearhellacopters/bireader#readme",
   "devDependencies": {
+    "@types/mocha": "^10.0.2",
     "@types/node": "^20.7.0",
+    "@typescript/lib-dom": "npm:@types/web@^0.0.115",
     "typescript": "^5.2.2"
   },
   "engines": {

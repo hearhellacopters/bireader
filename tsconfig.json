@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+      "target": "es2020",
+      "declaration": true,
+      "declarationMap": true,
+      "sourceMap": true,
+      "strict": true,
+      "noUnusedLocals": true,
+      "noUnusedParameters": true,
+      "noImplicitReturns": true,
+      "noFallthroughCasesInSwitch": true,
+      "types": ["node", "mocha"],
+      "esModuleInterop": true
+    },
+    "files": [
+      "index.ts",
+      "src/common.ts",
+      "src/reader.ts", 
+      "src/writer.ts"
+    ]
+  }

@@ -16,10 +16,8 @@ export declare class bireader {
     strict: boolean;
     errorDump: boolean;
     data: any;
-    private isBuffer;
     private isBufferOrUint8Array;
     extendArray(to_padd: number): void;
-    private check_size;
     /**
     * Binary reader, includes bitfields and strings
     *

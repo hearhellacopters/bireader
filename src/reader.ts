@@ -1,11 +1,9 @@
 import {
-    buffcheck,
     arraybuffcheck,
     extendarray,
     skip,
     goto,
     remove,
-    checkSize,
     addData,
     hexDump,
     XOR,
@@ -52,20 +50,12 @@ export class bireader {
     public errorDump: boolean = true;
     public data: any=[];
 
-    private isBuffer(obj: Array<Buffer|Uint8Array>): boolean {
-        return buffcheck(obj)
-    }
-
     private isBufferOrUint8Array(obj:  Array<Buffer|Uint8Array>): boolean {
         return arraybuffcheck(this,obj)
     }
 
     extendArray(to_padd: number): void {
         return extendarray(this, to_padd)
-    }
-
-    private check_size(write_bytes:number, write_bit?:number, offset?:number): number{
-        return checkSize(this,write_bytes||0,write_bit||0,offset||this.offset)
     }
 
     /**
