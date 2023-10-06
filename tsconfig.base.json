@@ -13,5 +13,10 @@
       "experimentalDecorators": true,
       "allowSyntheticDefaultImports": true
     },
-    "files": ["index.ts"]
+    "files": [
+      "index.ts",
+      "src/common.ts",
+      "src/reader.ts", 
+      "src/writer.ts"
+    ]
   }

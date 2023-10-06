@@ -1,2 +1,2 @@
-export {bireader} from './src/reader';
-export {biwriter} from './src/writer';
+export {bireader} from './src/reader.js';
+export {biwriter} from './src/writer.js';

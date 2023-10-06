@@ -33,7 +33,7 @@ import {
     wdfloat,
     wstring,
     rstring
-    } from './common'
+    } from './common.js'
 /**
 * Binary writer, includes bitfields and strings
 *
