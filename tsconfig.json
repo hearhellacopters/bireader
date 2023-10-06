@@ -13,9 +13,6 @@
       "esModuleInterop": true
     },
     "files": [
-      "index.ts",
-      "src/common.ts",
-      "src/reader.ts", 
-      "src/writer.ts"
+      "src/index.ts"
     ]
   }
