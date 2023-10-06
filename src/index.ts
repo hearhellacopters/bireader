@@ -49,7 +49,7 @@ export function checkSize(_this: any, write_bytes:number, write_bit?:number, off
 
 export function skip(_this: any, bytes: number, bits?: number): void{
     const new_size = (((bytes || 0) + _this.offset) + Math.ceil((_this.bitoffset + (bits||0)) /8) )
-    _this.check_size(_this, bytes || 0, bits || 0)
+    check_size(_this, bytes || 0, bits || 0)
     if(new_size > _this.size){
         if( _this.strict == false){
             _this.extendArray(new_size - _this.size)
@@ -736,7 +736,7 @@ export function rbit(_this:any,bits?: number, unsigned?: boolean, endian?: strin
 }
 
 export function wbyte(_this:any,value: number, unsigned?: boolean): void{
-    _this.check_size(_this,1,0)
+    check_size(_this,1,0)
     if (unsigned == true) {
         if (value< 0 || value > 255) {
             _this.errorDump ? "[Error], hexdump:\n" + _this.hexdump() : ""
@@ -756,7 +756,7 @@ export function wbyte(_this:any,value: number, unsigned?: boolean): void{
 }
 
 export function rbyte(_this:any,unsigned?: boolean): number{
-    _this.check_size(_this,1)
+    check_size(_this,1)
     var read = <unknown> _this.data[_this.offset] as number
     _this.offset += 1
     _this.bitoffset = 0
@@ -768,7 +768,7 @@ export function rbyte(_this:any,unsigned?: boolean): number{
 }
 
 export function wint16(_this:any, value: number, unsigned?: boolean, endian?: string): void {
-    _this.check_size(_this,2,0)
+    check_size(_this,2,0)
     if (unsigned == true) {
         if (value< 0 || value > 65535) {
             _this.errorDump ? "[Error], hexdump:\n" + _this.hexdump() : ""
@@ -794,7 +794,7 @@ export function wint16(_this:any, value: number, unsigned?: boolean, endian?: st
 }
 
 export function rint16(_this:any,unsigned?: boolean, endian?: string): number{
-    _this.check_size(_this,2)
+    check_size(_this,2)
     var read: number;
     if((endian != undefined ? endian : _this.endian)  == "little"){
         read = ((<unknown>_this.data[_this.offset + 1] as number & 0xFFFF) << 8) | (<unknown>_this.data[_this.offset] as number & 0xFFFF);
@@ -841,7 +841,7 @@ export function rhalffloat(_this:any,endian?: string): number{
 }
 
 export function whalffloat(_this:any,value: number, endian?: string): void {
-    _this.check_size(_this,2,0)
+    check_size(_this,2,0)
     const maxValue = 65504;
     const minValue = 5.96e-08;
     if(value < minValue || value > maxValue){
@@ -887,7 +887,7 @@ export function whalffloat(_this:any,value: number, endian?: string): void {
 }
 
 export function wint32(_this:any, value: number, unsigned?: boolean, endian?: string): void {
-    _this.check_size(_this,4,0)
+    check_size(_this,4,0)
     if (unsigned == true) {
         if (value < 0 || value > 4294967295) {
             _this.errorDump ? "[Error], hexdump:\n" + _this.hexdump() : ""
@@ -917,7 +917,7 @@ export function wint32(_this:any, value: number, unsigned?: boolean, endian?: st
 }
 
 export function rint32(_this:any,unsigned?: boolean, endian?: string): number{
-    _this.check_size(_this,4)
+    check_size(_this,4)
     var read: number;
     if((endian != undefined ? endian : _this.endian) == "little"){
         read = (((<unknown>_this.data[_this.offset + 3] as number & 0xFF)<< 24) | ((<unknown>_this.data[_this.offset + 2] as number & 0xFF) << 16) | ((<unknown>_this.data[_this.offset + 1] as number & 0xFF) << 8) | (<unknown>_this.data[_this.offset] as number & 0xFF))
@@ -961,7 +961,7 @@ export function rfloat(_this:any, endian?: string): number{
 }
 
 export function wfloat(_this:any, value: number, endian?: string): void{
-    _this.check_size(_this,4,0)
+    check_size(_this,4,0)
     const maxValue = 3.402823466e+38
     const minValue = 1.175494351e-38
     if(value < minValue || value > maxValue){
@@ -985,7 +985,7 @@ export function wfloat(_this:any, value: number, endian?: string): void{
 }
 
 export function rint64(_this:any, unsigned?: boolean, endian?: string): bigint {
-    _this.check_size(_this,8)
+    check_size(_this,8)
 
     // Convert the byte array to a BigInt
     let value: bigint = BigInt(0);
@@ -1016,7 +1016,7 @@ export function rint64(_this:any, unsigned?: boolean, endian?: string): bigint {
 }
 
 export function wint64(_this:any, value: number, unsigned?: boolean, endian?: string): void {
-    _this.check_size(_this,8,0)
+    check_size(_this,8,0)
     if (unsigned == true) {
         if (value < 0 || value > Math.pow(2, 64) - 1) {
             _this.errorDump ? "[Error], hexdump:\n" + _this.hexdump() : ""
@@ -1070,7 +1070,7 @@ export function wint64(_this:any, value: number, unsigned?: boolean, endian?: st
 }
 
 export function wdfloat(_this:any, value: number, endian?: string): void {
-    _this.check_size(_this,8,0)
+    check_size(_this,8,0)
     const maxValue = 1.7976931348623158e308;
     const minValue = 2.2250738585072014e-308;
     if(value < minValue || value > maxValue){
@@ -1147,7 +1147,7 @@ export function rstring(_this:any, options?: {
     var terminate = terminateValue
 
     if(length != undefined){
-        _this.check_size(_this,length)
+        check_size(_this,length)
     }
 
     if(typeof terminateValue == "number"){
@@ -1304,7 +1304,7 @@ export function wstring(_this:any, string: string, options?: {
             totalLength = (length || (encodedString.length*2)) + (terminateValue != undefined ? 2 : 0)
         }
 
-        _this.check_size(_this,totalLength, 0) 
+        check_size(_this,totalLength, 0) 
     
         // Write the string bytes to the Uint8Array
         for (let i = 0; i < encodedString.length; i++) {
@@ -1374,7 +1374,7 @@ export function wstring(_this:any, string: string, options?: {
             totalLength = (length || (encodedString.length*2)) + lengthWriteSize
         }
 
-        _this.check_size(_this,totalLength, 0)  
+        check_size(_this,totalLength, 0)  
 
         if(lengthWriteSize == 1){
             _this.writeUByte(maxBytes);
