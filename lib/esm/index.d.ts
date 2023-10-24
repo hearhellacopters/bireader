@@ -1,8 +1,8 @@
 /// <reference types="node" />
-export declare function isBuffer(obj: Array<Buffer | Uint8Array>): boolean;
+export declare function isBuffer(obj: Buffer | Uint8Array): boolean;
 export declare function check_size(_this: any, write_bytes: number, write_bit?: number, offset?: number): number;
-export declare function buffcheck(obj: Array<Buffer | Uint8Array>): boolean;
-export declare function arraybuffcheck(_this: any, obj: Array<Buffer | Uint8Array>): boolean;
+export declare function buffcheck(obj: Buffer | Uint8Array): boolean;
+export declare function arraybuffcheck(_this: any, obj: Buffer | Uint8Array): boolean;
 export declare function extendarray(_this: any, to_padd: number): void;
 export declare function checkSize(_this: any, write_bytes: number, write_bit?: number, offset?: number): number;
 export declare function skip(_this: any, bytes: number, bits?: number): void;
@@ -83,7 +83,7 @@ export declare class bireader {
     * @param {string} endianness - Endianness ```big``` or ```little``` (default ```little```)
     * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default true)
     */
-    constructor(data: Array<Buffer | Uint8Array>, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean);
+    constructor(data: Buffer | Uint8Array, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean);
     /**
     *
     * Change endian, defaults to little
@@ -3400,7 +3400,7 @@ export declare class biwriter {
     * @param {string} endianness - Endianness ``big`` or ``little`` (default little)
     * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default false)
     */
-    constructor(data: Array<Uint8Array>, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean);
+    constructor(data: Buffer | Uint8Array, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean);
     /**
     * Change Endian (default little)
     *
