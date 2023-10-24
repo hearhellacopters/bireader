@@ -1,4 +1,4 @@
-export function isBuffer(obj: Array<Buffer|Uint8Array>): boolean {
+export function isBuffer(obj: Buffer|Uint8Array): boolean {
     return buffcheck(obj)
 }
 
@@ -6,11 +6,11 @@ export function check_size(_this: any, write_bytes:number, write_bit?:number, of
     return checkSize(_this,write_bytes||0,write_bit||0,offset||_this.offset)
 }
 
-export function buffcheck(obj: Array<Buffer|Uint8Array>): boolean {
+export function buffcheck(obj: Buffer|Uint8Array): boolean {
     return (typeof Buffer !== 'undefined' && obj instanceof Buffer);
 }
 
-export function arraybuffcheck(_this: any, obj:  Array<Buffer|Uint8Array>): boolean {
+export function arraybuffcheck(_this: any, obj:  Buffer|Uint8Array): boolean {
     return obj instanceof Uint8Array || isBuffer(obj);
 }
 
@@ -1425,7 +1425,7 @@ export class bireader {
     public errorDump: boolean = true;
     public data: any=[];
 
-    private isBufferOrUint8Array(obj:  Array<Buffer|Uint8Array>): boolean {
+    private isBufferOrUint8Array(obj:Buffer|Uint8Array): boolean {
         return arraybuffcheck(this,obj)
     }
 
@@ -1442,7 +1442,7 @@ export class bireader {
     * @param {string} endianness - Endianness ```big``` or ```little``` (default ```little```)
     * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default true)
     */
-    constructor(data: Array<Buffer|Uint8Array>, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean) {
+    constructor(data: Buffer|Uint8Array, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean) {
         if(endianness != undefined && typeof endianness != "string"){
             throw new Error("Endian must be big or little")
         }
@@ -6245,7 +6245,7 @@ export class biwriter {
     public errorDump: boolean = true;
     public data: any=[];
 
-    private isBufferOrUint8Array(obj:  Array<Buffer|Uint8Array>): boolean {
+    private isBufferOrUint8Array(obj:  Buffer|Uint8Array): boolean {
         return arraybuffcheck(this,obj)
     }
 
@@ -6262,7 +6262,7 @@ export class biwriter {
     * @param {string} endianness - Endianness ``big`` or ``little`` (default little)
     * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default false)
     */
-    constructor(data: Array<Uint8Array>, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean) {
+    constructor(data: Buffer|Uint8Array, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean) {
         if(endianness != undefined && typeof endianness != "string"){
             throw new Error("endianness must be big or little")
         }
