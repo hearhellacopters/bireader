@@ -361,21 +361,21 @@ export declare class bireader {
     * @param {boolean} consume - Move position to end of removed data (default false)
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    delete(startOffset?: number, endOffset?: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    delete(startOffset?: number, endOffset?: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Deletes part of data from current byte position to end, returns removed
     * Note: Errors in strict mode
     *
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    clip(): Array<Buffer | Uint8Array>;
+    clip(): Buffer | Uint8Array;
     /**
     * Deletes part of data from current byte position to end, returns removed
     * Note: Errors in strict mode
     *
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    trim(): Array<Buffer | Uint8Array>;
+    trim(): Buffer | Uint8Array;
     /**
     * Deletes part of data from current byte position to supplied length, returns removed
     * Note: Errors in strict mode
@@ -384,7 +384,7 @@ export declare class bireader {
     * @param {boolean} consume - Move position to end of removed data (default false)
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    crop(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    crop(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Deletes part of data from current position to supplied length, returns removed
     * Note: Only works in strict mode
@@ -393,7 +393,7 @@ export declare class bireader {
     * @param {boolean} consume - Move position to end of removed data (default false)
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    drop(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    drop(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Returns part of data from current byte position to end of data unless supplied
     *
@@ -403,7 +403,7 @@ export declare class bireader {
     * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
     * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
-    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Array<Buffer | Uint8Array>;
+    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Buffer | Uint8Array;
     /**
     * Returns part of data from current byte position to end of data unless supplied
     *
@@ -413,7 +413,7 @@ export declare class bireader {
     * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
     * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
-    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Array<Buffer | Uint8Array>;
+    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Buffer | Uint8Array;
     /**
     * Extract data from current position to length supplied
     * Note: Does not affect supplied data
@@ -422,7 +422,7 @@ export declare class bireader {
     * @param {number} consume - Moves offset to end of length
     * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
-    extract(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    extract(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Extract data from current position to length supplied
     * Note: Does not affect supplied data
@@ -431,7 +431,7 @@ export declare class bireader {
     * @param {number} consume - Moves offset to end of length
     * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
-    slice(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    slice(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Extract data from current position to length supplied
     * Note: Does not affect supplied data
@@ -440,7 +440,7 @@ export declare class bireader {
     * @param {number} consume - Moves offset to end of length
     * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
-    wrap(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    wrap(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Inserts data into data
     * Note: Must be same data type as supplied data. Errors on strict mode.
@@ -514,13 +514,13 @@ export declare class bireader {
     *
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    get(): Array<Buffer | Uint8Array>;
+    get(): Buffer | Uint8Array;
     /**
     * Returns current data
     *
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    return(): Array<Buffer | Uint8Array>;
+    return(): Buffer | Uint8Array;
     /**
     * removes data
     */
@@ -3683,21 +3683,21 @@ export declare class biwriter {
     * @param {boolean} consume - Move position to end of removed data (default false)
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    delete(startOffset?: number, endOffset?: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    delete(startOffset?: number, endOffset?: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Deletes part of data from current byte position to end, returns removed
     * Note: Errors in strict mode
     *
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    clip(): Array<Buffer | Uint8Array>;
+    clip(): Buffer | Uint8Array;
     /**
     * Deletes part of data from current byte position to end, returns removed
     * Note: Errors in strict mode
     *
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    trim(): Array<Buffer | Uint8Array>;
+    trim(): Buffer | Uint8Array;
     /**
     * Deletes part of data from current byte position to supplied length, returns removed
     * Note: Errors in strict mode
@@ -3706,7 +3706,7 @@ export declare class biwriter {
     * @param {boolean} consume - Move position to end of removed data (default false)
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    crop(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    crop(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Deletes part of data from current position to supplied length, returns removed
     * Note: Only works in strict mode
@@ -3715,7 +3715,7 @@ export declare class biwriter {
     * @param {boolean} consume - Move position to end of removed data (default false)
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
     */
-    drop(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    drop(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Returns part of data from current byte position to end of data unless supplied
     *
@@ -3725,7 +3725,7 @@ export declare class biwriter {
     * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
     * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
-    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Array<Buffer | Uint8Array>;
+    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Buffer | Uint8Array;
     /**
     * Returns part of data from current byte position to end of data unless supplied
     *
@@ -3735,7 +3735,7 @@ export declare class biwriter {
     * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
     * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
-    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Array<Buffer | Uint8Array>;
+    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Buffer | Uint8Array;
     /**
     * Extract data from current position to length supplied
     * Note: Does not affect supplied data
@@ -3744,7 +3744,7 @@ export declare class biwriter {
     * @param {number} consume - Moves offset to end of length
     * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
-    extract(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    extract(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Extract data from current position to length supplied
     * Note: Does not affect supplied data
@@ -3753,7 +3753,7 @@ export declare class biwriter {
     * @param {number} consume - Moves offset to end of length
     * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
-    slice(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    slice(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Extract data from current position to length supplied
     * Note: Does not affect supplied data
@@ -3762,7 +3762,7 @@ export declare class biwriter {
     * @param {number} consume - Moves offset to end of length
     * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
     */
-    wrap(length: number, consume?: boolean): Array<Buffer | Uint8Array>;
+    wrap(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Inserts data into data
     * Note: Must be same data type as supplied data. Errors on strict mode.
@@ -3836,13 +3836,13 @@ export declare class biwriter {
     *
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    get(): Array<Buffer | Uint8Array>;
+    get(): Buffer | Uint8Array;
     /**
     * Returns current data
     *
     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
     */
-    return(): Array<Buffer | Uint8Array>;
+    return(): Buffer | Uint8Array;
     /**
     * removes data
     */
