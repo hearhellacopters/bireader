@@ -1,4 +1,2 @@
 node_modules/
-lib/
-test_reader.js
-test_writer.js
+test*
