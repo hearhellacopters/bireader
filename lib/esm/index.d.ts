@@ -601,6 +601,16 @@ export declare class bireader {
     *
     * Note: When returning to a byte read, remaining bits are dropped
     *
+    * @param {number} bits - bits to read
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
+    */
+    ubit(bits: number, endian?: string): number;
+    /**
+    * Bit field reader
+    *
+    * Note: When returning to a byte read, remaining bits are dropped
+    *
     * @param {boolean} unsigned - if the value is unsigned
     * @param {string} endian - ``big`` or ``little`
     * @returns number
@@ -3919,6 +3929,17 @@ export declare class biwriter {
     * @returns number
     */
     bit(value: number, bits: number, unsigned?: boolean, endian?: string): void;
+    /**
+    * Bit field writer
+    *
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int
+    * @param {number} bits - bits to write
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
+    */
+    ubit(value: number, bits: number, endian?: string): void;
     /**
     * Bit field writer
     *

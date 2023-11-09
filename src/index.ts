@@ -799,7 +799,7 @@ export function rint16(_this:any,unsigned?: boolean, endian?: string): number{
     if((endian != undefined ? endian : _this.endian)  == "little"){
         read = ((<unknown>_this.data[_this.offset + 1] as number & 0xFFFF) << 8) | (<unknown>_this.data[_this.offset] as number & 0xFFFF);
     } else {
-        read = ((<unknown>_this.data[_this.offset] as number& 0xFFFF) << 8) | (<unknown>_this.data[_this.offset + 1] as number& 0xFFFF);
+        read = ((<unknown>_this.data[_this.offset] as number & 0xFFFF) << 8) | (<unknown>_this.data[_this.offset + 1] as number & 0xFFFF);
     }
     _this.offset += 2
     _this.bitoffset = 0
@@ -920,7 +920,7 @@ export function rint32(_this:any,unsigned?: boolean, endian?: string): number{
     check_size(_this,4)
     var read: number;
     if((endian != undefined ? endian : _this.endian) == "little"){
-        read = (((<unknown>_this.data[_this.offset + 3] as number & 0xFF)<< 24) | ((<unknown>_this.data[_this.offset + 2] as number & 0xFF) << 16) | ((<unknown>_this.data[_this.offset + 1] as number & 0xFF) << 8) | (<unknown>_this.data[_this.offset] as number & 0xFF))
+        read = (((<unknown>_this.data[_this.offset + 3] as number & 0xFF) << 24) | ((<unknown>_this.data[_this.offset + 2] as number & 0xFF) << 16) | ((<unknown>_this.data[_this.offset + 1] as number & 0xFF) << 8) | (<unknown>_this.data[_this.offset] as number & 0xFF))
     } else {
         read = ((<unknown>_this.data[_this.offset] as number & 0xFF) << 24) | ((<unknown>_this.data[_this.offset + 1] as number & 0xFF) << 16) | ((<unknown>_this.data[_this.offset + 2] as number & 0xFF) << 8) | (<unknown>_this.data[_this.offset + 3] as number & 0xFF)
     }
@@ -991,7 +991,7 @@ export function rint64(_this:any, unsigned?: boolean, endian?: string): bigint {
     let value: bigint = BigInt(0);
     if((endian == undefined ? _this.endian : endian) == "little"){
         for (let i = 0; i < 8; i++) {
-            value = value | BigInt((<unknown>_this.data[_this.offset]  as number & 0xFF)) << BigInt(8 * i);
+            value = value | BigInt((<unknown>_this.data[_this.offset] as number & 0xFF)) << BigInt(8 * i);
             _this.offset += 1
         }
         if(unsigned == undefined || unsigned == false){
@@ -2409,6 +2409,19 @@ export class bireader {
     */
     bit(bits: number, unsigned?: boolean, endian?: string): number{
         return this.readBit(bits,unsigned,endian)
+    }
+
+    /**
+    * Bit field reader
+    * 
+    * Note: When returning to a byte read, remaining bits are dropped
+    *
+    * @param {number} bits - bits to read
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
+    */
+    ubit(bits: number, endian?: string): number{
+        return this.readBit(bits,true,endian)
     }
 
     /**
@@ -7236,6 +7249,20 @@ export class biwriter {
     bit(value:number, bits: number, unsigned?: boolean, endian?: string): void{
         return this.writeBit(value, bits, unsigned, endian)
     }  
+
+    /**
+    * Bit field writer
+    * 
+    * Note: When returning to a byte write, remaining bits are dropped
+    *
+    * @param {number} value - value as int 
+    * @param {number} bits - bits to write
+    * @param {string} endian - ``big`` or ``little`
+    * @returns number
+    */
+    ubit(value:number, bits: number, endian?: string): void{
+        return this.writeBit(value, bits, true, endian)
+    } 
     
     /**
     * Bit field writer
