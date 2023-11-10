@@ -49,7 +49,7 @@ export function checkSize(_this: any, write_bytes:number, write_bit?:number, off
 
 export function skip(_this: any, bytes: number, bits?: number): void{
     var new_size = (((bytes || 0) + _this.offset) + Math.ceil((_this.bitoffset + (bits||0)) /8) )
-    if(bits && bits < 0){
+    if( bits && bits < 0){
         new_size = Math.floor(((((bytes || 0) + _this.offset) * 8) + _this.bitoffset + (bits||0)) / 8)
     }
 
@@ -62,13 +62,9 @@ export function skip(_this: any, bytes: number, bits?: number): void{
         }
     }
 
-    if(bits && bits < 0){
-        _this.bitoffset = ((_this.bitoffset + (bits || 0) % 8) + 8) % 8;
-        _this.offset = new_size;
-    } else {
-        _this.bitoffset += (bits || 0) % 8;
-        _this.offset += (bytes || 0);
-    } 
+    const total_bits = (((bytes || 0) + _this.offset) * 8) + (bits || 0) + _this.bitoffset 
+    _this.bitoffset = total_bits % 8;
+    _this.offset = Math.floor(total_bits / 8);
 }
 
 export function goto(_this: any,byte: number, bit?: number): void{
