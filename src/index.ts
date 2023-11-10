@@ -61,10 +61,17 @@ export function skip(_this: any, bytes: number, bits?: number): void{
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: Seek of range of data: seek " + new_size + " of " + _this.size)
         }
     }
-
-    const total_bits = (((bytes || 0) + _this.offset) * 8) + (bits || 0) + _this.bitoffset 
-    _this.bitoffset = total_bits % 8;
-    _this.offset = Math.floor(total_bits / 8);
+    
+    // Adjust byte offset based on bit overflow
+    _this.offset += Math.floor((_this.bitoffset + bits) / 8);
+    // Adjust bit offset
+    _this.bitoffset = (_this.bitoffset + bits + 64) % 8;
+    // Adjust byte offset based on byte overflow
+    _this.offset += bytes;
+    // Ensure bit offset stays between 0-7
+    _this.bitoffset = Math.min(Math.max(_this.bitoffset, 0), 7);
+    // Ensure offset doesn't go negative
+    _this.offset = Math.max(_this.offset, 0);
 }
 
 export function goto(_this: any,byte: number, bit?: number): void{
