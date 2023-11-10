@@ -48,8 +48,11 @@ export function checkSize(_this: any, write_bytes:number, write_bit?:number, off
 }
 
 export function skip(_this: any, bytes: number, bits?: number): void{
-    const new_size = (((bytes || 0) + _this.offset) + Math.ceil((_this.bitoffset + (bits||0)) /8) )
-    check_size(_this, bytes || 0, bits || 0)
+    var new_size = (((bytes || 0) + _this.offset) + Math.ceil((_this.bitoffset + (bits||0)) /8) )
+    if(bits && bits < 0){
+        new_size = Math.floor(((((bytes || 0) + _this.offset) * 8) + _this.bitoffset + (bits||0)) / 8)
+    }
+
     if(new_size > _this.size){
         if( _this.strict == false){
             _this.extendArray(new_size - _this.size)
@@ -58,8 +61,14 @@ export function skip(_this: any, bytes: number, bits?: number): void{
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: Seek of range of data: seek " + new_size + " of " + _this.size)
         }
     }
-    _this.bitoffset += (bits || 0) % 8
-    _this.offset += (bytes || 0)
+
+    if(bits && bits < 0){
+        _this.bitoffset = ((_this.bitoffset + (bits || 0) % 8) + 8) % 8;
+        _this.offset = new_size;
+    } else {
+        _this.bitoffset += (bits || 0) % 8;
+        _this.offset += (bytes || 0);
+    } 
 }
 
 export function goto(_this: any,byte: number, bit?: number): void{
