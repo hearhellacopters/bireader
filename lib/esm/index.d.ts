@@ -1,60 +1,4 @@
 /// <reference types="node" />
-export declare function isBuffer(obj: Buffer | Uint8Array): boolean;
-export declare function check_size(_this: any, write_bytes: number, write_bit?: number, offset?: number): number;
-export declare function buffcheck(obj: Buffer | Uint8Array): boolean;
-export declare function arraybuffcheck(_this: any, obj: Buffer | Uint8Array): boolean;
-export declare function extendarray(_this: any, to_padd: number): void;
-export declare function checkSize(_this: any, write_bytes: number, write_bit?: number, offset?: number): number;
-export declare function skip(_this: any, bytes: number, bits?: number): void;
-export declare function goto(_this: any, byte: number, bit?: number): void;
-export declare function remove(_this: any, startOffset?: number, endOffset?: number, consume?: boolean, remove?: boolean, fillValue?: number): any;
-export declare function addData(_this: any, data: Buffer | Uint8Array, consume?: boolean, offset?: number, repalce?: boolean): void;
-export declare function hexDump(_this: any, options?: {
-    length?: number;
-    startByte?: number;
-    supressUnicode?: boolean;
-}): void;
-export declare function AND(_this: any, and_key: any, start?: number, end?: number, consume?: boolean): any;
-export declare function OR(_this: any, or_key: any, start?: number, end?: number, consume?: boolean): any;
-export declare function XOR(_this: any, xor_key: any, start?: number, end?: number, consume?: boolean): any;
-export declare function NOT(_this: any, start?: number, end?: number, consume?: boolean): any;
-export declare function LSHIFT(_this: any, shift_key: any, start?: number, end?: number, consume?: boolean): any;
-export declare function RSHIFT(_this: any, shift_key: any, start?: number, end?: number, consume?: boolean): any;
-export declare function ADD(_this: any, add_key: any, start?: number, end?: number, consume?: boolean): any;
-export declare function wbit(_this: any, value: number, bits: number, unsigned?: boolean, endian?: string): void;
-export declare function rbit(_this: any, bits?: number, unsigned?: boolean, endian?: string): number;
-export declare function wbyte(_this: any, value: number, unsigned?: boolean): void;
-export declare function rbyte(_this: any, unsigned?: boolean): number;
-export declare function wint16(_this: any, value: number, unsigned?: boolean, endian?: string): void;
-export declare function rint16(_this: any, unsigned?: boolean, endian?: string): number;
-export declare function rhalffloat(_this: any, endian?: string): number;
-export declare function whalffloat(_this: any, value: number, endian?: string): void;
-export declare function wint32(_this: any, value: number, unsigned?: boolean, endian?: string): void;
-export declare function rint32(_this: any, unsigned?: boolean, endian?: string): number;
-export declare function rfloat(_this: any, endian?: string): number;
-export declare function wfloat(_this: any, value: number, endian?: string): void;
-export declare function rint64(_this: any, unsigned?: boolean, endian?: string): bigint;
-export declare function wint64(_this: any, value: number, unsigned?: boolean, endian?: string): void;
-export declare function wdfloat(_this: any, value: number, endian?: string): void;
-export declare function rdfloat(_this: any, endian?: string): number;
-export declare function rstring(_this: any, options?: {
-    length?: number;
-    stringType?: string;
-    terminateValue?: number;
-    lengthReadSize?: number;
-    stripNull?: boolean;
-    encoding?: string;
-    endian?: string;
-}): string;
-export declare function wstring(_this: any, string: string, options?: {
-    length?: number;
-    stringType?: string;
-    terminateValue?: number;
-    lengthWriteSize?: number;
-    stripNull?: boolean;
-    encoding?: string;
-    endian?: string;
-}): void;
 /**
 * Binary reader, includes bitfields and strings
 *
@@ -117,6 +61,22 @@ export declare class bireader {
     * Sets endian to little
     */
     le(): void;
+    /**
+    * Aligns current byte position
+    *
+    * Note: Will extend array if strict mode is off and outside of max size
+    *
+    * @param {number} number - Byte to align
+    */
+    align(number: number): void;
+    /**
+    * Reverse aligns current byte position
+    *
+    * Note: Will extend array if strict mode is off and outside of max size
+    *
+    * @param {number} number - Byte to align
+    */
+    alignRev(number: number): void;
     /**
     * Offset current byte or bit position
     * Note: Will extend array if strict mode is off and outside of max size
@@ -2330,6 +2290,12 @@ export declare class bireader {
     */
     writeByte(value: number, unsigned?: boolean): void;
     /**
+    * Write unsigned byte
+    *
+    * @param {number} value - value as int
+    */
+    writeUByte(value: number): void;
+    /**
     * Read byte
     *
     * @param {boolean} unsigned - if value is unsigned or not
@@ -2377,6 +2343,13 @@ export declare class bireader {
     * @param {string} endian - ``big`` or ``little`
     */
     writeInt16(value: number, unsigned?: boolean, endian?: string): void;
+    /**
+    * Write unsigned int16
+    *
+    * @param {number} value - value as int
+    * @param {string} endian - ``big`` or ``little`
+    */
+    writeUInt16(value: number, endian?: string): void;
     /**
     * Read short
     *
@@ -2609,6 +2582,13 @@ export declare class bireader {
     * @param {string} endian - ``big`` or ``little`
     */
     writeInt32(value: number, unsigned?: boolean, endian?: string): void;
+    /**
+    * Write unsigned int32
+    *
+    * @param {number} value - value as int
+    * @param {string} endian - ``big`` or ``little``
+    */
+    writeUInt32(value: number, endian?: string): void;
     /**
     * Read 32 bit integer
     *
@@ -3450,7 +3430,24 @@ export declare class biwriter {
     */
     le(): void;
     /**
+    * Aligns current byte position
+    *
+    * Note: Will extend array if strict mode is off and outside of max size
+    *
+    * @param {number} number - Byte to align
+    */
+    align(number: number): void;
+    /**
+    * Reverse aligns current byte position
+    *
+    * Note: Will extend array if strict mode is off and outside of max size
+    *
+    * @param {number} number - Byte to align
+    */
+    alignRev(number: number): void;
+    /**
     * Offset current byte or bit position
+    *
     * Note: Will extend array if strict mode is off and outside of max size
     *
     * @param {number} bytes - Bytes to skip
@@ -5926,6 +5923,12 @@ export declare class biwriter {
     * @returns number
     */
     readByte(unsigned?: boolean): number;
+    /**
+    * Read unsigned byte
+    *
+    * @returns number
+    */
+    readUByte(): number;
     /**
     * Write byte
     *

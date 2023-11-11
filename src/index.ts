@@ -1,20 +1,20 @@
-export function isBuffer(obj: Buffer|Uint8Array): boolean {
+function isBuffer(obj: Buffer|Uint8Array): boolean {
     return buffcheck(obj)
 }
 
-export function check_size(_this: any, write_bytes:number, write_bit?:number, offset?:number): number{
+function check_size(_this: bireader|biwriter, write_bytes:number, write_bit?:number, offset?:number): number{
     return checkSize(_this,write_bytes||0,write_bit||0,offset||_this.offset)
 }
 
-export function buffcheck(obj: Buffer|Uint8Array): boolean {
+function buffcheck(obj: Buffer|Uint8Array): boolean {
     return (typeof Buffer !== 'undefined' && obj instanceof Buffer);
 }
 
-export function arraybuffcheck(_this: any, obj:  Buffer|Uint8Array): boolean {
+function arraybuffcheck(_this: bireader|biwriter, obj:  Buffer|Uint8Array): boolean {
     return obj instanceof Uint8Array || isBuffer(obj);
 }
 
-export function extendarray(_this:any, to_padd: number): void {
+function extendarray(_this:bireader|biwriter, to_padd: number): void {
     if((typeof Buffer !== 'undefined' && _this.data instanceof Buffer)){
         var paddbuffer = Buffer.alloc(to_padd);
         _this.data = Buffer.concat([_this.data, paddbuffer]);
@@ -24,7 +24,7 @@ export function extendarray(_this:any, to_padd: number): void {
     }
 }
 
-export function checkSize(_this: any, write_bytes:number, write_bit?:number, offset?:number): number{
+function checkSize(_this: bireader|biwriter, write_bytes:number, write_bit?:number, offset?:number): number{
     const bits: number = (write_bit || 0) + _this.bitoffset
     var new_off = (offset || _this.offset)
     var writesize = write_bytes || 0
@@ -47,7 +47,7 @@ export function checkSize(_this: any, write_bytes:number, write_bit?:number, off
     return new_off
 }
 
-export function skip(_this: any, bytes: number, bits?: number): void{
+function skip(_this: bireader|biwriter, bytes: number, bits?: number): void{
     var new_size = (((bytes || 0) + _this.offset) + Math.ceil((_this.bitoffset + (bits||0)) /8) )
     if( bits && bits < 0){
         new_size = Math.floor(((((bytes || 0) + _this.offset) * 8) + _this.bitoffset + (bits||0)) / 8)
@@ -61,11 +61,11 @@ export function skip(_this: any, bytes: number, bits?: number): void{
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: Seek of range of data: seek " + new_size + " of " + _this.size)
         }
     }
-    
+
     // Adjust byte offset based on bit overflow
-    _this.offset += Math.floor((_this.bitoffset + bits) / 8);
+    _this.offset += Math.floor((_this.bitoffset + (bits||0)) / 8);
     // Adjust bit offset
-    _this.bitoffset = (_this.bitoffset + bits + 64) % 8;
+    _this.bitoffset = (_this.bitoffset + (bits||0) + 64) % 8;
     // Adjust byte offset based on byte overflow
     _this.offset += bytes;
     // Ensure bit offset stays between 0-7
@@ -74,7 +74,21 @@ export function skip(_this: any, bytes: number, bits?: number): void{
     _this.offset = Math.max(_this.offset, 0);
 }
 
-export function goto(_this: any,byte: number, bit?: number): void{
+function align(_this: bireader|biwriter, n:number){
+    var a = _this.offset % n;
+    if(a){
+        _this.skip(n - a);
+    }
+}
+
+function alignRev(_this: bireader|biwriter, n:number){
+    var a = _this.offset % n;
+    if(a){
+        _this.skip(a * -1);
+    }
+}
+
+function goto(_this: bireader|biwriter,byte: number, bit?: number): void{
     const new_size = (byte + Math.ceil((bit||0)/8) )
     if(new_size > _this.size){
         if( _this.strict == false){
@@ -88,7 +102,7 @@ export function goto(_this: any,byte: number, bit?: number): void{
     _this.bitoffset = (bit || 0) % 8
 }
 
-export function remove(_this: any, startOffset?: number, endOffset?: number, consume?: boolean, remove?: boolean, fillValue?:number): any{
+function remove(_this: bireader|biwriter, startOffset?: number, endOffset?: number, consume?: boolean, remove?: boolean, fillValue?:number): any{
     const new_start = Math.abs(startOffset || 0)
     const new_offset = (endOffset || _this.offset)
     if(new_offset > _this.size){
@@ -138,7 +152,7 @@ export function remove(_this: any, startOffset?: number, endOffset?: number, con
     return data_removed
 }
 
-export function addData(_this: any, data: Buffer|Uint8Array,consume?: boolean, offset?: number, repalce?: boolean): void{
+function addData(_this: bireader|biwriter, data: Buffer|Uint8Array,consume?: boolean, offset?: number, repalce?: boolean): void{
     if(_this.strict == true){
         _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : ""
         throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Can not insert data in strict mode. Use unrestrict() to enable.`)
@@ -193,7 +207,7 @@ export function addData(_this: any, data: Buffer|Uint8Array,consume?: boolean, o
     }
 }
 
-export function hexDump(_this: any, options?: {length?: number, startByte?: number, supressUnicode?: boolean}): void{
+function hexDump(_this: bireader|biwriter, options?: {length?: number, startByte?: number, supressUnicode?: boolean}): void{
     var length:any = options && options.length
     var startByte:any = options && options.startByte
     var supressUnicode:any = options && options.supressUnicode || false
@@ -365,7 +379,7 @@ export function hexDump(_this: any, options?: {length?: number, startByte?: numb
     console.log(rows.join("\n"))
 }
 
-export function AND(_this: any, and_key: any, start?: number, end?: number, consume?: boolean):any {
+function AND(_this: bireader|biwriter, and_key: any, start?: number, end?: number, consume?: boolean):any {
     const input = _this.data;
     if((end||0) > _this.size){
         if(_this.strict == false){
@@ -384,7 +398,7 @@ export function AND(_this: any, and_key: any, start?: number, end?: number, cons
             }
         }
     } else {
-        if(_this.isBufferOrUint8Array(and_key)){
+        if(arraybuffcheck(_this, and_key)){
             let number = -1
             for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
                 if (number != and_key.length - 1) {
@@ -404,7 +418,7 @@ export function AND(_this: any, and_key: any, start?: number, end?: number, cons
     }
 }
 
-export function OR(_this: any, or_key: any, start?: number, end?: number, consume?: boolean):any {
+function OR(_this: bireader|biwriter, or_key: any, start?: number, end?: number, consume?: boolean):any {
     const input = _this.data;
     if((end||0) > _this.size){
         if(_this.strict == false){
@@ -423,7 +437,7 @@ export function OR(_this: any, or_key: any, start?: number, end?: number, consum
             }
         }
     } else {
-        if(_this.isBufferOrUint8Array(or_key)){
+        if(arraybuffcheck(_this, or_key)){
             let number = -1
             for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
                 if (number != or_key.length - 1) {
@@ -443,7 +457,7 @@ export function OR(_this: any, or_key: any, start?: number, end?: number, consum
     }
 }
 
-export function XOR(_this: any, xor_key: any, start?: number, end?: number, consume?: boolean):any {
+function XOR(_this: bireader|biwriter, xor_key: any, start?: number, end?: number, consume?: boolean):any {
     const input = _this.data;
     if((end||0) > _this.size){
         if(_this.strict == false){
@@ -462,7 +476,7 @@ export function XOR(_this: any, xor_key: any, start?: number, end?: number, cons
             }
         }
     } else {
-        if(_this.isBufferOrUint8Array(xor_key)){
+        if(arraybuffcheck(_this, xor_key)){
             let number = -1
             for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
                 if (number != xor_key.length - 1) {
@@ -482,7 +496,7 @@ export function XOR(_this: any, xor_key: any, start?: number, end?: number, cons
     }
 }
 
-export function NOT(_this: any, start?: number, end?: number, consume?: boolean): any{
+function NOT(_this: bireader|biwriter, start?: number, end?: number, consume?: boolean): any{
     if((end||0) > _this.size){
         if(_this.strict == false){
             _this.extendArray((end||0) - _this.size)
@@ -500,7 +514,7 @@ export function NOT(_this: any, start?: number, end?: number, consume?: boolean)
     }
 }
 
-export function LSHIFT(_this: any, shift_key:any, start?: number, end?: number, consume?: boolean): any{
+function LSHIFT(_this: bireader|biwriter, shift_key:any, start?: number, end?: number, consume?: boolean): any{
     const input = _this.data;
     if((end||0) > _this.size){
         if(_this.strict == false){
@@ -519,7 +533,7 @@ export function LSHIFT(_this: any, shift_key:any, start?: number, end?: number, 
             }
         }
     } else {
-        if(_this.isBufferOrUint8Array(shift_key)){
+        if(arraybuffcheck(_this, shift_key)){
             let number = -1
             for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
                 if (number != shift_key.length - 1) {
@@ -539,7 +553,7 @@ export function LSHIFT(_this: any, shift_key:any, start?: number, end?: number, 
     }
 }
 
-export function RSHIFT(_this: any, shift_key:any, start?: number, end?: number, consume?: boolean): any{
+function RSHIFT(_this: bireader|biwriter, shift_key:any, start?: number, end?: number, consume?: boolean): any{
     const input = _this.data;
     if((end||0) > _this.size){
         if(_this.strict == false){
@@ -558,7 +572,7 @@ export function RSHIFT(_this: any, shift_key:any, start?: number, end?: number, 
             }
         }
     } else {
-        if(_this.isBufferOrUint8Array(shift_key)){
+        if(arraybuffcheck(_this, shift_key)){
             let number = -1
             for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
                 if (number != shift_key.length - 1) {
@@ -578,7 +592,7 @@ export function RSHIFT(_this: any, shift_key:any, start?: number, end?: number, 
     }
 }
 
-export function ADD(_this: any, add_key:any, start?: number, end?: number, consume?: boolean): any{
+function ADD(_this: bireader|biwriter, add_key:any, start?: number, end?: number, consume?: boolean): any{
     const input = _this.data;
     if((end||0) > _this.size){
         if(_this.strict == false){
@@ -597,7 +611,7 @@ export function ADD(_this: any, add_key:any, start?: number, end?: number, consu
             }
         }
     } else {
-        if(_this.isBufferOrUint8Array(add_key)){
+        if(arraybuffcheck(_this, add_key)){
             let number = -1
             for (let i = (start || 0); i < Math.min(end||_this.size, _this.size); i++) {
                 if (number != add_key.length - 1) {
@@ -617,7 +631,7 @@ export function ADD(_this: any, add_key:any, start?: number, end?: number, consu
     }
 }
 
-export function wbit(_this: any,value: number, bits: number, unsigned?: boolean, endian?: string){
+function wbit(_this: bireader|biwriter,value: number, bits: number, unsigned?: boolean, endian?: string){
     if(value == undefined){
         throw new Error('Must supply value.');
     }
@@ -686,7 +700,7 @@ export function wbit(_this: any,value: number, bits: number, unsigned?: boolean,
     _this.bitoffset = ((bits) + _this.bitoffset) % 8  
 }
 
-export function rbit(_this:any,bits?: number, unsigned?: boolean, endian?: string): number{
+function rbit(_this: bireader|biwriter,bits?: number, unsigned?: boolean, endian?: string): number{
     if(bits == undefined || typeof bits != "number"){
         throw new Error("Enter number of bits to read")
     }
@@ -747,7 +761,7 @@ export function rbit(_this:any,bits?: number, unsigned?: boolean, endian?: strin
     return value; 
 }
 
-export function wbyte(_this:any,value: number, unsigned?: boolean): void{
+function wbyte(_this: bireader|biwriter,value: number, unsigned?: boolean): void{
     check_size(_this,1,0)
     if (unsigned == true) {
         if (value< 0 || value > 255) {
@@ -767,7 +781,7 @@ export function wbyte(_this:any,value: number, unsigned?: boolean): void{
     _this.bitoffset = 0
 }
 
-export function rbyte(_this:any,unsigned?: boolean): number{
+function rbyte(_this: bireader|biwriter,unsigned?: boolean): number{
     check_size(_this,1)
     var read = <unknown> _this.data[_this.offset] as number
     _this.offset += 1
@@ -779,7 +793,7 @@ export function rbyte(_this:any,unsigned?: boolean): number{
     }
 }
 
-export function wint16(_this:any, value: number, unsigned?: boolean, endian?: string): void {
+function wint16(_this: bireader|biwriter, value: number, unsigned?: boolean, endian?: string): void {
     check_size(_this,2,0)
     if (unsigned == true) {
         if (value< 0 || value > 65535) {
@@ -805,7 +819,7 @@ export function wint16(_this:any, value: number, unsigned?: boolean, endian?: st
     _this.bitoffset = 0
 }
 
-export function rint16(_this:any,unsigned?: boolean, endian?: string): number{
+function rint16(_this: bireader|biwriter,unsigned?: boolean, endian?: string): number{
     check_size(_this,2)
     var read: number;
     if((endian != undefined ? endian : _this.endian)  == "little"){
@@ -822,7 +836,7 @@ export function rint16(_this:any,unsigned?: boolean, endian?: string): number{
     }
 }
 
-export function rhalffloat(_this:any,endian?: string): number{
+function rhalffloat(_this: bireader|biwriter,endian?: string): number{
 
     var uint16Value = _this.readInt16(true, (endian != undefined ? endian : _this.endian))
     const sign = (uint16Value & 0x8000) >> 15;
@@ -852,7 +866,7 @@ export function rhalffloat(_this:any,endian?: string): number{
     return floatValue;
 }
 
-export function whalffloat(_this:any,value: number, endian?: string): void {
+function whalffloat(_this: bireader|biwriter,value: number, endian?: string): void {
     check_size(_this,2,0)
     const maxValue = 65504;
     const minValue = 5.96e-08;
@@ -898,7 +912,7 @@ export function whalffloat(_this:any,value: number, endian?: string): void {
     _this.bitoffset = 0
 }
 
-export function wint32(_this:any, value: number, unsigned?: boolean, endian?: string): void {
+function wint32(_this: bireader|biwriter, value: number, unsigned?: boolean, endian?: string): void {
     check_size(_this,4,0)
     if (unsigned == true) {
         if (value < 0 || value > 4294967295) {
@@ -928,7 +942,7 @@ export function wint32(_this:any, value: number, unsigned?: boolean, endian?: st
     _this.bitoffset = 0
 }
 
-export function rint32(_this:any,unsigned?: boolean, endian?: string): number{
+function rint32(_this: bireader|biwriter,unsigned?: boolean, endian?: string): number{
     check_size(_this,4)
     var read: number;
     if((endian != undefined ? endian : _this.endian) == "little"){
@@ -945,7 +959,7 @@ export function rint32(_this:any,unsigned?: boolean, endian?: string): number{
     }
 }
 
-export function rfloat(_this:any, endian?: string): number{
+function rfloat(_this: bireader|biwriter, endian?: string): number{
 
     var uint32Value = _this.readInt32(true, (endian == undefined ? _this.endian : endian))
     // Check if the value is negative (i.e., the most significant bit is set)
@@ -972,7 +986,7 @@ export function rfloat(_this:any, endian?: string): number{
     return floatValue;
 }
 
-export function wfloat(_this:any, value: number, endian?: string): void{
+function wfloat(_this: bireader|biwriter, value: number, endian?: string): void{
     check_size(_this,4,0)
     const maxValue = 3.402823466e+38
     const minValue = 1.175494351e-38
@@ -996,7 +1010,7 @@ export function wfloat(_this:any, value: number, endian?: string): void{
     _this.bitoffset = 0
 }
 
-export function rint64(_this:any, unsigned?: boolean, endian?: string): bigint {
+function rint64(_this: bireader|biwriter, unsigned?: boolean, endian?: string): bigint {
     check_size(_this,8)
 
     // Convert the byte array to a BigInt
@@ -1027,7 +1041,7 @@ export function rint64(_this:any, unsigned?: boolean, endian?: string): bigint {
     return value
 }
 
-export function wint64(_this:any, value: number, unsigned?: boolean, endian?: string): void {
+function wint64(_this: bireader|biwriter, value: number, unsigned?: boolean, endian?: string): void {
     check_size(_this,8,0)
     if (unsigned == true) {
         if (value < 0 || value > Math.pow(2, 64) - 1) {
@@ -1081,7 +1095,7 @@ export function wint64(_this:any, value: number, unsigned?: boolean, endian?: st
     _this.bitoffset = 0
 }
 
-export function wdfloat(_this:any, value: number, endian?: string): void {
+function wdfloat(_this: bireader|biwriter, value: number, endian?: string): void {
     check_size(_this,8,0)
     const maxValue = 1.7976931348623158e308;
     const minValue = 2.2250738585072014e-308;
@@ -1108,7 +1122,7 @@ export function wdfloat(_this:any, value: number, endian?: string): void {
     _this.bitoffset = 0
 }
 
-export function rdfloat(_this:any, endian?: string): number{
+function rdfloat(_this: bireader|biwriter, endian?: string): number{
 
     var uint64Value = _this.readInt64(true, (endian == undefined ? _this.endian : endian))
     const sign = (uint64Value & 0x8000000000000000n) >> 63n;
@@ -1138,7 +1152,7 @@ export function rdfloat(_this:any, endian?: string): number{
     return floatValue;
 }
 
-export function rstring(_this:any, options?: {   
+function rstring(_this: bireader|biwriter, options?: {   
     length?: number,
     stringType?: string,
     terminateValue?: number,
@@ -1274,7 +1288,7 @@ export function rstring(_this:any, options?: {
     }
 }
 
-export function wstring(_this:any, string: string, options?: {   
+function wstring(_this: bireader|biwriter, string: string, options?: {   
     length?: number,
     stringType?: string,
     terminateValue?: number,
@@ -1554,6 +1568,28 @@ export class bireader {
     //
     // move from current position
     //
+
+    /**
+    * Aligns current byte position
+    * 
+    * Note: Will extend array if strict mode is off and outside of max size
+    * 
+    * @param {number} number - Byte to align
+    */
+    align(number: number): void{
+        return align(this, number)
+    }
+
+    /**
+    * Reverse aligns current byte position
+    * 
+    * Note: Will extend array if strict mode is off and outside of max size
+    * 
+    * @param {number} number - Byte to align
+    */
+    alignRev(number: number): void{
+        return alignRev(this, number)
+    }
 
     /**
     * Offset current byte or bit position
@@ -2259,7 +2295,7 @@ export class bireader {
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
-    unshift(data: Buffer|Uint8Array, consume?: boolean){
+    unshift(data: Buffer|Uint8Array, consume?: boolean): void{
         return addData(this, data, consume||false, 0)
     }
 
@@ -2270,7 +2306,7 @@ export class bireader {
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
-    prepend(data: Buffer|Uint8Array, consume?: boolean){
+    prepend(data: Buffer|Uint8Array, consume?: boolean): void{
         return addData(this, data, consume||false, 0)
     }
 
@@ -2281,7 +2317,7 @@ export class bireader {
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
-    push(data: Buffer|Uint8Array, consume?: boolean){
+    push(data: Buffer|Uint8Array, consume?: boolean): void{
         return addData(this, data, consume||false, this.size)
     }
 
@@ -2292,7 +2328,7 @@ export class bireader {
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
-    append(data: Buffer|Uint8Array, consume?: boolean){
+    append(data: Buffer|Uint8Array, consume?: boolean): void{
         return addData(this, data, consume||false, this.size)
     }
 
@@ -4739,6 +4775,15 @@ export class bireader {
     }
 
     /**
+    * Write unsigned byte
+    *
+    * @param {number} value - value as int 
+    */
+    writeUByte(value: number): void{
+        return wbyte(this, value, true)
+    }
+
+    /**
     * Read byte
     * 
     * @param {boolean} unsigned - if value is unsigned or not
@@ -4809,6 +4854,16 @@ export class bireader {
     */
     writeInt16(value: number, unsigned?: boolean, endian?: string): void {
         return wint16(this,value,unsigned,endian)
+    }
+
+    /**
+    * Write unsigned int16
+    *
+    * @param {number} value - value as int 
+    * @param {string} endian - ``big`` or ``little`
+    */
+    writeUInt16(value: number, endian?: string): void {
+        return wint16(this, value, true, endian)
     }
 
     /**
@@ -5155,6 +5210,17 @@ export class bireader {
     writeInt32(value: number, unsigned?: boolean, endian?: string): void {
         return wint32(this, value, unsigned, endian)
     }
+
+    /**
+    * Write unsigned int32
+    *
+    * @param {number} value - value as int 
+    * @param {string} endian - ``big`` or ``little``
+    */
+    writeUInt32(value: number, endian?: string): void {
+        return wint32(this, value, true, endian)
+    }
+
 
     /**
     * Read 32 bit integer
@@ -6394,7 +6460,30 @@ export class biwriter {
     //
 
     /**
+    * Aligns current byte position
+    * 
+    * Note: Will extend array if strict mode is off and outside of max size
+    * 
+    * @param {number} number - Byte to align
+    */
+    align(number: number): void{
+        return align(this, number)
+    }
+
+    /**
+    * Reverse aligns current byte position
+    * 
+    * Note: Will extend array if strict mode is off and outside of max size
+    * 
+    * @param {number} number - Byte to align
+    */
+    alignRev(number: number): void{
+        return alignRev(this, number)
+    }
+
+    /**
     * Offset current byte or bit position
+    * 
     * Note: Will extend array if strict mode is off and outside of max size
     * 
     * @param {number} bytes - Bytes to skip
@@ -7097,7 +7186,7 @@ export class biwriter {
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
-    unshift(data: Buffer|Uint8Array, consume?: boolean){
+    unshift(data: Buffer|Uint8Array, consume?: boolean): void{
         return addData(this, data, consume||false, 0)
     }
 
@@ -7108,7 +7197,7 @@ export class biwriter {
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
-    prepend(data: Buffer|Uint8Array, consume?: boolean){
+    prepend(data: Buffer|Uint8Array, consume?: boolean): void{
         return addData(this, data, consume||false, 0)
     }
 
@@ -7119,7 +7208,7 @@ export class biwriter {
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
-    push(data: Buffer|Uint8Array, consume?: boolean){
+    push(data: Buffer|Uint8Array, consume?: boolean): void{
         return addData(this, data, consume||false, this.size)
     }
 
@@ -7130,7 +7219,7 @@ export class biwriter {
     * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
-    append(data: Buffer|Uint8Array, consume?: boolean){
+    append(data: Buffer|Uint8Array, consume?: boolean): void{
         return addData(this, data, consume||false, this.size)
     }
 
@@ -9870,6 +9959,15 @@ export class biwriter {
     */
     readByte(unsigned?: boolean): number{
         return rbyte(this, unsigned)
+    }
+
+    /**
+    * Read unsigned byte
+    * 
+    * @returns number
+    */
+    readUByte(): number {
+        return rbyte(this, true)
     }
 
     /**

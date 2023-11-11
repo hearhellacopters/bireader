@@ -389,6 +389,18 @@ Common functions for setup, movement, manipulation and math shared by both.
   <th align="center" colspan="4"><i>Movement</i></th>
   <tr>
     <td>Name</td>
+    <td>align(<b>number</b>)</td>
+    <td align="center">Aligns byte position to number.</td>
+    <td ><b>Note:</b> Errors in strict mode when change is outside of data size.</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>alignRev(<b>number</b>)</td>
+    <td align="center">Reverse aligns byte position to number.</td>
+    <td ><b>Note:</b> Errors in strict mode when change is outside of data size.</td>
+  </tr>
+  <tr>
+    <td>Name</td>
     <td>skip(<b>bytes</b>, bits)</td>
     <td align="center" rowspan="2"><b>Bytes to skip from current byte position</b>, bits to skip (default 0)</td>
     <td rowspan="2">Use negative to go back.<br><b>Note:</b> Remaining bits are dropped when returning to a byte function.</td>
