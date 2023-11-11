@@ -1436,10 +1436,10 @@ function wstring(_this: bireader|biwriter, string: string, options?: {
 /**
 * Binary reader, includes bitfields and strings
 *
-* @param {Buffer|Uint8Array} data - ```Buffer``` or ```Uint8Array```. Always found in ``biwriter.data``
+* @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``biwriter.data``
 * @param {number} byteOffset - Byte offset to start reader (default 0)
 * @param {number} bitOffset - Bit offset 0-7 to start reader (default 0)
-* @param {string} endianness - Endianness ```big``` or ```little``` (default ```little```)
+* @param {string} endianness - Endianness ``big`` or ``little`` (default ``little``)
 * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default true)
 */
 export class bireader {
@@ -1462,10 +1462,10 @@ export class bireader {
     /**
     * Binary reader, includes bitfields and strings
     *
-    * @param {Buffer|Uint8Array} data - ```Buffer``` or ```Uint8Array```. Always found in ``biwriter.data``
+    * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``biwriter.data``
     * @param {number} byteOffset - Byte offset to start reader (default 0)
     * @param {number} bitOffset - Bit offset 0-7 to start reader (default 0)
-    * @param {string} endianness - Endianness ```big``` or ```little``` (default ```little```)
+    * @param {string} endianness - Endianness ``big`` or ``little`` (default ``little``)
     * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default true)
     */
     constructor(data: Buffer|Uint8Array, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean) {
@@ -1511,7 +1511,7 @@ export class bireader {
     * 
     * Can be changed at any time, doesn't loose position
     *
-    * @param {string} endian - endianness ```big``` or ```little```
+    * @param {string} endian - endianness ``big`` or ``little``
     */
     endianness(endian: string): void{
         if(endian == undefined || typeof endian != "string"){
@@ -2181,7 +2181,7 @@ export class bireader {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move position to end of lifted data (default false)
     * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
     */
     lift(startOffset?:number, endOffset?: number, consume?: boolean, fillValue?: number): Buffer|Uint8Array{
         return remove(this,startOffset||this.offset,endOffset||this.size, consume||false, false, fillValue)
@@ -2194,7 +2194,7 @@ export class bireader {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move position to end of lifted data (default false)
     * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
     */
     fill(startOffset?:number, endOffset?: number, consume?: boolean, fillValue?: number): Buffer|Uint8Array{
         return remove(this,startOffset||this.offset,endOffset||this.size, consume||false, false, fillValue)
@@ -2206,7 +2206,7 @@ export class bireader {
     * 
     * @param {number} length - Length of data in bytes to copy from current offset
     * @param {number} consume - Moves offset to end of length
-    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
     */
     extract(length:number, consume?: boolean): Buffer|Uint8Array{
         return remove(this,this.offset,this.offset + (length||0), consume||false, false)
@@ -2218,7 +2218,7 @@ export class bireader {
     * 
     * @param {number} length - Length of data in bytes to copy from current offset
     * @param {number} consume - Moves offset to end of length
-    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
     */
     slice(length:number, consume?: boolean): Buffer|Uint8Array{
         return remove(this,this.offset,this.offset + (length||0), consume||false, false)
@@ -2230,7 +2230,7 @@ export class bireader {
     * 
     * @param {number} length - Length of data in bytes to copy from current offset
     * @param {number} consume - Moves offset to end of length
-    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
     */
     wrap(length:number, consume?: boolean): Buffer|Uint8Array{
         return remove(this,this.offset,this.offset + (length||0), consume||false, false)
@@ -2244,7 +2244,7 @@ export class bireader {
     * Inserts data into data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
     * @param {boolean} consume - Move current byte position to end of data (default false)
     * @param {number} offset - Byte position to add at (defaults to current position)
     */
@@ -2256,7 +2256,7 @@ export class bireader {
     * Inserts data into data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
     * @param {boolean} consume - Move current byte position to end of data (default false)
     * @param {number} offset - Byte position to add at (defaults to current position)
     */
@@ -2268,7 +2268,7 @@ export class bireader {
     * Replaces data in data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to replace in data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
     * @param {boolean} consume - Move current byte position to end of data (default false)
     * @param {number} offset - Offset to add it at (defaults to current position)
     */
@@ -2280,7 +2280,7 @@ export class bireader {
     * Replaces data in data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to replace in data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
     * @param {boolean} consume - Move current byte position to end of data (default false)
     * @param {number} offset - Offset to add it at (defaults to current position)
     */
@@ -2292,7 +2292,7 @@ export class bireader {
     * Adds data to start of supplied data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     unshift(data: Buffer|Uint8Array, consume?: boolean): void{
@@ -2303,7 +2303,7 @@ export class bireader {
     * Adds data to start of supplied data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     prepend(data: Buffer|Uint8Array, consume?: boolean): void{
@@ -2314,7 +2314,7 @@ export class bireader {
     * Adds data to end of supplied data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     push(data: Buffer|Uint8Array, consume?: boolean): void{
@@ -2325,7 +2325,7 @@ export class bireader {
     * Adds data to end of supplied data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     append(data: Buffer|Uint8Array, consume?: boolean): void{
@@ -2438,7 +2438,7 @@ export class bireader {
     *
     * @param {number} bits - bits to read
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     readBit(bits?: number, unsigned?: boolean, endian?: string): number{
@@ -2452,7 +2452,7 @@ export class bireader {
     *
     * @param {number} bits - bits to read
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit(bits: number, unsigned?: boolean, endian?: string): number{
@@ -2465,7 +2465,7 @@ export class bireader {
     * Note: When returning to a byte read, remaining bits are dropped
     *
     * @param {number} bits - bits to read
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit(bits: number, endian?: string): number{
@@ -2478,7 +2478,7 @@ export class bireader {
     * Note: When returning to a byte read, remaining bits are dropped
     * 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit1(unsigned?: boolean, endian?: string): number{
@@ -4838,7 +4838,7 @@ export class bireader {
     * Read short
     * 
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     readInt16(unsigned?: boolean, endian?: string): number{
@@ -4850,7 +4850,7 @@ export class bireader {
     *
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     writeInt16(value: number, unsigned?: boolean, endian?: string): void {
         return wint16(this,value,unsigned,endian)
@@ -4860,7 +4860,7 @@ export class bireader {
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     writeUInt16(value: number, endian?: string): void {
         return wint16(this, value, true, endian)
@@ -4870,7 +4870,7 @@ export class bireader {
     * Read short
     * 
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     int16(unsigned?: boolean, endian?: string): number{
@@ -4881,7 +4881,7 @@ export class bireader {
     * Read short
     * 
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     short(unsigned?: boolean, endian?: string): number{
@@ -4892,7 +4892,7 @@ export class bireader {
     * Read short
     * 
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     word(unsigned?: boolean, endian?: string): number{
@@ -4902,7 +4902,7 @@ export class bireader {
     /**
     * Read unsigned short
     * 
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * 
     * @returns number
     */
@@ -4913,7 +4913,7 @@ export class bireader {
     /**
     * Read unsigned short
     * 
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * 
     * @returns number
     */
@@ -4924,7 +4924,7 @@ export class bireader {
     /**
     * Read unsigned short
     * 
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * 
     * @returns number
     */
@@ -4935,7 +4935,7 @@ export class bireader {
     /**
     * Read unsigned short
     * 
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * 
     * @returns number
     */
@@ -5094,7 +5094,7 @@ export class bireader {
     /**
     * Read half float
     * 
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     readHalfFloat(endian?: string): number{
@@ -5105,7 +5105,7 @@ export class bireader {
     * Writes half float
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     writeHalfFloat(value: number, endian?: string): void {
         return whalffloat(this, value, endian)
@@ -5114,7 +5114,7 @@ export class bireader {
     /**
     * Read half float
     * 
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     halffloat(endian?: string): number{
@@ -5124,7 +5124,7 @@ export class bireader {
     /**
     * Read half float
     * 
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     half(endian?: string): number{
@@ -5193,7 +5193,7 @@ export class bireader {
     * Read 32 bit integer
     * 
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     readInt32(unsigned?: boolean, endian?: string): number{
@@ -5205,7 +5205,7 @@ export class bireader {
     *
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     writeInt32(value: number, unsigned?: boolean, endian?: string): void {
         return wint32(this, value, unsigned, endian)
@@ -5226,7 +5226,7 @@ export class bireader {
     * Read 32 bit integer
     * 
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     int(unsigned?: boolean, endian?: string): number{
@@ -5237,7 +5237,7 @@ export class bireader {
     * Read 32 bit integer
     * 
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     double(unsigned?: boolean, endian?: string): number{
@@ -5248,7 +5248,7 @@ export class bireader {
     * Read 32 bit integer
     * 
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     int32(unsigned?: boolean, endian?: string): number{
@@ -5259,7 +5259,7 @@ export class bireader {
     * Read 32 bit integer
     * 
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     long(unsigned?: boolean, endian?: string): number{
@@ -5498,18 +5498,18 @@ export class bireader {
     /**
     * Read float
     * 
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     readFloat(endian?: string): number{
         return rfloat(this, endian)
     }
 
-     /**
+    /**
     * Write float
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
      writeFloat(value: number, endian?: string): void{
         return wfloat(this, value, endian)
@@ -5518,7 +5518,7 @@ export class bireader {
     /**
     * Read float
     * 
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     float(endian?: string): number{
@@ -5568,7 +5568,7 @@ export class bireader {
     /**
     * Read signed 64 bit integer
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     readInt64(unsigned?: boolean, endian?: string): bigint {
@@ -5580,7 +5580,7 @@ export class bireader {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     writeInt64(value: number, unsigned?: boolean, endian?: string): void {
         return wint64(this, value, unsigned, endian)
@@ -5589,7 +5589,7 @@ export class bireader {
     /**
     * Read signed 64 bit integer
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     int64(unsigned?: boolean, endian?: string): bigint {
@@ -5599,7 +5599,7 @@ export class bireader {
     /**
     * Read signed 64 bit integer
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bigint(unsigned?: boolean, endian?: string): bigint {
@@ -5609,7 +5609,7 @@ export class bireader {
     /**
     * Read signed 64 bit integer
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     quad(unsigned?: boolean, endian?: string): bigint {
@@ -5803,7 +5803,7 @@ export class bireader {
     /**
     * Read double float
     * 
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     readDoubleFloat(endian?: string): number{
@@ -5815,7 +5815,7 @@ export class bireader {
     * 
     * @param {number} value - value as int 
     * @param {number} offset - byte offset (default last write position)
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     writeDoubleFloat(value: number, endian?: string): void {
         return wdfloat(this, value, endian)
@@ -5824,7 +5824,7 @@ export class bireader {
     /**
     * Read double float
     * 
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     doublefloat(endian?: string): number{
@@ -5834,7 +5834,7 @@ export class bireader {
     /**
     * Read double float
     * 
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     dfloat(endian?: string): number{
@@ -6395,7 +6395,7 @@ export class biwriter {
     * 
     * Can be changed at any time, doesn't loose position
     *
-    * @param {string} endian - Endianness ```big``` or ```little```
+    * @param {string} endian - Endianness ``big`` or ``little``
     */
     endianness(endian: string): void{
         if(endian == undefined || typeof endian != "string"){
@@ -7072,7 +7072,7 @@ export class biwriter {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move position to end of lifted data (default false)
     * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
     */
     lift(startOffset?:number, endOffset?: number, consume?: boolean, fillValue?: number): Buffer|Uint8Array{
         return remove(this,startOffset||this.offset,endOffset||this.size, consume||false, false, fillValue)
@@ -7085,7 +7085,7 @@ export class biwriter {
     * @param {number} endOffset - End location (default end of data)
     * @param {boolean} consume - Move position to end of lifted data (default false)
     * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
     */
     fill(startOffset?:number, endOffset?: number, consume?: boolean, fillValue?: number): Buffer|Uint8Array{
         return remove(this,startOffset||this.offset,endOffset||this.size, consume||false, false, fillValue)
@@ -7097,7 +7097,7 @@ export class biwriter {
     * 
     * @param {number} length - Length of data in bytes to copy from current offset
     * @param {number} consume - Moves offset to end of length
-    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
     */
     extract(length:number, consume?: boolean): Buffer|Uint8Array{
         return remove(this,this.offset,this.offset + (length||0), consume||false, false)
@@ -7109,7 +7109,7 @@ export class biwriter {
     * 
     * @param {number} length - Length of data in bytes to copy from current offset
     * @param {number} consume - Moves offset to end of length
-    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
     */
     slice(length:number, consume?: boolean): Buffer|Uint8Array{
         return remove(this,this.offset,this.offset + (length||0), consume||false, false)
@@ -7121,7 +7121,7 @@ export class biwriter {
     * 
     * @param {number} length - Length of data in bytes to copy from current offset
     * @param {number} consume - Moves offset to end of length
-    * @returns {Buffer|Uint8Array} Selected data as ```Uint8Array``` or ```Buffer```
+    * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
     */
     wrap(length:number, consume?: boolean): Buffer|Uint8Array{
         return remove(this,this.offset,this.offset + (length||0), consume||false, false)
@@ -7135,7 +7135,7 @@ export class biwriter {
     * Inserts data into data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
     * @param {boolean} consume - Move current byte position to end of data (default false)
     * @param {number} offset - Byte position to add at (defaults to current position)
     */
@@ -7147,7 +7147,7 @@ export class biwriter {
     * Inserts data into data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
     * @param {boolean} consume - Move current byte position to end of data (default false)
     * @param {number} offset - Byte position to add at (defaults to current position)
     */
@@ -7159,7 +7159,7 @@ export class biwriter {
     * Replaces data in data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to replace in data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
     * @param {boolean} consume - Move current byte position to end of data (default false)
     * @param {number} offset - Offset to add it at (defaults to current position)
     */
@@ -7171,7 +7171,7 @@ export class biwriter {
     * Replaces data in data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to replace in data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
     * @param {boolean} consume - Move current byte position to end of data (default false)
     * @param {number} offset - Offset to add it at (defaults to current position)
     */
@@ -7183,7 +7183,7 @@ export class biwriter {
     * Adds data to start of supplied data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     unshift(data: Buffer|Uint8Array, consume?: boolean): void{
@@ -7194,7 +7194,7 @@ export class biwriter {
     * Adds data to start of supplied data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     prepend(data: Buffer|Uint8Array, consume?: boolean): void{
@@ -7205,7 +7205,7 @@ export class biwriter {
     * Adds data to end of supplied data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     push(data: Buffer|Uint8Array, consume?: boolean): void{
@@ -7216,7 +7216,7 @@ export class biwriter {
     * Adds data to end of supplied data
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
-    * @param {Buffer|Uint8Array} data - ```Uint8Array``` or ```Buffer``` to add to data
+    * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     append(data: Buffer|Uint8Array, consume?: boolean): void{
@@ -7329,7 +7329,7 @@ export class biwriter {
     *
     * @param {number} bits - bits to read
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     readBit(bits?: number, unsigned?: boolean, endian?: string): number{
@@ -7344,7 +7344,7 @@ export class biwriter {
     * @param {number} value - value as int 
     * @param {number} bits - bits to write
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit(value:number, bits: number, unsigned?: boolean, endian?: string): void{
@@ -7358,7 +7358,7 @@ export class biwriter {
     *
     * @param {number} value - value as int 
     * @param {number} bits - bits to write
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit(value:number, bits: number, endian?: string): void{
@@ -7480,7 +7480,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit1(value:number, unsigned?: boolean, endian?: string): void{
@@ -7519,7 +7519,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit1(value: number, endian?: string): void{
@@ -7557,7 +7557,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit2(value:number, unsigned?: boolean, endian?: string): void{
@@ -7596,7 +7596,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit2(value: number, endian?: string): void{
@@ -7634,7 +7634,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit3(value:number, unsigned?: boolean, endian?: string): void{
@@ -7673,7 +7673,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit3(value: number, endian?: string): void{
@@ -7711,7 +7711,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit4(value:number, unsigned?: boolean, endian?: string): void{
@@ -7750,7 +7750,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit4(value: number, endian?: string): void{
@@ -7788,7 +7788,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit5(value:number, unsigned?: boolean, endian?: string): void{
@@ -7827,7 +7827,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit5(value: number, endian?: string): void{
@@ -7865,7 +7865,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit6(value:number, unsigned?: boolean, endian?: string): void{
@@ -7904,7 +7904,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit6(value: number, endian?: string): void{
@@ -7942,7 +7942,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit7(value:number, unsigned?: boolean, endian?: string): void{
@@ -7981,7 +7981,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit7(value: number, endian?: string): void{
@@ -8019,7 +8019,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit8(value:number, unsigned?: boolean, endian?: string): void{
@@ -8058,7 +8058,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit8(value: number, endian?: string): void{
@@ -8096,7 +8096,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit9(value:number, unsigned?: boolean, endian?: string): void{
@@ -8135,7 +8135,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit9(value: number, endian?: string): void{
@@ -8173,7 +8173,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit10(value:number, unsigned?: boolean, endian?: string): void{
@@ -8212,7 +8212,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit10(value: number, endian?: string): void{
@@ -8250,7 +8250,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit11(value:number, unsigned?: boolean, endian?: string): void{
@@ -8289,7 +8289,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit11(value: number, endian?: string): void{
@@ -8327,7 +8327,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit12(value:number, unsigned?: boolean, endian?: string): void{
@@ -8366,7 +8366,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit12(value: number, endian?: string): void{
@@ -8404,7 +8404,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit13(value:number, unsigned?: boolean, endian?: string): void{
@@ -8443,7 +8443,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit13(value: number, endian?: string): void{
@@ -8481,7 +8481,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit14(value:number, unsigned?: boolean, endian?: string): void{
@@ -8520,7 +8520,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit14(value: number, endian?: string): void{
@@ -8558,7 +8558,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit15(value:number, unsigned?: boolean, endian?: string): void{
@@ -8597,7 +8597,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit15(value: number, endian?: string): void{
@@ -8635,7 +8635,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit16(value:number, unsigned?: boolean, endian?: string): void{
@@ -8674,7 +8674,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit16(value: number, endian?: string): void{
@@ -8712,7 +8712,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit17(value:number, unsigned?: boolean, endian?: string): void{
@@ -8751,7 +8751,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit17(value: number, endian?: string): void{
@@ -8789,7 +8789,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit18(value:number, unsigned?: boolean, endian?: string): void{
@@ -8828,7 +8828,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit18(value: number, endian?: string): void{
@@ -8866,7 +8866,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit19(value:number, unsigned?: boolean, endian?: string): void{
@@ -8905,7 +8905,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit19(value: number, endian?: string): void{
@@ -8943,7 +8943,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit20(value:number, unsigned?: boolean, endian?: string): void{
@@ -8982,7 +8982,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit20(value: number, endian?: string): void{
@@ -9020,7 +9020,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit21(value:number, unsigned?: boolean, endian?: string): void{
@@ -9059,7 +9059,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit21(value: number, endian?: string): void{
@@ -9097,7 +9097,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit22(value:number, unsigned?: boolean, endian?: string): void{
@@ -9136,7 +9136,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit22(value: number, endian?: string): void{
@@ -9174,7 +9174,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit23(value:number, unsigned?: boolean, endian?: string): void{
@@ -9213,7 +9213,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit23(value: number, endian?: string): void{
@@ -9251,7 +9251,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit24(value:number, unsigned?: boolean, endian?: string): void{
@@ -9290,7 +9290,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit24(value: number, endian?: string): void{
@@ -9328,7 +9328,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit25(value:number, unsigned?: boolean, endian?: string): void{
@@ -9367,7 +9367,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit25(value: number, endian?: string): void{
@@ -9405,7 +9405,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit26(value:number, unsigned?: boolean, endian?: string): void{
@@ -9444,7 +9444,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit26(value: number, endian?: string): void{
@@ -9482,7 +9482,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit27(value:number, unsigned?: boolean, endian?: string): void{
@@ -9521,7 +9521,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit27(value: number, endian?: string): void{
@@ -9559,7 +9559,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit28(value:number, unsigned?: boolean, endian?: string): void{
@@ -9598,7 +9598,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit28(value: number, endian?: string): void{
@@ -9636,7 +9636,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit29(value:number, unsigned?: boolean, endian?: string): void{
@@ -9675,7 +9675,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit29(value: number, endian?: string): void{
@@ -9713,7 +9713,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit30(value:number, unsigned?: boolean, endian?: string): void{
@@ -9752,7 +9752,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit30(value: number, endian?: string): void{
@@ -9790,7 +9790,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit31(value:number, unsigned?: boolean, endian?: string): void{
@@ -9829,7 +9829,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit31(value: number, endian?: string): void{
@@ -9867,7 +9867,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     bit32(value:number, unsigned?: boolean, endian?: string): void{
@@ -9906,7 +9906,7 @@ export class biwriter {
     * Note: When returning to a byte write, remaining bits are dropped
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     ubit32(value: number, endian?: string): void{
@@ -10026,7 +10026,7 @@ export class biwriter {
     *
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     writeInt16(value: number, unsigned?: boolean, endian?: string): void {
         return wint16(this,value,unsigned,endian)
@@ -10036,7 +10036,7 @@ export class biwriter {
     * Read short
     * 
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     readInt16(unsigned?: boolean, endian?: string): number{
@@ -10049,7 +10049,7 @@ export class biwriter {
     *
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     int16(value: number, unsigned?: boolean, endian?: string): void {
         return this.writeInt16(value,unsigned,endian)
@@ -10060,7 +10060,7 @@ export class biwriter {
     *
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     short(value: number, unsigned?: boolean, endian?: string): void {
         return this.writeInt16(value,unsigned,endian)
@@ -10071,7 +10071,7 @@ export class biwriter {
     *
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     word(value: number, unsigned?: boolean, endian?: string): void {
         return this.writeInt16(value,unsigned,endian)
@@ -10081,7 +10081,7 @@ export class biwriter {
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     writeUInt16(value: number, endian?: string): void {
         return this.writeInt16(value, true, endian)
@@ -10091,7 +10091,7 @@ export class biwriter {
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     uint16(value: number, endian?: string): void {
         return this.writeInt16(value, true, endian)
@@ -10101,7 +10101,7 @@ export class biwriter {
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     ushort(value: number, endian?: string): void {
         return this.writeInt16(value, true, endian)
@@ -10111,7 +10111,7 @@ export class biwriter {
     * Write unsigned int16
     *
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     uword(value: number, endian?: string): void {
         return this.writeInt16(value, true, endian)
@@ -10269,7 +10269,7 @@ export class biwriter {
     * Writes half float
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     writeHalfFloat(value: number, endian?: string): void {
         return whalffloat(this, value, endian)
@@ -10278,7 +10278,7 @@ export class biwriter {
     /**
     * Read half float
     * 
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     readHalfFloat(endian?: string): number{
@@ -10289,7 +10289,7 @@ export class biwriter {
     * Writes half float
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     half(value: number, endian?: string): void {
         return this.writeHalfFloat(value,endian)
@@ -10299,7 +10299,7 @@ export class biwriter {
     * Writes half float
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     halffloat(value: number, endian?: string): void {
         return this.writeHalfFloat(value,endian)
@@ -10368,7 +10368,7 @@ export class biwriter {
     *
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     writeInt32(value: number, unsigned?: boolean, endian?: string): void {
         return wint32(this, value, unsigned, endian)
@@ -10378,7 +10378,7 @@ export class biwriter {
     * Read 32 bit integer
     * 
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     readInt32(unsigned?: boolean, endian?: string): number{
@@ -10390,7 +10390,7 @@ export class biwriter {
     *
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     int(value: number, unsigned?: boolean, endian?: string): void {
         return this.writeInt32(value, unsigned, endian)
@@ -10401,7 +10401,7 @@ export class biwriter {
     *
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     int32(value: number, unsigned?: boolean, endian?: string): void {
         return this.writeInt32(value, unsigned, endian)
@@ -10412,7 +10412,7 @@ export class biwriter {
     *
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     double(value: number, unsigned?: boolean, endian?: string): void {
         return this.writeInt32(value, unsigned, endian)
@@ -10423,7 +10423,7 @@ export class biwriter {
     *
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     long(value: number, unsigned?: boolean, endian?: string): void {
         return this.writeInt32(value, unsigned, endian)
@@ -10667,7 +10667,7 @@ export class biwriter {
     * Write float
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     writeFloat(value: number, endian?: string): void{
         return wfloat(this, value, endian)
@@ -10676,7 +10676,7 @@ export class biwriter {
     /**
     * Read float
     * 
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     readFloat(endian?: string): number{
@@ -10687,7 +10687,7 @@ export class biwriter {
     * Write float
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     float(value: number, endian?: string): void{
         return this.writeFloat(value,endian)
@@ -10738,7 +10738,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     writeInt64(value: number, unsigned?: boolean, endian?: string): void {
         return wint64(this, value, unsigned, endian)
@@ -10747,7 +10747,7 @@ export class biwriter {
     /**
     * Read signed 64 bit integer
     * @param {boolean} unsigned - if value is unsigned or not
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     readInt64(unsigned?: boolean, endian?: string): bigint {
@@ -10759,7 +10759,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     int64(value: number, unsigned?: boolean, endian?: string): void {
         return this.writeInt64(value,unsigned,endian)
@@ -10770,7 +10770,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     quad(value: number, unsigned?: boolean, endian?: string): void {
         return this.writeInt64(value,unsigned,endian)
@@ -10781,7 +10781,7 @@ export class biwriter {
     * 
     * @param {number} value - value as int 
     * @param {boolean} unsigned - if the value is unsigned
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     bigint(value: number, unsigned?: boolean, endian?: string): void {
         return this.writeInt64(value,unsigned,endian)
@@ -10791,7 +10791,7 @@ export class biwriter {
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     writeUInt64(value: number, endian?: string) {
         return this.writeInt64(value, true, endian)
@@ -10801,7 +10801,7 @@ export class biwriter {
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     uint64(value: number, endian?: string) {
         return this.writeInt64(value, true, endian)
@@ -10811,7 +10811,7 @@ export class biwriter {
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     ubigint(value: number, endian?: string) {
         return this.writeInt64(value, true, endian)
@@ -10821,7 +10821,7 @@ export class biwriter {
     * Write unsigned 64 bit integer
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     uquad(value: number, endian?: string) {
         return this.writeInt64(value, true, endian)
@@ -10979,8 +10979,7 @@ export class biwriter {
     * Writes double float
     * 
     * @param {number} value - value as int 
-    * @param {number} offset - byte offset (default last write position)
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     writeDoubleFloat(value: number, endian?: string): void {
         return wdfloat(this, value, endian)
@@ -10989,7 +10988,7 @@ export class biwriter {
     /**
     * Read double float
     * 
-    * @param {string} endian - ```big``` or ```little```
+    * @param {string} endian - ``big`` or ``little``
     * @returns number
     */
     readDoubleFloat(endian?: string): number{
@@ -11000,7 +10999,7 @@ export class biwriter {
     * Writes double float
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     doublefloat(value: number, endian?: string): void {
         return this.writeDoubleFloat(value, endian)
@@ -11010,7 +11009,7 @@ export class biwriter {
     * Writes double float
     * 
     * @param {number} value - value as int 
-    * @param {string} endian - ``big`` or ``little`
+    * @param {string} endian - ``big`` or ``little``
     */
     dfloat(value: number, endian?: string): void {
         return this.writeDoubleFloat(value, endian)
