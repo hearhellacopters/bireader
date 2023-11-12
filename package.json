@@ -1,6 +1,6 @@
 {
   "name": "bireader",
-  "version": "1.0.39",
+  "version": "1.0.40",
   "description": "Read and write data in binary",
   "module": "lib/esm/index.mjs",
   "main": "lib/cjs/index.js",

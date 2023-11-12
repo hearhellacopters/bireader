@@ -88,8 +88,11 @@ function alignRev(_this: bireader|biwriter, n:number){
     }
 }
 
-function goto(_this: bireader|biwriter,byte: number, bit?: number): void{
-    const new_size = (byte + Math.ceil((bit||0)/8) )
+function goto(_this: bireader|biwriter,bytes: number, bits?: number): void{
+    var new_size = (((bytes || 0)) + Math.ceil(( (bits||0)) /8) )
+    if( bits && bits < 0){
+        new_size = Math.floor(((((bytes || 0) ) * 8) + (bits||0)) / 8)
+    }
     if(new_size > _this.size){
         if( _this.strict == false){
             _this.extendArray(new_size - _this.size)
@@ -98,8 +101,15 @@ function goto(_this: bireader|biwriter,byte: number, bit?: number): void{
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: Goto utside of range of data: goto " + new_size + " of " + _this.size)
         }
     }
-    _this.offset = byte
-    _this.bitoffset = (bit || 0) % 8
+    _this.offset = bytes;
+    // Adjust byte offset based on bit overflow
+    _this.offset += Math.floor(((bits||0)) / 8);
+    // Adjust bit offset
+    _this.bitoffset = ((bits||0) + 64) % 8;    
+    // Ensure bit offset stays between 0-7
+    _this.bitoffset = Math.min(Math.max(_this.bitoffset, 0), 7);
+    // Ensure offset doesn't go negative
+    _this.offset = Math.max(_this.offset, 0);
 }
 
 function remove(_this: bireader|biwriter, startOffset?: number, endOffset?: number, consume?: boolean, remove?: boolean, fillValue?:number): any{
