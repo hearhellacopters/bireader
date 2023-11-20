@@ -19,7 +19,7 @@
     "./*": "./*"
   },
   "scripts": {
-    "clean": "rmdir /s lib",
+    "clean": "rmdir /S /Q lib",
     "build": "npm run clean && npm run build:esm && npm run move && npm run build:cjs",
     "build:esm": "tsc --module esnext --outDir lib/esm",
     "move": "cd ./lib/esm/ && ren index.js index.mjs && cd ../../",

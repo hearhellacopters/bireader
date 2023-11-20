@@ -82,7 +82,7 @@ export declare class bireader {
     * Note: Will extend array if strict mode is off and outside of max size
     *
     * @param {number} bytes - Bytes to skip
-    * @param {number} bits - Bits to skip (0-7)
+    * @param {number} bits - Bits to skip
     */
     skip(bytes: number, bits?: number): void;
     /**
@@ -90,7 +90,7 @@ export declare class bireader {
     * Note: Will extend array if strict mode is off and outside of max size
     *
     * @param {number} bytes - Bytes to skip
-    * @param {number} bits - Bits to skip (0-7)
+    * @param {number} bits - Bits to skip
     */
     jump(bytes: number, bits?: number): void;
     /**
@@ -98,7 +98,7 @@ export declare class bireader {
     * Note: Will extend array if strict mode is off and outside of max size
     *
     * @param {number} byte - byte to set to
-    * @param {number} bit - bit to set to (0-7)
+    * @param {number} bit - bit to set to
     */
     goto(byte: number, bit?: number): void;
     /**
@@ -106,7 +106,7 @@ export declare class bireader {
     * Note: Will extend array if strict mode is off and outside of max size
     *
     * @param {number} bytes - Bytes to skip
-    * @param {number} bits - Bits to skip (0-7)
+    * @param {number} bits - Bits to skip
     */
     seek(bytes: number, bits?: number): void;
     /**
@@ -114,7 +114,7 @@ export declare class bireader {
     * Note: Will extend array if strict mode is off and outside of max size
     *
     * @param {number} byte - byte to set to
-    * @param {number} bit - bit to set to (0-7)
+    * @param {number} bit - bit to set to
     */
     pointer(byte: number, bit?: number): void;
     /**
@@ -122,7 +122,7 @@ export declare class bireader {
     * Note: Will extend array if strict mode is off and outside of max size
     *
     * @param {number} byte - byte to set to
-    * @param {number} bit - bit to set to (0-7)
+    * @param {number} bit - bit to set to
     */
     warp(byte: number, bit?: number): void;
     /**
