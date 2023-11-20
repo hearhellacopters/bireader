@@ -162,7 +162,7 @@ function remove(_this: bireader|biwriter, startOffset?: number, endOffset?: numb
     return data_removed
 }
 
-function addData(_this: bireader|biwriter, data: Buffer|Uint8Array,consume?: boolean, offset?: number, repalce?: boolean): void{
+function addData(_this: bireader|biwriter, data: Buffer|Uint8Array,consume?: boolean, offset?: number, replace?: boolean): void{
     if(_this.strict == true){
         _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : ""
         throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Can not insert data in strict mode. Use unrestrict() to enable.`)
@@ -174,7 +174,7 @@ function addData(_this: bireader|biwriter, data: Buffer|Uint8Array,consume?: boo
         throw new Error("Data insert must be a Uint8Array")
     }
     var needed_size: number = offset || _this.offset
-    if(repalce){
+    if(replace){
         needed_size = offset || _this.offset + data.length
     }
     if(needed_size > _this.size){
@@ -186,7 +186,7 @@ function addData(_this: bireader|biwriter, data: Buffer|Uint8Array,consume?: boo
         }
         _this.size = _this.data.length
     }
-    if(repalce){
+    if(replace){
         if(isBuffer(_this.data)){
             const part1 = _this.data.subarray(0,needed_size - data.length)
             const part2 = _this.data.subarray(needed_size, _this.size)
@@ -648,6 +648,9 @@ function wbit(_this: bireader|biwriter,value: number, bits: number, unsigned?: b
     if(bits == undefined){
         throw new Error("Enter number of bits to write")
     }
+    if (bits == 0){
+        return;
+    }
     if (bits <= 0 || bits > 32) {
         throw new Error('Bit length must be between 1 and 32.');
     }
@@ -713,6 +716,9 @@ function wbit(_this: bireader|biwriter,value: number, bits: number, unsigned?: b
 function rbit(_this: bireader|biwriter,bits?: number, unsigned?: boolean, endian?: string): number{
     if(bits == undefined || typeof bits != "number"){
         throw new Error("Enter number of bits to read")
+    }
+    if (bits == 0){
+        return 0;
     }
     if (bits <= 0 || bits > 32) {
         throw new Error('Bit length must be between 1 and 32.');
@@ -1511,7 +1517,7 @@ export class bireader {
                 throw new Error("Write data must be Uint8Array or Buffer")
             }       
         }
-        this.size = data.length + ((bitOffset || 0) % 8)
+        this.size = data.length
         this.data = data
     }
 
@@ -1606,7 +1612,7 @@ export class bireader {
     * Note: Will extend array if strict mode is off and outside of max size
     * 
     * @param {number} bytes - Bytes to skip
-    * @param {number} bits - Bits to skip (0-7)
+    * @param {number} bits - Bits to skip
     */
     skip(bytes: number, bits?: number): void{
         return skip(this, bytes, bits)
@@ -1617,7 +1623,7 @@ export class bireader {
     * Note: Will extend array if strict mode is off and outside of max size
     * 
     * @param {number} bytes - Bytes to skip
-    * @param {number} bits - Bits to skip (0-7)
+    * @param {number} bits - Bits to skip
     */
     jump(bytes: number, bits?: number): void{
         this.skip(bytes, bits)
@@ -1632,7 +1638,7 @@ export class bireader {
     * Note: Will extend array if strict mode is off and outside of max size
     * 
     * @param {number} byte - byte to set to
-    * @param {number} bit - bit to set to (0-7)
+    * @param {number} bit - bit to set to
     */
     goto(byte: number, bit?: number): void{
         return goto(this,byte,bit)
@@ -1643,7 +1649,7 @@ export class bireader {
     * Note: Will extend array if strict mode is off and outside of max size
     * 
     * @param {number} bytes - Bytes to skip
-    * @param {number} bits - Bits to skip (0-7)
+    * @param {number} bits - Bits to skip
     */
     seek(bytes: number, bits?: number): void{
         return this.skip(bytes, bits)
@@ -1654,7 +1660,7 @@ export class bireader {
     * Note: Will extend array if strict mode is off and outside of max size
     * 
     * @param {number} byte - byte to set to
-    * @param {number} bit - bit to set to (0-7)
+    * @param {number} bit - bit to set to
     */
     pointer(byte: number, bit?: number): void{
         return this.goto(byte,bit)
@@ -1665,7 +1671,7 @@ export class bireader {
     * Note: Will extend array if strict mode is off and outside of max size
     * 
     * @param {number} byte - byte to set to
-    * @param {number} bit - bit to set to (0-7)
+    * @param {number} bit - bit to set to
     */
     warp(byte: number, bit?: number): void{
         return this.goto(byte,bit)
@@ -1687,8 +1693,7 @@ export class bireader {
     * Set byte and bit position to start of data
     */
     gotostart(): void{
-        this.offset = 0
-        this.bitoffset = 0
+        return this.rewind();
     }
 
     //
@@ -1710,7 +1715,7 @@ export class bireader {
     * @return {number} current byte position
     */
     getOffset(): number{
-        return this.offset
+        return this.tell();
     }
 
     /**
@@ -1719,7 +1724,7 @@ export class bireader {
     * @return {number} current byte position
     */
     saveOffset(): number{
-        return this.offset
+        return this.tell();
     }
 
     /**
@@ -1737,7 +1742,7 @@ export class bireader {
     * @return {number} current bit position
     */
     getOffsetBit(): number{
-        return this.bitoffset
+        return this.tellB();
     }
 
     /**
@@ -1755,7 +1760,7 @@ export class bireader {
     * @return {number} current absolute bit position
     */
      tellAbsB(): number{
-        return (this.offset *8 ) + this.bitoffset
+        return this.saveOffsetAbsBit();
     }
 
     /**
@@ -1764,7 +1769,7 @@ export class bireader {
     * @return {number} current absolute bit position
     */
     getOffsetAbsBit(): number{
-        return (this.offset *8 ) + this.bitoffset
+        return this.saveOffsetAbsBit();
     }
 
     /**
@@ -1773,7 +1778,7 @@ export class bireader {
     * @return {number} current absolute bit position
     */
     saveOffsetBit(): number{
-        return (this.offset *8 ) + this.bitoffset
+        return this.saveOffsetAbsBit();
     }
 
     //
@@ -6397,7 +6402,7 @@ export class biwriter {
             }       
         }
         this.data = data
-        this.size = this.data.length + ((bitOffset || 0) % 8)
+        this.size = this.data.length
     }
 
     /**
@@ -6578,8 +6583,7 @@ export class biwriter {
     * Set byte and bit position to start of data
     */
     gotostart(): void{
-        this.offset = 0
-        this.bitoffset = 0
+        return this.rewind();
     }
 
     //
@@ -6592,7 +6596,7 @@ export class biwriter {
     * @return {number} current byte position
     */
     tell(): number{
-        return this.offset
+        return this.offset;
     }
 
     /**
@@ -6601,7 +6605,7 @@ export class biwriter {
     * @return {number} current byte position
     */
     getOffset(): number{
-        return this.offset
+        return this.tell();
     }
 
     /**
@@ -6610,7 +6614,7 @@ export class biwriter {
     * @return {number} current byte position
     */
     saveOffset(): number{
-        return this.offset
+        return this.tell();
     }
 
     /**
@@ -6619,7 +6623,7 @@ export class biwriter {
     * @return {number} current bit position
     */
     tellB(): number{
-        return this.bitoffset
+        return this.bitoffset;
     }
 
     /**
@@ -6628,7 +6632,7 @@ export class biwriter {
     * @return {number} current bit position
     */
     getOffsetBit(): number{
-        return this.bitoffset
+        return this.tellB();
     }
 
     /**
@@ -6646,7 +6650,7 @@ export class biwriter {
     * @return {number} current absolute bit position
     */
      tellAbsB(): number{
-        return (this.offset *8 ) + this.bitoffset
+        return this.saveOffsetAbsBit();
     }
 
     /**
@@ -6655,7 +6659,7 @@ export class biwriter {
     * @return {number} current absolute bit position
     */
     getOffsetAbsBit(): number{
-        return (this.offset *8 ) + this.bitoffset
+        return this.saveOffsetAbsBit();
     }
 
     /**
@@ -6664,7 +6668,7 @@ export class biwriter {
     * @return {number} current absolute bit position
     */
     saveOffsetBit(): number{
-        return (this.offset *8 ) + this.bitoffset
+        return this.saveOffsetAbsBit();
     }
 
     //
