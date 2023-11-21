@@ -652,7 +652,7 @@ function wbit(_this: bireader|biwriter,value: number, bits: number, unsigned?: b
         return;
     }
     if (bits <= 0 || bits > 32) {
-        throw new Error('Bit length must be between 1 and 32.');
+        throw new Error('Bit length must be between 1 and 32. Got '+ bits);
     }
     if (unsigned == true) {
         if (value < 0 || value > Math.pow(2, bits)) {
@@ -721,7 +721,7 @@ function rbit(_this: bireader|biwriter,bits?: number, unsigned?: boolean, endian
         return 0;
     }
     if (bits <= 0 || bits > 32) {
-        throw new Error('Bit length must be between 1 and 32.');
+        throw new Error('Bit length must be between 1 and 32. Got '+ bits);
     }
     const size_needed = ((((bits-1) + _this.bitoffset) / 8) + _this.offset)
     if (bits <= 0 || size_needed > _this.size) {
