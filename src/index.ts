@@ -723,7 +723,7 @@ function fNumber(_this: bireader|biwriter, targetNumber:number, bits:number, uns
 function fHalfFloat(_this:bireader|biwriter,targetNumber:number,endian?:string):number{
 
     check_size(_this,2,0)
-    
+
     for (let z = _this.offset; z <= (_this.size-2); z++) {
 
         var value = 0;
@@ -1736,16 +1736,37 @@ export class bireader {
     * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default true)
     */
     constructor(data: Buffer|Uint8Array, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean) {
+        if(data == undefined){
+            throw new Error("Data required");
+        } else {
+            if(!this.isBufferOrUint8Array(data)){
+                throw new Error("Write data must be Uint8Array or Buffer");
+            }
+        }
+
+        this.size = data.length;
+
+        this.data = data;
+
         if(endianness != undefined && typeof endianness != "string"){
-            throw new Error("Endian must be big or little")
+            throw new Error("Endian must be big or little");
         }
         if(endianness != undefined && !(endianness == "big" || endianness == "little")){
-            throw new Error("Byte order must be big or little")
+            throw new Error("Byte order must be big or little");
         }
-        this.endian = endianness || "little"
+
+        this.endian = endianness || "little";
+
+        if(typeof strict == "boolean"){
+            this.strict = strict
+        } else {
+            if(strict != undefined){
+                throw new Error("Strict mode must be true of false");
+            }
+        }
         
         if(byteOffset != undefined || bitOffset!= undefined){
-            this.offset = ((Math.abs(byteOffset|| 0)) + Math.ceil(( Math.abs(bitOffset||0)) /8) )
+            this.offset = ((Math.abs(byteOffset|| 0)) + Math.ceil(( Math.abs(bitOffset||0)) /8) );
             // Adjust byte offset based on bit overflow
             this.offset += Math.floor((Math.abs(bitOffset||0)) / 8);
             // Adjust bit offset
@@ -1754,23 +1775,14 @@ export class bireader {
             this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
             // Ensure offset doesn't go negative
             this.offset = Math.max(this.offset, 0);
-        }
-        if(typeof strict == "boolean"){
-            this.strict = strict
-        } else {
-            if(strict != undefined){
-                throw new Error("Strict mode must be true of false")
+            if(this.offset > this.size){
+                if(this.strict == false){
+                    this.extendArray(this.offset - this.size);
+                } else {
+                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
+                }
             }
         }
-        if(data == undefined){
-            throw new Error("Data required")
-        } else {
-            if(!this.isBufferOrUint8Array(data)){
-                throw new Error("Write data must be Uint8Array or Buffer")
-            }       
-        }
-        this.size = data.length
-        this.data = data
     }
 
     /**
@@ -6740,12 +6752,37 @@ export class biwriter {
     * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default false)
     */
     constructor(data: Buffer|Uint8Array, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean) {
+        
+        if(data == undefined){
+            if(typeof Buffer !== 'undefined'){
+                this.data = Buffer.alloc(this.offset||1+(this.bitoffset!=0?1:0));
+            } else {
+                this.data = new Uint8Array(this.offset||1+(this.bitoffset!=0?1:0));
+            }
+        } else {
+            if(!this.isBufferOrUint8Array(data)){
+                throw new Error("Write data must be Uint8Array or Buffer.");
+            }
+            this.data = data; 
+        }
+
+        this.size = this.data.length;
+
+        if(typeof strict == "boolean"){
+            this.strict = strict;
+        } else {
+            if(strict != undefined){
+                throw new Error("Strict mode must be true of false.");
+            }
+        }
+
         if(endianness != undefined && typeof endianness != "string"){
-            throw new Error("endianness must be big or little")
+            throw new Error("endianness must be big or little.");
         }
         if(endianness != undefined && !(endianness == "big" || endianness == "little")){
-            throw new Error("Endianness must be big or little")
+            throw new Error("Endianness must be big or little.");
         }
+
         this.endian = endianness || "little"
 
         if(byteOffset != undefined || bitOffset!= undefined){
@@ -6758,28 +6795,14 @@ export class biwriter {
             this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
             // Ensure offset doesn't go negative
             this.offset = Math.max(this.offset, 0);
-        }
-
-        if(typeof strict == "boolean"){
-            this.strict = strict
-        } else {
-            if(strict != undefined){
-                throw new Error("Strict mode must be true of false")
+            if(this.offset > this.size){
+                if(this.strict == false){
+                    this.extendArray(this.offset - this.size);
+                } else {
+                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
+                }
             }
         }
-        if(data == undefined){
-            if(typeof Buffer !== 'undefined'){
-                this.data = Buffer.alloc(this.offset||1+(this.bitoffset!=0?1:0));
-            } else {
-                this.data = new Uint8Array(this.offset||1+(this.bitoffset!=0?1:0));
-            }
-        } else {
-            if(!this.isBufferOrUint8Array(data)){
-                throw new Error("Write data must be Uint8Array or Buffer")
-            }       
-        }
-        this.data = data
-        this.size = this.data.length
     }
 
     /**
