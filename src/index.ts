@@ -1493,15 +1493,16 @@ export class bireader {
         }
         this.endian = endianness || "little"
         
-        if(byteOffset != undefined ){
-            if(typeof byteOffset == "number"){
-                this.offset = Math.round(byteOffset) || 0
-            } else {
-                throw new Error("Byte offset must be number")
-            }
-        }
-        if(bitOffset!= undefined){
-            this.bitoffset = bitOffset % 8
+        if(byteOffset != undefined || bitOffset!= undefined){
+            this.offset = ((Math.abs(byteOffset|| 0)) + Math.ceil(( Math.abs(bitOffset||0)) /8) )
+            // Adjust byte offset based on bit overflow
+            this.offset += Math.floor((Math.abs(bitOffset||0)) / 8);
+            // Adjust bit offset
+            this.bitoffset = (Math.abs(bitOffset||0) + 64) % 8;    
+            // Ensure bit offset stays between 0-7
+            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
+            // Ensure offset doesn't go negative
+            this.offset = Math.max(this.offset, 0);
         }
         if(typeof strict == "boolean"){
             this.strict = strict
@@ -6376,17 +6377,19 @@ export class biwriter {
             throw new Error("Endianness must be big or little")
         }
         this.endian = endianness || "little"
-        
-        if(byteOffset != undefined ){
-            if(typeof byteOffset == "number"){
-                this.offset = Math.round(byteOffset) || 0
-            } else {
-                throw new Error("Byte offset must be number")
-            }
+
+        if(byteOffset != undefined || bitOffset!= undefined){
+            this.offset = ((Math.abs(byteOffset|| 0)) + Math.ceil(( Math.abs(bitOffset||0)) /8) )
+            // Adjust byte offset based on bit overflow
+            this.offset += Math.floor((Math.abs(bitOffset||0)) / 8);
+            // Adjust bit offset
+            this.bitoffset = (Math.abs(bitOffset||0) + 64) % 8;    
+            // Ensure bit offset stays between 0-7
+            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
+            // Ensure offset doesn't go negative
+            this.offset = Math.max(this.offset, 0);
         }
-        if(bitOffset!= undefined){
-            this.bitoffset = (bitOffset % 8)
-        }
+
         if(typeof strict == "boolean"){
             this.strict = strict
         } else {
@@ -6395,7 +6398,11 @@ export class biwriter {
             }
         }
         if(data == undefined){
-            throw new Error("Data required")
+            if(typeof Buffer !== 'undefined'){
+                this.data = Buffer.alloc(this.offset||1+(this.bitoffset!=0?1:0));
+            } else {
+                this.data = new Uint8Array(this.offset||1+(this.bitoffset!=0?1:0));
+            }
         } else {
             if(!this.isBufferOrUint8Array(data)){
                 throw new Error("Write data must be Uint8Array or Buffer")

@@ -289,12 +289,13 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>new bireader(<b>data</b>, byteOffset, bitOffset, endianess, strict)</td>
-    <td align="center" rowspan="2"><b>Buffer or Uint8Array</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending initially supplied data (default true for reader, false for writer)</td>
-    <td rowspan="2">Start with new Constructor.<br><b>Note:</b> Data can always be found with .data</td>
+    <td align="center" rowspan="2"><b>Buffer or Uint8Array</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending initially supplied data (default true for reader, false for writer)
+    </td>
+    <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> Data can always be found with .data. Also biwrite can created without data and will default to a supplied offset as a Buffer (if available) or Uint8Array.</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>new biwriter(<b>data</b>, byteOffset, bitOffset, endianess, strict)</td>
+    <td>new biwriter(data, byteOffset, bitOffset, endianess, strict)</td>
   </tr>
   <tr>
     <td>Name</td>
