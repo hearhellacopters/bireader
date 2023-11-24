@@ -1758,7 +1758,7 @@ export class bireader {
         this.endian = endianness || "little";
 
         if(typeof strict == "boolean"){
-            this.strict = strict
+            this.strict = strict;
         } else {
             if(strict != undefined){
                 throw new Error("Strict mode must be true of false");
@@ -6783,7 +6783,7 @@ export class biwriter {
             throw new Error("Endianness must be big or little.");
         }
 
-        this.endian = endianness || "little"
+        this.endian = endianness || "little";
 
         if(byteOffset != undefined || bitOffset!= undefined){
             this.offset = ((Math.abs(byteOffset|| 0)) + Math.ceil(( Math.abs(bitOffset||0)) /8) )
