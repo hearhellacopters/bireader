@@ -387,6 +387,55 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td>Aliases</td>
     <td>close(), done(), finished()</td>
   </tr>
+  <th align="center" colspan="4"><i>Search</i></th>
+  <tr>
+    <td>Name</td>
+    <td>findString(<b>value</b>, unsigned, endian)</td>
+    <td align="center">Searches for byte position of string from current read position.</td>
+    <td ><b>Note:</b> Does not change current read position.</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>findByte(<b>value</b>, unsigned, endian)</td>
+    <td align="center">Searches for byte value (can be signed or unsigned) position from current read position.</td>
+    <td ><b>Note:</b> Does not change current read position.</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>findShort(<b>value</b>, unsigned, endian)</td>
+    <td align="center">Searches for short value (can be signed or unsigned) position from current read position.</td>
+    <td ><b>Note:</b> Does not change current read position.</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>findInt(<b>value</b>, unsigned, endian)</td>
+    <td align="center">Searches for integer value (can be signed or unsigned) position from current read position.</td>
+    <td ><b>Note:</b> Does not change current read position.</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>findInt64(<b>value</b>, unsigned, endian)</td>
+    <td align="center">Searches for 64 bit position from current read position.</td>
+    <td ><b>Note:</b> Does not change current read position.</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>findHalfFloat(<b>value</b>, endian)</td>
+    <td align="center">Searches for half float value position from current read position.</td>
+    <td ><b>Note:</b> Does not change current read position.</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>findFloat(<b>value</b>, endian)</td>
+    <td align="center">Searches for float value position from current read position.</td>
+    <td ><b>Note:</b> Does not change current read position.</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>findDoubleFloat(<b>value</b>, endian)</td>
+    <td align="center">Searches for double float value position from current read position.</td>
+    <td ><b>Note:</b> Does not change current read position.</td>
+  </tr>
   <th align="center" colspan="4"><i>Movement</i></th>
   <tr>
     <td>Name</td>

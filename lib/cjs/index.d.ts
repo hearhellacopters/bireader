@@ -523,6 +523,97 @@ export declare class bireader {
     */
     errorDumpOn(): void;
     /**
+    * Searches for byte position of string from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {string} string - String to search for.
+    */
+    findString(string: string): number;
+    /**
+    * Searches for byte value (can be signed or unsigned) position from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findByte(value: number, unsigned?: boolean, endian?: string): number;
+    /**
+    * Searches for short value (can be signed or unsigned) position from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findShort(value: number, unsigned?: boolean, endian?: string): number;
+    /**
+    * Searches for integer value (can be signed or unsigned) position from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findInt(value: number, unsigned?: boolean, endian?: string): number;
+    /**
+    * Searches for half float value position from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {number} value - Number to search for.
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findHalfFloat(value: number, endian?: string): number;
+    /**
+    * Searches for float value position from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {number} value - Number to search for.
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findFloat(value: number, endian?: string): number;
+    /**
+    * Searches for 64 bit value (can be signed or unsigned) position from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findInt64(value: number, unsigned?: boolean, endian?: string): number;
+    /**
+    * Searches for double float value position from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {number} value - Number to search for.
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findDoubleFloat(value: number, endian?: string): number;
+    /**
     *
     * Write bits, must have at least value and number of bits
     *
@@ -3891,6 +3982,97 @@ export declare class biwriter {
     * Turn hexdump on error on (default on)
     */
     errorDumpOn(): void;
+    /**
+    * Searches for byte position of string from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {string} string - String to search for.
+    */
+    findString(string: string): number;
+    /**
+    * Searches for byte value (can be signed or unsigned) position from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findByte(value: number, unsigned?: boolean, endian?: string): number;
+    /**
+    * Searches for short value (can be signed or unsigned) position from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findShort(value: number, unsigned?: boolean, endian?: string): number;
+    /**
+    * Searches for integer value (can be signed or unsigned) position from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findInt(value: number, unsigned?: boolean, endian?: string): number;
+    /**
+    * Searches for half float value position from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {number} value - Number to search for.
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findHalfFloat(value: number, endian?: string): number;
+    /**
+    * Searches for float value position from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {number} value - Number to search for.
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findFloat(value: number, endian?: string): number;
+    /**
+    * Searches for 64 bit value (can be signed or unsigned) position from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findInt64(value: number, unsigned?: boolean, endian?: string): number;
+    /**
+    * Searches for double float value position from current read position.
+    *
+    * Returns -1 if not found.
+    *
+    * Does not change current read position.
+    *
+    * @param {number} value - Number to search for.
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findDoubleFloat(value: number, endian?: string): number;
     /**
     *
     * Write bits, must have at least value and number of bits

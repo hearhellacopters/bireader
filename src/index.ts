@@ -641,6 +641,257 @@ function ADD(_this: bireader|biwriter, add_key:any, start?: number, end?: number
     }
 }
 
+function fString(_this: bireader|biwriter,searchString:string):number{
+// Convert the searchString to Uint8Array
+    const searchArray = new TextEncoder().encode(searchString);
+
+    for (let i = _this.offset; i <= _this.size - searchArray.length; i++) {
+        let match = true;
+
+        for (let j = 0; j < searchArray.length; j++) {
+            if (_this.data[i + j] !== searchArray[j]) {
+                match = false;
+                break;
+            }
+        }
+
+        if (match) {
+            return i; // Found the string, return the index
+        }
+    }
+
+    return -1; // String not found
+
+}
+
+function fNumber(_this: bireader|biwriter, targetNumber:number, bits:number, unsigned:boolean, endian?:string):number {
+
+    check_size(_this,Math.floor(bits/8),0)
+
+    for (let z = _this.offset; z <= (_this.size-(bits/8)); z++) {
+
+        var off_in_bits = 0;
+
+        var value = 0;
+
+        for (var i = 0; i < bits;) {
+            var remaining = bits - i;
+            var bitOffset = off_in_bits & 7;
+            var currentByte = <unknown> _this.data[z+(off_in_bits >> 3)] as number
+
+            var read = Math.min(remaining, 8 - bitOffset);
+
+            var mask: number, readBits: number;
+
+            if ((endian != undefined ? endian : _this.endian)  == "big") {
+
+                mask = ~(0xFF << read);
+                readBits = (currentByte >> (8 - read - bitOffset)) & mask;
+                value <<= read;
+                value |= readBits;
+
+            } else {
+
+                mask = ~(0xFF << read);
+                readBits = (currentByte >> bitOffset) & mask;
+                value |= readBits << i;
+
+            }
+
+            off_in_bits += read;
+            i += read;
+        }
+
+        if (unsigned == true || bits <= 7) {
+
+            value = value >>> 0;
+            
+        } else {
+            if (bits !== 32 && value & (1 << (bits - 1))) {
+                value |= -1 ^ ((1 << bits) - 1);
+            }
+        }        
+
+        if(value === targetNumber){
+            return z; // Found the byte, return the index
+        }
+    }
+    
+    return -1; // number not found
+}
+
+function fHalfFloat(_this:bireader|biwriter,targetNumber:number,endian?:string):number{
+
+    check_size(_this,2,0)
+    
+    for (let z = _this.offset; z <= (_this.size-2); z++) {
+
+        var value = 0;
+
+        if((endian != undefined ? endian : _this.endian)  == "little"){
+            value = ((<unknown>_this.data[z + 1] as number & 0xFFFF) << 8) | (<unknown>_this.data[z] as number & 0xFFFF);
+        } else {
+            value = ((<unknown>_this.data[z] as number & 0xFFFF) << 8) | (<unknown>_this.data[z + 1] as number & 0xFFFF);
+        }
+
+        const sign = (value & 0x8000) >> 15;
+        const exponent = (value & 0x7C00) >> 10;
+        const fraction = value & 0x03FF;
+
+        let floatValue:number;
+
+        if (exponent === 0) {
+            if (fraction === 0) {
+            floatValue = (sign === 0) ? 0 : -0; // +/-0
+            } else {
+            // Denormalized number
+            floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, -14) * (fraction / 0x0400);
+            }
+        } else if (exponent === 0x1F) {
+            if (fraction === 0) {
+            floatValue = (sign === 0) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+            } else {
+            floatValue = Number.NaN;
+            }
+        } else {
+            // Normalized number
+            floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x0400);
+        }
+
+        if(floatValue === targetNumber){
+            return z; // Found the number, return the index
+        }
+    }
+
+    return -1; // number not found
+}
+
+function fFloat(_this:bireader|biwriter,targetNumber:number,endian?:string):number{
+
+    check_size(_this,4,0)
+
+    for (let z = _this.offset; z <= (_this.size-4); z++) {
+
+        var value = 0;
+
+        if((endian != undefined ? endian : _this.endian) == "little"){
+            value = (((<unknown>_this.data[z + 3] as number & 0xFF) << 24) | ((<unknown>_this.data[z + 2] as number & 0xFF) << 16) | ((<unknown>_this.data[z + 1] as number & 0xFF) << 8) | (<unknown>_this.data[z] as number & 0xFF))
+        } else {
+            value = ((<unknown>_this.data[z] as number & 0xFF) << 24) | ((<unknown>_this.data[z + 1] as number & 0xFF) << 16) | ((<unknown>_this.data[z + 2] as number & 0xFF) << 8) | (<unknown>_this.data[z + 3] as number & 0xFF)
+        }
+
+        const isNegative = (value & 0x80000000) !== 0 ? 1: 0;
+
+        // Extract the exponent and fraction parts
+        const exponent = (value >> 23) & 0xFF;
+        const fraction = value & 0x7FFFFF;
+
+        // Calculate the float value
+        let floatValue: number;
+
+        if (exponent === 0) {
+            // Denormalized number (exponent is 0)
+            floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
+        } else if (exponent === 0xFF) {
+            // Infinity or NaN (exponent is 255)
+            floatValue = fraction === 0 ? (isNegative ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : Number.NaN;
+        } else {
+            // Normalized number
+            floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
+        }
+
+        if(floatValue === targetNumber){
+            return z; // Found the number, return the index
+        }
+
+    }
+
+    return -1; // number not found
+}
+
+function fBigInt(_this: bireader|biwriter, targetNumber:number, unsigned:boolean, endian?:string):number {
+    check_size(_this,8,0)
+
+    for (let z = _this.offset; z <= (_this.size-8); z++) {
+        let value: bigint = BigInt(0);
+        if((endian == undefined ? _this.endian : endian) == "little"){
+            for (let i = 0; i < 8; i++) {
+                value = value | BigInt((<unknown>_this.data[z+i] as number & 0xFF)) << BigInt(8 * i);
+            }
+            if(unsigned == undefined || unsigned == false){
+                if (value & (BigInt(1) << BigInt(63))) {
+                    value -= BigInt(1) << BigInt(64);
+                }
+            }
+        } else {
+            for (let i = 0; i < 8; i++) {
+                value = (value << BigInt(8)) | BigInt((<unknown>_this.data[z+i] as number & 0xFF));
+            }
+            if(unsigned == undefined || unsigned == false){
+                if (value & (BigInt(1) << BigInt(63))) {
+                    value -= BigInt(1) << BigInt(64);
+                }
+            }
+        }
+
+        if(value == BigInt(targetNumber)){
+            return z;
+        }
+    }
+
+    return -1;// number not found
+}
+
+function fDoubleFloat(_this:bireader|biwriter,targetNumber:number,endian?:string):number{
+
+    check_size(_this,8,0)
+
+    for (let z = _this.offset; z <= (_this.size-8); z++) {
+
+        let value = BigInt(0);
+        if((endian == undefined ? _this.endian : endian) == "little"){
+            for (let i = 0; i < 8; i++) {
+                value = value | BigInt((<unknown>_this.data[z+i] as number & 0xFF)) << BigInt(8 * i);
+            }
+        } else {
+            for (let i = 0; i < 8; i++) {
+                value = (value << BigInt(8)) | BigInt((<unknown>_this.data[z+i] as number & 0xFF));
+            }
+        }
+
+        const sign = (value & 0x8000000000000000n) >> 63n;
+        const exponent = Number((value & 0x7FF0000000000000n) >> 52n) - 1023;
+        const fraction = Number(value & 0x000FFFFFFFFFFFFFn) / Math.pow(2, 52);
+
+        var floatValue: number;
+
+        if (exponent == -1023) {
+            if (fraction == 0) {
+            floatValue = (sign == 0n) ? 0 : -0; // +/-0
+            } else {
+            // Denormalized number
+            floatValue = (sign == 0n ? 1 : -1) * Math.pow(2, -1022) * fraction;
+            }
+        } else if (exponent == 1024) {
+            if (fraction == 0) {
+            floatValue = (sign == 0n) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+            } else {
+            floatValue = Number.NaN;
+            }
+        } else {
+            // Normalized number
+            floatValue = (sign == 0n ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
+        }
+
+        if(floatValue == targetNumber){
+            return z;
+        }
+
+    }
+
+    return -1; // number not found
+}
+
 function wbit(_this: bireader|biwriter,value: number, bits: number, unsigned?: boolean, endian?: string){
     if(value == undefined){
         throw new Error('Must supply value.');
@@ -2426,6 +2677,125 @@ export class bireader {
     */
     errorDumpOn(): void{
         this.errorDump = true;
+    }
+
+    //
+    //find
+    //
+
+    /**
+    * Searches for byte position of string from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {string} string - String to search for.
+    */
+    findString(string:string):number{
+        return fString(this,string)
+    }
+
+    /**
+    * Searches for byte value (can be signed or unsigned) position from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findByte(value:number,unsigned?:boolean,endian?:string):number{
+        return fNumber(this,value,8,unsigned==undefined? true:unsigned,endian)
+    }
+
+    /**
+    * Searches for short value (can be signed or unsigned) position from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findShort(value:number,unsigned?:boolean,endian?:string):number{
+        return fNumber(this,value,16,unsigned==undefined? true:unsigned,endian)
+    }
+
+    /**
+    * Searches for integer value (can be signed or unsigned) position from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findInt(value:number,unsigned?:boolean,endian?:string):number{
+        return fNumber(this,value,32,unsigned==undefined? true:unsigned,endian)
+    }
+
+    /**
+    * Searches for half float value position from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {number} value - Number to search for.
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findHalfFloat(value:number,endian?:string):number{
+        return fHalfFloat(this,value,endian)
+    }
+
+    /**
+    * Searches for float value position from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {number} value - Number to search for.
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findFloat(value:number,endian?:string):number{
+        return fFloat(this,value,endian)
+    }
+
+    /**
+    * Searches for 64 bit value (can be signed or unsigned) position from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findInt64(value:number,unsigned?:boolean,endian?:string):number{
+        return fBigInt(this,value,unsigned==undefined? true:unsigned,endian)
+    }
+
+    /**
+    * Searches for double float value position from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {number} value - Number to search for.
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findDoubleFloat(value:number,endian?:string):number{
+        return fDoubleFloat(this,value,endian)
     }
 
     //
@@ -7322,6 +7692,125 @@ export class biwriter {
     */
     errorDumpOn(): void{
         this.errorDump = true;
+    }
+
+    //
+    //find
+    //
+
+    /**
+    * Searches for byte position of string from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {string} string - String to search for.
+    */
+    findString(string:string):number{
+        return fString(this,string)
+    }
+
+    /**
+    * Searches for byte value (can be signed or unsigned) position from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findByte(value:number,unsigned?:boolean,endian?:string):number{
+        return fNumber(this,value,8,unsigned==undefined? true:unsigned,endian)
+    }
+
+    /**
+    * Searches for short value (can be signed or unsigned) position from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findShort(value:number,unsigned?:boolean,endian?:string):number{
+        return fNumber(this,value,16,unsigned==undefined? true:unsigned,endian)
+    }
+
+    /**
+    * Searches for integer value (can be signed or unsigned) position from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findInt(value:number,unsigned?:boolean,endian?:string):number{
+        return fNumber(this,value,32,unsigned==undefined? true:unsigned,endian)
+    }
+
+    /**
+    * Searches for half float value position from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {number} value - Number to search for.
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findHalfFloat(value:number,endian?:string):number{
+        return fHalfFloat(this,value,endian)
+    }
+
+    /**
+    * Searches for float value position from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {number} value - Number to search for.
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findFloat(value:number,endian?:string):number{
+        return fFloat(this,value,endian)
+    }
+
+    /**
+    * Searches for 64 bit value (can be signed or unsigned) position from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {number} value - Number to search for.
+    * @param {boolean} unsigned - If the number is unsigned (default true)
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findInt64(value:number,unsigned?:boolean,endian?:string):number{
+        return fBigInt(this,value,unsigned==undefined? true:unsigned,endian)
+    }
+
+    /**
+    * Searches for double float value position from current read position.
+    * 
+    * Returns -1 if not found.
+    * 
+    * Does not change current read position.
+    * 
+    * @param {number} value - Number to search for.
+    * @param {string} endian - endianness of value (default set endian).
+    */
+    findDoubleFloat(value:number,endian?:string):number{
+        return fDoubleFloat(this,value,endian)
     }
 
     //
