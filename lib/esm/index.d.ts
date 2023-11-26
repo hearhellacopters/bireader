@@ -79,6 +79,7 @@ export declare class bireader {
     alignRev(number: number): void;
     /**
     * Offset current byte or bit position
+    *
     * Note: Will extend array if strict mode is off and outside of max size
     *
     * @param {number} bytes - Bytes to skip
@@ -87,6 +88,7 @@ export declare class bireader {
     skip(bytes: number, bits?: number): void;
     /**
     * Offset current byte or bit position
+    *
     * Note: Will extend array if strict mode is off and outside of max size
     *
     * @param {number} bytes - Bytes to skip
@@ -95,6 +97,7 @@ export declare class bireader {
     jump(bytes: number, bits?: number): void;
     /**
     * Change position directly to address
+    *
     * Note: Will extend array if strict mode is off and outside of max size
     *
     * @param {number} byte - byte to set to
@@ -103,6 +106,7 @@ export declare class bireader {
     goto(byte: number, bit?: number): void;
     /**
     * Offset current byte or bit position
+    *
     * Note: Will extend array if strict mode is off and outside of max size
     *
     * @param {number} bytes - Bytes to skip
@@ -111,6 +115,7 @@ export declare class bireader {
     seek(bytes: number, bits?: number): void;
     /**
     * Change position directly to address
+    *
     * Note: Will extend array if strict mode is off and outside of max size
     *
     * @param {number} byte - byte to set to
@@ -119,6 +124,7 @@ export declare class bireader {
     pointer(byte: number, bit?: number): void;
     /**
     * Change position directly to address
+    *
     * Note: Will extend array if strict mode is off and outside of max size
     *
     * @param {number} byte - byte to set to
@@ -314,6 +320,7 @@ export declare class bireader {
     addThis(addKey: number | string | Array<number> | Buffer, length?: number, consume?: boolean): void;
     /**
     * Deletes part of data from start to current byte position unless supplied, returns removed
+    *
     * Note: Errors in strict mode
     *
     * @param {number} startOffset - Start location (default 0)
@@ -324,6 +331,7 @@ export declare class bireader {
     delete(startOffset?: number, endOffset?: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Deletes part of data from current byte position to end, returns removed
+    *
     * Note: Errors in strict mode
     *
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
@@ -331,6 +339,7 @@ export declare class bireader {
     clip(): Buffer | Uint8Array;
     /**
     * Deletes part of data from current byte position to end, returns removed
+    *
     * Note: Errors in strict mode
     *
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
@@ -338,6 +347,7 @@ export declare class bireader {
     trim(): Buffer | Uint8Array;
     /**
     * Deletes part of data from current byte position to supplied length, returns removed
+    *
     * Note: Errors in strict mode
     *
     * @param {number} length - Length of data in bytes to remove
@@ -376,6 +386,7 @@ export declare class bireader {
     fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Buffer | Uint8Array;
     /**
     * Extract data from current position to length supplied
+    *
     * Note: Does not affect supplied data
     *
     * @param {number} length - Length of data in bytes to copy from current offset
@@ -385,6 +396,7 @@ export declare class bireader {
     extract(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Extract data from current position to length supplied
+    *
     * Note: Does not affect supplied data
     *
     * @param {number} length - Length of data in bytes to copy from current offset
@@ -394,6 +406,7 @@ export declare class bireader {
     slice(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Extract data from current position to length supplied
+    *
     * Note: Does not affect supplied data
     *
     * @param {number} length - Length of data in bytes to copy from current offset
@@ -403,6 +416,7 @@ export declare class bireader {
     wrap(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Inserts data into data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -412,6 +426,7 @@ export declare class bireader {
     insert(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
     /**
     * Inserts data into data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -421,6 +436,7 @@ export declare class bireader {
     place(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
     /**
     * Replaces data in data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
@@ -430,6 +446,7 @@ export declare class bireader {
     replace(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
     /**
     * Replaces data in data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
@@ -439,6 +456,7 @@ export declare class bireader {
     overwrite(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
     /**
     * Adds data to start of supplied data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -447,6 +465,7 @@ export declare class bireader {
     unshift(data: Buffer | Uint8Array, consume?: boolean): void;
     /**
     * Adds data to start of supplied data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -455,6 +474,7 @@ export declare class bireader {
     prepend(data: Buffer | Uint8Array, consume?: boolean): void;
     /**
     * Adds data to end of supplied data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -463,6 +483,7 @@ export declare class bireader {
     push(data: Buffer | Uint8Array, consume?: boolean): void;
     /**
     * Adds data to end of supplied data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -3774,6 +3795,7 @@ export declare class biwriter {
     addThis(addKey: number | string | Array<number> | Buffer, length?: number, consume?: boolean): void;
     /**
     * Deletes part of data from start to current byte position unless supplied, returns removed
+    *
     * Note: Errors in strict mode
     *
     * @param {number} startOffset - Start location (default 0)
@@ -3784,6 +3806,7 @@ export declare class biwriter {
     delete(startOffset?: number, endOffset?: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Deletes part of data from current byte position to end, returns removed
+    *
     * Note: Errors in strict mode
     *
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
@@ -3798,6 +3821,7 @@ export declare class biwriter {
     trim(): Buffer | Uint8Array;
     /**
     * Deletes part of data from current byte position to supplied length, returns removed
+    *
     * Note: Errors in strict mode
     *
     * @param {number} length - Length of data in bytes to remove
@@ -3807,6 +3831,7 @@ export declare class biwriter {
     crop(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Deletes part of data from current position to supplied length, returns removed
+    *
     * Note: Only works in strict mode
     *
     * @param {number} length - Length of data in bytes to remove
@@ -3836,6 +3861,7 @@ export declare class biwriter {
     fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Buffer | Uint8Array;
     /**
     * Extract data from current position to length supplied
+    *
     * Note: Does not affect supplied data
     *
     * @param {number} length - Length of data in bytes to copy from current offset
@@ -3845,6 +3871,7 @@ export declare class biwriter {
     extract(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Extract data from current position to length supplied
+    *
     * Note: Does not affect supplied data
     *
     * @param {number} length - Length of data in bytes to copy from current offset
@@ -3854,6 +3881,7 @@ export declare class biwriter {
     slice(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Extract data from current position to length supplied
+    *
     * Note: Does not affect supplied data
     *
     * @param {number} length - Length of data in bytes to copy from current offset
@@ -3863,6 +3891,7 @@ export declare class biwriter {
     wrap(length: number, consume?: boolean): Buffer | Uint8Array;
     /**
     * Inserts data into data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -3872,6 +3901,7 @@ export declare class biwriter {
     insert(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
     /**
     * Inserts data into data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -3881,6 +3911,7 @@ export declare class biwriter {
     place(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
     /**
     * Replaces data in data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
@@ -3890,6 +3921,7 @@ export declare class biwriter {
     replace(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
     /**
     * Replaces data in data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
@@ -3899,6 +3931,7 @@ export declare class biwriter {
     overwrite(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
     /**
     * Adds data to start of supplied data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -3907,6 +3940,7 @@ export declare class biwriter {
     unshift(data: Buffer | Uint8Array, consume?: boolean): void;
     /**
     * Adds data to start of supplied data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -3915,6 +3949,7 @@ export declare class biwriter {
     prepend(data: Buffer | Uint8Array, consume?: boolean): void;
     /**
     * Adds data to end of supplied data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -3923,6 +3958,7 @@ export declare class biwriter {
     push(data: Buffer | Uint8Array, consume?: boolean): void;
     /**
     * Adds data to end of supplied data
+    *
     * Note: Must be same data type as supplied data. Errors on strict mode.
     *
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data

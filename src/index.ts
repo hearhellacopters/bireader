@@ -177,15 +177,6 @@ function addData(_this: bireader|biwriter, data: Buffer|Uint8Array,consume?: boo
     if(replace){
         needed_size = (offset || _this.offset) + data.length
     }
-    if(needed_size > _this.size){
-        if(_this.strict == false){
-            _this.extendArray(needed_size - _this.size)
-        } else {
-            _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : ""
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + needed_size + " of " + _this.size)
-        }
-        _this.size = _this.data.length
-    }
     if(replace){
         const part1 = _this.data.subarray(0,needed_size - data.length)
         const part2 = _this.data.subarray(needed_size, _this.size)
@@ -1867,6 +1858,7 @@ export class bireader {
 
     /**
     * Offset current byte or bit position
+    * 
     * Note: Will extend array if strict mode is off and outside of max size
     * 
     * @param {number} bytes - Bytes to skip
@@ -1878,6 +1870,7 @@ export class bireader {
 
     /**
     * Offset current byte or bit position
+    * 
     * Note: Will extend array if strict mode is off and outside of max size
     * 
     * @param {number} bytes - Bytes to skip
@@ -1893,6 +1886,7 @@ export class bireader {
 
     /**
     * Change position directly to address
+    * 
     * Note: Will extend array if strict mode is off and outside of max size
     * 
     * @param {number} byte - byte to set to
@@ -1904,6 +1898,7 @@ export class bireader {
 
     /**
     * Offset current byte or bit position
+    * 
     * Note: Will extend array if strict mode is off and outside of max size
     * 
     * @param {number} bytes - Bytes to skip
@@ -1915,6 +1910,7 @@ export class bireader {
 
     /**
     * Change position directly to address
+    * 
     * Note: Will extend array if strict mode is off and outside of max size
     * 
     * @param {number} byte - byte to set to
@@ -1926,6 +1922,7 @@ export class bireader {
 
     /**
     * Change position directly to address
+    * 
     * Note: Will extend array if strict mode is off and outside of max size
     * 
     * @param {number} byte - byte to set to
@@ -2388,6 +2385,7 @@ export class bireader {
 
     /**
     * Deletes part of data from start to current byte position unless supplied, returns removed
+    * 
     * Note: Errors in strict mode
     * 
     * @param {number} startOffset - Start location (default 0)
@@ -2401,6 +2399,7 @@ export class bireader {
 
     /**
     * Deletes part of data from current byte position to end, returns removed
+    * 
     * Note: Errors in strict mode
     * 
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
@@ -2411,6 +2410,7 @@ export class bireader {
 
     /**
     * Deletes part of data from current byte position to end, returns removed
+    * 
     * Note: Errors in strict mode
     * 
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
@@ -2421,6 +2421,7 @@ export class bireader {
 
     /**
     * Deletes part of data from current byte position to supplied length, returns removed
+    * 
     * Note: Errors in strict mode
     * 
     * @param {number} length - Length of data in bytes to remove
@@ -2475,6 +2476,7 @@ export class bireader {
 
     /**
     * Extract data from current position to length supplied
+    * 
     * Note: Does not affect supplied data
     * 
     * @param {number} length - Length of data in bytes to copy from current offset
@@ -2487,6 +2489,7 @@ export class bireader {
 
     /**
     * Extract data from current position to length supplied
+    * 
     * Note: Does not affect supplied data
     * 
     * @param {number} length - Length of data in bytes to copy from current offset
@@ -2499,6 +2502,7 @@ export class bireader {
 
     /**
     * Extract data from current position to length supplied
+    * 
     * Note: Does not affect supplied data
     * 
     * @param {number} length - Length of data in bytes to copy from current offset
@@ -2515,6 +2519,7 @@ export class bireader {
     
     /**
     * Inserts data into data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -2527,6 +2532,7 @@ export class bireader {
 
     /**
     * Inserts data into data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -2539,6 +2545,7 @@ export class bireader {
 
     /**
     * Replaces data in data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
@@ -2551,6 +2558,7 @@ export class bireader {
 
     /**
     * Replaces data in data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
@@ -2563,6 +2571,7 @@ export class bireader {
 
     /**
     * Adds data to start of supplied data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -2574,6 +2583,7 @@ export class bireader {
 
     /**
     * Adds data to start of supplied data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -2585,6 +2595,7 @@ export class bireader {
 
     /**
     * Adds data to end of supplied data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -2596,6 +2607,7 @@ export class bireader {
 
     /**
     * Adds data to end of supplied data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -7414,6 +7426,7 @@ export class biwriter {
 
     /**
     * Deletes part of data from start to current byte position unless supplied, returns removed
+    * 
     * Note: Errors in strict mode
     * 
     * @param {number} startOffset - Start location (default 0)
@@ -7427,6 +7440,7 @@ export class biwriter {
 
     /**
     * Deletes part of data from current byte position to end, returns removed
+    * 
     * Note: Errors in strict mode
     * 
     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
@@ -7447,6 +7461,7 @@ export class biwriter {
 
     /**
     * Deletes part of data from current byte position to supplied length, returns removed
+    * 
     * Note: Errors in strict mode
     * 
     * @param {number} length - Length of data in bytes to remove
@@ -7459,6 +7474,7 @@ export class biwriter {
 
     /**
     * Deletes part of data from current position to supplied length, returns removed
+    * 
     * Note: Only works in strict mode
     * 
     * @param {number} length - Length of data in bytes to remove
@@ -7501,6 +7517,7 @@ export class biwriter {
 
     /**
     * Extract data from current position to length supplied
+    * 
     * Note: Does not affect supplied data
     * 
     * @param {number} length - Length of data in bytes to copy from current offset
@@ -7513,6 +7530,7 @@ export class biwriter {
 
     /**
     * Extract data from current position to length supplied
+    * 
     * Note: Does not affect supplied data
     * 
     * @param {number} length - Length of data in bytes to copy from current offset
@@ -7525,6 +7543,7 @@ export class biwriter {
 
     /**
     * Extract data from current position to length supplied
+    * 
     * Note: Does not affect supplied data
     * 
     * @param {number} length - Length of data in bytes to copy from current offset
@@ -7541,6 +7560,7 @@ export class biwriter {
     
     /**
     * Inserts data into data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -7553,6 +7573,7 @@ export class biwriter {
 
     /**
     * Inserts data into data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -7565,6 +7586,7 @@ export class biwriter {
 
     /**
     * Replaces data in data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
@@ -7577,6 +7599,7 @@ export class biwriter {
 
     /**
     * Replaces data in data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
@@ -7589,6 +7612,7 @@ export class biwriter {
 
     /**
     * Adds data to start of supplied data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -7600,6 +7624,7 @@ export class biwriter {
 
     /**
     * Adds data to start of supplied data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -7611,6 +7636,7 @@ export class biwriter {
 
     /**
     * Adds data to end of supplied data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
@@ -7622,6 +7648,7 @@ export class biwriter {
 
     /**
     * Adds data to end of supplied data
+    * 
     * Note: Must be same data type as supplied data. Errors on strict mode.
     * 
     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
