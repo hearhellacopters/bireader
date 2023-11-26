@@ -175,7 +175,7 @@ function addData(_this: bireader|biwriter, data: Buffer|Uint8Array,consume?: boo
     }
     var needed_size: number = offset || _this.offset
     if(replace){
-        needed_size = offset || _this.offset + data.length
+        needed_size = (offset || _this.offset) + data.length
     }
     if(needed_size > _this.size){
         if(_this.strict == false){
@@ -187,32 +187,26 @@ function addData(_this: bireader|biwriter, data: Buffer|Uint8Array,consume?: boo
         _this.size = _this.data.length
     }
     if(replace){
+        const part1 = _this.data.subarray(0,needed_size - data.length)
+        const part2 = _this.data.subarray(needed_size, _this.size)
         if(isBuffer(_this.data)){
-            const part1 = _this.data.subarray(0,needed_size - data.length)
-            const part2 = _this.data.subarray(needed_size, _this.size)
             _this.data = Buffer.concat([part1, data, part2]);
-            _this.size = _this.data.length
         } else {
-            const part1 = _this.data.subarray(0,needed_size - data.length)
-            const part2 = _this.data.subarray(needed_size, _this.size)
             _this.data = new Uint8Array([...part1, ...data, ...part2]);
-            _this.size = _this.data.length
         }
+        _this.size = _this.data.length
     } else {
+        const part1 = _this.data.subarray(0,needed_size)
+            const part2 = _this.data.subarray(needed_size, _this.size)
         if(isBuffer(_this.data)){
-            const part1 = _this.data.subarray(0,needed_size)
-            const part2 = _this.data.subarray(needed_size, _this.size)
             _this.data = Buffer.concat([part1, data, part2]);
-            _this.size = _this.data.length
         } else {
-            const part1 = _this.data.subarray(0,needed_size)
-            const part2 = _this.data.subarray(needed_size, _this.size)
             _this.data = new Uint8Array([...part1, ...data, ...part2]);
-            _this.size = _this.data.length
         }
+        _this.size = _this.data.length
     }
     if(consume){
-        _this.offset = needed_size
+        _this.offset = (offset || _this.offset) + data.length
         _this.bitoffset = 0
     }
 }
@@ -2528,7 +2522,7 @@ export class bireader {
     * @param {number} offset - Byte position to add at (defaults to current position)
     */
     insert(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
-        return addData(this,data,consume||false,offset||this.offset)
+        return addData(this, data, consume||false, offset||this.offset, false)
     }
 
     /**
@@ -2540,7 +2534,7 @@ export class bireader {
     * @param {number} offset - Byte position to add at (defaults to current position)
     */
     place(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
-        return addData(this,data,consume||false,offset||this.offset)
+        return addData(this, data, consume||false, offset||this.offset, false)
     }
 
     /**
@@ -2552,7 +2546,7 @@ export class bireader {
     * @param {number} offset - Offset to add it at (defaults to current position)
     */
     replace(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
-        return addData(this,data,consume||false,offset||this.offset,true)
+        return addData(this, data, consume||false, offset||this.offset, true)
     }
 
     /**
@@ -2564,7 +2558,7 @@ export class bireader {
     * @param {number} offset - Offset to add it at (defaults to current position)
     */
     overwrite(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
-        return addData(this,data,consume||false,offset||this.offset,true)
+        return addData(this, data, consume||false, offset||this.offset, true)
     }
 
     /**
@@ -2575,7 +2569,7 @@ export class bireader {
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     unshift(data: Buffer|Uint8Array, consume?: boolean): void{
-        return addData(this, data, consume||false, 0)
+        return addData(this, data, consume||false, 0, false)
     }
 
     /**
@@ -2586,7 +2580,7 @@ export class bireader {
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     prepend(data: Buffer|Uint8Array, consume?: boolean): void{
-        return addData(this, data, consume||false, 0)
+        return addData(this, data, consume||false, 0, false)
     }
 
     /**
@@ -2597,7 +2591,7 @@ export class bireader {
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     push(data: Buffer|Uint8Array, consume?: boolean): void{
-        return addData(this, data, consume||false, this.size)
+        return addData(this, data, consume||false, this.size, false)
     }
 
     /**
@@ -2608,7 +2602,7 @@ export class bireader {
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     append(data: Buffer|Uint8Array, consume?: boolean): void{
-        return addData(this, data, consume||false, this.size)
+        return addData(this, data, consume||false, this.size, false)
     }
 
     //
@@ -7554,7 +7548,7 @@ export class biwriter {
     * @param {number} offset - Byte position to add at (defaults to current position)
     */
     insert(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
-        return addData(this,data,consume||false,offset||this.offset)
+        return addData(this, data,consume||false, offset||this.offset, false)
     }
 
     /**
@@ -7566,7 +7560,7 @@ export class biwriter {
     * @param {number} offset - Byte position to add at (defaults to current position)
     */
     place(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
-        return addData(this,data,consume||false,offset||this.offset)
+        return addData(this, data, consume||false, offset||this.offset, false)
     }
 
     /**
@@ -7578,7 +7572,7 @@ export class biwriter {
     * @param {number} offset - Offset to add it at (defaults to current position)
     */
     replace(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
-        return addData(this,data,consume||false,offset||this.offset,true)
+        return addData(this, data, consume||false, offset||this.offset, true)
     }
 
     /**
@@ -7590,7 +7584,7 @@ export class biwriter {
     * @param {number} offset - Offset to add it at (defaults to current position)
     */
     overwrite(data: Buffer|Uint8Array,consume?: boolean, offset?: number): void{
-        return addData(this,data,consume||false,offset||this.offset,true)
+        return addData(this, data, consume||false, offset||this.offset, true)
     }
 
     /**
@@ -7601,7 +7595,7 @@ export class biwriter {
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     unshift(data: Buffer|Uint8Array, consume?: boolean): void{
-        return addData(this, data, consume||false, 0)
+        return addData(this, data, consume||false, 0, false)
     }
 
     /**
@@ -7612,7 +7606,7 @@ export class biwriter {
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     prepend(data: Buffer|Uint8Array, consume?: boolean): void{
-        return addData(this, data, consume||false, 0)
+        return addData(this, data, consume||false, 0, false)
     }
 
     /**
@@ -7623,7 +7617,7 @@ export class biwriter {
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     push(data: Buffer|Uint8Array, consume?: boolean): void{
-        return addData(this, data, consume||false, this.size)
+        return addData(this, data, consume||false, this.size, false)
     }
 
     /**
@@ -7634,7 +7628,7 @@ export class biwriter {
     * @param {boolean} consume - Move current write position to end of data (default false)
     */
     append(data: Buffer|Uint8Array, consume?: boolean): void{
-        return addData(this, data, consume||false, this.size)
+        return addData(this, data, consume||false, this.size, false)
     }
 
     //
