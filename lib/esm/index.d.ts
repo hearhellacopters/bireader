@@ -2,7 +2,7 @@
 /**
 * Binary reader, includes bitfields and strings
 *
-* @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``biwriter.data``
+* @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``bireader.data``
 * @param {number} byteOffset - Byte offset to start reader (default 0)
 * @param {number} bitOffset - Bit offset 0-7 to start reader (default 0)
 * @param {string} endianness - Endianness ``big`` or ``little`` (default ``little``)
@@ -21,7 +21,7 @@ export declare class bireader {
     /**
     * Binary reader, includes bitfields and strings
     *
-    * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``biwriter.data``
+    * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``bireader.data``
     * @param {number} byteOffset - Byte offset to start reader (default 0)
     * @param {number} bitOffset - Bit offset 0-7 to start reader (default 0)
     * @param {string} endianness - Endianness ``big`` or ``little`` (default ``little``)
@@ -3502,7 +3502,7 @@ export declare class biwriter {
     * @param {string} endianness - Endianness ``big`` or ``little`` (default little)
     * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default false)
     */
-    constructor(data: Buffer | Uint8Array, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean);
+    constructor(data?: Buffer | Uint8Array, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean);
     /**
     * Change Endian (default little)
     *
