@@ -202,6 +202,36 @@ function addData(_this: bireader|biwriter, data: Buffer|Uint8Array,consume?: boo
     }
 }
 
+/**
+ * Console logs provided data as hex dump
+ * 
+ * @param {Uint8Array|Buffer} src - Uint8Array or Buffer
+ * @param {object} options 
+ * ```javascript
+ *   {
+ *       length: 192, // number of bytes to log, default 192 or end of data
+ *       startByte: 0, // byte to start dump (default 0)
+ *       supressUnicode: false // Supress unicode character preview for even columns
+ *   }
+ * ```
+ */
+export function hexdump(src:Uint8Array|Buffer,options?: {length?: number, startByte?: number, supressUnicode?: boolean}):void{
+    
+    if(!(src instanceof Uint8Array || isBuffer(src))){
+        throw new Error("Write data must be Uint8Array or Buffer.");
+    }
+    
+    const fake_reader = {
+        data: src,
+        size: src.length,
+        offset: options && options.startByte || 0,
+        errorDump:true,
+        extendArray: extendarray,
+    };
+
+    hexDump(<unknown> fake_reader as bireader, options)
+}
+
 function hexDump(_this: bireader|biwriter, options?: {length?: number, startByte?: number, supressUnicode?: boolean}): void{
     var length:any = options && options.length
     var startByte:any = options && options.startByte

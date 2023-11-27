@@ -1,5 +1,23 @@
 /// <reference types="node" />
 /**
+ * Console logs provided data as hex dump
+ *
+ * @param {Uint8Array|Buffer} src - Uint8Array or Buffer
+ * @param {object} options
+ * ```javascript
+ *   {
+ *       length: 192, // number of bytes to log, default 192 or end of data
+ *       startByte: 0, // byte to start dump (default 0)
+ *       supressUnicode: false // Supress unicode character preview for even columns
+ *   }
+ * ```
+ */
+export declare function hexdump(src: Uint8Array | Buffer, options?: {
+    length?: number;
+    startByte?: number;
+    supressUnicode?: boolean;
+}): void;
+/**
 * Binary reader, includes bitfields and strings
 *
 * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``bireader.data``
