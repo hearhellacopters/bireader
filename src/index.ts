@@ -18,9 +18,11 @@ function extendarray(_this:bireader|biwriter, to_padd: number): void {
     if((typeof Buffer !== 'undefined' && _this.data instanceof Buffer)){
         var paddbuffer = Buffer.alloc(to_padd);
         _this.data = Buffer.concat([_this.data, paddbuffer]);
+        _this.size = _this.data.length
     } else {
         const addArray = new Array(to_padd);
         _this.data = new Uint8Array([..._this.data, ...addArray]);
+        _this.size = _this.data.length
     }
 }
 

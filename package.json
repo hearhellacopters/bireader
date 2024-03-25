@@ -1,6 +1,6 @@
 {
   "name": "bireader",
-  "version": "1.0.50",
+  "version": "1.0.51",
   "description": "Read and write data in binary",
   "module": "lib/esm/index.mjs",
   "main": "lib/cjs/index.cjs",
@@ -23,7 +23,7 @@
     "clean": "rmdir /S /Q lib",
     "build": "npm run clean && npm run build:esm && npm run build:cjs && npm run movem && npm run movec",
     "build:esm": "tsc --module esnext --outDir lib/esm",
-    "movem": "mjs.bat" ,
+    "movem": "mjs.bat",
     "movec": "cjs.bat",
     "build:cjs": "tsc --module commonjs --outDir lib/cjs",
     "prepack": ""
