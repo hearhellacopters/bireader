@@ -309,23 +309,43 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Name</td>
+    <td>length()</td>
+    <td align="center" rowspan="2">none</td>
+    <td rowspan="2">Gets the current buffer size in bytes.</td>
+  </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>size, FileSize()</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>lengthB()</td>
+    <td align="center" rowspan="2">none</td>
+    <td rowspan="2">Gets the current buffer size in bits.</td>
+  </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>sizeB, FileSizeB()</td>
+  </tr>
+  <tr>
+    <td>Name</td>
     <td>getOffset()</td>
     <td align="center" rowspan="2">none</td>
     <td rowspan="2">Gets current byte position.</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>tell(), saveOffset()</td>
+    <td>FTell(), tell(), saveOffset()</td>
   </tr>
   <tr>
     <td>Name</td>
     <td>getOffsetBit()</td>
     <td align="center" rowspan="2">none</td>
-    <td rowspan="2">Gets current bit position (0-7).</td>
+    <td rowspan="2">Gets current byte's bit position (0-7).</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>tellB(), saveOffsetBit()</td>
+    <td>FTellB(), tellB(), saveOffsetBit()</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -336,6 +356,36 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Aliases</td>
     <td>tellAbsB(), saveOffsetAbsBit()</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>remain()</td>
+    <td align="center" rowspan="2">none</td>
+    <td rowspan="2">Size in bytes of current read position to the end.</td>
+  </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>FEoF()</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>remainB()</td>
+    <td align="center" rowspan="2">none</td>
+    <td rowspan="2">Size in bits of current read position to the end.</td>
+  </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>FEoFB()</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>getLine()</td>
+    <td align="center" rowspan="2">none</td>
+    <td rowspan="2">Row line of the file (16 bytes per row).</td>
+  </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>row()</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -457,7 +507,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Alias</td>
-    <td>seek(<b>byte</b>, bit)<br>jump(<b>bytes</b>, bits)</td>
+    <td>FSeek(<b>byte</b>, bit)<br>seek(<b>byte</b>, bit)<br>jump(<b>bytes</b>, bits)</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -477,7 +527,17 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Alias</td>
-    <td>gotostart()</td>
+    <td>gotoStart()</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>last()</td>
+    <td align="center" rowspan="2">none</td>
+    <td rowspan="2">Moves current byte position to end of data.</td>
+  </tr>
+  <tr>
+    <td>Alias</td>
+    <td>gotoEnd(), EoF()</td>
   </tr>
   <th align="center" colspan="4"><i>Manipulation</i></th>
   <tr>
