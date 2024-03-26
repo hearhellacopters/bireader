@@ -1299,9 +1299,12 @@ function wfloat(_this: bireader|biwriter, value: number, endian?: string): void{
         _this.errorDump ? "[Error], hexdump:\n" + _this.hexdump() : "";
         throw new Error('Value is out of range for the specified float length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
     }
-    let intValue = Float32Array.from([value])[0]; // Convert float to 32-bit integer representation
-    let shift = 0;
+    
+    const dataView = new DataView(new Uint8Array(4).buffer);
+    dataView.setFloat32(0, value, true);
+    let intValue = dataView.getInt32(0,true);
 
+    let shift = 0;
     for (let i = 0; i < 4; i++) {
         if ((endian = undefined ? endian : _this.endian ) == "little") {
             _this.data[_this.offset + i] = (intValue >> shift) & 0xFF;
@@ -6165,7 +6168,7 @@ export class bireader {
     * @param {number} value - value as int 
     * @param {string} endian - ``big`` or ``little``
     */
-     writeFloat(value: number, endian?: string): void{
+    writeFloat(value: number, endian?: string): void{
         return wfloat(this, value, endian);
     }
 
