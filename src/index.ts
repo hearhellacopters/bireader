@@ -734,7 +734,7 @@ function fNumber(_this: bireader|biwriter, targetNumber:number, bits:number, uns
         }        
 
         if(value === targetNumber){
-            return z; // Found the byte, return the index
+            return z - _this.offset; // Found the byte, return the index from current
         }
     }
     
