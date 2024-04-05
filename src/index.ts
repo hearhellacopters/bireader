@@ -1327,6 +1327,7 @@ function rint64(_this: bireader|biwriter, unsigned?: boolean, endian?: string): 
     if((endian == undefined ? _this.endian : endian) == "little"){
         for (let i = 0; i < 8; i++) {
             value = value | BigInt((<unknown>_this.data[_this.offset] as number & 0xFF)) << BigInt(8 * i);
+            _this.offset += 1
         }
         if(unsigned == undefined || unsigned == false){
             if (value & (BigInt(1) << BigInt(63))) {
@@ -1336,6 +1337,7 @@ function rint64(_this: bireader|biwriter, unsigned?: boolean, endian?: string): 
     } else {
         for (let i = 0; i < 8; i++) {
             value = (value << BigInt(8)) | BigInt((<unknown>_this.data[_this.offset] as number & 0xFF));
+            _this.offset += 1
         }
         if(unsigned == undefined || unsigned == false){
             if (value & (BigInt(1) << BigInt(63))) {
@@ -1343,7 +1345,6 @@ function rint64(_this: bireader|biwriter, unsigned?: boolean, endian?: string): 
             }
         }
     }
-    _this.offset += 8;
     _this.bitoffset = 0;
     return value
 }
