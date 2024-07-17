@@ -169,7 +169,7 @@ function parse_webp(data){
 
 //write example - write a webp file from read data
 function write_webp(data){
-  const bw = new biwriter(new Uint8Arry(1)) //extends array as we write by default
+  const bw = new biwriter(new Uint8Arry(0x100000)) // Will extends array as we write if needed by default
   bw.string("RIFF",{length:4})
   bw.uint32le(0) //dummy for now, will be final size - 8
   bw.string("WEBP",{length:4})
@@ -291,7 +291,7 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td>new bireader(<b>data</b>, byteOffset, bitOffset, endianess, strict)</td>
     <td align="center" rowspan="2"><b>Buffer or Uint8Array</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending initially supplied data (default true for reader, false for writer)
     </td>
-    <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> Data can always be found with .data. Also biwrite can created without data and will default to a supplied offset as a Buffer (if available) or Uint8Array.</td>
+    <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> Supplied data can always be found with .data.<br><br><b>biwriter note:</b> while biwriter can be created with a 0 length Uint8array or Buffer, each new value write will create a new array and concat the two. For large data writes this will lead to a degraded performance. It's best to supply a larger than needed buffer to start and use .trim() after you're finished.</td>
   </tr>
   <tr>
     <td>Name</td>
