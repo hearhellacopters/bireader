@@ -32,7 +32,7 @@ import {BiReader, BiWriter} from 'bireader';
 // read example - parse a webp file
 function parse_webp(data){
   const br = new BiReader(data);
-  br.hexdump({supressUnicode:true}); //console.log data as hex
+  br.hexdump({supressUnicode:true}); // console.log data as hex
 
   //         0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  0123456789ABCDEF
   // 00000  52 49 46 46 98 3a 00 00 57 45 42 50 56 50 38 58  RIFF.:..WEBPVP8X
@@ -50,26 +50,26 @@ function parse_webp(data){
 
   const header = {};
   header.magic = br.string({length:4});    // RIFF
-  header.size = br.uint32le();             // 15000
+  header.size = br.uint32le;               // 15000
   header.fileSize = header.size + 8;       // 15008
   header.payload = br.string({length:4});  // WEBP
   header.format = br.string({length:4});   // VP8X
-  header.formatChunkSize = br.uint32le();  // 10
+  header.formatChunkSize = br.uint32le;    // 10
   switch (header.format){
     case "VP8 ":
         header.formatType = "Lossy";
         var read_size = 0;
-        header.frame_tag = br.ubit24();
+        header.frame_tag = br.ubit24;
         read_size += 3;
         header.key_frame = header.frame_tag & 0x1;
         header.version = (header.frame_tag >> 1) & 0x7;
         header.show_frame = (header.frame_tag >> 4) & 0x1;
         header.first_part_size = (header.frame_tag >> 5) & 0x7FFFF;
-        header.start_code = br.ubit24(); // should be 2752925
-        header.horizontal_size_code = br.ubit16();
+        header.start_code = br.ubit24; // should be 2752925
+        header.horizontal_size_code = br.ubit16;
         header.width = header.horizontal_size_code & 0x3FFF;
         header.horizontal_scale = header.horizontal_size_code >> 14;
-        header.vertical_size_code = br.ubit16();
+        header.vertical_size_code = br.ubit16;
         header.height = header.vertical_size_code & 0x3FFF;
         header.vertical_scale = header.vertical_size_code >> 14;
         read_size += 7;
@@ -78,84 +78,84 @@ function parse_webp(data){
     case "VP8L":
         header.formatType = "Lossless";
         var read_size = 0;
-        header.signature = br.ubyte(); // should be 47
+        header.signature = br.ubyte; // should be 47
         read_size += 1;
-        header.readWidth =  br.ubit14();
+        header.readWidth =  br.ubit14;
         header.width = header.readWidth+1;
-        header.readHeight =  br.ubit14();
+        header.readHeight =  br.ubit14;
         header.height = header.readHeight+1;
-        header.alpha_is_used =  br.bit1();
-        header.version_number =  br.ubit3();
+        header.alpha_is_used =  br.bit1;
+        header.version_number =  br.ubit3;
         read_size += 4;
         header.VP8Ldata = br.extract(header.formatChunkSize - read_size, true);
         break;
     case "VP8X":
         header.formatType = "Extended";
-        br.big(); //switch to Big Endian bit read
-        header.rsv = br.bit2();  // Reserved
-        header.I = br.bit1();    // ICC profile
-        header.L = br.bit1();    // Alpha
-        header.E = br.bit1();    // Exif
-        header.X = br.bit1();    // XMP
-        header.A = br.bit1();    // Animation
-        header.R = br.bit1();    // Reserved
-        br.little(); //return to little
-        header.rsv2 = br.ubit24();
-        header.widthMinus1 = br.ubit24();
+        br.big();              // switch to Big Endian bit read
+        header.rsv = br.bit2;  // Reserved
+        header.I = br.bit1;    // ICC profile
+        header.L = br.bit1;    // Alpha
+        header.E = br.bit1;    // Exif
+        header.X = br.bit1;    // XMP
+        header.A = br.bit1;    // Animation
+        header.R = br.bit1;    // Reserved
+        br.little();           // return to little
+        header.rsv2 = br.ubit24;
+        header.widthMinus1 = br.ubit24;
         header.width = header.widthMinus1 + 1
-        header.heightMinus1 = br.ubit24();
+        header.heightMinus1 = br.ubit24;
         header.height = header.heightMinus1 + 1
         if(header.I)
         {
           header.ICCP = br.string({length:4});  // Should be ICCP
-          header.ICCPChunkSize = br.uint32();
+          header.ICCPChunkSize = br.uint32;
           header.ICCPData = br.extract(header.ICCPChunkSize, true);
         }
         if(header.L)
         {
           header.ALPH = br.string({length:4});  // Should be ALPH
-          header.ALPHChunkSize = br.uint32(); // 4134
+          header.ALPHChunkSize = br.uint32;     // 4134
           header.ALPHData = br.extract(header.ALPHChunkSize, true);
         }
         if(header.A)
         {
           header.ANI = br.string({length:4});  // Should be ANIM or ANIF
-          header.ANIChunkSize = br.uint32();
+          header.ANIChunkSize = br.uint32;
           if(header.ANI == "ANIM")
           {
-            header.BGColor = br.uint32();
-            header.loopCount = br.ushort();
+            header.BGColor = br.uint32;
+            header.loopCount = br.ushort;
             header.ANIMData = br.extract(header.ANIChunkSize, true);
           } else
           if (header.ANI == "ANIF")
           {
-            header.FrameX = br.ubit24();
-            header.FrameY = br.ubit24();
-            header.readFrameWidth = br.ubit24();
-            header.readFrameHeight = br.ubit24();
+            header.FrameX = br.ubit24;
+            header.FrameY = br.ubit24;
+            header.readFrameWidth = br.ubit24;
+            header.readFrameHeight = br.ubit24;
             header.frameWidth = readFrameWidth + 1;
             header.frameHeight = readFrameHeight + 1;
-            header.duration = br.ubit24();
-            header.rsv3 = br.ubit6();
-            header.byte.B = br.bit1(); // Blending
-            header.byte.D = br.bit1(); // Disposal
+            header.duration = br.ubit24;
+            header.rsv3 = br.ubit6;
+            header.byte.B = br.bit1; // Blending
+            header.byte.D = br.bit1; // Disposal
             header.frameData = br.extract(16, true);
             header.ANIFData = br.extract(header.ANIChunkSize, true);
           }
         }
         header.extFormatStr = br.string({length:4});
-        header.extChunkSize = br.uint32();
+        header.extChunkSize = br.uint32;
         header.extData = br.extract(header.extChunkSize, true);
         if(header.E)
         {
           header.EXIF = br.string({length:4});  // Should be EXIF
-          header.EXIFChunkSize = br.uint32();
+          header.EXIFChunkSize = br.uint32;
           header.EXIFData = br.extract(header.EXIFChunkSize, true);
         }
         if(header.X)
         {
           header.XMP = br.string({length:4});  // Should be XMP
-          header.XMPChunkSize = br.uint32();
+          header.XMPChunkSize = br.uint32;
           header.XMPMetaData = br.extract(header.XMPChunkSize, true);
         }
         break;
@@ -171,92 +171,92 @@ function parse_webp(data){
 function write_webp(data){
   const bw = new BiWriter(new Uint8Arry(0x100000)); // Will extends array as we write if needed by default
   bw.string("RIFF",{length:4});
-  bw.uint32le(0); // dummy for now, will be final size - 8
+  bw.uint32le = 0; // dummy for now, will be final size - 8
   bw.string("WEBP",{length:4});
   switch(data.format){
     case "VP8 ":
       bw.string("VP8 ",{length:4});
-      bw.uint32le(data.VP8data.length);
-      bw.ubit24(data.key_frame);
-      bw.ubit24(data.start_code);
-      bw.ubit16(data.horizontal_size_code);
-      bw.ubit16(data.vertical_size_code);
+      bw.uint32le = data.VP8data.length;
+      bw.ubit24 = data.key_frame;
+      bw.ubit24 = data.start_code;
+      bw.ubit16 = data.horizontal_size_code;
+      bw.ubit16 = data.vertical_size_code;
       bw.overwrite(data.VP8data ,true);
       break;
     case "VP8L":
       bw.string("VP8L",{length:4});
-      bw.uint32le(data.VP8Ldata.length - 4);
-      bw.ubyte(47);
-      bw.ubit14(data.width - 1);
-      bw.ubit14(data.heigth - 1);
-      bw.ubit1(data.alpha_is_used);
-      bw.bit3(data.version_number);
+      bw.uint32le = data.VP8Ldata.length - 4;
+      bw.ubyte = 47;
+      bw.ubit14 = data.width - 1;
+      bw.ubit14 = data.heigth - 1;
+      bw.ubit1 = data.alpha_is_used;
+      bw.bit3 = data.version_number;
       bw.overwrite(data.VP8Ldata,true);
       break;
     case "VP8X":
       bw.string("VP8X",{length:4});
-      bw.uint32le(10);
+      bw.uint32le = 10;
       bw.big();
-      bw.bit2(0);
-      bw.bit1(data.I);
-      bw.bit1(data.L);
-      bw.bit1(data.E);
-      bw.bit1(data.X);
-      bw.bit1(data.A);
-      bw.bit1(0);
+      bw.bit2 = 0;
+      bw.bit1 = data.I;
+      bw.bit1 = data.L;
+      bw.bit1 = data.E;
+      bw.bit1 = data.X;
+      bw.bit1 = data.A;
+      bw.bit1 = 0;
       bw.little();
-      bw.ubit24(data.rsv2);
-      bw.ubit24(data.width - 1);
-      bw.ubit24(data.height - 1);
+      bw.ubit24 = data.rsv2;
+      bw.ubit24 = data.width - 1;
+      bw.ubit24 = data.height - 1;
       if(data.I)
       {
         bw.string(data.ICCP, {length:4});
-        bw.uint32(data.ICCPData.length);
+        bw.uint32 = data.ICCPData.length;;
         bw.replace(data.ICCPData, true);
       }
       if(data.L)
       {
         bw.string(data.ALPH, {length:4});
-        bw.uint32(data.ALPHData.length);
+        bw.uint32 = data.ALPHData.length;
         bw.replace(data.ALPHData);
       }
       if(data.A)
       {
         bw.string(data.ANI, {length:4});
-        bw.uint32(data.ANIChunkSize);
+        bw.uint32 = data.ANIChunkSize;
         if(data.ANI == "ANIM")
         {
-          bw.uint32(data.BGColor);
-          bw.ushort(data.loopCount);
+          bw.uint32 = data.BGColor;
+          bw.ushort = data.loopCount;
           bw.replace(data.ANIMData);
         } else
         if (data.ANI == "ANIF")
         {
-          bw.ubit24(data.FrameX);
-          bw.ubit24(data.FrameY);
-          bw.ubit24(data.frameWidth - 1);
-          bw.ubit24(data.frameHeigh - 1);
-          bw.ubit24(data.duration);
-          bw.ubit6(data.rsv3);
-          bw.bit1(data.byte.B);
-          bw.bit1(data.byte.D);
+          bw.ubit24 = data.FrameX;
+          bw.ubit24 = data.FrameY;
+          bw.ubit24 = data.frameWidth - 1;
+          bw.ubit24 = data.frameHeigh - 1;
+          bw.ubit24 = data.duration;
+          bw.ubit6  data.rsv3;
+          bw.bit1 = data.byte.B;
+          bw.bit1 = data.byte.D;
           bw.replace(data.frameData, true);
           bw.replace(data.ANIFData, true);
         }
       }
       bw.string(data.extFormatStr, {length:4});
-      bw.uint32(data.extData.length);
+      bw.uint32 = data.extData.length;
       bw.replace(data.extData, true);
       if(data.E)
       {
         bw.string(data.EXIF, {length:4});
-        bw.uint32(data.EXIFData.length);
+        bw.uint32 = data.EXIFData.length;
         bw.replace( data.EXIFData, true);
       }
       if(data.X)
       {
         bw.string(data.XMP, {length:4});
-        bw.uint32(data.XMPMetaData.length);
+        bw.uint32 = data.XMPMetaData.length;
         bw.replace(data.XMPMetaData, true);
       }
       break;
@@ -265,7 +265,7 @@ function write_webp(data){
   }
   bw.trim(); // remove any remaining bytes
   bw.goto(4);
-  bw.uint32le(bw.size - 8); // write file size
+  bw.uint32le = bw.size - 8; // write file size
   return bw.return();
 }
 ```
