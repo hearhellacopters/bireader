@@ -1199,7 +1199,7 @@ function whalffloat(_this: bireader|biwriter,value: number, endian?: string): vo
     let halfFloatBits = (signBit << 15) | (exponentBits << 10) | fractionBits;
     
     // Write bytes based on endianness
-    if ((endian = undefined ? endian : _this.endian ) == "little") {
+    if((endian == undefined ? _this.endian : endian) == "little"){
         _this.data[_this.offset] = halfFloatBits & 0xFF;
         _this.data[_this.offset + 1] = (halfFloatBits >> 8) & 0xFF;
     } else {
@@ -1228,7 +1228,7 @@ function wint32(_this: bireader|biwriter, value: number, unsigned?: boolean, end
             throw new Error('Value is out of range for the specified 32bit length.' +" min: " + minValue + " max: " + maxValue + " value: "+ value);
         }
     }
-    if ((endian = undefined ? endian : _this.endian ) == "little") {
+    if((endian == undefined ? _this.endian : endian) == "little"){
         _this.data[_this.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
         _this.data[_this.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
         _this.data[_this.offset + 2] = (unsigned == undefined || unsigned == false) ? (value >> 16) : (value >> 16) & 0xFF;
@@ -1310,7 +1310,7 @@ function wfloat(_this: bireader|biwriter, value: number, endian?: string): void{
 
     let shift = 0;
     for (let i = 0; i < 4; i++) {
-        if ((endian = undefined ? endian : _this.endian ) == "little") {
+        if((endian == undefined ? _this.endian : endian) == "little"){
             _this.data[_this.offset + i] = (intValue >> shift) & 0xFF;
         } else {
             _this.data[_this.offset + (3 - i)] = (intValue >> shift) & 0xFF;
@@ -1378,7 +1378,7 @@ function wint64(_this: bireader|biwriter, value: number, unsigned?: boolean, end
     const int32Array = new Int32Array(bigIntArray.buffer);
     
     for (let i = 0; i < 2; i++) {
-        if ((endian = undefined ? endian : _this.endian ) == "little") {
+        if((endian == undefined ? _this.endian : endian) == "little"){
             if(unsigned == undefined || unsigned == false){
                 _this.data[_this.offset + i * 4 + 0] = int32Array[i];
                 _this.data[_this.offset + i * 4 + 1] = (int32Array[i] >> 8);
@@ -1431,7 +1431,7 @@ function wdfloat(_this: bireader|biwriter, value: number, endian?: string): void
     const bytes = new Uint8Array(intArray.buffer);
 
     for (let i = 0; i < 8; i++) {
-        if ((endian = undefined ? endian : _this.endian ) == "little") {
+        if((endian == undefined ? _this.endian : endian) == "little"){
             _this.data[_this.offset + i] = bytes[i];
         } else {
             _this.data[_this.offset + (7 - i)] = bytes[i];
@@ -1761,6 +1761,8 @@ function wstring(_this: bireader|biwriter, string: string, options?: {
 * @param {number} bitOffset - Bit offset 0-7 to start reader (default 0)
 * @param {string} endianness - Endianness ``big`` or ``little`` (default ``little``)
 * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default true)
+* 
+* @deprecated Since version 1.0.59. Will be deleted in version 3.0. Use BiReader instead.
 */
 export class bireader {
     /**
@@ -5439,6 +5441,29 @@ export class bireader {
     }
 
     /**
+     * Write multiple bytes.
+     * 
+     * @param {number[]} values - array of values as int
+     * @param {boolean} unsigned - if the value is unsigned
+     */
+    writeBytes(values: number[], unsigned?: boolean): void {
+        for (let i = 0; i < values.length; i++) {
+            wbyte(this, values[i], unsigned);
+        }
+    }
+
+    /**
+     * Read multiple bytes.
+     * 
+     * @param {number} amount - amount of bytes to read
+     * @param {boolean} unsigned - if value is unsigned or not
+     * @returns {number[]}
+     */
+    readBytes(amount:number, unsigned?: boolean): number[] {
+        return Array.from({length: amount}, () => rbyte(this, unsigned));
+    }
+
+    /**
     * Write unsigned byte.
     *
     * @param {number} value - value as int 
@@ -6994,6 +7019,8 @@ export class bireader {
 * @param {number} bitOffset - Bit offset to start writer, 0-7 
 * @param {string} endianness - Endianness ``big`` or ``little`` (default little)
 * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default false)
+* 
+* @deprecated Since version 1.0.59. Will be deleted in version 3.0. Use BiWriter instead.
 */
 export class biwriter {
     /**
@@ -10946,6 +10973,29 @@ export class biwriter {
     }
 
     /**
+     * Write multiple bytes.
+     * 
+     * @param {number[]} values - array of values as int
+     * @param {boolean} unsigned - if the value is unsigned
+     */
+    writeBytes(values: number[], unsigned?: boolean): void {
+        for (let i = 0; i < values.length; i++) {
+            wbyte(this, values[i], unsigned);
+        }
+    }
+
+    /**
+     * Read multiple bytes.
+     * 
+     * @param {number} amount - amount of bytes to read
+     * @param {boolean} unsigned - if value is unsigned or not
+     * @returns {number[]}
+     */
+    readBytes(amount:number, unsigned?: boolean): number[] {
+        return Array.from({length: amount}, () => rbyte(this, unsigned));
+    }
+
+    /**
     * Read byte.
     * 
     * @param {boolean} unsigned - if value is unsigned or not
@@ -12473,3 +12523,6 @@ export class biwriter {
     }
 
 }
+
+export {BiReader} from './bireader';
+export {BiWriter} from './biwriter';

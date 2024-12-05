@@ -1,22 +1,22 @@
 {
-    "compilerOptions": {
-      "target": "es2020",
-      "declaration": true,
-      "module": "esnext",
-      "moduleResolution": "node",
-      "declarationMap": true,
-      "sourceMap": true,
-      "strict": true,
-      "noUnusedLocals": true,
-      "noUnusedParameters": true,
-      "noImplicitReturns": true,
-      "noFallthroughCasesInSwitch": true,
-      "types": ["node", "mocha"],
-      "esModuleInterop": true,
-      "outDir": "lib/"
-    },
-    "files": [
-      "src/index.ts"
-    ],
-    "compileOnSave": false
-  }
+  "compilerOptions": {
+    "target": "ES2020",
+    "allowJs": true,
+    "declaration": true,
+    "declarationMap": true,
+    "moduleResolution": "bundler",
+    "sourceMap": true,
+    "strict": true,
+    "noImplicitReturns": true,
+    "allowSyntheticDefaultImports": true,
+    "noFallthroughCasesInSwitch": false,
+    "types": ["node"],
+    "esModuleInterop": true
+  },
+  "include": [
+    "src/index.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

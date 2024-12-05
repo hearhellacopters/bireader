@@ -1,5 +1,6 @@
 node_modules/
 src/
+lib/
 test_reader.js
 test_writer.js
 tsconfig.base.json

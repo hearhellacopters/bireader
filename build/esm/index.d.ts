@@ -25,6 +25,8 @@ export declare function hexdump(src: Uint8Array | Buffer, options?: {
 * @param {number} bitOffset - Bit offset 0-7 to start reader (default 0)
 * @param {string} endianness - Endianness ``big`` or ``little`` (default ``little``)
 * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default true)
+*
+* @deprecated Since version 1.0.59. Will be deleted in version 3.0. Use BiReader instead.
 */
 export declare class bireader {
     /**
@@ -2539,6 +2541,21 @@ export declare class bireader {
     */
     writeByte(value: number, unsigned?: boolean): void;
     /**
+     * Write multiple bytes.
+     *
+     * @param {number[]} values - array of values as int
+     * @param {boolean} unsigned - if the value is unsigned
+     */
+    writeBytes(values: number[], unsigned?: boolean): void;
+    /**
+     * Read multiple bytes.
+     *
+     * @param {number} amount - amount of bytes to read
+     * @param {boolean} unsigned - if value is unsigned or not
+     * @returns {number[]}
+     */
+    readBytes(amount: number, unsigned?: boolean): number[];
+    /**
     * Write unsigned byte.
     *
     * @param {number} value - value as int
@@ -3623,6 +3640,8 @@ export declare class bireader {
 * @param {number} bitOffset - Bit offset to start writer, 0-7
 * @param {string} endianness - Endianness ``big`` or ``little`` (default little)
 * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default false)
+*
+* @deprecated Since version 1.0.59. Will be deleted in version 3.0. Use BiWriter instead.
 */
 export declare class biwriter {
     /**
@@ -6400,6 +6419,21 @@ export declare class biwriter {
     */
     writeByte(value: number, unsigned?: boolean): void;
     /**
+     * Write multiple bytes.
+     *
+     * @param {number[]} values - array of values as int
+     * @param {boolean} unsigned - if the value is unsigned
+     */
+    writeBytes(values: number[], unsigned?: boolean): void;
+    /**
+     * Read multiple bytes.
+     *
+     * @param {number} amount - amount of bytes to read
+     * @param {boolean} unsigned - if value is unsigned or not
+     * @returns {number[]}
+     */
+    readBytes(amount: number, unsigned?: boolean): number[];
+    /**
     * Read byte.
     *
     * @param {boolean} unsigned - if value is unsigned or not
@@ -7449,4 +7483,6 @@ export declare class biwriter {
     */
     wpstring4be(string: string): void;
 }
+export { BiReader } from './bireader';
+export { BiWriter } from './biwriter';
 //# sourceMappingURL=index.d.ts.map

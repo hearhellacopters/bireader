@@ -1,4 +1,4 @@
-# bireader
+# BiReader
 
 A feature rich binary reader and writer that keeps track of your position to quickly create file structures. Includes shared naming conventions, programmable inputs and advanced math for easy data conversions to do low level parsing. Accepts `Uint8Array` or `Buffer`.
 
@@ -27,12 +27,12 @@ Import the reader or writer. Create a new parser with the data and start parsing
 Includes presents for quick parsing or programmable functions (examples below).
 
 ```javascript
-import {bireader, biwriter} from 'bireader';
+import {BiReader, BiWriter} from 'bireader';
 
-//read example - parse a webp file
+// read example - parse a webp file
 function parse_webp(data){
-  const br = new bireader(data)
-  br.hexdump({supressUnicode:true}) //console.log data as hex
+  const br = new BiReader(data);
+  br.hexdump({supressUnicode:true}); //console.log data as hex
 
   //         0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  0123456789ABCDEF
   // 00000  52 49 46 46 98 3a 00 00 57 45 42 50 56 50 38 58  RIFF.:..WEBPVP8X
@@ -48,24 +48,24 @@ function parse_webp(data){
   // 000a0  52 b8 8e 65 a9 eb 38 ce ab 52 75 9d 67 ff 75 2f  R..e..8..Ru.g.u/
   // 000b0  77 44 40 94 6d 25 6c 74 91 a8 88 86 58 9b da 6e  wD@.m%lt....X..n
 
-  const header = {}
-  header.magic = br.string({length:4})    //RIFF
-  header.size = br.uint32le()             //15000
-  header.fileSize = header.size + 8       //15008
-  header.payload = br.string({length:4})  //WEBP
-  header.format = br.string({length:4})   //VP8X
-  header.formatChunkSize = br.uint32le()  //10
+  const header = {};
+  header.magic = br.string({length:4});    // RIFF
+  header.size = br.uint32le();             // 15000
+  header.fileSize = header.size + 8;       // 15008
+  header.payload = br.string({length:4});  // WEBP
+  header.format = br.string({length:4});   // VP8X
+  header.formatChunkSize = br.uint32le();  // 10
   switch (header.format){
     case "VP8 ":
-        header.formatType = "Lossy"
-        var read_size = 0
-        header.frame_tag = br.ubit24()
+        header.formatType = "Lossy";
+        var read_size = 0;
+        header.frame_tag = br.ubit24();
         read_size += 3;
         header.key_frame = header.frame_tag & 0x1;
         header.version = (header.frame_tag >> 1) & 0x7;
         header.show_frame = (header.frame_tag >> 4) & 0x1;
         header.first_part_size = (header.frame_tag >> 5) & 0x7FFFF;
-        header.start_code = br.ubit24() //should be 2752925
+        header.start_code = br.ubit24(); // should be 2752925
         header.horizontal_size_code = br.ubit16();
         header.width = header.horizontal_size_code & 0x3FFF;
         header.horizontal_scale = header.horizontal_size_code >> 14;
@@ -73,200 +73,200 @@ function parse_webp(data){
         header.height = header.vertical_size_code & 0x3FFF;
         header.vertical_scale = header.vertical_size_code >> 14;
         read_size += 7;
-        header.VP8data = br.extract(header.formatChunkSize - read_size, true)
+        header.VP8data = br.extract(header.formatChunkSize - read_size, true);
         break;
     case "VP8L":
-        header.formatType = "Lossless"
-        var read_size = 0
-        header.signature = br.ubyte() //should be 47
+        header.formatType = "Lossless";
+        var read_size = 0;
+        header.signature = br.ubyte(); // should be 47
         read_size += 1;
-        header.readWidth =  br.ubit14()
+        header.readWidth =  br.ubit14();
         header.width = header.readWidth+1;
-        header.readHeight =  br.ubit14()
+        header.readHeight =  br.ubit14();
         header.height = header.readHeight+1;
-        header.alpha_is_used =  br.bit1() 
-        header.version_number =  br.ubit3() 
+        header.alpha_is_used =  br.bit1();
+        header.version_number =  br.ubit3();
         read_size += 4;
-        header.VP8Ldata = br.extract(header.formatChunkSize - read_size, true)
+        header.VP8Ldata = br.extract(header.formatChunkSize - read_size, true);
         break;
     case "VP8X":
-        header.formatType = "Extended"
-        br.big() //switch to Big Endian bit read
-        header.rsv = br.bit2()  //Reserved
-        header.I = br.bit1()    //ICC profile
-        header.L = br.bit1()    //Alpha
-        header.E = br.bit1()    //Exif
-        header.X = br.bit1()    //XMP
-        header.A = br.bit1()    //Animation
-        header.R = br.bit1()    //Reserved
-        br.little() //return to little
-        header.rsv2 = br.ubit24()
-        header.widthMinus1 = br.ubit24()
+        header.formatType = "Extended";
+        br.big(); //switch to Big Endian bit read
+        header.rsv = br.bit2();  // Reserved
+        header.I = br.bit1();    // ICC profile
+        header.L = br.bit1();    // Alpha
+        header.E = br.bit1();    // Exif
+        header.X = br.bit1();    // XMP
+        header.A = br.bit1();    // Animation
+        header.R = br.bit1();    // Reserved
+        br.little(); //return to little
+        header.rsv2 = br.ubit24();
+        header.widthMinus1 = br.ubit24();
         header.width = header.widthMinus1 + 1
-        header.heightMinus1 = br.ubit24()
+        header.heightMinus1 = br.ubit24();
         header.height = header.heightMinus1 + 1
         if(header.I)
         {
-          header.ICCP = br.string({length:4})  // Should be ICCP
-          header.ICCPChunkSize = br.uint32()
-          header.ICCPData = br.extract(header.ICCPChunkSize, true)
+          header.ICCP = br.string({length:4});  // Should be ICCP
+          header.ICCPChunkSize = br.uint32();
+          header.ICCPData = br.extract(header.ICCPChunkSize, true);
         }
         if(header.L)
         {
-          header.ALPH = br.string({length:4})  // Should be ALPH
-          header.ALPHChunkSize = br.uint32() //4134
-          header.ALPHData = br.extract(header.ALPHChunkSize, true)
+          header.ALPH = br.string({length:4});  // Should be ALPH
+          header.ALPHChunkSize = br.uint32(); // 4134
+          header.ALPHData = br.extract(header.ALPHChunkSize, true);
         }
         if(header.A)
         {
-          header.ANI = br.string({length:4})  // Should be ANIM or ANIF
-          header.ANIChunkSize = br.uint32()
+          header.ANI = br.string({length:4});  // Should be ANIM or ANIF
+          header.ANIChunkSize = br.uint32();
           if(header.ANI == "ANIM")
           {
-            header.BGColor = br.uint32()
-            header.loopCount = br.ushort()
-            header.ANIMData = br.extract(header.ANIChunkSize, true)
+            header.BGColor = br.uint32();
+            header.loopCount = br.ushort();
+            header.ANIMData = br.extract(header.ANIChunkSize, true);
           } else
           if (header.ANI == "ANIF")
           {
-            header.FrameX = br.ubit24()
-            header.FrameY = br.ubit24()
-            header.readFrameWidth = br.ubit24()
-            header.readFrameHeight = br.ubit24()
-            header.frameWidth = readFrameWidth + 1
-            header.frameHeight = readFrameHeight + 1
-            header.duration = br.ubit24()
-            header.rsv3 = br.ubit6()
-            header.byte.B = br.bit1() //Blending
-            header.byte.D = br.bit1() //Disposal
-            header.frameData = br.extract(16, true)
-            header.ANIFData = br.extract(header.ANIChunkSize, true)
+            header.FrameX = br.ubit24();
+            header.FrameY = br.ubit24();
+            header.readFrameWidth = br.ubit24();
+            header.readFrameHeight = br.ubit24();
+            header.frameWidth = readFrameWidth + 1;
+            header.frameHeight = readFrameHeight + 1;
+            header.duration = br.ubit24();
+            header.rsv3 = br.ubit6();
+            header.byte.B = br.bit1(); // Blending
+            header.byte.D = br.bit1(); // Disposal
+            header.frameData = br.extract(16, true);
+            header.ANIFData = br.extract(header.ANIChunkSize, true);
           }
         }
-        header.extFormatStr = br.string({length:4})
-        header.extChunkSize = br.uint32()
-        header.extData = br.extract(header.extChunkSize, true)
+        header.extFormatStr = br.string({length:4});
+        header.extChunkSize = br.uint32();
+        header.extData = br.extract(header.extChunkSize, true);
         if(header.E)
         {
-          header.EXIF = br.string({length:4})  // Should be EXIF
-          header.EXIFChunkSize = br.uint32()
-          header.EXIFData = br.extract(header.EXIFChunkSize, true)
+          header.EXIF = br.string({length:4});  // Should be EXIF
+          header.EXIFChunkSize = br.uint32();
+          header.EXIFData = br.extract(header.EXIFChunkSize, true);
         }
         if(header.X)
         {
-          header.XMP = br.string({length:4})  // Should be XMP
-          header.XMPChunkSize = br.uint32()
-          header.XMPMetaData = br.extract(header.XMPChunkSize, true)
+          header.XMP = br.string({length:4});  // Should be XMP
+          header.XMPChunkSize = br.uint32();
+          header.XMPMetaData = br.extract(header.XMPChunkSize, true);
         }
         break;
     default:
-        header.data = br.extract(header.formatChunkSize, true)
+        header.data = br.extract(header.formatChunkSize, true);
         break;
   }
-  br.finished()
-  return header
+  br.finished();
+  return header;
 }
 
-//write example - write a webp file from read data
+// write example - write a webp file from read data
 function write_webp(data){
-  const bw = new biwriter(new Uint8Arry(0x100000)) // Will extends array as we write if needed by default
-  bw.string("RIFF",{length:4})
-  bw.uint32le(0) //dummy for now, will be final size - 8
-  bw.string("WEBP",{length:4})
+  const bw = new BiWriter(new Uint8Arry(0x100000)); // Will extends array as we write if needed by default
+  bw.string("RIFF",{length:4});
+  bw.uint32le(0); // dummy for now, will be final size - 8
+  bw.string("WEBP",{length:4});
   switch(data.format){
     case "VP8 ":
-      bw.string("VP8 ",{length:4})
-      bw.uint32le(data.VP8data.length)
-      bw.ubit24(data.key_frame)
-      bw.ubit24(data.start_code)
-      bw.ubit16(data.horizontal_size_code)
-      bw.ubit16(data.vertical_size_code)
-      bw.overwrite(data.VP8data ,true)
+      bw.string("VP8 ",{length:4});
+      bw.uint32le(data.VP8data.length);
+      bw.ubit24(data.key_frame);
+      bw.ubit24(data.start_code);
+      bw.ubit16(data.horizontal_size_code);
+      bw.ubit16(data.vertical_size_code);
+      bw.overwrite(data.VP8data ,true);
       break;
     case "VP8L":
-      bw.string("VP8L",{length:4})
-      bw.uint32le(data.VP8Ldata.length - 4)
-      bw.ubyte(47)
-      bw.ubit14(data.width - 1)
-      bw.ubit14(data.heigth - 1)
-      bw.ubit1(data.alpha_is_used)
-      bw.bit3(data.version_number)
-      bw.overwrite(data.VP8Ldata,true)
+      bw.string("VP8L",{length:4});
+      bw.uint32le(data.VP8Ldata.length - 4);
+      bw.ubyte(47);
+      bw.ubit14(data.width - 1);
+      bw.ubit14(data.heigth - 1);
+      bw.ubit1(data.alpha_is_used);
+      bw.bit3(data.version_number);
+      bw.overwrite(data.VP8Ldata,true);
       break;
     case "VP8X":
-      bw.string("VP8X",{length:4})
-      bw.uint32le(10)
-      bw.big()
-      bw.bit2(0)
-      bw.bit1(data.I)
-      bw.bit1(data.L)
-      bw.bit1(data.E)
-      bw.bit1(data.X)
-      bw.bit1(data.A)
-      bw.bit1(0)
-      bw.little()
-      bw.ubit24(data.rsv2)
-      bw.ubit24(data.width - 1)
-      bw.ubit24(data.height - 1)
+      bw.string("VP8X",{length:4});
+      bw.uint32le(10);
+      bw.big();
+      bw.bit2(0);
+      bw.bit1(data.I);
+      bw.bit1(data.L);
+      bw.bit1(data.E);
+      bw.bit1(data.X);
+      bw.bit1(data.A);
+      bw.bit1(0);
+      bw.little();
+      bw.ubit24(data.rsv2);
+      bw.ubit24(data.width - 1);
+      bw.ubit24(data.height - 1);
       if(data.I)
       {
-        bw.string(data.ICCP, {length:4})
-        bw.uint32(data.ICCPData.length)
-        bw.replace(data.ICCPData, true)
+        bw.string(data.ICCP, {length:4});
+        bw.uint32(data.ICCPData.length);
+        bw.replace(data.ICCPData, true);
       }
       if(data.L)
       {
-        bw.string(data.ALPH, {length:4})
-        bw.uint32(data.ALPHData.length) 
-        bw.replace(data.ALPHData)
+        bw.string(data.ALPH, {length:4});
+        bw.uint32(data.ALPHData.length);
+        bw.replace(data.ALPHData);
       }
       if(data.A)
       {
-        bw.string(data.ANI, {length:4})
-        bw.uint32(data.ANIChunkSize)
+        bw.string(data.ANI, {length:4});
+        bw.uint32(data.ANIChunkSize);
         if(data.ANI == "ANIM")
         {
-          bw.uint32(data.BGColor)
-          bw.ushort(data.loopCount)
-          bw.replace(data.ANIMData)
+          bw.uint32(data.BGColor);
+          bw.ushort(data.loopCount);
+          bw.replace(data.ANIMData);
         } else
         if (data.ANI == "ANIF")
         {
-          bw.ubit24(data.FrameX)
-          bw.ubit24(data.FrameY)
-          bw.ubit24(data.frameWidth - 1)
-          bw.ubit24(data.frameHeigh - 1)
-          bw.ubit24(data.duration)
-          bw.ubit6(data.rsv3)
-          bw.bit1(data.byte.B)
-          bw.bit1(data.byte.D) 
-          bw.replace(data.frameData, true)
-          bw.replace(data.ANIFData, true)
+          bw.ubit24(data.FrameX);
+          bw.ubit24(data.FrameY);
+          bw.ubit24(data.frameWidth - 1);
+          bw.ubit24(data.frameHeigh - 1);
+          bw.ubit24(data.duration);
+          bw.ubit6(data.rsv3);
+          bw.bit1(data.byte.B);
+          bw.bit1(data.byte.D);
+          bw.replace(data.frameData, true);
+          bw.replace(data.ANIFData, true);
         }
       }
-      bw.string(data.extFormatStr, {length:4})
-      bw.uint32(data.extData.length)
-      bw.replace(data.extData, true)
+      bw.string(data.extFormatStr, {length:4});
+      bw.uint32(data.extData.length);
+      bw.replace(data.extData, true);
       if(data.E)
       {
-        bw.string(data.EXIF, {length:4})
-        bw.uint32(data.EXIFData.length)
-        bw.replace( data.EXIFData, true)
+        bw.string(data.EXIF, {length:4});
+        bw.uint32(data.EXIFData.length);
+        bw.replace( data.EXIFData, true);
       }
       if(data.X)
       {
-        bw.string(data.XMP, {length:4})
-        bw.uint32(data.XMPMetaData.length)
-        bw.replace(data.XMPMetaData, true)
+        bw.string(data.XMP, {length:4});
+        bw.uint32(data.XMPMetaData.length);
+        bw.replace(data.XMPMetaData, true);
       }
       break;
     default:
       break;
   }
-  bw.trim() //remove any remaining bytes
-  bw.goto(4)
-  bw.uint32le(bw.size - 8) //write file size
-  return bw.return()
+  bw.trim(); // remove any remaining bytes
+  bw.goto(4);
+  bw.uint32le(bw.size - 8); // write file size
+  return bw.return();
 }
 ```
 
@@ -288,14 +288,14 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
   <tr>
     <td>Name</td>
-    <td>new bireader(<b>data</b>, byteOffset, bitOffset, endianess, strict)</td>
+    <td>new BiReader(<b>data</b>, byteOffset, bitOffset, endianess, strict)</td>
     <td align="center" rowspan="2"><b>Buffer or Uint8Array</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending initially supplied data (default true for reader, false for writer)
     </td>
-    <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> Supplied data can always be found with .data.<br><br><b>biwriter note:</b> while biwriter can be created with a 0 length Uint8array or Buffer, each new value write will create a new array and concat the two. For large data writes this will lead to a degraded performance. It's best to supply a larger than needed buffer to start and use .trim() after you're finished.</td>
+    <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> Supplied data can always be found with .data.<br><br><b>BiWriter note:</b> while BiWriter can be created with a 0 length Uint8array or Buffer, each new value write will create a new array and concat the two. For large data writes this will lead to a degraded performance. It's best to supply a larger than needed buffer to start and use .trim() after you're finished.</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>new biwriter(data, byteOffset, bitOffset, endianess, strict)</td>
+    <td>new BiWriter(data, byteOffset, bitOffset, endianess, strict)</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -309,93 +309,93 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Name</td>
-    <td>length()</td>
+    <td>length</td>
     <td align="center" rowspan="2">none</td>
     <td rowspan="2">Gets the current buffer size in bytes.</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>size, FileSize()</td>
+    <td>len, size, FileSize</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>lengthB()</td>
+    <td>lengthB</td>
     <td align="center" rowspan="2">none</td>
     <td rowspan="2">Gets the current buffer size in bits.</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>sizeB, FileSizeB()</td>
+    <td>lenb, sizeB, FileSizeB</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>getOffset()</td>
+    <td>getOffset</td>
     <td align="center" rowspan="2">none</td>
     <td rowspan="2">Gets current byte position.</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>FTell(), tell(), saveOffset()</td>
+    <td>off, FTell, tell, saveOffset</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>getOffsetBit()</td>
+    <td>getOffsetBit</td>
     <td align="center" rowspan="2">none</td>
     <td rowspan="2">Gets current byte's bit position (0-7).</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>FTellB(), tellB(), saveOffsetBit()</td>
+    <td>offb, FTellB, tellB, saveOffsetBit</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>getOffsetAbsBit()</td>
+    <td>getOffsetAbsBit</td>
     <td align="center" rowspan="2">none</td>
     <td rowspan="2">Gets current absolute bit position from start of data.</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>tellAbsB(), saveOffsetAbsBit()</td>
+    <td>offab, tellAbsB, saveOffsetAbsBit</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>remain()</td>
+    <td>remain</td>
     <td align="center" rowspan="2">none</td>
     <td rowspan="2">Size in bytes of current read position to the end.</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>FEoF()</td>
+    <td>FEoF</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>remainB()</td>
+    <td>remainB</td>
     <td align="center" rowspan="2">none</td>
     <td rowspan="2">Size in bits of current read position to the end.</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>FEoFB()</td>
+    <td>FEoFB</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>getLine()</td>
+    <td>getLine</td>
     <td align="center" rowspan="2">none</td>
     <td rowspan="2">Row line of the file (16 bytes per row).</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>row()</td>
+    <td>row</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>get() </td>
+    <td>get</td>
     <td align="center" rowspan="2">none</td>
     <td rowspan="2">Returns supplied data.</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>return()</td>
+    <td>return, data</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -547,10 +547,14 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td >Removes and returns data. <br><b>Note:</b> Errors on strict mode</td>
   </tr>
   <tr>
-    <td>Preset</td>
-    <td>clip()<br>trim()</td>
-    <td align="center">None</td>
-    <td >Removes data after the current byte position and returns data. <br><b>Note:</b> Errors on strict mode</td>
+    <td>Name</td>
+    <td>clip()</td>
+    <td align="center" rowspan="2">None</td>
+    <td rowspan="2">Removes data after the current byte position and returns data. <br><b>Note:</b> Errors on strict mode</td>
+  </tr>
+  <tr>
+    <td>Alias</td>
+    <td>trim()</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -570,7 +574,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Alias</td>
-    <td>overwrite(<b>data</b>, consume, offset)</td>
+    <td>writeBytes(values, unsigned), overwrite(<b>data</b>, consume, offset)</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -590,7 +594,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>slice(<b>length</b>, consume)<br>wrap(<b>length</b>, consume)</td>
+    <td>readbytes(amount, unsigned), slice(<b>length</b>, consume)<br>wrap(<b>length</b>, consume)</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -714,13 +718,13 @@ Common functions for setup, movement, manipulation and math shared by both.
 
 Parse value as a bit field. There are 32 functions from bit1 to bit32 and can be signed or unsigned (with a ``u`` at the start) and in little or big endian order (``be`` or ``le`` at the end).
 
-**Note:** Remaining bits are dropped when returning to a byte read. Example, after using ``bit4()`` then ``ubyte()``, the read locations drops the remaining 4 bits after ``bit4()`` when reading ``ubyte()``. Any bit reading under 8 will always be unsigned.
+**Note:** Remaining bits are dropped when returning to a byte read. Example, after using ``bit4`` then ``ubyte``, the read locations drops the remaining 4 bits after ``bit4`` when reading ``ubyte``. Any bit reading under 8 will always be unsigned.
 
 <table>
 <thead>
   <tr>
     <th></th>
-    <th align="center">Functions</th>
+    <th align="center">Properties</th>
     <th align="left">Params (bold requires)</th>
   </tr>
 </thead>
@@ -736,13 +740,13 @@ Parse value as a bit field. There are 32 functions from bit1 to bit32 and can be
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
-    <td>[u]bit{1-32}{le|be}(*unsigned)</td>
-    <td>If value is signed or not.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>first</i> augment</td>
+    <td>[u]bit{1-32}{le|be}</td>
+    <td>*Note: in BiReader these are get, not functions.</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>[u]bit{1-32}{le|be}(<b>value</b>, *unsigned)</td>
-    <td><b>value to write</b>, if value is unsigned or not.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>fourth</i> augment</td>
+    <td>[u]bit{1-32}{le|be} = <b>value</b></td>
+    <td>*Note: in BiWriter these are set, not functions.</td>
   </tr>
 </tbody>
 </table>
@@ -755,7 +759,7 @@ Parse value as a byte (aka int8). Can be signed or unsigned (with a ``u`` at the
 <thead>
   <tr>
     <th></th>
-    <th align="center">Functions</th>
+    <th align="center">Properties</th>
     <th align="left">Params (bold requires)</th>
   </tr>
 </thead>
@@ -771,13 +775,13 @@ Parse value as a byte (aka int8). Can be signed or unsigned (with a ``u`` at the
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
-    <td>[u]{byte|int8}(*unsigned)</td>
-    <td>If value is signed or not.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>first</i> augment</td>
+    <td>[u]{byte|int8}</td>
+    <td>*Note: in BiReader these are get, not functions.</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>[u]{byte|int8}(<b>value</b>, *unsigned)</td>
-    <td><b>value to write</b>, if value is signed or not.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment</td>
+    <td>[u]{byte|int8} = <b>value</b></td>
+    <td>*Note: in BiWriter these are set, not functions.</td>
   </tr>
 </tbody>
 </table>
@@ -790,7 +794,7 @@ Parse value as a int16 (aka short or word). Can be signed or unsigned (with a ``
 <thead>
   <tr>
     <th></th>
-    <th align="center">Functions</th>
+    <th align="center">Properties</th>
     <th align="left">Params (bold requires)</th>
   </tr>
 </thead>
@@ -806,13 +810,13 @@ Parse value as a int16 (aka short or word). Can be signed or unsigned (with a ``
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
-    <td>[u]{int16|word|short}{be|le}(*unsigned, *endian)</td>
-    <td>If value is unsigned, big or little endian.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>first</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>second</i> augment (does not overwite set endian).</td>
+    <td>[u]{int16|word|short}{be|le}</td>
+    <td>*Note: in BiReader these are get, not functions.</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>[u]{int16|word|short}{be|le}(<b>value</b>, *unsigned, *endian)</td>
-    <td><b>value to write</b>, if value is unsigned, big or little endian.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>fourth</i> augment (does not overwite set endian).</td>
+    <td>[u]{int16|word|short}{be|le} = <b>value</b></td>
+    <td>*Note: in BiWriter these are set, not functions.</td>
   </tr>
 </tbody>
 </table>
@@ -825,7 +829,7 @@ Parse value as a half float (aka half). Can be in little or big endian order (``
 <thead>
   <tr>
     <th></th>
-    <th align="center">Functions</th>
+    <th align="center">Properties</th>
     <th align="left">Params (bold requires)</th>
   </tr>
 </thead>
@@ -841,13 +845,13 @@ Parse value as a half float (aka half). Can be in little or big endian order (``
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
-    <td>{halffloat|half}{be|le}(*endian)</td>
-    <td>Big or little endian.<br>*Note: functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>first</i> augment (does not overwite set endian).</td>
+    <td>{halffloat|half}{be|le}</td>
+    <td>*Note: in BiReader these are get, not functions.</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>{halffloat|half}{be|le}(<b>value</b>, *endian)</td>
-    <td><b>value to write</b>, big or little endian.<br>*Note: and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>second</i> augment (does not overwite set endian).</td>
+    <td>{halffloat|half}{be|le} = <b>value</b></td>
+    <td>*Note: in BiWriter these are set, not functions.</td>
   </tr>
 </tbody>
 </table>
@@ -860,7 +864,7 @@ Parse value as a int32 (aka int, long or  double). Can be signed or unsigned (wi
 <thead>
   <tr>
     <th></th>
-    <th align="center">Functions</th>
+    <th align="center">Properties</th>
     <th align="left">Params (bold requires)</th>
   </tr>
 </thead>
@@ -876,13 +880,13 @@ Parse value as a int32 (aka int, long or  double). Can be signed or unsigned (wi
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
-    <td>[u]{int32|long|int|double}{be|le}(*unsigned, *endian)</td>
-    <td>If value is unsigned, little or big endian.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>first</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>second</i> augment (does not overwite set endian).</td>
+    <td>[u]{int32|long|int|double}{be|le}</td>
+    <td>*Note: in BiReader these are get, not functions.</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>[u]{int32|long|int|double}{be|le}(<b>value</b>,  *unsigned, *endian)</td>
-    <td><b>value to write</b>, if value is unsigned, little or big endian<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>fourth</i> augment (does not overwite set endian).</td>
+    <td>[u]{int32|long|int|double}{be|le} = <b>value</b></td>
+    <td>*Note: in BiWriter these are set, not functions.</td>
   </tr>
 </tbody>
 </table>
@@ -895,7 +899,7 @@ Parse value as a float. Can be in little or big endian order (``be`` or ``le`` a
 <thead>
   <tr>
     <th></th>
-    <th align="center">Functions</th>
+    <th align="center">Properties</th>
     <th align="left">Params (bold requires)</th>
   </tr>
 </thead>
@@ -911,13 +915,13 @@ Parse value as a float. Can be in little or big endian order (``be`` or ``le`` a
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
-    <td>float{be|le}(*endian)</td>
-    <td>Big or little endian.<br>*Note: functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>first</i> augment (does not overwite set endian).</td>
+    <td>float{be|le}</td>
+    <td>*Note: in BiReader these are get, not functions.</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>float{be|le}(<b>value</b>,  *endian)</td>
-    <td><b>value to write</b>, big or little endian.<br>*Note: functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>third</i> augment (does not overwite set endian).</td>
+    <td>float{be|le} = <b>value</b></td>
+    <td>*Note: in BiWriter these are set, not functions.</td>
   </tr>
 </tbody>
 </table>
@@ -930,7 +934,7 @@ Parse value as a int64 (aka quad or bigint). Can be signed or unsigned (with a `
 <thead>
   <tr>
     <th></th>
-    <th align="center">Functions</th>
+    <th align="center">Properties</th>
     <th align="left">Params (bold requires)</th>
   </tr>
 </thead>
@@ -946,13 +950,13 @@ Parse value as a int64 (aka quad or bigint). Can be signed or unsigned (with a `
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
-    <td>[u]{int64|quad|bigint}{be|le}(*unsigned, *endian)</td>
-    <td>If value is unsigned, if value is unsigned, big or little endian.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>first</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>second</i> augment (does not overwite set endian).</td>
+    <td>[u]{int64|quad|bigint}{be|le}</td>
+    <td>If value is unsigned, if value is unsigned, big or little endian.<br>*Note: in BiReader these are get, not functions.</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>[u]{int64|quad|bigint}{be|le}(<b>value</b>, *unsigned, *endian)</td>
-    <td><b>value to write</b>, if value is unsigned, big or little endian.<br>*Note: functions without the starting letter <u>u</u> can still be called unsigned when <b>true</b> is the <i>third</i> augment, and functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>fourth</i> augment (does not overwite set endian).</td>
+    <td>[u]{int64|quad|bigint}{be|le} = <b>value</b></td>
+    <td><b>value to write</b>, if value is unsigned, big or little endian.<br>*Note: in BiWriter these are set, not functions.</td>
   </tr>
 </tbody>
 </table>
@@ -965,7 +969,7 @@ Parse value as a double float (aka dfloat). Can be in little or big endian order
 <thead>
   <tr>
     <th></th>
-    <th align="center">Functions</th>
+    <th align="center">Properties</th>
     <th align="left">Params (bold requires)</th>
   </tr>
 </thead>
@@ -981,13 +985,13 @@ Parse value as a double float (aka dfloat). Can be in little or big endian order
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
-    <td>{doublefloat|dfloat}{be|le}(*endian)</td>
-    <td>Big or little endian.<br>*Note: functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>first</i> augment (does not overwite set endian).</td>
+    <td>{doublefloat|dfloat}{be|le}</td>
+    <td>*Note: in BiReader these are get, not functions.</td>
   </tr>
   <tr>
    <td align="center"><b>Presets (writer)</b></td>
-    <td>{doublefloat|dfloat}{be|le}(<b>value</b>, *endian)</td>
-    <td><b>Value to write</b>, big or little endian.<br>*Note: functions without ending letters <u>be</u> or <u>le</u> can still be called the endian in the <i>third</i> augment (does not overwite set endian).</td>
+    <td>{doublefloat|dfloat}{be|le} = <b>value</b></td>
+    <td>*Note: in BiWriter these are set, not functions.</td>
   </tr>
 </tbody>
 </table>
