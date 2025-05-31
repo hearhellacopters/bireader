@@ -11,7 +11,7 @@ const common_1 = require("./common");
  * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
  * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
  * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
- * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes login in ``.get`` and ``.return``.
+ * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
  *
  * @since 2.0
  */
@@ -25,7 +25,7 @@ class BiReader extends common_1.ReaderBase {
      * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
      * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
      * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
-     * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes login in ``.get`` and ``.return``.
+     * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
      */
     constructor(data, options = {}) {
         super();
