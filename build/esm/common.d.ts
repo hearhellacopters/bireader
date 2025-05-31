@@ -1,6 +1,28 @@
 /// <reference types="node" />
 type BiReader = import('./bireader.ts').BiReader;
 type BiWriter = import('./biwriter.ts').BiWriter;
+export type BiOptions = {
+    /**
+     * Byte offset to start writer, default is 0
+     */
+    byteOffset?: number;
+    /**
+     *  Byte offset to start writer, default is 0
+     */
+    bitOffset?: number;
+    /**
+     * Endianness ``big`` or ``little`` (default little)
+     */
+    endianness?: "little" | "big";
+    /**
+     * Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+     */
+    strict?: boolean;
+    /**
+     * Amount of data to add when extending the buffer array when strict mode is false. Note: Changes login in ``.get`` and ``.return``.
+     */
+    extendBufferSize?: number;
+};
 export declare function isBuffer(obj: Buffer | Uint8Array): boolean;
 export declare function check_size(_this: BiReader | BiWriter | ReaderBase, write_bytes: number, write_bit?: number, offset?: number): number;
 export declare function buffcheck(obj: Buffer | Uint8Array | ReaderBase): boolean;
@@ -13,29 +35,36 @@ export declare function alignRev(_this: BiReader | BiWriter | ReaderBase, n: num
 export declare function goto(_this: BiReader | BiWriter | ReaderBase, bytes: number, bits?: number): void;
 export declare function remove(_this: BiReader | BiWriter | ReaderBase, startOffset?: number, endOffset?: number, consume?: boolean, remove?: boolean, fillValue?: number): any;
 export declare function addData(_this: BiReader | BiWriter | ReaderBase, data: Buffer | Uint8Array, consume?: boolean, offset?: number, replace?: boolean): void;
+type hexdumpOptions = {
+    /**
+     * number of bytes to log, default ``192`` or end of data
+     */
+    length?: number;
+    /**
+     * byte to start dump (default ``0``)
+     */
+    startByte?: number;
+    /**
+     * Supress unicode character preview for even columns.
+     */
+    supressUnicode?: boolean;
+    /**
+     * Returns the hex dump string instead of logging it.
+     */
+    returnString?: boolean;
+};
 /**
- * Console logs provided data as hex dump.
+ * Creates hex dump string. Will console log or return string if set in options.
  *
  * @param {Uint8Array|Buffer} src - Uint8Array or Buffer
- * @param {object} options
- * ```javascript
- *   {
- *       length: 192, // number of bytes to log, default 192 or end of data
- *       startByte: 0, // byte to start dump (default 0)
- *       supressUnicode: false // Supress unicode character preview for even columns
- *   }
- * ```
+ * @param {hexdumpOptions?} options - hex dump options
+ * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
+ * @param {number?} options.startByte - byte to start dump (default ``0``)
+ * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
+ * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
  */
-export declare function hexdump(src: Uint8Array | Buffer, options?: {
-    length?: number;
-    startByte?: number;
-    supressUnicode?: boolean;
-}): void;
-export declare function hexDump(_this: BiReader | BiWriter | ReaderBase, options?: {
-    length?: number;
-    startByte?: number;
-    supressUnicode?: boolean;
-}): void;
+export declare function hexdump(src: Uint8Array | Buffer, options?: hexdumpOptions): void | string;
+export declare function hexDump(_this: BiReader | BiWriter | ReaderBase, options?: hexdumpOptions): void | string;
 export declare function AND(_this: BiReader | BiWriter | ReaderBase, and_key: any, start?: number, end?: number, consume?: boolean): any;
 export declare function OR(_this: BiReader | BiWriter | ReaderBase, or_key: any, start?: number, end?: number, consume?: boolean): any;
 export declare function XOR(_this: BiReader | BiWriter | ReaderBase, xor_key: any, start?: number, end?: number, consume?: boolean): any;
@@ -118,6 +147,16 @@ export declare class ReaderBase {
      * @type {Buffer|Uint8Array}
      */
     data: any;
+    /**
+     * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
+     *
+     * Otherwise it extends just the amount of the next written value.
+     *
+     * This can greatly speed up data writes when large files are being written.
+     *
+     * NOTE: Using ``BiWriter.get`` or ``BiWriter.return`` will now remove all data after the current write position. Use ``BiWriter.data`` to get the full buffer instead.
+     */
+    extendBufferSize: number;
     isBufferOrUint8Array(obj: Buffer | Uint8Array): boolean;
     extendArray(to_padd: number): void;
     /**
@@ -312,32 +351,34 @@ export declare class ReaderBase {
     /**
      * Returns current data.
      *
+     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
+     *
+     * Use ``.data`` instead if you want the full buffer data.
+     *
      * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
      */
     get get(): Buffer | Uint8Array;
     /**
      * Returns current data.
      *
+     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
+     *
+     * Use ``.data`` instead if you want the full buffer data.
+     *
      * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
      */
     get return(): Buffer | Uint8Array;
     /**
-    * Console logs data as hex dump.
+    * Creates hex dump string. Will console log or return string if set in options.
     *
     * @param {object} options
-    * ```javascript
-    *   {
-    *       length: 192, // number of bytes to log, default 192 or end of data
-    *       startByte: 0, // byte to start dump (default current byte position)
-    *       supressUnicode: false // Supress unicode character preview for even columns
-    *   }
-    * ```
+    * @param {hexdumpOptions?} options - hex dump options
+    * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
+    * @param {number?} options.startByte - byte to start dump (default ``0``)
+    * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
+    * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
     */
-    hexdump(options?: {
-        length?: number;
-        startByte?: number;
-        supressUnicode?: boolean;
-    }): void;
+    hexdump(options?: hexdumpOptions): void | string;
     /**
      * Turn hexdump on error off (default on).
      */

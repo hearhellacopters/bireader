@@ -43,7 +43,12 @@ function checkSize(_this, write_bytes, write_bit, offset) {
     if (needed_size > _this.size) {
         const dif = needed_size - _this.size;
         if (_this.strict == false) {
-            _this.extendArray(dif);
+            if (_this.extendBufferSize != 0) {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else {
+                _this.extendArray(dif);
+            }
         }
         else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m hexdump:\n" + _this.hexdump() : "";
@@ -61,7 +66,12 @@ function skip(_this, bytes, bits) {
     }
     if (new_size > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray(new_size - _this.size);
+            if (_this.extendBufferSize != 0) {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else {
+                _this.extendArray(new_size - _this.size);
+            }
         }
         else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m hexdump:\n" + _this.hexdump() : "";
@@ -101,7 +111,12 @@ function goto(_this, bytes, bits) {
     }
     if (new_size > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray(new_size - _this.size);
+            if (_this.extendBufferSize != 0) {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else {
+                _this.extendArray(new_size - _this.size);
+            }
         }
         else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m hexdump:\n" + _this.hexdump() : "";
@@ -124,16 +139,21 @@ function remove(_this, startOffset, endOffset, consume, remove, fillValue) {
     const new_offset = (endOffset || _this.offset);
     if (new_offset > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray(new_offset - _this.size);
+            if (_this.extendBufferSize != 0) {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else {
+                _this.extendArray(new_offset - _this.size);
+            }
         }
         else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + endOffset + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + endOffset + " of " + _this.size);
         }
     }
     if (_this.strict == true && remove == true) {
         _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-        throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset" + endOffset + " of " + _this.size);
+        throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + _this.size);
     }
     const data_removed = _this.data.slice(new_start, new_offset);
     if (remove) {
@@ -221,19 +241,16 @@ function addData(_this, data, consume, offset, replace) {
 }
 exports.addData = addData;
 /**
- * Console logs provided data as hex dump.
+ * Creates hex dump string. Will console log or return string if set in options.
  *
  * @param {Uint8Array|Buffer} src - Uint8Array or Buffer
- * @param {object} options
- * ```javascript
- *   {
- *       length: 192, // number of bytes to log, default 192 or end of data
- *       startByte: 0, // byte to start dump (default 0)
- *       supressUnicode: false // Supress unicode character preview for even columns
- *   }
- * ```
+ * @param {hexdumpOptions?} options - hex dump options
+ * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
+ * @param {number?} options.startByte - byte to start dump (default ``0``)
+ * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
+ * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
  */
-function hexdump(src, options) {
+function hexdump(src, options = {}) {
     if (!(src instanceof Uint8Array || isBuffer(src))) {
         throw new Error("Write data must be Uint8Array or Buffer.");
     }
@@ -244,10 +261,10 @@ function hexdump(src, options) {
         errorDump: true,
         extendArray: extendarray,
     };
-    hexDump(fake_reader, options);
+    return hexDump(fake_reader, options);
 }
 exports.hexdump = hexdump;
-function hexDump(_this, options) {
+function hexDump(_this, options = {}) {
     var length = options && options.length;
     var startByte = options && options.startByte;
     var supressUnicode = options && options.supressUnicode || false;
@@ -427,18 +444,28 @@ function hexDump(_this, options) {
     if (make_wide) {
         rows.push("*Removed character byte header on unicode detection");
     }
-    console.log(rows.join("\n"));
+    if (options && options.returnString) {
+        return rows.join("\n");
+    }
+    else {
+        console.log(rows.join("\n"));
+    }
 }
 exports.hexDump = hexDump;
 function AND(_this, and_key, start, end, consume) {
     const input = _this.data;
     if ((end || 0) > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray((end || 0) - _this.size);
+            if (_this.extendBufferSize != 0) {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else {
+                _this.extendArray((end || 0) - _this.size);
+            }
         }
         else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end || 0) + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + _this.size);
         }
     }
     if (typeof and_key == "number") {
@@ -477,11 +504,16 @@ function OR(_this, or_key, start, end, consume) {
     const input = _this.data;
     if ((end || 0) > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray((end || 0) - _this.size);
+            if (_this.extendBufferSize != 0) {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else {
+                _this.extendArray((end || 0) - _this.size);
+            }
         }
         else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end || 0) + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + _this.size);
         }
     }
     if (typeof or_key == "number") {
@@ -520,11 +552,16 @@ function XOR(_this, xor_key, start, end, consume) {
     const input = _this.data;
     if ((end || 0) > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray((end || 0) - _this.size);
+            if (_this.extendBufferSize != 0) {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else {
+                _this.extendArray((end || 0) - _this.size);
+            }
         }
         else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end || 0) + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + _this.size);
         }
     }
     if (typeof xor_key == "number") {
@@ -562,11 +599,16 @@ exports.XOR = XOR;
 function NOT(_this, start, end, consume) {
     if ((end || 0) > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray((end || 0) - _this.size);
+            if (_this.extendBufferSize != 0) {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else {
+                _this.extendArray((end || 0) - _this.size);
+            }
         }
         else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end || 0) + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + _this.size);
         }
     }
     for (let i = (start || 0); i < Math.min(end || _this.size, _this.size); i++) {
@@ -582,11 +624,16 @@ function LSHIFT(_this, shift_key, start, end, consume) {
     const input = _this.data;
     if ((end || 0) > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray((end || 0) - _this.size);
+            if (_this.extendBufferSize != 0) {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else {
+                _this.extendArray((end || 0) - _this.size);
+            }
         }
         else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end || 0) + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + _this.size);
         }
     }
     if (typeof shift_key == "number") {
@@ -625,11 +672,16 @@ function RSHIFT(_this, shift_key, start, end, consume) {
     const input = _this.data;
     if ((end || 0) > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray((end || 0) - _this.size);
+            if (_this.extendBufferSize != 0) {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else {
+                _this.extendArray((end || 0) - _this.size);
+            }
         }
         else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end || 0) + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + _this.size);
         }
     }
     if (typeof shift_key == "number") {
@@ -668,11 +720,16 @@ function ADD(_this, add_key, start, end, consume) {
     const input = _this.data;
     if ((end || 0) > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray((end || 0) - _this.size);
+            if (_this.extendBufferSize != 0) {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else {
+                _this.extendArray((end || 0) - _this.size);
+            }
         }
         else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end || 0) + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + _this.size);
         }
     }
     if (typeof add_key == "number") {
@@ -953,7 +1010,12 @@ function wbit(_this, value, bits, unsigned, endian) {
     const size_needed = ((((bits - 1) + _this.bitoffset) / 8) + _this.offset);
     if (size_needed > _this.size) {
         //add size
-        _this.extendArray(size_needed - _this.size);
+        if (_this.extendBufferSize != 0) {
+            _this.extendArray(_this.extendBufferSize);
+        }
+        else {
+            _this.extendArray(size_needed - _this.size);
+        }
     }
     var off_in_bits = (_this.offset * 8) + _this.bitoffset;
     for (var i = 0; i < bits;) {
@@ -1719,6 +1781,16 @@ class ReaderBase {
          * @type {Buffer|Uint8Array}
          */
         this.data = [];
+        /**
+         * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
+         *
+         * Otherwise it extends just the amount of the next written value.
+         *
+         * This can greatly speed up data writes when large files are being written.
+         *
+         * NOTE: Using ``BiWriter.get`` or ``BiWriter.return`` will now remove all data after the current write position. Use ``BiWriter.data`` to get the full buffer instead.
+         */
+        this.extendBufferSize = 0;
     }
     isBufferOrUint8Array(obj) {
         return arraybuffcheck(this, obj);
@@ -1996,32 +2068,44 @@ class ReaderBase {
     /**
      * Returns current data.
      *
+     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
+     *
+     * Use ``.data`` instead if you want the full buffer data.
+     *
      * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
      */
     get get() {
+        if (this.extendBufferSize != 0) {
+            this.trim();
+        }
         return this.data;
     }
     /**
      * Returns current data.
      *
+     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
+     *
+     * Use ``.data`` instead if you want the full buffer data.
+     *
      * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
      */
     get return() {
+        if (this.extendBufferSize != 0) {
+            this.trim();
+        }
         return this.data;
     }
     /**
-    * Console logs data as hex dump.
+    * Creates hex dump string. Will console log or return string if set in options.
     *
     * @param {object} options
-    * ```javascript
-    *   {
-    *       length: 192, // number of bytes to log, default 192 or end of data
-    *       startByte: 0, // byte to start dump (default current byte position)
-    *       supressUnicode: false // Supress unicode character preview for even columns
-    *   }
-    * ```
+    * @param {hexdumpOptions?} options - hex dump options
+    * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
+    * @param {number?} options.startByte - byte to start dump (default ``0``)
+    * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
+    * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
     */
-    hexdump(options) {
+    hexdump(options = {}) {
         return hexDump(this, options);
     }
     /**

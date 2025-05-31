@@ -1,13 +1,15 @@
 /// <reference types="node" />
-import { ReaderBase } from "./common";
+import { ReaderBase, BiOptions } from "./common";
 /**
  * Binary writer, includes bitfields and strings.
  *
  * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
- * @param {number} byteOffset - Byte offset to start writer, default is 0
- * @param {number} bitOffset - Bit offset 0-7 to start writer (default 0)
- * @param {string} endianness - Endianness ``big`` or ``little`` (default little)
- * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default false)
+ * @param {BiOptions} options - Any options to set at start
+ * @param {number?} options.byteOffset - Byte offset to start writer, default is ``0``
+ * @param {number?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+ * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+ * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes login in ``.get`` and ``.return``.
  *
  * @since 2.0
  */
@@ -15,13 +17,15 @@ export declare class BiWriter extends ReaderBase {
     /**
      * Binary writer, includes bitfields and strings.
      *
-     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``biwriter.data``
-     * @param {number} byteOffset - Byte offset to start writer, default is 0
-     * @param {number} bitOffset - Bit offset to start writer, 0-7
-     * @param {string} endianness - Endianness ``big`` or ``little`` (default little)
-     * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default false)
+     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+     * @param {BiOptions?} options - Any options to set at start
+     * @param {number?} options.byteOffset - Byte offset to start writer, default is ``0``
+     * @param {number?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+     * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+     * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+     * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes login in ``.get`` and ``.return``.
      */
-    constructor(data?: Buffer | Uint8Array, byteOffset?: number, bitOffset?: number, endianness?: string, strict?: boolean);
+    constructor(data?: Buffer | Uint8Array, options?: BiOptions);
     /**
      * Bit field writer.
      *

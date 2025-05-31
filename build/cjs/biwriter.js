@@ -6,10 +6,12 @@ const common_1 = require("./common");
  * Binary writer, includes bitfields and strings.
  *
  * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
- * @param {number} byteOffset - Byte offset to start writer, default is 0
- * @param {number} bitOffset - Bit offset 0-7 to start writer (default 0)
- * @param {string} endianness - Endianness ``big`` or ``little`` (default little)
- * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default false)
+ * @param {BiOptions} options - Any options to set at start
+ * @param {number?} options.byteOffset - Byte offset to start writer, default is ``0``
+ * @param {number?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+ * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+ * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes login in ``.get`` and ``.return``.
  *
  * @since 2.0
  */
@@ -17,13 +19,15 @@ class BiWriter extends common_1.ReaderBase {
     /**
      * Binary writer, includes bitfields and strings.
      *
-     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``biwriter.data``
-     * @param {number} byteOffset - Byte offset to start writer, default is 0
-     * @param {number} bitOffset - Bit offset to start writer, 0-7
-     * @param {string} endianness - Endianness ``big`` or ``little`` (default little)
-     * @param {boolean} strict - Strict mode: if true does not extend supplied array on outside write (default false)
+     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+     * @param {BiOptions?} options - Any options to set at start
+     * @param {number?} options.byteOffset - Byte offset to start writer, default is ``0``
+     * @param {number?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+     * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+     * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+     * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes login in ``.get`` and ``.return``.
      */
-    constructor(data, byteOffset, bitOffset, endianness, strict) {
+    constructor(data, options = {}) {
         super();
         this.strict = false;
         if (data == undefined) {
@@ -40,36 +44,44 @@ class BiWriter extends common_1.ReaderBase {
             }
             this.data = data;
         }
+        if (options.extendBufferSize != undefined && options.extendBufferSize != 0) {
+            this.extendBufferSize = options.extendBufferSize;
+        }
         this.size = this.data.length;
         this.sizeB = this.data.length * 8;
-        if (typeof strict == "boolean") {
-            this.strict = strict;
+        if (typeof options.strict == "boolean") {
+            this.strict = options.strict;
         }
         else {
-            if (strict != undefined) {
+            if (options.strict != undefined) {
                 throw new Error("Strict mode must be true of false.");
             }
         }
-        if (endianness != undefined && typeof endianness != "string") {
+        if (options.endianness != undefined && typeof options.endianness != "string") {
             throw new Error("endianness must be big or little.");
         }
-        if (endianness != undefined && !(endianness == "big" || endianness == "little")) {
+        if (options.endianness != undefined && !(options.endianness == "big" || options.endianness == "little")) {
             throw new Error("Endianness must be big or little.");
         }
-        this.endian = endianness || "little";
-        if (byteOffset != undefined || bitOffset != undefined) {
-            this.offset = ((Math.abs(byteOffset || 0)) + Math.ceil((Math.abs(bitOffset || 0)) / 8));
+        this.endian = options.endianness || "little";
+        if (options.byteOffset != undefined || options.bitOffset != undefined) {
+            this.offset = ((Math.abs(options.byteOffset || 0)) + Math.ceil((Math.abs(options.bitOffset || 0)) / 8));
             // Adjust byte offset based on bit overflow
-            this.offset += Math.floor((Math.abs(bitOffset || 0)) / 8);
+            this.offset += Math.floor((Math.abs(options.bitOffset || 0)) / 8);
             // Adjust bit offset
-            this.bitoffset = (Math.abs(bitOffset || 0) + 64) % 8;
+            this.bitoffset = (Math.abs(options.bitOffset || 0) + 64) % 8;
             // Ensure bit offset stays between 0-7
             this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
             // Ensure offset doesn't go negative
             this.offset = Math.max(this.offset, 0);
             if (this.offset > this.size) {
                 if (this.strict == false) {
-                    this.extendArray(this.offset - this.size);
+                    if (this.extendBufferSize != 0) {
+                        this.extendArray(this.extendBufferSize);
+                    }
+                    else {
+                        this.extendArray(this.offset - this.size);
+                    }
                 }
                 else {
                     throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);

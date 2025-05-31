@@ -1,8 +1,8 @@
-# BiReader
+# BiReader / BiWriter
 
-A feature rich binary reader and writer that keeps track of your position to quickly create file structures. Includes shared naming conventions, programmable inputs and advanced math for easy data conversions to do low level parsing. Accepts `Uint8Array` or `Buffer`.
+A feature rich binary reader ***and writer*** that keeps track of your position to quickly create file structures. Includes shared naming conventions, programmable inputs and advanced math for easy data conversions on low level parsing. Accepts `Uint8Array` or `Buffer`.
 
-Supported data types are:
+Supported data types:
 
 - [Bitfields](#bit-field) ([u]bit{1-32}{le|be}) 1-32 bit signed or unsigned value in big or little endian order
 - [Bytes](#byte) ([u]int8, byte) 8 bit signed or unsigned value
@@ -13,6 +13,21 @@ Supported data types are:
 - [Quadwords](#quadword) ([u]int64, quad, bigint{le|be}) 64 bit signed or unsigned in big or little endian
 - [Double Floats](#double-float) (doublefloat, dfloat{le|be}) 64 bit decimal value in big or little endian
 - [Strings](#strings) (string) Fixed and non-fixed length, UTF, pascal, wide pascal. Includes all ```TextEncoder``` types
+
+## What's New?
+
+### v3.0
+ * Added better option for extending array buffer when writing data with ``extendBufferSize``.
+ * Consolidated all options argument into single object when creating class.
+ * Removed deprecated ``bireader`` and ``biwriter`` classes.
+ * Fixed standalone hexdump function. 
+
+### v2.0
+ * Created new ``BiReader`` and ``BiWriter`` classes with easier *get* and *set* functions for faster coding.
+
+### v1.0
+ * Included math functions and value searches.
+ * Many bug fixes.
 
 ## Installation
 
@@ -288,18 +303,18 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
   <tr>
     <td>Name</td>
-    <td>new BiReader(<b>data</b>, byteOffset, bitOffset, endianess, strict)</td>
-    <td align="center" rowspan="2"><b>Buffer or Uint8Array</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending initially supplied data (default true for reader, false for writer)
+    <td>new BiReader(<b>data</b>, {byteOffset, bitOffset, endianess, strict, extendBufferSize})</td>
+    <td align="center" rowspan="2"><b>Buffer or Uint8Array</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending initially supplied data (default true for reader, false for writer), extended Buffer size amount.
     </td>
-    <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> Supplied data can always be found with .data.<br><br><b>BiWriter note:</b> while BiWriter can be created with a 0 length Uint8array or Buffer, each new value write will create a new array and concat the two. For large data writes this will lead to a degraded performance. It's best to supply a larger than needed buffer to start and use .trim() after you're finished.</td>
+    <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> Supplied data can always be found with .data.<br><br><b>Writing data note:</b> while BiWriter can be created with a 0 length Uint8Array or Buffer, each new value write will create a new array and concat the two. For large data writes this will lead to a degraded performance. It's best to supply a larger than needed buffer when creating the Writer and use .trim() after you're finished. You can also set the extendBufferSize value to always extend by a fixed amount when reaching the end. This will also change the logic for .return and .get to trim the remining data from the current position for you. Use .data instead if you want to get the whole padded buffer array.</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>new BiWriter(data, byteOffset, bitOffset, endianess, strict)</td>
+    <td>new BiWriter(data, {byteOffset, bitOffset, endianess, strict, extendBufferSize})</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>endianness(<b>bigOrLittle</b>)</td>
+    <td>endianness(<b>"big" | "little"</b>)</td>
     <td align="center" rowspan="2"><b>big</b> or <b>little</b> (default little)</td>
     <td rowspan="2">Set or change Endian. Can be changed at any time.</td>
   </tr>
@@ -310,7 +325,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>length</td>
-    <td align="center" rowspan="2">none</td>
+    <td align="center" rowspan="2">None</td>
     <td rowspan="2">Gets the current buffer size in bytes.</td>
   </tr>
   <tr>
@@ -320,7 +335,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>lengthB</td>
-    <td align="center" rowspan="2">none</td>
+    <td align="center" rowspan="2">None</td>
     <td rowspan="2">Gets the current buffer size in bits.</td>
   </tr>
   <tr>
@@ -330,7 +345,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>getOffset</td>
-    <td align="center" rowspan="2">none</td>
+    <td align="center" rowspan="2">None</td>
     <td rowspan="2">Gets current byte position.</td>
   </tr>
   <tr>
@@ -340,7 +355,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>getOffsetBit</td>
-    <td align="center" rowspan="2">none</td>
+    <td align="center" rowspan="2">None</td>
     <td rowspan="2">Gets current byte's bit position (0-7).</td>
   </tr>
   <tr>
@@ -350,7 +365,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>getOffsetAbsBit</td>
-    <td align="center" rowspan="2">none</td>
+    <td align="center" rowspan="2">None</td>
     <td rowspan="2">Gets current absolute bit position from start of data.</td>
   </tr>
   <tr>
@@ -360,7 +375,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>remain</td>
-    <td align="center" rowspan="2">none</td>
+    <td align="center" rowspan="2">None</td>
     <td rowspan="2">Size in bytes of current read position to the end.</td>
   </tr>
   <tr>
@@ -370,7 +385,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>remainB</td>
-    <td align="center" rowspan="2">none</td>
+    <td align="center" rowspan="2">None</td>
     <td rowspan="2">Size in bits of current read position to the end.</td>
   </tr>
   <tr>
@@ -380,7 +395,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>getLine</td>
-    <td align="center" rowspan="2">none</td>
+    <td align="center" rowspan="2">None</td>
     <td rowspan="2">Row line of the file (16 bytes per row).</td>
   </tr>
   <tr>
@@ -390,12 +405,18 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>get</td>
-    <td align="center" rowspan="2">none</td>
-    <td rowspan="2">Returns supplied data.</td>
+    <td align="center" rowspan="2">None</td>
+    <td rowspan="2">Returns supplied data. <b>Note:</b> Will use .trim() command if extendBufferSize is set (removes all data after current position). Use .data if you want the full padded data buffer.</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>return, data</td>
+    <td>return</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>data</td>
+    <td align="center">None</td>
+    <td >Returns full current buffer data.</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -418,19 +439,19 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>unrestrict()</td>
-    <td align="center">none</td>
+    <td align="center">None</td>
     <td>Sets strict mode to false, will extend array if data is outside of max size (<b>default true for reader, false for writer</b>)</td>
   </tr>
   <tr>
     <td>Name</td>
     <td>restrict()</td>
-    <td align="center">none</td>
+    <td align="center">None</td>
     <td>Sets strict mode to true, won't extend array if data is outside of max size (<b>default true for reader, false for writer</b>)</td>
   </tr>
   <tr>
     <td>Name</td>
     <td>end()</td>
-    <td align="center" rowspan="2">none</td>
+    <td align="center" rowspan="2">None</td>
     <td rowspan="2">Removes supplied data.</td>
   </tr>
   <tr>
@@ -522,7 +543,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>rewind()</td>
-    <td align="center" rowspan="2">none</td>
+    <td align="center" rowspan="2">None</td>
     <td rowspan="2">Moves current byte position to start of data.</td>
   </tr>
   <tr>
@@ -532,7 +553,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Name</td>
     <td>last()</td>
-    <td align="center" rowspan="2">none</td>
+    <td align="center" rowspan="2">None</td>
     <td rowspan="2">Moves current byte position to end of data.</td>
   </tr>
   <tr>

@@ -1,6 +1,29 @@
 type BiReader = import('./bireader.ts').BiReader;
 type BiWriter = import('./biwriter.ts').BiWriter;
 
+export type BiOptions = {
+    /**
+     * Byte offset to start writer, default is 0 
+     */
+    byteOffset? : number,
+    /**
+     *  Byte offset to start writer, default is 0 
+     */
+    bitOffset? :number,
+    /**
+     * Endianness ``big`` or ``little`` (default little)
+     */
+    endianness? : "little"|"big",
+    /**
+     * Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+     */
+    strict?: boolean,
+    /**
+     * Amount of data to add when extending the buffer array when strict mode is false. Note: Changes login in ``.get`` and ``.return``.
+     */
+    extendBufferSize?: number
+};
+
 export function isBuffer(obj: Buffer | Uint8Array): boolean {
     return buffcheck(obj);
 }
@@ -42,7 +65,14 @@ export function checkSize(_this: BiReader | BiWriter | ReaderBase, write_bytes: 
     if (needed_size > _this.size) {
         const dif = needed_size - _this.size;
         if (_this.strict == false) {
-            _this.extendArray(dif);
+            if(_this.extendBufferSize != 0)
+            {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else 
+            {
+                _this.extendArray(dif);
+            }
         } else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m hexdump:\n" + _this.hexdump() : "";
             throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: writing to ` + needed_size + " at " + _this.offset + " of " + _this.size);
@@ -60,7 +90,14 @@ export function skip(_this: BiReader | BiWriter | ReaderBase, bytes: number, bit
 
     if (new_size > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray(new_size - _this.size);
+            if(_this.extendBufferSize != 0)
+            {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else 
+            {
+                _this.extendArray(new_size - _this.size);
+            }
         } else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m hexdump:\n" + _this.hexdump() : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: Seek of range of data: seek " + new_size + " of " + _this.size);
@@ -100,7 +137,14 @@ export function goto(_this: BiReader | BiWriter | ReaderBase, bytes: number, bit
     }
     if (new_size > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray(new_size - _this.size);
+            if(_this.extendBufferSize != 0)
+            {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else 
+            {
+                _this.extendArray(new_size - _this.size);
+            }
         } else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m hexdump:\n" + _this.hexdump() : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: Goto utside of range of data: goto " + new_size + " of " + _this.size);
@@ -122,15 +166,22 @@ export function remove(_this: BiReader | BiWriter | ReaderBase, startOffset?: nu
     const new_offset = (endOffset || _this.offset);
     if (new_offset > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray(new_offset - _this.size);
+            if(_this.extendBufferSize != 0)
+            {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else 
+            {
+                _this.extendArray(new_offset - _this.size);
+            }
         } else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + endOffset + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + endOffset + " of " + _this.size);
         }
     }
     if (_this.strict == true && remove == true) {
         _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-        throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset" + endOffset + " of " + _this.size);
+        throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + _this.size);
     }
     const data_removed = _this.data.slice(new_start, new_offset);
     if (remove) {
@@ -211,20 +262,36 @@ export function addData(_this: BiReader | BiWriter | ReaderBase, data: Buffer | 
     }
 }
 
+type hexdumpOptions = {
+    /**
+     * number of bytes to log, default ``192`` or end of data
+     */
+    length?: number,
+    /**
+     * byte to start dump (default ``0``)
+     */
+    startByte?: number, 
+    /**
+     * Supress unicode character preview for even columns.
+     */
+    supressUnicode?: boolean,
+    /**
+     * Returns the hex dump string instead of logging it.
+     */
+    returnString?: boolean
+}
+
 /**
- * Console logs provided data as hex dump.
+ * Creates hex dump string. Will console log or return string if set in options.
  * 
  * @param {Uint8Array|Buffer} src - Uint8Array or Buffer
- * @param {object} options 
- * ```javascript
- *   {
- *       length: 192, // number of bytes to log, default 192 or end of data
- *       startByte: 0, // byte to start dump (default 0)
- *       supressUnicode: false // Supress unicode character preview for even columns
- *   }
- * ```
+ * @param {hexdumpOptions?} options - hex dump options
+ * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
+ * @param {number?} options.startByte - byte to start dump (default ``0``)
+ * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
+ * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
  */
-export function hexdump(src: Uint8Array | Buffer, options?: { length?: number, startByte?: number, supressUnicode?: boolean }): void {
+export function hexdump(src: Uint8Array | Buffer, options: hexdumpOptions = {}): void|string {
 
     if (!(src instanceof Uint8Array || isBuffer(src))) {
         throw new Error("Write data must be Uint8Array or Buffer.");
@@ -238,10 +305,10 @@ export function hexdump(src: Uint8Array | Buffer, options?: { length?: number, s
         extendArray: extendarray,
     };
 
-    hexDump(<unknown>fake_reader as BiReader, options);
+    return hexDump(<unknown>fake_reader as BiReader, options);
 }
 
-export function hexDump(_this: BiReader | BiWriter | ReaderBase, options?: { length?: number, startByte?: number, supressUnicode?: boolean }): void {
+export function hexDump(_this: BiReader | BiWriter | ReaderBase, options: hexdumpOptions = {}): void|string {
     var length: any = options && options.length;
     var startByte: any = options && options.startByte;
     var supressUnicode: any = options && options.supressUnicode || false;
@@ -410,17 +477,32 @@ export function hexDump(_this: BiReader | BiWriter | ReaderBase, options?: { len
     if (make_wide) {
         rows.push("*Removed character byte header on unicode detection");
     }
-    console.log(rows.join("\n"));
+    if(options && options.returnString)
+    {
+        return rows.join("\n");
+    }
+    else
+    {
+        console.log(rows.join("\n"));
+    }
+    
 }
 
 export function AND(_this: BiReader | BiWriter | ReaderBase, and_key: any, start?: number, end?: number, consume?: boolean): any {
     const input = _this.data;
     if ((end || 0) > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray((end || 0) - _this.size);
+            if(_this.extendBufferSize != 0)
+            {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else 
+            {
+                _this.extendArray((end || 0) - _this.size);
+            }
         } else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end || 0) + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + _this.size);
         }
     }
     if (typeof and_key == "number") {
@@ -456,10 +538,17 @@ export function OR(_this: BiReader | BiWriter | ReaderBase, or_key: any, start?:
     const input = _this.data;
     if ((end || 0) > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray((end || 0) - _this.size);
+            if(_this.extendBufferSize != 0)
+            {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else 
+            {
+                _this.extendArray((end || 0) - _this.size);
+            }
         } else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end || 0) + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + _this.size);
         }
     }
     if (typeof or_key == "number") {
@@ -495,10 +584,17 @@ export function XOR(_this: BiReader | BiWriter | ReaderBase, xor_key: any, start
     const input = _this.data;
     if ((end || 0) > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray((end || 0) - _this.size);
+            if(_this.extendBufferSize != 0)
+            {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else 
+            {
+                _this.extendArray((end || 0) - _this.size);
+            }
         } else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end || 0) + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + _this.size);
         }
     }
     if (typeof xor_key == "number") {
@@ -533,10 +629,17 @@ export function XOR(_this: BiReader | BiWriter | ReaderBase, xor_key: any, start
 export function NOT(_this: BiReader | BiWriter | ReaderBase, start?: number, end?: number, consume?: boolean): any {
     if ((end || 0) > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray((end || 0) - _this.size);
+            if(_this.extendBufferSize != 0)
+            {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else 
+            {
+                _this.extendArray((end || 0) - _this.size);
+            }
         } else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end || 0) + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + _this.size);
         }
     }
     for (let i = (start || 0); i < Math.min(end || _this.size, _this.size); i++) {
@@ -552,10 +655,17 @@ export function LSHIFT(_this: BiReader | BiWriter | ReaderBase, shift_key: any, 
     const input = _this.data;
     if ((end || 0) > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray((end || 0) - _this.size);
+            if(_this.extendBufferSize != 0)
+            {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else 
+            {
+                _this.extendArray((end || 0) - _this.size);
+            }
         } else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end || 0) + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + _this.size);
         }
     }
     if (typeof shift_key == "number") {
@@ -591,10 +701,17 @@ export function RSHIFT(_this: BiReader | BiWriter | ReaderBase, shift_key: any, 
     const input = _this.data;
     if ((end || 0) > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray((end || 0) - _this.size);
+            if(_this.extendBufferSize != 0)
+            {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else 
+            {
+                _this.extendArray((end || 0) - _this.size);
+            }
         } else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end || 0) + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + _this.size);
         }
     }
     if (typeof shift_key == "number") {
@@ -630,10 +747,17 @@ export function ADD(_this: BiReader | BiWriter | ReaderBase, add_key: any, start
     const input = _this.data;
     if ((end || 0) > _this.size) {
         if (_this.strict == false) {
-            _this.extendArray((end || 0) - _this.size);
+            if(_this.extendBufferSize != 0)
+            {
+                _this.extendArray(_this.extendBufferSize);
+            }
+            else 
+            {
+                _this.extendArray((end || 0) - _this.size);
+            }
         } else {
             _this.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + _this.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset" + (end || 0) + " of " + _this.size);
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + _this.size);
         }
     }
     if (typeof add_key == "number") {
@@ -951,7 +1075,14 @@ export function wbit(_this: BiReader | BiWriter | ReaderBase, value: number, bit
     const size_needed = ((((bits - 1) + _this.bitoffset) / 8) + _this.offset);
     if (size_needed > _this.size) {
         //add size
-        _this.extendArray(size_needed - _this.size);
+        if(_this.extendBufferSize != 0)
+        {
+            _this.extendArray(_this.extendBufferSize);
+        }
+        else 
+        {
+            _this.extendArray(size_needed - _this.size);
+        }
     }
 
     var off_in_bits = (_this.offset * 8) + _this.bitoffset;
@@ -1791,6 +1922,16 @@ export class ReaderBase{
      * @type {Buffer|Uint8Array}
      */
     public data: any = [];
+    /**
+     * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
+     * 
+     * Otherwise it extends just the amount of the next written value.
+     * 
+     * This can greatly speed up data writes when large files are being written.
+     * 
+     * NOTE: Using ``BiWriter.get`` or ``BiWriter.return`` will now remove all data after the current write position. Use ``BiWriter.data`` to get the full buffer instead.
+     */    
+    public extendBufferSize: number = 0;
 
     isBufferOrUint8Array(obj: Buffer | Uint8Array): boolean {
         return arraybuffcheck(this, obj);
@@ -2105,34 +2246,48 @@ export class ReaderBase{
     /**
      * Returns current data.
      * 
+     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
+     * 
+     * Use ``.data`` instead if you want the full buffer data.
+     * 
      * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
      */
     get get(): Buffer | Uint8Array {
+        if(this.extendBufferSize != 0)
+        {
+            this.trim();
+        }
         return this.data;
     }
 
     /**
      * Returns current data.
      * 
+     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
+     * 
+     * Use ``.data`` instead if you want the full buffer data.
+     * 
      * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
      */
     get return(): Buffer | Uint8Array {
+        if(this.extendBufferSize != 0)
+        {
+            this.trim();
+        }
         return this.data;
     }
 
      /**
-     * Console logs data as hex dump.
+     * Creates hex dump string. Will console log or return string if set in options.
      * 
      * @param {object} options 
-     * ```javascript
-     *   {
-     *       length: 192, // number of bytes to log, default 192 or end of data
-     *       startByte: 0, // byte to start dump (default current byte position)
-     *       supressUnicode: false // Supress unicode character preview for even columns
-     *   }
-     * ```
+     * @param {hexdumpOptions?} options - hex dump options
+     * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
+     * @param {number?} options.startByte - byte to start dump (default ``0``)
+     * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
+     * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
      */
-    hexdump(options?: { length?: number, startByte?: number, supressUnicode?: boolean }): void {
+    hexdump(options: hexdumpOptions = {}): void|string {
         return hexDump(this, options);
     }
 
