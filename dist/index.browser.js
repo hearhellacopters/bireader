@@ -6612,6 +6612,924 @@ class BiReader extends BiReaderBase {
             }
         }
     }
+    bit(bits, unsigned, endian) {
+        throw new Error("Method not implemented.");
+    }
+    ubit(bits, endian) {
+        throw new Error("Method not implemented.");
+    }
+    ubitbe(bits) {
+        throw new Error("Method not implemented.");
+    }
+    bitbe(bits, unsigned) {
+        throw new Error("Method not implemented.");
+    }
+    ubitle(bits) {
+        throw new Error("Method not implemented.");
+    }
+    bitle(bits, unsigned) {
+        throw new Error("Method not implemented.");
+    }
+    get bit1() {
+        throw new Error("Method not implemented.");
+    }
+    get bit1le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit1be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit1() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit1le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit1be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit2() {
+        throw new Error("Method not implemented.");
+    }
+    get bit2le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit2be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit2() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit2le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit2be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit3() {
+        throw new Error("Method not implemented.");
+    }
+    get bit3le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit3be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit3() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit3le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit3be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit4() {
+        throw new Error("Method not implemented.");
+    }
+    get bit4le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit4be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit4() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit4le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit4be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit5() {
+        throw new Error("Method not implemented.");
+    }
+    get bit5le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit5be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit5() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit5le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit5be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit6() {
+        throw new Error("Method not implemented.");
+    }
+    get bit6le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit6be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit6() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit6le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit6be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit7() {
+        throw new Error("Method not implemented.");
+    }
+    get bit7le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit7be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit7() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit7le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit7be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit8() {
+        throw new Error("Method not implemented.");
+    }
+    get bit8le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit8be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit8() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit8le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit8be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit9() {
+        throw new Error("Method not implemented.");
+    }
+    get bit9le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit9be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit9() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit9le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit9be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit10() {
+        throw new Error("Method not implemented.");
+    }
+    get bit10le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit10be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit10() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit10le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit10be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit11() {
+        throw new Error("Method not implemented.");
+    }
+    get bit11le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit11be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit11() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit11le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit11be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit12() {
+        throw new Error("Method not implemented.");
+    }
+    get bit12le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit12be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit12() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit12le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit12be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit13() {
+        throw new Error("Method not implemented.");
+    }
+    get bit13le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit13be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit13() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit13le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit13be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit14() {
+        throw new Error("Method not implemented.");
+    }
+    get bit14le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit14be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit14() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit14le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit14be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit15() {
+        throw new Error("Method not implemented.");
+    }
+    get bit15le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit15be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit15() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit15le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit15be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit16() {
+        throw new Error("Method not implemented.");
+    }
+    get bit16le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit16be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit16() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit16le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit16be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit17() {
+        throw new Error("Method not implemented.");
+    }
+    get bit17le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit17be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit17() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit17le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit17be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit18() {
+        throw new Error("Method not implemented.");
+    }
+    get bit18le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit18be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit18() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit18le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit18be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit19() {
+        throw new Error("Method not implemented.");
+    }
+    get bit19le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit19be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit19() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit19le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit19be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit20() {
+        throw new Error("Method not implemented.");
+    }
+    get bit20le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit20be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit20() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit20le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit20be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit21() {
+        throw new Error("Method not implemented.");
+    }
+    get bit21le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit21be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit21() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit21le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit21be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit22() {
+        throw new Error("Method not implemented.");
+    }
+    get bit22le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit22be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit22() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit22le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit22be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit23() {
+        throw new Error("Method not implemented.");
+    }
+    get bit23le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit23be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit23() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit23le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit23be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit24() {
+        throw new Error("Method not implemented.");
+    }
+    get bit24le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit24be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit24() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit24le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit24be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit25() {
+        throw new Error("Method not implemented.");
+    }
+    get bit25le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit25be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit25() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit25le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit25be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit26() {
+        throw new Error("Method not implemented.");
+    }
+    get bit26le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit26be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit26() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit26le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit26be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit27() {
+        throw new Error("Method not implemented.");
+    }
+    get bit27le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit27be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit27() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit27le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit27be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit28() {
+        throw new Error("Method not implemented.");
+    }
+    get bit28le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit28be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit28() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit28le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit28be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit29() {
+        throw new Error("Method not implemented.");
+    }
+    get bit29le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit29be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit29() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit29le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit29be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit30() {
+        throw new Error("Method not implemented.");
+    }
+    get bit30le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit30be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit30() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit30le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit30be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit31() {
+        throw new Error("Method not implemented.");
+    }
+    get bit31le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit31be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit31() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit31le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit31be() {
+        throw new Error("Method not implemented.");
+    }
+    get bit32() {
+        throw new Error("Method not implemented.");
+    }
+    get bit32le() {
+        throw new Error("Method not implemented.");
+    }
+    get bit32be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit32() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit32le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubit32be() {
+        throw new Error("Method not implemented.");
+    }
+    get byte() {
+        throw new Error("Method not implemented.");
+    }
+    get int8() {
+        throw new Error("Method not implemented.");
+    }
+    get uint8() {
+        throw new Error("Method not implemented.");
+    }
+    get ubyte() {
+        throw new Error("Method not implemented.");
+    }
+    get int16() {
+        throw new Error("Method not implemented.");
+    }
+    get short() {
+        throw new Error("Method not implemented.");
+    }
+    get word() {
+        throw new Error("Method not implemented.");
+    }
+    get uint16() {
+        throw new Error("Method not implemented.");
+    }
+    get ushort() {
+        throw new Error("Method not implemented.");
+    }
+    get uword() {
+        throw new Error("Method not implemented.");
+    }
+    get uint16le() {
+        throw new Error("Method not implemented.");
+    }
+    get ushortle() {
+        throw new Error("Method not implemented.");
+    }
+    get uwordle() {
+        throw new Error("Method not implemented.");
+    }
+    get int16le() {
+        throw new Error("Method not implemented.");
+    }
+    get shortle() {
+        throw new Error("Method not implemented.");
+    }
+    get wordle() {
+        throw new Error("Method not implemented.");
+    }
+    get uint16be() {
+        throw new Error("Method not implemented.");
+    }
+    get ushortbe() {
+        throw new Error("Method not implemented.");
+    }
+    get uwordbe() {
+        throw new Error("Method not implemented.");
+    }
+    get int16be() {
+        throw new Error("Method not implemented.");
+    }
+    get shortbe() {
+        throw new Error("Method not implemented.");
+    }
+    get wordbe() {
+        throw new Error("Method not implemented.");
+    }
+    get halffloat() {
+        throw new Error("Method not implemented.");
+    }
+    get half() {
+        throw new Error("Method not implemented.");
+    }
+    get halffloatbe() {
+        throw new Error("Method not implemented.");
+    }
+    get halfbe() {
+        throw new Error("Method not implemented.");
+    }
+    get halffloatle() {
+        throw new Error("Method not implemented.");
+    }
+    get halfle() {
+        throw new Error("Method not implemented.");
+    }
+    get int() {
+        throw new Error("Method not implemented.");
+    }
+    get double() {
+        throw new Error("Method not implemented.");
+    }
+    get int32() {
+        throw new Error("Method not implemented.");
+    }
+    get long() {
+        throw new Error("Method not implemented.");
+    }
+    get uint() {
+        throw new Error("Method not implemented.");
+    }
+    get udouble() {
+        throw new Error("Method not implemented.");
+    }
+    get uint32() {
+        throw new Error("Method not implemented.");
+    }
+    get ulong() {
+        throw new Error("Method not implemented.");
+    }
+    get intbe() {
+        throw new Error("Method not implemented.");
+    }
+    get doublebe() {
+        throw new Error("Method not implemented.");
+    }
+    get int32be() {
+        throw new Error("Method not implemented.");
+    }
+    get longbe() {
+        throw new Error("Method not implemented.");
+    }
+    get uintbe() {
+        throw new Error("Method not implemented.");
+    }
+    get udoublebe() {
+        throw new Error("Method not implemented.");
+    }
+    get uint32be() {
+        throw new Error("Method not implemented.");
+    }
+    get ulongbe() {
+        throw new Error("Method not implemented.");
+    }
+    get intle() {
+        throw new Error("Method not implemented.");
+    }
+    get doublele() {
+        throw new Error("Method not implemented.");
+    }
+    get int32le() {
+        throw new Error("Method not implemented.");
+    }
+    get longle() {
+        throw new Error("Method not implemented.");
+    }
+    get uintle() {
+        throw new Error("Method not implemented.");
+    }
+    get udoublele() {
+        throw new Error("Method not implemented.");
+    }
+    get uint32le() {
+        throw new Error("Method not implemented.");
+    }
+    get ulongle() {
+        throw new Error("Method not implemented.");
+    }
+    get float() {
+        throw new Error("Method not implemented.");
+    }
+    get floatbe() {
+        throw new Error("Method not implemented.");
+    }
+    get floatle() {
+        throw new Error("Method not implemented.");
+    }
+    get int64() {
+        throw new Error("Method not implemented.");
+    }
+    get bigint() {
+        throw new Error("Method not implemented.");
+    }
+    get quad() {
+        throw new Error("Method not implemented.");
+    }
+    get uint64() {
+        throw new Error("Method not implemented.");
+    }
+    get ubigint() {
+        throw new Error("Method not implemented.");
+    }
+    get uquad() {
+        throw new Error("Method not implemented.");
+    }
+    get int64be() {
+        throw new Error("Method not implemented.");
+    }
+    get bigintbe() {
+        throw new Error("Method not implemented.");
+    }
+    get quadbe() {
+        throw new Error("Method not implemented.");
+    }
+    get uint64be() {
+        throw new Error("Method not implemented.");
+    }
+    get ubigintbe() {
+        throw new Error("Method not implemented.");
+    }
+    get uquadbe() {
+        throw new Error("Method not implemented.");
+    }
+    get int64le() {
+        throw new Error("Method not implemented.");
+    }
+    get bigintle() {
+        throw new Error("Method not implemented.");
+    }
+    get quadle() {
+        throw new Error("Method not implemented.");
+    }
+    get uint64le() {
+        throw new Error("Method not implemented.");
+    }
+    get ubigintle() {
+        throw new Error("Method not implemented.");
+    }
+    get uquadle() {
+        throw new Error("Method not implemented.");
+    }
+    get doublefloat() {
+        throw new Error("Method not implemented.");
+    }
+    get dfloat() {
+        throw new Error("Method not implemented.");
+    }
+    get dfloatebe() {
+        throw new Error("Method not implemented.");
+    }
+    get doublefloatbe() {
+        throw new Error("Method not implemented.");
+    }
+    get dfloatle() {
+        throw new Error("Method not implemented.");
+    }
+    get doublefloatle() {
+        throw new Error("Method not implemented.");
+    }
+    string(options) {
+        throw new Error("Method not implemented.");
+    }
+    get str() {
+        throw new Error("Method not implemented.");
+    }
+    utf8string(length, terminateValue, stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    cstring(length, terminateValue, stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    ansistring(length, terminateValue, stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    utf16string(length, terminateValue, stripNull, endian) {
+        throw new Error("Method not implemented.");
+    }
+    unistring(length, terminateValue, stripNull, endian) {
+        throw new Error("Method not implemented.");
+    }
+    utf16stringle(length, terminateValue, stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    unistringle(length, terminateValue, stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    utf16stringbe(length, terminateValue, stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    unistringbe(length, terminateValue, stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    pstring(lengthReadSize, stripNull, endian) {
+        throw new Error("Method not implemented.");
+    }
+    pstring1(stripNull, endian) {
+        throw new Error("Method not implemented.");
+    }
+    pstring1le(stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    pstring1be(stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    pstring2(stripNull, endian) {
+        throw new Error("Method not implemented.");
+    }
+    pstring2le(stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    pstring2be(stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    pstring4(stripNull, endian) {
+        throw new Error("Method not implemented.");
+    }
+    pstring4le(stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    pstring4be(stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring(lengthReadSize, stripNull, endian) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring1(stripNull, endian) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring2(stripNull, endian) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring2le(stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring2be(stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring4(stripNull, endian) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring4be(stripNull) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring4le(stripNull) {
+        throw new Error("Method not implemented.");
+    }
 }
 
 function applyBinaryAliasWriter(Base) {
@@ -9678,6 +10596,939 @@ class BiWriter extends BiWriterBase {
                 }
             }
         }
+    }
+    bit(value, bits, unsigned, endian) {
+        throw new Error("Method not implemented.");
+    }
+    ubit(value, bits, endian) {
+        throw new Error("Method not implemented.");
+    }
+    bitbe(value, bits, unsigned) {
+        throw new Error("Method not implemented.");
+    }
+    ubitbe(value, bits) {
+        throw new Error("Method not implemented.");
+    }
+    ubitle(value, bits) {
+        throw new Error("Method not implemented.");
+    }
+    bitle(value, bits, unsigned) {
+        throw new Error("Method not implemented.");
+    }
+    set bit1(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit1le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit1be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit1(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit1le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit1be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit2(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit2le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit2be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit2(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit2le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit2be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit3(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit3le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit3be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit3(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit3le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit3be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit4(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit4le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit4be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit4(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit4le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit4be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit5(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit5le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit5be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit5(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit5le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit5be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit6(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit6le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit6be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit6(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit6le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit6be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit7(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit7le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit7be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit7(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit7le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit7be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit8(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit8le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit8be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit8(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit8le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit8be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit9(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit9le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit9be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit9(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit9le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit9be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit10(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit10le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit10be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit10(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit10le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit10be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit11(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit11le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit11be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit11(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit11le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit11be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit12(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit12le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit12be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit12(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit12le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit12be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit13(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit13le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit13be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit13(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit13le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit13be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit14(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit14le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit14be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit14(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit14le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit14be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit15(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit15le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit15be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit15(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit15le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit15be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit16(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit16le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit16be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit16(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit16le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit16be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit17(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit17le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit17be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit17(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit17le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit17be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit18(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit18le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit18be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit18(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit18le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit18be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit19(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit19le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit19be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit19(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit19le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit19be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit20(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit20le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit20be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit20(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit20le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit20be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit21(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit21le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit21be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit21(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit21le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit21be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit22(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit22le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit22be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit22(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit22le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit22be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit23(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit23le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit23be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit23(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit23le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit23be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit24(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit24le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit24be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit24(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit24le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit24be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit25(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit25le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit25be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit25(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit25le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit25be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit26(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit26le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit26be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit26(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit26le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit26be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit27(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit27le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit27be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit27(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit27le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit27be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit28(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit28le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit28be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit28(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit28le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit28be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit29(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit29le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit29be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit29(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit29le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit29be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit30(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit30le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit30be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit30(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit30le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit30be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit31(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit31le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit31be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit31(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit31le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit31be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit32(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit32le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bit32be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit32(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit32le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubit32be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set byte(value) {
+        throw new Error("Method not implemented.");
+    }
+    set int8(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uint8(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubyte(value) {
+        throw new Error("Method not implemented.");
+    }
+    set int16(value) {
+        throw new Error("Method not implemented.");
+    }
+    set short(value) {
+        throw new Error("Method not implemented.");
+    }
+    set word(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uint16(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ushort(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uword(value) {
+        throw new Error("Method not implemented.");
+    }
+    set int16be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set shortbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set wordbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uint16be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ushortbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uwordbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set int16le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set shortle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set wordle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uint16le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ushortle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uwordle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set half(value) {
+        throw new Error("Method not implemented.");
+    }
+    set halffloat(value) {
+        throw new Error("Method not implemented.");
+    }
+    set halffloatbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set halfbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set halffloatle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set halfle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set int(value) {
+        throw new Error("Method not implemented.");
+    }
+    set int32(value) {
+        throw new Error("Method not implemented.");
+    }
+    set double(value) {
+        throw new Error("Method not implemented.");
+    }
+    set long(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uint32(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uint(value) {
+        throw new Error("Method not implemented.");
+    }
+    set udouble(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ulong(value) {
+        throw new Error("Method not implemented.");
+    }
+    set int32le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set intle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set doublele(value) {
+        throw new Error("Method not implemented.");
+    }
+    set longle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uint32le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uintle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set udoublele(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ulongle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set intbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set int32be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set doublebe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set longbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set writeUInt32BE(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uint32be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uintbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set udoublebe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ulongbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set float(value) {
+        throw new Error("Method not implemented.");
+    }
+    set floatle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set floatbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set int64(value) {
+        throw new Error("Method not implemented.");
+    }
+    set quad(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bigint(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uint64(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubigint(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uquad(value) {
+        throw new Error("Method not implemented.");
+    }
+    set int64le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bigintle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set quadle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uint64le(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubigintle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uquadle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set int64be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set bigintbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set quadbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uint64be(value) {
+        throw new Error("Method not implemented.");
+    }
+    set ubigintbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set uquadbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set doublefloat(value) {
+        throw new Error("Method not implemented.");
+    }
+    set dfloat(value) {
+        throw new Error("Method not implemented.");
+    }
+    set dfloatbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set doublefloatbe(value) {
+        throw new Error("Method not implemented.");
+    }
+    set dfloatle(value) {
+        throw new Error("Method not implemented.");
+    }
+    set doublefloatle(value) {
+        throw new Error("Method not implemented.");
+    }
+    string(string, options) {
+        throw new Error("Method not implemented.");
+    }
+    set str(string) {
+        throw new Error("Method not implemented.");
+    }
+    utf8string(string, length, terminateValue) {
+        throw new Error("Method not implemented.");
+    }
+    cstring(string, length, terminateValue) {
+        throw new Error("Method not implemented.");
+    }
+    ansistring(string, length, terminateValue) {
+        throw new Error("Method not implemented.");
+    }
+    utf16string(string, length, terminateValue, endian) {
+        throw new Error("Method not implemented.");
+    }
+    unistring(string, length, terminateValue, endian) {
+        throw new Error("Method not implemented.");
+    }
+    utf16stringle(string, length, terminateValue) {
+        throw new Error("Method not implemented.");
+    }
+    unistringle(string, length, terminateValue) {
+        throw new Error("Method not implemented.");
+    }
+    utf16stringbe(string, length, terminateValue) {
+        throw new Error("Method not implemented.");
+    }
+    unistringbe(string, length, terminateValue) {
+        throw new Error("Method not implemented.");
+    }
+    pstring(string, lengthWriteSize, endian) {
+        throw new Error("Method not implemented.");
+    }
+    pstring1(string, endian) {
+        throw new Error("Method not implemented.");
+    }
+    pstring1le(string) {
+        throw new Error("Method not implemented.");
+    }
+    pstring1be(string) {
+        throw new Error("Method not implemented.");
+    }
+    pstring2(string, endian) {
+        throw new Error("Method not implemented.");
+    }
+    pstring2le(string) {
+        throw new Error("Method not implemented.");
+    }
+    pstring2be(string) {
+        throw new Error("Method not implemented.");
+    }
+    pstring4(string, endian) {
+        throw new Error("Method not implemented.");
+    }
+    pstring4be(string) {
+        throw new Error("Method not implemented.");
+    }
+    pstring4le(string) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring(string, lengthWriteSize, endian) {
+        throw new Error("Method not implemented.");
+    }
+    wpstringbe(string, lengthWriteSize) {
+        throw new Error("Method not implemented.");
+    }
+    wpstringle(string, lengthWriteSize) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring1(string, endian) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring1be(string) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring1le(string) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring2(string, endian) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring2le(string) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring2be(string) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring4(string, endian) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring4le(string) {
+        throw new Error("Method not implemented.");
+    }
+    wpstring4be(string) {
+        throw new Error("Method not implemented.");
     }
 }
 
