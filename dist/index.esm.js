@@ -2250,7 +2250,7 @@ class BiBase {
      *
      * Does not change current read position.
      *
-     * @param {number|bigint} value - Number to search for.
+     * @param {BigValue} value - Number to search for.
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
@@ -3428,7 +3428,7 @@ class BiBase {
     /**
      * Write 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
      */
@@ -3438,7 +3438,7 @@ class BiBase {
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      * @param {endian} endian - ``big`` or ``little``
      */
     writeUInt64(value, endian) {
@@ -3447,7 +3447,7 @@ class BiBase {
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
     writeInt64LE(value) {
         return this.writeInt64(value, false, "little");
@@ -3455,7 +3455,7 @@ class BiBase {
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
     writeUInt64LE(value) {
         return this.writeInt64(value, true, "little");
@@ -3463,7 +3463,7 @@ class BiBase {
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
     writeInt64BE(value) {
         return this.writeInt64(value, false, "big");
@@ -3471,7 +3471,7 @@ class BiBase {
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
     writeUInt64BE(value) {
         return this.writeInt64(value, true, "big");
@@ -14036,7 +14036,7 @@ class BiBaseStreamer {
      *
      * Does not change current read position.
      *
-     * @param {number|bigint} value - Number to search for.
+     * @param {BigValue} value - Number to search for.
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
@@ -15214,7 +15214,7 @@ class BiBaseStreamer {
     /**
      * Write 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
      */
@@ -15224,7 +15224,7 @@ class BiBaseStreamer {
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      * @param {endian} endian - ``big`` or ``little``
      */
     writeUInt64(value, endian) {
@@ -15233,7 +15233,7 @@ class BiBaseStreamer {
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
     writeInt64LE(value) {
         return this.writeInt64(value, false, "little");
@@ -15241,7 +15241,7 @@ class BiBaseStreamer {
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
     writeUInt64LE(value) {
         return this.writeInt64(value, true, "little");
@@ -15249,7 +15249,7 @@ class BiBaseStreamer {
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
     writeInt64BE(value) {
         return this.writeInt64(value, false, "big");
@@ -15257,7 +15257,7 @@ class BiBaseStreamer {
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
     writeUInt64BE(value) {
         return this.writeInt64(value, true, "big");

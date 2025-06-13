@@ -1,5 +1,6 @@
 /// <reference types="node" />
 type endian = "little" | "big";
+type BigValue = number | bigint;
 type BiOptions = {
     /**
      * Byte offset to start writer, default is 0
@@ -479,11 +480,11 @@ declare class BiBase {
      *
      * Does not change current read position.
      *
-     * @param {number|bigint} value - Number to search for.
+     * @param {BigValue} value - Number to search for.
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findInt64(value: number | bigint, unsigned?: boolean, endian?: endian): number;
+    findInt64(value: BigValue, unsigned?: boolean, endian?: endian): number;
     /**
      * Searches for half float value position from current read position.
      *
@@ -1281,42 +1282,42 @@ declare class BiBase {
     /**
      * Write 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
      */
-    writeInt64(value: number | bigint, unsigned?: boolean, endian?: endian): void;
+    writeInt64(value: BigValue, unsigned?: boolean, endian?: endian): void;
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      * @param {endian} endian - ``big`` or ``little``
      */
-    writeUInt64(value: number | bigint, endian?: endian): void;
+    writeUInt64(value: BigValue, endian?: endian): void;
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    writeInt64LE(value: number | bigint): void;
+    writeInt64LE(value: BigValue): void;
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    writeUInt64LE(value: number | bigint): void;
+    writeUInt64LE(value: BigValue): void;
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    writeInt64BE(value: number | bigint): void;
+    writeInt64BE(value: BigValue): void;
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    writeUInt64BE(value: number | bigint): void;
+    writeUInt64BE(value: BigValue): void;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -6690,24 +6691,24 @@ declare class BiWriter extends BiWriterBase implements BinaryAliasWriter {
     set float(value: number);
     set floatle(value: number);
     set floatbe(value: number);
-    set int64(value: number);
-    set quad(value: number);
-    set bigint(value: number);
-    set uint64(value: number);
-    set ubigint(value: number);
-    set uquad(value: number);
-    set int64le(value: number);
-    set bigintle(value: number);
-    set quadle(value: number);
-    set uint64le(value: number);
-    set ubigintle(value: number);
-    set uquadle(value: number);
-    set int64be(value: number);
-    set bigintbe(value: number);
-    set quadbe(value: number);
-    set uint64be(value: number);
-    set ubigintbe(value: number);
-    set uquadbe(value: number);
+    set int64(value: BigValue);
+    set quad(value: BigValue);
+    set bigint(value: BigValue);
+    set uint64(value: BigValue);
+    set ubigint(value: BigValue);
+    set uquad(value: BigValue);
+    set int64le(value: BigValue);
+    set bigintle(value: BigValue);
+    set quadle(value: BigValue);
+    set uint64le(value: BigValue);
+    set ubigintle(value: BigValue);
+    set uquadle(value: BigValue);
+    set int64be(value: BigValue);
+    set bigintbe(value: BigValue);
+    set quadbe(value: BigValue);
+    set uint64be(value: BigValue);
+    set ubigintbe(value: BigValue);
+    set uquadbe(value: BigValue);
     set doublefloat(value: number);
     set dfloat(value: number);
     set dfloatbe(value: number);

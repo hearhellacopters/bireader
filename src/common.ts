@@ -1,5 +1,7 @@
 export type endian = "little"|"big";
 
+export type BigValue = number|bigint;
+
 export type BiOptions = {
     /**
      * Byte offset to start writer, default is 0 

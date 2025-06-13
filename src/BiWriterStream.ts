@@ -1,4 +1,4 @@
-import { BiOptions, endian, stringOptions } from "./common.js";
+import { BigValue, BiOptions, endian, stringOptions } from "./common.js";
 import { BiBaseStreamer } from './core/BiBaseStream.js';
 import { applyBinaryAliasWriter, BinaryAliasWriterStreamer } from "./aliases/BinaryAliasWriter.js";
 
@@ -824,58 +824,58 @@ export class BiWriterStream extends BiWriterStreamer implements BinaryAliasWrite
     set floatbe(value: number) {
         throw new Error("Method not implemented.");
     }
-    set int64(value: number) {
+    set int64(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set quad(value: number) {
+    set quad(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set bigint(value: number) {
+    set bigint(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set uint64(value: number) {
+    set uint64(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set ubigint(value: number) {
+    set ubigint(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set uquad(value: number) {
+    set uquad(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set int64le(value: number) {
+    set int64le(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set bigintle(value: number) {
+    set bigintle(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set quadle(value: number) {
+    set quadle(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set uint64le(value: number) {
+    set uint64le(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set ubigintle(value: number) {
+    set ubigintle(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set uquadle(value: number) {
+    set uquadle(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set int64be(value: number) {
+    set int64be(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set bigintbe(value: number) {
+    set bigintbe(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set quadbe(value: number) {
+    set quadbe(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set uint64be(value: number) {
+    set uint64be(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set ubigintbe(value: number) {
+    set ubigintbe(value: BigValue) {
         throw new Error("Method not implemented.");
     }
-    set uquadbe(value: number) {
+    set uquadbe(value: BigValue) {
         throw new Error("Method not implemented.");
     }
     set doublefloat(value: number) {

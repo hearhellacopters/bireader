@@ -1,4 +1,5 @@
 import {
+    BigValue,
     endian,
     arraybuffcheck,
     hexdumpOptions,
@@ -951,7 +952,7 @@ function fFloat(ctx: BiBaseStreamer, targetNumber: number, endian?: string): num
     return -1; // number not found
 }
 
-function fBigInt(ctx: BiBaseStreamer, targetNumber: number|bigint, unsigned: boolean, endian?: string): number {
+function fBigInt(ctx: BiBaseStreamer, targetNumber: BigValue, unsigned: boolean, endian?: string): number {
     ctx.open();
     const chunkSize = 0x2000; // 8192 bytes
     let lastChunk = Buffer.alloc(0);
@@ -1529,7 +1530,7 @@ function rint64(ctx: BiBaseStreamer, unsigned?: boolean, endian?: string): bigin
     return value
 }
 
-function wint64(ctx: BiBaseStreamer, value: number|bigint, unsigned?: boolean, endian?: string): void {
+function wint64(ctx: BiBaseStreamer, value: BigValue, unsigned?: boolean, endian?: string): void {
 
     ctx.open();
 
@@ -2739,11 +2740,11 @@ export class BiBaseStreamer {
      * 
      * Does not change current read position.
      * 
-     * @param {number|bigint} value - Number to search for.
+     * @param {BigValue} value - Number to search for.
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findInt64(value: number|bigint, unsigned?: boolean, endian?: endian): number {
+    findInt64(value: BigValue, unsigned?: boolean, endian?: endian): number {
         return fBigInt(this, value, unsigned == undefined ? true : unsigned, endian);
     }
 
@@ -4045,57 +4046,57 @@ export class BiBaseStreamer {
     /**
      * Write 64 bit integer.
      * 
-     * @param {number|bigint} value - value as int 
+     * @param {BigValue} value - value as int 
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
      */
-    writeInt64(value: number|bigint, unsigned?: boolean, endian?: endian): void {
+    writeInt64(value: BigValue, unsigned?: boolean, endian?: endian): void {
         return wint64(this, value, unsigned, endian);
     }
 
     /**
      * Write unsigned 64 bit integer.
      * 
-     * @param {number|bigint} value - value as int 
+     * @param {BigValue} value - value as int 
      * @param {endian} endian - ``big`` or ``little``
      */
-    writeUInt64(value: number|bigint, endian?: endian) {
+    writeUInt64(value: BigValue, endian?: endian) {
         return this.writeInt64(value, true, endian);
     }
 
     /**
      * Write signed 64 bit integer.
      * 
-     * @param {number|bigint} value - value as int 
+     * @param {BigValue} value - value as int 
      */
-    writeInt64LE(value: number|bigint): void {
+    writeInt64LE(value: BigValue): void {
         return this.writeInt64(value, false, "little");
     }
 
     /**
      * Write unsigned 64 bit integer.
      * 
-     * @param {number|bigint} value - value as int 
+     * @param {BigValue} value - value as int 
      */
-    writeUInt64LE(value: number|bigint): void {
+    writeUInt64LE(value: BigValue): void {
         return this.writeInt64(value, true, "little");
     }
 
     /**
      * Write signed 64 bit integer.
      * 
-     * @param {number|bigint} value - value as int 
+     * @param {BigValue} value - value as int 
      */
-    writeInt64BE(value: number|bigint): void {
+    writeInt64BE(value: BigValue): void {
         return this.writeInt64(value, false, "big");
     }
 
     /**
      * Write unsigned 64 bit integer.
      * 
-     * @param {number|bigint} value - value as int 
+     * @param {BigValue} value - value as int 
      */
-    writeUInt64BE(value: number|bigint): void {
+    writeUInt64BE(value: BigValue): void {
         return this.writeInt64(value, true, "big");
     }
 
