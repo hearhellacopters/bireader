@@ -7,7 +7,7 @@ import {
     stringOptions
 } from '../common.js';
 
-export function hexDumpBase(ctx: BiBase, options: hexdumpOptions = {}): string {
+function hexDumpBase(ctx: BiBase, options: hexdumpOptions = {}): string {
     var length: any = options && options.length;
     var startByte: any = options && options.startByte;
 
@@ -26,7 +26,7 @@ export function hexDumpBase(ctx: BiBase, options: hexdumpOptions = {}): string {
    return _hexDump(data, options, start, end);
 }
 
-export function skip(ctx: BiBase, bytes: number, bits?: number): void {
+function skip(ctx: BiBase, bytes: number, bits?: number): void {
     var new_size = (((bytes || 0) + ctx.offset) + Math.ceil((ctx.bitoffset + (bits || 0)) / 8));
     if (bits && bits < 0) {
         new_size = Math.floor(((((bytes || 0) + ctx.offset) * 8) + ctx.bitoffset + (bits || 0)) / 8);
@@ -60,21 +60,21 @@ export function skip(ctx: BiBase, bytes: number, bits?: number): void {
     ctx.offset = Math.max(ctx.offset, 0);
 }
 
-export function align(ctx: BiBase, n: number) {
+function align(ctx: BiBase, n: number) {
     var a = ctx.offset % n;
     if (a) {
         ctx.skip(n - a);
     }
 }
 
-export function alignRev(ctx: BiBase, n: number) {
+function alignRev(ctx: BiBase, n: number) {
     var a = ctx.offset % n;
     if (a) {
         ctx.skip(a * -1);
     }
 }
 
-export function goto(ctx: BiBase, bytes: number, bits?: number): void {
+function goto(ctx: BiBase, bytes: number, bits?: number): void {
     var new_size = (((bytes || 0)) + Math.ceil(((bits || 0)) / 8));
     if (bits && bits < 0) {
         new_size = Math.floor(((((bytes || 0)) * 8) + (bits || 0)) / 8);
@@ -105,11 +105,11 @@ export function goto(ctx: BiBase, bytes: number, bits?: number): void {
     ctx.offset = Math.max(ctx.offset, 0);
 }
 
-export function check_size(ctx: BiBase, write_bytes: number, write_bit?: number, offset?: number): number {
+function check_size(ctx: BiBase, write_bytes: number, write_bit?: number, offset?: number): number {
     return checkSize(ctx, write_bytes || 0, write_bit || 0, offset || ctx.offset);
 }
 
-export function checkSize(ctx: BiBase, write_bytes: number, write_bit?: number, offset?: number): number {
+function checkSize(ctx: BiBase, write_bytes: number, write_bit?: number, offset?: number): number {
     const bits: number = (write_bit || 0) + ctx.bitoffset;
     var new_off = (offset || ctx.offset);
     var writesize = write_bytes || 0;
@@ -139,7 +139,7 @@ export function checkSize(ctx: BiBase, write_bytes: number, write_bit?: number, 
     return new_off;
 }
 
-export function extendarray(ctx: BiBase, to_padd: number): void {
+function extendarray(ctx: BiBase, to_padd: number): void {
     if ((typeof Buffer !== 'undefined' && ctx.data instanceof Buffer)) {
         var paddbuffer = Buffer.alloc(to_padd);
         ctx.data = Buffer.concat([ctx.data, paddbuffer]);
@@ -151,7 +151,7 @@ export function extendarray(ctx: BiBase, to_padd: number): void {
     ctx.sizeB = ctx.data.length * 8;
 }
 
-export function remove(ctx: BiBase, startOffset?: number, endOffset?: number, consume?: boolean, remove?: boolean, fillValue?: number): any {
+function remove(ctx: BiBase, startOffset?: number, endOffset?: number, consume?: boolean, remove?: boolean, fillValue?: number): any {
     const new_start = Math.abs(startOffset || 0);
     const new_offset = (endOffset || ctx.offset);
     if (new_offset > ctx.size) {
@@ -210,7 +210,7 @@ export function remove(ctx: BiBase, startOffset?: number, endOffset?: number, co
     return data_removed;
 }
 
-export function addData(ctx: BiBase, data: Buffer | Uint8Array, consume?: boolean, offset?: number, replace?: boolean): void {
+function addData(ctx: BiBase, data: Buffer | Uint8Array, consume?: boolean, offset?: number, replace?: boolean): void {
     if (ctx.strict == true) {
         ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
         throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Can not insert data in strict mode. Use unrestrict() to enable.`);
@@ -250,7 +250,7 @@ export function addData(ctx: BiBase, data: Buffer | Uint8Array, consume?: boolea
     }
 }
 
-export function AND(ctx: BiBase, and_key: any, start?: number, end?: number, consume?: boolean): any {
+function AND(ctx: BiBase, and_key: any, start?: number, end?: number, consume?: boolean): any {
     const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
@@ -296,7 +296,7 @@ export function AND(ctx: BiBase, and_key: any, start?: number, end?: number, con
     }
 }
 
-export function OR(ctx: BiBase, or_key: any, start?: number, end?: number, consume?: boolean): any {
+function OR(ctx: BiBase, or_key: any, start?: number, end?: number, consume?: boolean): any {
     const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
@@ -342,7 +342,7 @@ export function OR(ctx: BiBase, or_key: any, start?: number, end?: number, consu
     }
 }
 
-export function XOR(ctx: BiBase, xor_key: any, start?: number, end?: number, consume?: boolean): any {
+function XOR(ctx: BiBase, xor_key: any, start?: number, end?: number, consume?: boolean): any {
     const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
@@ -388,7 +388,7 @@ export function XOR(ctx: BiBase, xor_key: any, start?: number, end?: number, con
     }
 }
 
-export function NOT(ctx: BiBase, start?: number, end?: number, consume?: boolean): any {
+function NOT(ctx: BiBase, start?: number, end?: number, consume?: boolean): any {
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
             if(ctx.extendBufferSize != 0)
@@ -413,7 +413,7 @@ export function NOT(ctx: BiBase, start?: number, end?: number, consume?: boolean
     }
 }
 
-export function LSHIFT(ctx: BiBase, shift_key: any, start?: number, end?: number, consume?: boolean): any {
+function LSHIFT(ctx: BiBase, shift_key: any, start?: number, end?: number, consume?: boolean): any {
     const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
@@ -459,7 +459,7 @@ export function LSHIFT(ctx: BiBase, shift_key: any, start?: number, end?: number
     }
 }
 
-export function RSHIFT(ctx: BiBase, shift_key: any, start?: number, end?: number, consume?: boolean): any {
+function RSHIFT(ctx: BiBase, shift_key: any, start?: number, end?: number, consume?: boolean): any {
     const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
@@ -505,7 +505,7 @@ export function RSHIFT(ctx: BiBase, shift_key: any, start?: number, end?: number
     }
 }
 
-export function ADD(ctx: BiBase, add_key: any, start?: number, end?: number, consume?: boolean): any {
+function ADD(ctx: BiBase, add_key: any, start?: number, end?: number, consume?: boolean): any {
     const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
@@ -551,7 +551,7 @@ export function ADD(ctx: BiBase, add_key: any, start?: number, end?: number, con
     }
 }
 
-export function fString(ctx: BiBase, searchString: string): number {
+function fString(ctx: BiBase, searchString: string): number {
     // Convert the searchString to Uint8Array
     const searchArray = new TextEncoder().encode(searchString);
 
@@ -573,7 +573,7 @@ export function fString(ctx: BiBase, searchString: string): number {
     return -1; // String not found
 }
 
-export function fNumber(ctx: BiBase, targetNumber: number, bits: number, unsigned: boolean, endian?: string): number {
+function fNumber(ctx: BiBase, targetNumber: number, bits: number, unsigned: boolean, endian?: string): number {
 
     check_size(ctx, Math.floor(bits / 8), 0);
 
@@ -629,7 +629,7 @@ export function fNumber(ctx: BiBase, targetNumber: number, bits: number, unsigne
     return -1; // number not found
 }
 
-export function fHalfFloat(ctx: BiBase, targetNumber: number, endian?: string): number {
+function fHalfFloat(ctx: BiBase, targetNumber: number, endian?: string): number {
 
     check_size(ctx, 2, 0);
 
@@ -675,7 +675,7 @@ export function fHalfFloat(ctx: BiBase, targetNumber: number, endian?: string): 
     return -1; // number not found
 }
 
-export function fFloat(ctx: BiBase, targetNumber: number, endian?: string): number {
+function fFloat(ctx: BiBase, targetNumber: number, endian?: string): number {
 
     check_size(ctx, 4, 0);
 
@@ -718,7 +718,7 @@ export function fFloat(ctx: BiBase, targetNumber: number, endian?: string): numb
     return -1; // number not found
 }
 
-export function fBigInt(ctx: BiBase, targetNumber: number, unsigned: boolean, endian?: string): number {
+function fBigInt(ctx: BiBase, targetNumber: number, unsigned: boolean, endian?: string): number {
 
     check_size(ctx, 8, 0);
 
@@ -752,7 +752,7 @@ export function fBigInt(ctx: BiBase, targetNumber: number, unsigned: boolean, en
     return -1;// number not found
 }
 
-export function fDoubleFloat(ctx: BiBase, targetNumber: number, endian?: string): number {
+function fDoubleFloat(ctx: BiBase, targetNumber: number, endian?: string): number {
 
     check_size(ctx, 8, 0);
 
@@ -802,7 +802,7 @@ export function fDoubleFloat(ctx: BiBase, targetNumber: number, endian?: string)
     return -1; // number not found
 }
 
-export function wbit(ctx: BiBase, value: number, bits: number, unsigned?: boolean, endian?: string) {
+function wbit(ctx: BiBase, value: number, bits: number, unsigned?: boolean, endian?: string) {
     if (value == undefined) {
         throw new Error('Must supply value.');
     }
@@ -881,7 +881,7 @@ export function wbit(ctx: BiBase, value: number, bits: number, unsigned?: boolea
     ctx.bitoffset = ((bits) + ctx.bitoffset) % 8;
 }
 
-export function rbit(ctx: BiBase, bits?: number, unsigned?: boolean, endian?: string): number {
+function rbit(ctx: BiBase, bits?: number, unsigned?: boolean, endian?: string): number {
     if (bits == undefined || typeof bits != "number") {
         throw new Error("Enter number of bits to read");
     }
@@ -945,7 +945,7 @@ export function rbit(ctx: BiBase, bits?: number, unsigned?: boolean, endian?: st
     return value;
 }
 
-export function wbyte(ctx: BiBase, value: number, unsigned?: boolean): void {
+function wbyte(ctx: BiBase, value: number, unsigned?: boolean): void {
 
     check_size(ctx, 1, 0);
 
@@ -967,7 +967,7 @@ export function wbyte(ctx: BiBase, value: number, unsigned?: boolean): void {
     ctx.bitoffset = 0;
 }
 
-export function rbyte(ctx: BiBase, unsigned?: boolean): number {
+function rbyte(ctx: BiBase, unsigned?: boolean): number {
 
     check_size(ctx, 1);
 
@@ -981,7 +981,7 @@ export function rbyte(ctx: BiBase, unsigned?: boolean): number {
     }
 }
 
-export function wint16(ctx: BiBase, value: number, unsigned?: boolean, endian?: string): void {
+function wint16(ctx: BiBase, value: number, unsigned?: boolean, endian?: string): void {
 
     check_size(ctx, 2, 0);
 
@@ -1009,7 +1009,7 @@ export function wint16(ctx: BiBase, value: number, unsigned?: boolean, endian?: 
     ctx.bitoffset = 0;
 }
 
-export function rint16(ctx: BiBase, unsigned?: boolean, endian?: string): number {
+function rint16(ctx: BiBase, unsigned?: boolean, endian?: string): number {
 
     check_size(ctx, 2);
 
@@ -1028,7 +1028,7 @@ export function rint16(ctx: BiBase, unsigned?: boolean, endian?: string): number
     }
 }
 
-export function rhalffloat(ctx: BiBase, endian?: endian): number {
+function rhalffloat(ctx: BiBase, endian?: endian): number {
 
     var uint16Value = ctx.readInt16(true, (endian != undefined ? endian : ctx.endian));
     const sign = (uint16Value & 0x8000) >> 15;
@@ -1058,7 +1058,7 @@ export function rhalffloat(ctx: BiBase, endian?: endian): number {
     return floatValue;
 }
 
-export function whalffloat(ctx: BiBase, value: number, endian?: string): void {
+function whalffloat(ctx: BiBase, value: number, endian?: string): void {
 
     check_size(ctx, 2, 0);
 
@@ -1106,7 +1106,7 @@ export function whalffloat(ctx: BiBase, value: number, endian?: string): void {
     ctx.bitoffset = 0;
 }
 
-export function wint32(ctx: BiBase, value: number, unsigned?: boolean, endian?: string): void {
+function wint32(ctx: BiBase, value: number, unsigned?: boolean, endian?: string): void {
 
     check_size(ctx, 4, 0);
 
@@ -1138,7 +1138,7 @@ export function wint32(ctx: BiBase, value: number, unsigned?: boolean, endian?: 
     ctx.bitoffset = 0;
 }
 
-export function rint32(ctx: BiBase, unsigned?: boolean, endian?: string): number {
+function rint32(ctx: BiBase, unsigned?: boolean, endian?: string): number {
 
     check_size(ctx, 4);
 
@@ -1157,7 +1157,7 @@ export function rint32(ctx: BiBase, unsigned?: boolean, endian?: string): number
     }
 }
 
-export function rfloat(ctx: BiBase, endian?: endian): number {
+function rfloat(ctx: BiBase, endian?: endian): number {
 
     var uint32Value = ctx.readInt32(true, (endian == undefined ? ctx.endian : endian));
     // Check if the value is negative (i.e., the most significant bit is set)
@@ -1184,7 +1184,7 @@ export function rfloat(ctx: BiBase, endian?: endian): number {
     return floatValue;
 }
 
-export function wfloat(ctx: BiBase, value: number, endian?: string): void {
+function wfloat(ctx: BiBase, value: number, endian?: string): void {
 
     check_size(ctx, 4, 0);
 
@@ -1217,7 +1217,7 @@ export function wfloat(ctx: BiBase, value: number, endian?: string): void {
     ctx.bitoffset = 0;
 }
 
-export function rint64(ctx: BiBase, unsigned?: boolean, endian?: string): bigint {
+function rint64(ctx: BiBase, unsigned?: boolean, endian?: string): bigint {
 
     check_size(ctx, 8);
 
@@ -1248,7 +1248,7 @@ export function rint64(ctx: BiBase, unsigned?: boolean, endian?: string): bigint
     return value
 }
 
-export function wint64(ctx: BiBase, value: number, unsigned?: boolean, endian?: string): void {
+function wint64(ctx: BiBase, value: number, unsigned?: boolean, endian?: string): void {
 
     check_size(ctx, 8, 0);
 
@@ -1304,7 +1304,7 @@ export function wint64(ctx: BiBase, value: number, unsigned?: boolean, endian?: 
     ctx.bitoffset = 0;
 }
 
-export function wdfloat(ctx: BiBase, value: number, endian?: string): void {
+function wdfloat(ctx: BiBase, value: number, endian?: string): void {
 
     check_size(ctx, 8, 0);
 
@@ -1337,7 +1337,7 @@ export function wdfloat(ctx: BiBase, value: number, endian?: string): void {
     ctx.bitoffset = 0
 }
 
-export function rdfloat(ctx: BiBase, endian?: endian): number {
+function rdfloat(ctx: BiBase, endian?: endian): number {
     endian = (endian == undefined ? ctx.endian : endian);
     var uint64Value = ctx.readInt64(true, endian);
     const sign = (uint64Value & 0x8000000000000000n) >> 63n;
@@ -1367,7 +1367,7 @@ export function rdfloat(ctx: BiBase, endian?: endian): number {
     return floatValue;
 }
 
-export function rstring(ctx: BiBase, options?: stringOptions): string {
+function rstring(ctx: BiBase, options?: stringOptions): string {
 
     var length: any = options && options.length;
     var stringType: any = options && options.stringType || 'utf-8';
@@ -1495,7 +1495,7 @@ export function rstring(ctx: BiBase, options?: stringOptions): string {
     }
 }
 
-export function wstring(ctx: BiBase, string: string, options?: stringOptions): void {
+function wstring(ctx: BiBase, string: string, options?: stringOptions): void {
     var length: any = options && options.length;
     var stringType: any = options && options.stringType || 'utf-8';
     var terminateValue: any = options && options.terminateValue;
@@ -1664,9 +1664,9 @@ export class BiBase{
     public errorDump: boolean = true;
     /**
      * Current buffer data.
-     * @type {Buffer|Uint8Array}
+     * @type {Buffer|Uint8Array|null}
      */
-    public data: any = [];
+    public data: Buffer|Uint8Array|null = null;
     /**
      * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
      * 
@@ -1677,10 +1677,23 @@ export class BiBase{
      * NOTE: Using ``BiWriter.get`` or ``BiWriter.return`` will now remove all data after the current write position. Use ``BiWriter.data`` to get the full buffer instead.
      */    
     public extendBufferSize: number = 0;
+    
+    public fd = null;
+
+    public filePath = "";
+
+    public fsMode = "";
+
     /**
      * The settings that used when using the .str getter / setter
      */
     private strDefaults: stringOptions = {stringType: "utf-8", terminateValue: 0x0};
+
+    public maxFileSize: number | null = null;
+
+    constructor(){
+
+    }
 
     /**
      * Settings for when using .str
@@ -1698,14 +1711,78 @@ export class BiBase{
         this.strDefaults.terminateValue = settings.terminateValue;
     }
 
-    isBufferOrUint8Array(obj: Buffer | Uint8Array): boolean {
-        return arraybuffcheck(obj);
+    /**
+     * Enables expanding in reader (changes strict)
+     * 
+     * @param {boolean} mode - Enable expanding in reader (changes strict)
+     */
+    writeMode(mode: boolean) {
+        if (mode) {
+            this.strict = false;
+            return;
+        }
+        else 
+        {
+            this.strict = true;
+            return;
+        }
+    }
+
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    open():number{
+        return this.size;
+    }
+
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    updateSize():void{
+        this.return;
+    }
+
+    /**
+     * removes data.
+     */
+    close(): void {
+        this.data = undefined;
+    }
+
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    read(start: number, length: number, consume: boolean = false){
+        return this.lift(start, start+length, consume);
+    }
+
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    write(start: number, data: Buffer, consume: boolean = false): number {
+        this.insert(data, consume, start);
+        return data.length;
+    }
+
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    commit(consume: boolean = true): number {
+        return consume ? 0 : 1;
     }
 
     extendArray(to_padd: number): void {
         return extendarray(this, to_padd);
     }
 
+    isBufferOrUint8Array(obj: Buffer | Uint8Array): boolean {
+        return arraybuffcheck(obj);
+    }
+
+    ///////////////////////////////
+    //         ENDIANNESS        //
+    ///////////////////////////////
+    
     /**
      *
      * Change endian, defaults to little.
@@ -1766,6 +1843,10 @@ export class BiBase{
         this.endianness("little");
     }
 
+    ///////////////////////////////
+    //            SIZE           //
+    ///////////////////////////////
+
     /**
      * Size in bytes of the current buffer.
      * 
@@ -1820,9 +1901,9 @@ export class BiBase{
         return this.sizeB;
     }
 
-    //
-    //get position
-    //
+    ///////////////////////////////
+    //         POSITION          //
+    ///////////////////////////////
 
     /**
      * Get the current byte position.
@@ -2004,9 +2085,9 @@ export class BiBase{
         return Math.abs(Math.floor((this.offset - 1) / 16));
     }
 
-    //
-    //finishing
-    //
+    ///////////////////////////////
+    //        FINISHING          //
+    ///////////////////////////////
 
     /**
      * Returns current data.
@@ -2070,9 +2151,9 @@ export class BiBase{
         this.errorDump = true;
     }
 
-    //
-    //strict mode change
-    //
+    ///////////////////////////////
+    //       STRICTMODE          //
+    ///////////////////////////////
 
     /**
      * Disallows extending data if position is outside of max size.
@@ -2098,13 +2179,6 @@ export class BiBase{
     /**
      * removes data.
      */
-    close(): void {
-        this.data = undefined;
-    }
-
-    /**
-     * removes data.
-     */
     done(): void {
         this.data = undefined;
     }
@@ -2116,9 +2190,9 @@ export class BiBase{
         this.data = undefined;
     }
 
-    //
-    //find
-    //
+    ///////////////////////////////
+    //          FIND             //
+    ///////////////////////////////
 
     /**
      * Searches for byte position of string from current read position.
@@ -2235,9 +2309,9 @@ export class BiBase{
         return fDoubleFloat(this, value, endian);
     }
 
-    //
-    // move from current position
-    //
+    ///////////////////////////////
+    //        MOVE TO            //
+    ///////////////////////////////
 
     /**
      * Aligns current byte position.
@@ -2260,10 +2334,6 @@ export class BiBase{
     alignRev(number: number): void {
         return alignRev(this, number);
     }
-
-    //
-    // directly set current position
-    //
 
     /**
      * Offset current byte or bit position.
@@ -2349,10 +2419,6 @@ export class BiBase{
         return this.goto(byte, bit)
     }
 
-    //
-    // go to start
-    //
-
     /**
      * Set byte and bit position to start of data.
      */
@@ -2392,9 +2458,9 @@ export class BiBase{
         this.bitoffset = 0;
     }
 
-    //
-    //remove part of data
-    //
+    ///////////////////////////////
+    //         REMOVE            //
+    ///////////////////////////////
 
     /**
      * Deletes part of data from start to current byte position unless supplied, returns removed.
@@ -2484,9 +2550,9 @@ export class BiBase{
         return addData(this, data, consume || false, offset || this.offset, true);
     }
 
-    //
-    // copy out
-    //
+    ///////////////////////////////
+    //        COPY OUT           //
+    ///////////////////////////////
 
     /**
      * Returns part of data from current byte position to end of data unless supplied.
@@ -2553,9 +2619,9 @@ export class BiBase{
         return remove(this, this.offset, this.offset + (length || 0), consume || false, false);
     }
 
-    //
-    //insert
-    //
+    ///////////////////////////////
+    //          INSERT           //
+    ///////////////////////////////
 
     /**
      * Inserts data into data.
@@ -2631,9 +2697,9 @@ export class BiBase{
         return addData(this, data, consume || false, this.size, false);
     }
 
-    //
-    // math
-    //
+    ///////////////////////////////
+    //          MATH             //
+    ///////////////////////////////
 
     /**
      * XOR data.
@@ -3011,9 +3077,9 @@ export class BiBase{
         return RSHIFT(this, lShiftKey, this.offset, this.offset + Length, consume || false);
     }
 
-    //
-    //bit reader
-    //
+    ///////////////////////////////
+    //        BIT READER         //
+    ///////////////////////////////
 
     /**
      *

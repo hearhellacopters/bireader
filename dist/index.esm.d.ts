@@ -118,9 +118,9 @@ declare class BiBase {
     errorDump: boolean;
     /**
      * Current buffer data.
-     * @type {Buffer|Uint8Array}
+     * @type {Buffer|Uint8Array|null}
      */
-    data: any;
+    data: Buffer | Uint8Array | null;
     /**
      * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
      *
@@ -131,18 +131,53 @@ declare class BiBase {
      * NOTE: Using ``BiWriter.get`` or ``BiWriter.return`` will now remove all data after the current write position. Use ``BiWriter.data`` to get the full buffer instead.
      */
     extendBufferSize: number;
+    fd: any;
+    filePath: string;
+    fsMode: string;
     /**
      * The settings that used when using the .str getter / setter
      */
     private strDefaults;
+    maxFileSize: number | null;
+    constructor();
     /**
      * Settings for when using .str
      *
      * @param {stringOptions} settings options to use with .str
      */
     set strSettings(settings: stringOptions);
-    isBufferOrUint8Array(obj: Buffer | Uint8Array): boolean;
+    /**
+     * Enables expanding in reader (changes strict)
+     *
+     * @param {boolean} mode - Enable expanding in reader (changes strict)
+     */
+    writeMode(mode: boolean): void;
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    open(): number;
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    updateSize(): void;
+    /**
+     * removes data.
+     */
+    close(): void;
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    read(start: number, length: number, consume?: boolean): Buffer | Uint8Array;
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    write(start: number, data: Buffer, consume?: boolean): number;
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    commit(consume?: boolean): number;
     extendArray(to_padd: number): void;
+    isBufferOrUint8Array(obj: Buffer | Uint8Array): boolean;
     /**
      *
      * Change endian, defaults to little.
@@ -383,10 +418,6 @@ declare class BiBase {
      * removes data.
      */
     end(): void;
-    /**
-     * removes data.
-     */
-    close(): void;
     /**
      * removes data.
      */
@@ -1424,7 +1455,7 @@ declare class BiBaseStreamer {
     /**
      * Current buffer chunk.
      *
-     * @type {Buffer}
+     * @type {Buffer|null}
      */
     data: Buffer | null;
     /**
@@ -1718,15 +1749,15 @@ declare class BiBaseStreamer {
      */
     get return(): Buffer;
     /**
- * Creates hex dump string. Will console log or return string if set in options.
- *
- * @param {object} options
- * @param {hexdumpOptions?} options - hex dump options
- * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
- * @param {number?} options.startByte - byte to start dump (default ``0``)
- * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
- * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
- */
+     * Creates hex dump string. Will console log or return string if set in options.
+     *
+     * @param {object} options
+     * @param {hexdumpOptions?} options - hex dump options
+     * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
+     * @param {number?} options.startByte - byte to start dump (default ``0``)
+     * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
+     * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
+     */
     hexdump(options?: hexdumpOptions): void | string;
     /**
      * Turn hexdump on error off (default on).

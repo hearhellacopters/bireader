@@ -793,7 +793,7 @@ With 3.1 you can now use ``BiReaderStream`` and ``BiWriterStream`` in Node for l
 
 ### Streaming Caveats
 
- * Naming: Same naming applies to streamers as [Common Functions](#common-functions) section but the file is saved after every operation.
+ * Naming: Same function naming applies to streamers as [Common Functions](#common-functions) section but the file is saved after every operation. **BiReaderStream / BiReader** and **BiWriterStream / BiWriter** are interchangeable when it comes to all functions and class objects names for easy use with type script.
  * Writing: Unlike the other BiReader, **all write functions will throw an error unless you switch to ``.writeMode(true)``** The file is read only until you do. Any write functions inside the reader will error beforehand.
  * Large removal: When using any function that removes data from the file and would return a Buffer, **if the size of the returned Buffer is outside of the Node max size for a Buffer, a new file will be made with the location and size concat to the name with a .removed file extention instead.**
 

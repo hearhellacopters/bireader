@@ -1727,9 +1727,9 @@ class BiBase {
         this.errorDump = true;
         /**
          * Current buffer data.
-         * @type {Buffer|Uint8Array}
+         * @type {Buffer|Uint8Array|null}
          */
-        this.data = [];
+        this.data = null;
         /**
          * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
          *
@@ -1740,10 +1740,14 @@ class BiBase {
          * NOTE: Using ``BiWriter.get`` or ``BiWriter.return`` will now remove all data after the current write position. Use ``BiWriter.data`` to get the full buffer instead.
          */
         this.extendBufferSize = 0;
+        this.fd = null;
+        this.filePath = "";
+        this.fsMode = "";
         /**
          * The settings that used when using the .str getter / setter
          */
         this.strDefaults = { stringType: "utf-8", terminateValue: 0x0 };
+        this.maxFileSize = null;
     }
     /**
      * Settings for when using .str
@@ -1760,12 +1764,67 @@ class BiBase {
         this.strDefaults.stripNull = settings.stripNull;
         this.strDefaults.terminateValue = settings.terminateValue;
     }
-    isBufferOrUint8Array(obj) {
-        return arraybuffcheck(obj);
+    /**
+     * Enables expanding in reader (changes strict)
+     *
+     * @param {boolean} mode - Enable expanding in reader (changes strict)
+     */
+    writeMode(mode) {
+        if (mode) {
+            this.strict = false;
+            return;
+        }
+        else {
+            this.strict = true;
+            return;
+        }
+    }
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    open() {
+        return this.size;
+    }
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    updateSize() {
+        this.return;
+    }
+    /**
+     * removes data.
+     */
+    close() {
+        this.data = undefined;
+    }
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    read(start, length, consume = false) {
+        return this.lift(start, start + length, consume);
+    }
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    write(start, data, consume = false) {
+        this.insert(data, consume, start);
+        return data.length;
+    }
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    commit(consume = true) {
+        return consume ? 0 : 1;
     }
     extendArray(to_padd) {
         return extendarray(this, to_padd);
     }
+    isBufferOrUint8Array(obj) {
+        return arraybuffcheck(obj);
+    }
+    ///////////////////////////////
+    //         ENDIANNESS        //
+    ///////////////////////////////
     /**
      *
      * Change endian, defaults to little.
@@ -1819,6 +1878,9 @@ class BiBase {
     le() {
         this.endianness("little");
     }
+    ///////////////////////////////
+    //            SIZE           //
+    ///////////////////////////////
     /**
      * Size in bytes of the current buffer.
      *
@@ -1867,9 +1929,9 @@ class BiBase {
     get lenb() {
         return this.sizeB;
     }
-    //
-    //get position
-    //
+    ///////////////////////////////
+    //         POSITION          //
+    ///////////////////////////////
     /**
      * Get the current byte position.
      *
@@ -2030,9 +2092,9 @@ class BiBase {
     get row() {
         return Math.abs(Math.floor((this.offset - 1) / 16));
     }
-    //
-    //finishing
-    //
+    ///////////////////////////////
+    //        FINISHING          //
+    ///////////////////////////////
     /**
      * Returns current data.
      *
@@ -2088,9 +2150,9 @@ class BiBase {
     errorDumpOn() {
         this.errorDump = true;
     }
-    //
-    //strict mode change
-    //
+    ///////////////////////////////
+    //       STRICTMODE          //
+    ///////////////////////////////
     /**
      * Disallows extending data if position is outside of max size.
      */
@@ -2112,12 +2174,6 @@ class BiBase {
     /**
      * removes data.
      */
-    close() {
-        this.data = undefined;
-    }
-    /**
-     * removes data.
-     */
     done() {
         this.data = undefined;
     }
@@ -2127,9 +2183,9 @@ class BiBase {
     finished() {
         this.data = undefined;
     }
-    //
-    //find
-    //
+    ///////////////////////////////
+    //          FIND             //
+    ///////////////////////////////
     /**
      * Searches for byte position of string from current read position.
      *
@@ -2237,9 +2293,9 @@ class BiBase {
     findDoubleFloat(value, endian) {
         return fDoubleFloat(this, value, endian);
     }
-    //
-    // move from current position
-    //
+    ///////////////////////////////
+    //        MOVE TO            //
+    ///////////////////////////////
     /**
      * Aligns current byte position.
      *
@@ -2260,9 +2316,6 @@ class BiBase {
     alignRev(number) {
         return alignRev(this, number);
     }
-    //
-    // directly set current position
-    //
     /**
      * Offset current byte or bit position.
      *
@@ -2340,9 +2393,6 @@ class BiBase {
     warp(byte, bit) {
         return this.goto(byte, bit);
     }
-    //
-    // go to start
-    //
     /**
      * Set byte and bit position to start of data.
      */
@@ -2377,9 +2427,9 @@ class BiBase {
         this.offset = this.size;
         this.bitoffset = 0;
     }
-    //
-    //remove part of data
-    //
+    ///////////////////////////////
+    //         REMOVE            //
+    ///////////////////////////////
     /**
      * Deletes part of data from start to current byte position unless supplied, returns removed.
      *
@@ -2461,9 +2511,9 @@ class BiBase {
     overwrite(data, consume, offset) {
         return addData(this, data, consume || false, offset || this.offset, true);
     }
-    //
-    // copy out
-    //
+    ///////////////////////////////
+    //        COPY OUT           //
+    ///////////////////////////////
     /**
      * Returns part of data from current byte position to end of data unless supplied.
      *
@@ -2524,9 +2574,9 @@ class BiBase {
     wrap(length, consume) {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, false);
     }
-    //
-    //insert
-    //
+    ///////////////////////////////
+    //          INSERT           //
+    ///////////////////////////////
     /**
      * Inserts data into data.
      *
@@ -2595,9 +2645,9 @@ class BiBase {
     append(data, consume) {
         return addData(this, data, consume || false, this.size, false);
     }
-    //
-    // math
-    //
+    ///////////////////////////////
+    //          MATH             //
+    ///////////////////////////////
     /**
      * XOR data.
      *
@@ -2893,9 +2943,9 @@ class BiBase {
         }
         return RSHIFT(this, lShiftKey, this.offset, this.offset + Length, consume || false);
     }
-    //
-    //bit reader
-    //
+    ///////////////////////////////
+    //        BIT READER         //
+    ///////////////////////////////
     /**
      *
      * Write bits, must have at least value and number of bits.

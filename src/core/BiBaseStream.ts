@@ -1963,7 +1963,7 @@ export class BiBaseStreamer {
     /**
      * Current buffer chunk.
      * 
-     * @type {Buffer}
+     * @type {Buffer|null}
      */
     public data: Buffer | null = null;
     /**
@@ -1987,7 +1987,7 @@ export class BiBaseStreamer {
      */
     private strDefaults: stringOptions = { stringType: "utf-8", terminateValue: 0x0 };
 
-    public maxFileSize: number | null = null
+    public maxFileSize: number | null = null;
 
     constructor(filePath: string, readwrite: boolean) {
         this.filePath = filePath;
@@ -2080,7 +2080,7 @@ export class BiBaseStreamer {
     /**
      * Internal update size
      */
-    updateSize() {
+    updateSize():void {
         if (fs == undefined) {
             throw new Error("Can't use BitStream without Node.");
         }
@@ -2254,30 +2254,16 @@ export class BiBaseStreamer {
 
         fs.ftruncateSync(this.fd, this.size + length);
 
-        //if (this.maxFileSize && this.maxFileSize > length) {
-        //    // stream extend
-        //    const CHUNK_SIZE = 64 * 1024;
-        //    const buffer = Buffer.alloc(CHUNK_SIZE);
-        //    var amount = length;
-        //    var start = this.size;
-        //    while (amount) {
-        //        const toWrite = Math.min(CHUNK_SIZE, amount);
-        //        fs.writeSync(this.fd, buffer, 0, toWrite, start);
-        //        start += toWrite;
-        //        amount -= toWrite;
-        //    }
-        //}
-        //else {
-        //    const buffer = Buffer.alloc(length);
-        //    fs.writeSync(this.fd, buffer, 0, buffer.length, this.size);
-        //}
-
         this.updateSize();
     }
 
     isBufferOrUint8Array(obj: Buffer | Uint8Array): boolean {
         return arraybuffcheck(obj);
     }
+
+    ///////////////////////////////
+    //         ENDIANNESS        //
+    ///////////////////////////////
 
     /**
      *
@@ -2339,6 +2325,10 @@ export class BiBaseStreamer {
         this.endianness("little");
     }
 
+    ///////////////////////////////
+    //            SIZE           //
+    ///////////////////////////////
+
     /**
      * Size in bytes of the current buffer.
      * 
@@ -2393,9 +2383,9 @@ export class BiBaseStreamer {
         return this.sizeB;
     }
 
-    //
-    //get position
-    //
+    ///////////////////////////////
+    //         POSITION          //
+    ///////////////////////////////
 
     /**
      * Get the current byte position.
@@ -2577,9 +2567,9 @@ export class BiBaseStreamer {
         return Math.abs(Math.floor((this.offset - 1) / 16));
     }
 
-    //
-    //finishing
-    //
+    ///////////////////////////////
+    //        FINISHING          //
+    ///////////////////////////////
 
     /**
      * Returns current data.
@@ -2614,15 +2604,15 @@ export class BiBaseStreamer {
     }
 
     /**
- * Creates hex dump string. Will console log or return string if set in options.
- * 
- * @param {object} options 
- * @param {hexdumpOptions?} options - hex dump options
- * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
- * @param {number?} options.startByte - byte to start dump (default ``0``)
- * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
- * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
- */
+     * Creates hex dump string. Will console log or return string if set in options.
+     * 
+     * @param {object} options 
+     * @param {hexdumpOptions?} options - hex dump options
+     * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
+     * @param {number?} options.startByte - byte to start dump (default ``0``)
+     * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
+     * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
+     */
     hexdump(options: hexdumpOptions = {}): void | string {
         return hexDump(this, options);
     }
@@ -2641,9 +2631,9 @@ export class BiBaseStreamer {
         this.errorDump = true;
     }
 
-    //
-    //strict mode change
-    //
+    ///////////////////////////////
+    //       STRICTMODE          //
+    ///////////////////////////////
 
     /**
      * Disallows extending data if position is outside of max size.
@@ -2680,9 +2670,9 @@ export class BiBaseStreamer {
         this.data = null;
     }
 
-    //
-    //find
-    //
+    ///////////////////////////////
+    //          FIND             //
+    ///////////////////////////////
 
     /**
      * Searches for byte position of string from current read position.
@@ -2799,9 +2789,9 @@ export class BiBaseStreamer {
         return fDoubleFloat(this, value, endian);
     }
 
-    //
-    // move from current position
-    //
+    ///////////////////////////////
+    //        MOVE TO            //
+    ///////////////////////////////
 
     /**
      * Aligns current byte position.
@@ -2824,10 +2814,6 @@ export class BiBaseStreamer {
     alignRev(number: number): void {
         return alignRev(this, number);
     }
-
-    //
-    // directly set current position
-    //
 
     /**
      * Offset current byte or bit position.
@@ -2913,10 +2899,6 @@ export class BiBaseStreamer {
         return this.goto(byte, bit)
     }
 
-    //
-    // go to start
-    //
-
     /**
      * Set byte and bit position to start of data.
      */
@@ -2956,9 +2938,9 @@ export class BiBaseStreamer {
         this.bitoffset = 0;
     }
 
-    //
-    //remove part of data
-    //
+    ///////////////////////////////
+    //         REMOVE            //
+    ///////////////////////////////
 
     /**
      * Deletes part of data from start to current byte position unless supplied, returns removed.
@@ -3048,9 +3030,9 @@ export class BiBaseStreamer {
         return addData(this, data, consume || false, offset || this.offset, true);
     }
 
-    //
-    // copy out
-    //
+    ///////////////////////////////
+    //        COPY OUT           //
+    ///////////////////////////////
 
     /**
      * Returns part of data from current byte position to end of data unless supplied.
@@ -3117,9 +3099,9 @@ export class BiBaseStreamer {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, false);
     }
 
-    //
-    //insert
-    //
+    ///////////////////////////////
+    //          INSERT           //
+    ///////////////////////////////
 
     /**
      * Inserts data into data.
@@ -3195,9 +3177,9 @@ export class BiBaseStreamer {
         return addData(this, data, consume || false, this.size, false);
     }
 
-    //
-    // math
-    //
+    ///////////////////////////////
+    //          MATH             //
+    ///////////////////////////////
 
     /**
      * XOR data.
@@ -3529,9 +3511,9 @@ export class BiBaseStreamer {
         return RSHIFT(this, lShiftKey, this.offset, this.offset + Length, consume || false);
     }
 
-    //
-    //bit reader
-    //
+    ///////////////////////////////
+    //        BIT READER         //
+    ///////////////////////////////
 
     /**
      *

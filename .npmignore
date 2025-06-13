@@ -1,4 +1,7 @@
 node_modules/
+tsconfig.json
+tsconfig.cjs.json
+tsconfig.esm.json
 src/
 lib/
 test*
