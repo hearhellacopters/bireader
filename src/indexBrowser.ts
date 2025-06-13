@@ -1,8 +1,6 @@
-export { hexdump }  from './common.js';
 export { BiReader } from './BiReader.js';
 export { BiWriter } from './BiWriter.js';
-export { BiReaderStream } from './BiReaderStream.js';
-export { BiWriterStream } from './BiWriterStream.js';
+export { hexdump }  from './common.js';
 
 /**
  * Not in use anymore.

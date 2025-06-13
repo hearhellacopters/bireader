@@ -16,16 +16,19 @@ Supported data types:
 
 ## What's New?
 
-### v3.0
- * Added better option for extending array buffer when writing data with ``extendBufferSize``.
+### v3
+ * Added Browser, Node CommonJS and Node ESM modules.
+ * Added new ``BiReaderStream`` and ``BiWriterStream`` for use in Node with large file size (4 gig+). See [documention](#bistreams) for how to use.
+ * Added setter ``.strSettings`` for use with ``.str`` for easier coding.
+ * Added better options for extending array buffer when writing data with ``extendBufferSize``.
  * Consolidated all options argument into single object when creating class.
  * Removed deprecated ``bireader`` and ``biwriter`` classes.
- * Fixed standalone hexdump function. 
+ * Fixed standalone ``hexdump`` function. 
 
-### v2.0
- * Created new ``BiReader`` and ``BiWriter`` classes with easier *get* and *set* functions for faster coding.
+### v2
+ * Created new ``BiReader`` and ``BiWriter`` classes with *get* and *set* functions for easier coding.
 
-### v1.0
+### v1
  * Included math functions and value searches.
  * Many bug fixes.
 
@@ -33,7 +36,7 @@ Supported data types:
 
 ```npm install bireader```
 
-Provides both CommonJS and ES modules.
+Provides both CommonJS and ES modules for Browser and Node.
 
 ### Example
 
@@ -47,6 +50,7 @@ import {BiReader, BiWriter} from 'bireader';
 // read example - parse a webp file
 function parse_webp(data){
   const br = new BiReader(data);
+  br.strSettings = {length: 4};
   br.hexdump({supressUnicode:true}); // console.log data as hex
 
   //         0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  0123456789ABCDEF
@@ -64,11 +68,11 @@ function parse_webp(data){
   // 000b0  77 44 40 94 6d 25 6c 74 91 a8 88 86 58 9b da 6e  wD@.m%lt....X..n
 
   const header = {};
-  header.magic = br.string({length:4});    // RIFF
+  header.magic = br.str;    // RIFF
   header.size = br.uint32le;               // 15000
   header.fileSize = header.size + 8;       // 15008
-  header.payload = br.string({length:4});  // WEBP
-  header.format = br.string({length:4});   // VP8X
+  header.payload = br.str;  // WEBP
+  header.format = br.str;   // VP8X
   header.formatChunkSize = br.uint32le;    // 10
   switch (header.format){
     case "VP8 ":
@@ -122,19 +126,19 @@ function parse_webp(data){
         header.height = header.heightMinus1 + 1
         if(header.I)
         {
-          header.ICCP = br.string({length:4});  // Should be ICCP
+          header.ICCP = br.str;  // Should be ICCP
           header.ICCPChunkSize = br.uint32;
           header.ICCPData = br.extract(header.ICCPChunkSize, true);
         }
         if(header.L)
         {
-          header.ALPH = br.string({length:4});  // Should be ALPH
+          header.ALPH = br.str;  // Should be ALPH
           header.ALPHChunkSize = br.uint32;     // 4134
           header.ALPHData = br.extract(header.ALPHChunkSize, true);
         }
         if(header.A)
         {
-          header.ANI = br.string({length:4});  // Should be ANIM or ANIF
+          header.ANI = br.str;  // Should be ANIM or ANIF
           header.ANIChunkSize = br.uint32;
           if(header.ANI == "ANIM")
           {
@@ -158,18 +162,18 @@ function parse_webp(data){
             header.ANIFData = br.extract(header.ANIChunkSize, true);
           }
         }
-        header.extFormatStr = br.string({length:4});
+        header.extFormatStr = br.str;
         header.extChunkSize = br.uint32;
         header.extData = br.extract(header.extChunkSize, true);
         if(header.E)
         {
-          header.EXIF = br.string({length:4});  // Should be EXIF
+          header.EXIF = br.str;  // Should be EXIF
           header.EXIFChunkSize = br.uint32;
           header.EXIFData = br.extract(header.EXIFChunkSize, true);
         }
         if(header.X)
         {
-          header.XMP = br.string({length:4});  // Should be XMP
+          header.XMP = br.str;  // Should be XMP
           header.XMPChunkSize = br.uint32;
           header.XMPMetaData = br.extract(header.XMPChunkSize, true);
         }
@@ -184,13 +188,15 @@ function parse_webp(data){
 
 // write example - write a webp file from read data
 function write_webp(data){
-  const bw = new BiWriter(new Uint8Arry(0x100000)); // Will extends array as we write if needed by default
-  bw.string("RIFF",{length:4});
+  const bw = new BiWriter(new Uint8Arry(0x100000)); // Will extends array as we 
+  // write if needed by default
+  bw.strSettings = {length: 4};
+  bw.str = "RIFF";
   bw.uint32le = 0; // dummy for now, will be final size - 8
-  bw.string("WEBP",{length:4});
+  bw.str = "WEBP";
   switch(data.format){
     case "VP8 ":
-      bw.string("VP8 ",{length:4});
+      bw.str = "VP8 ";
       bw.uint32le = data.VP8data.length;
       bw.ubit24 = data.key_frame;
       bw.ubit24 = data.start_code;
@@ -199,7 +205,7 @@ function write_webp(data){
       bw.overwrite(data.VP8data ,true);
       break;
     case "VP8L":
-      bw.string("VP8L",{length:4});
+      bw.str = "VP8L";
       bw.uint32le = data.VP8Ldata.length - 4;
       bw.ubyte = 47;
       bw.ubit14 = data.width - 1;
@@ -209,7 +215,7 @@ function write_webp(data){
       bw.overwrite(data.VP8Ldata,true);
       break;
     case "VP8X":
-      bw.string("VP8X",{length:4});
+      bw.str = "VP8X";
       bw.uint32le = 10;
       bw.big();
       bw.bit2 = 0;
@@ -225,19 +231,19 @@ function write_webp(data){
       bw.ubit24 = data.height - 1;
       if(data.I)
       {
-        bw.string(data.ICCP, {length:4});
+        bw.str = data.ICCP;
         bw.uint32 = data.ICCPData.length;;
         bw.replace(data.ICCPData, true);
       }
       if(data.L)
       {
-        bw.string(data.ALPH, {length:4});
+        bw.str = data.ALPH;
         bw.uint32 = data.ALPHData.length;
         bw.replace(data.ALPHData);
       }
       if(data.A)
       {
-        bw.string(data.ANI, {length:4});
+        bw.str = data.ANI;
         bw.uint32 = data.ANIChunkSize;
         if(data.ANI == "ANIM")
         {
@@ -259,18 +265,18 @@ function write_webp(data){
           bw.replace(data.ANIFData, true);
         }
       }
-      bw.string(data.extFormatStr, {length:4});
+      bw.str = data.extFormatStr;
       bw.uint32 = data.extData.length;
       bw.replace(data.extData, true);
       if(data.E)
       {
-        bw.string(data.EXIF, {length:4});
+        bw.str = data.EXIF;
         bw.uint32 = data.EXIFData.length;
         bw.replace( data.EXIFData, true);
       }
       if(data.X)
       {
-        bw.string(data.XMP, {length:4});
+        bw.str = data.XMP;
         bw.uint32 = data.XMPMetaData.length;
         bw.replace(data.XMPMetaData, true);
       }
@@ -306,7 +312,7 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td>new BiReader(<b>data</b>, {byteOffset, bitOffset, endianess, strict, extendBufferSize})</td>
     <td align="center" rowspan="2"><b>Buffer or Uint8Array</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending initially supplied data (default true for reader, false for writer), extended Buffer size amount.
     </td>
-    <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> Supplied data can always be found with .data.<br><br><b>Writing data note:</b> while BiWriter can be created with a 0 length Uint8Array or Buffer, each new value write will create a new array and concat the two. For large data writes this will lead to a degraded performance. It's best to supply a larger than needed buffer when creating the Writer and use .trim() after you're finished. You can also set the extendBufferSize value to always extend by a fixed amount when reaching the end. This will also change the logic for .return and .get to trim the remining data from the current position for you. Use .data instead if you want to get the whole padded buffer array.</td>
+    <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> Supplied data can always be found with <b>.data</b>.<br><br><b>Writing data note:</b> while BiWriter can be created with a 0 length Uint8Array or Buffer, each new value write will create a new array and concat the two. For large data writes this will lead to a degraded performance. It's best to supply a larger than needed buffer when creating the Writer and use <b>.trim()</b> after you're finished. You can also set the <b>extendBufferSize</b> value to always extend by a fixed amount when reaching the end. This will also change the logic for <b>.return</b> and <b>.get</b> to trim the remining data from the current position for you. Use <b>.data</b> instead if you want to get the whole padded buffer array.</td>
   </tr>
   <tr>
     <td>Name</td>
@@ -734,6 +740,62 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
 </tbody>
 </table>
+
+## BiStreams
+
+With 3.1 you can now use ``BiReaderStream`` and ``BiWriterStream`` in Node for larger files (or if you don't want or need the whole file loaded to memory all at once).
+
+<table>
+<thead>
+  <tr>
+    <th align="center" colspan="2">Function</th>
+    <th align="center">Params (bold requires)</th>
+    <th align="left">Desc</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+  <th align="center" colspan="4"><i>Streaming</i></th>
+  <tr>
+  <tr>
+    <td>Name</td>
+    <td>new BiReaderStream(<b>filePath</b>, {byteOffset, bitOffset, endianess, strict, extendBufferSize})</td>
+    <td align="center" rowspan="2"><b>Path to file</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending file size (default true for reader, false for writer), extended file size amount.
+    </td>
+    <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> The file must be opened with <b>.open()</b> and closed with <b>.close()</b>. The <b>.data</b> value is always the Buffer to the last read or write value. Read sizes outside of Node's max size will error, unless remove then it will create a new file.<br><br><b>Writer note:</b> You can set the <b>extendBufferSize</b> value to always extend the file by this minimum amount when reaching the end of the file. The file is saved after every write.</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>new BiWriterStream(<b>filePath</b>, {byteOffset, bitOffset, endianess, strict, extendBufferSize})</td>
+  </tr>
+  <th align="center" colspan="4"><i>File Control</i></th>
+  <tr>
+    <td>Name</td>
+    <td>open()
+    <td align="center"><b>none</td>
+    <td>Opens file for reading / writing.</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>close()
+    <td align="center"><b>none</td>
+    <td>Closes file after reading / writing.</td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>writeMode(writable)
+    <td align="center"><b>True if you want to switch to writing in BiReaderStream.</td>
+    <td>Note: This changes reader to write mode. Allows file to be expanded in size as well.</td>
+  </tr>
+  
+</tbody>
+</table>
+
+### Streaming Caveats
+
+ * Naming: Same naming applies to streamers as [Common Functions](#common-functions) section but the file is saved after every operation.
+ * Writing: Unlike the other BiReader, **all write functions will throw an error unless you switch to ``.writeMode(true)``** The file is read only until you do. Any write functions inside the reader will error beforehand.
+ * Large removal: When using any function that removes data from the file and would return a Buffer, **if the size of the returned Buffer is outside of the Node max size for a Buffer, a new file will be made with the location and size concat to the name with a .removed file extention instead.**
 
 ## Bit field
 

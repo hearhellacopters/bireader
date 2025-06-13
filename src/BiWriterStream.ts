@@ -1,13 +1,15 @@
 import { BiOptions } from "./common.js";
-import { BiBase } from './core/BiBase.js';
-import { applyBinaryAliasWriter, BinaryAliasWriter } from "./aliases/BinaryAliasWriter.js";
+import { BiBaseStreamer } from './core/BiBaseStream.js';
+import { applyBinaryAliasWriter, BinaryAliasWriterStreamer } from "./aliases/BinaryAliasWriter.js";
 
-const BiWriterBase = applyBinaryAliasWriter(BiBase);
+const BiWriterStreamer = applyBinaryAliasWriter(BiBaseStreamer);
 
 /**
  * Binary writer, includes bitfields and strings.
+ * 
+ * Note: Must start with .open() before writing.
  *
- * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+ * @param {string} filePath - Path to file
  * @param {BiOptions?} options - Any options to set at start
  * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
  * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
@@ -15,13 +17,15 @@ const BiWriterBase = applyBinaryAliasWriter(BiBase);
  * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
  * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
  * 
- * @since 2.0
+ * @since 3.1
  */
-export class BiWriter extends BiWriterBase implements BinaryAliasWriter {
+export class BiWriterStream extends BiWriterStreamer implements BinaryAliasWriterStreamer {
     /**
      * Binary writer, includes bitfields and strings.
+     * 
+     * Note: Must start with .open() before writing.
      *
-     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+     * @param {string} filePath - Path to file
      * @param {BiOptions?} options - Any options to set at start
      * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
      * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
@@ -29,29 +33,14 @@ export class BiWriter extends BiWriterBase implements BinaryAliasWriter {
      * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
      * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
      */
-    constructor(data?: Buffer|Uint8Array, options: BiOptions  = {}) {
-        super();
+    constructor(filePath: string, options: BiOptions  = {}) {
+        super(filePath, true);
         this.strict = false;
-        if(data == undefined){
-            if(typeof Buffer !== 'undefined'){
-                this.data = Buffer.alloc(this.offset||1+(this.bitoffset!=0?1:0));
-            } else {
-                this.data = new Uint8Array(this.offset||1+(this.bitoffset!=0?1:0));
-            }
-        } else {
-            if(!this.isBufferOrUint8Array(data)){
-                throw new Error("Write data must be Uint8Array or Buffer.");
-            }
-            this.data = data; 
-        }
 
         if(options.extendBufferSize != undefined && options.extendBufferSize != 0)
         {
             this.extendBufferSize = options.extendBufferSize;
         }
-
-        this.size = this.data.length;
-        this.sizeB = this.data.length * 8;
 
         if(typeof options.strict == "boolean"){
             this.strict = options.strict;
@@ -61,6 +50,8 @@ export class BiWriter extends BiWriterBase implements BinaryAliasWriter {
             }
         }
 
+        this.endian = options.endianness || "little";
+
         if(options.endianness != undefined && typeof options.endianness != "string"){
             throw new Error("endianness must be big or little.");
         }
@@ -68,32 +59,7 @@ export class BiWriter extends BiWriterBase implements BinaryAliasWriter {
             throw new Error("Endianness must be big or little.");
         }
 
-        this.endian = options.endianness || "little";
-
-        if(options.byteOffset != undefined || options.bitOffset!= undefined){
-            this.offset = ((Math.abs(options.byteOffset|| 0)) + Math.ceil(( Math.abs(options.bitOffset||0)) /8) )
-            // Adjust byte offset based on bit overflow
-            this.offset += Math.floor((Math.abs(options.bitOffset||0)) / 8);
-            // Adjust bit offset
-            this.bitoffset = (Math.abs(options.bitOffset||0) + 64) % 8;    
-            // Ensure bit offset stays between 0-7
-            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
-            // Ensure offset doesn't go negative
-            this.offset = Math.max(this.offset, 0);
-            if(this.offset > this.size){
-                if(this.strict == false){
-                    if(this.extendBufferSize != 0)
-                    {
-                        this.extendArray(this.extendBufferSize);
-                    }
-                    else 
-                    {
-                        this.extendArray(this.offset - this.size);
-                    }
-                } else {
-                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
-                }
-            }
-        }
+        this.offset = options.byteOffset ?? 0;
+        this.bitoffset = options.bitOffset ?? 0;
     }
-};
+}

@@ -1,28 +1,31 @@
 {
   "name": "bireader",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "description": "Read and write binary data in JavaScript",
-  "module": "build/esm/index.js",
-  "main": "build/cjs/index.js",
-  "files": [
-    "build"
-  ],
+  "type": "module",
+  "main": "./dist/index.cjs.js",
+  "module": "./dist/index.esm.js",
+  "types": "./dist/index.d.ts",
+  "browser": "./dist/index.browser.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/hearhellacopters/bireader.git"
   },
   "exports": {
     ".": {
-      "import": "./build/esm/index.js",
-      "require": "./build/cjs/index.js"
-    },
-    "./*": "./*"
+      "import": {
+        "browser": "./dist/index.browser.js",
+        "default": "./dist/index.esm.js"
+      },
+      "require": "./dist/index.cjs.js"
+    }
   },
   "scripts": {
-    "build": "npm run clean && npm run build:esm && npm run build:cjs",
-    "build:esm": "tsc --moduleResolution NodeNext --module NodeNext --outDir build/esm",
-    "build:cjs": "tsc --moduleResolution node --module commonjs --outDir build/cjs",
-    "clean": "rmdir /S /Q build"
+    "build": "npm run clean && npm run build:esm && npm run build:cjs && tsc --emitDeclarationOnly",
+    "build:rollup": "npm run clean && tsc --emitDeclarationOnly && rollup -c",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "clean": "rmdir /S /Q dist"
   },
   "keywords": [
     "buffer",
@@ -42,9 +45,15 @@
   },
   "homepage": "https://github.com/hearhellacopters/bireader#readme",
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-replace": "^6.0.2",
+    "@rollup/plugin-typescript": "^12.1.2",
     "@types/mocha": "^10.0.2",
     "@types/node": "^20.7.0",
     "@typescript/lib-dom": "npm:@types/web@^0.0.115",
+    "rollup-plugin-dts": "^6.2.1",
+    "tslib": "^2.8.1",
     "typescript": "^5.2.2"
   },
   "engines": {

@@ -1,19 +1,14 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "allowJs": true,
+    "module": "ESNext",
     "declaration": true,
-    "declarationMap": true,
-    "moduleResolution": "bundler",
-    "sourceMap": true,
-    "strict": true,
-    "noImplicitReturns": true,
-    "allowSyntheticDefaultImports": true,
-    "noFallthroughCasesInSwitch": false,
-    "types": ["node"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "moduleResolution": "node",
     "esModuleInterop": true
   },
-  "include": ["src/*"],
+  "include": ["src"],
   "exclude": [
     "node_modules"
   ]

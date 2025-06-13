@@ -1,7 +1,6 @@
 /// <reference types="node" />
-type BiReader = import('./bireader.ts').BiReader;
-type BiWriter = import('./biwriter.ts').BiWriter;
-export type BiOptions = {
+type endian = "little" | "big";
+type BiOptions = {
     /**
      * Byte offset to start writer, default is 0
      */
@@ -13,7 +12,7 @@ export type BiOptions = {
     /**
      * Endianness ``big`` or ``little`` (default little)
      */
-    endianness?: "little" | "big";
+    endianness?: endian;
     /**
      * Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
      */
@@ -23,18 +22,6 @@ export type BiOptions = {
      */
     extendBufferSize?: number;
 };
-export declare function isBuffer(obj: Buffer | Uint8Array): boolean;
-export declare function check_size(_this: BiReader | BiWriter | ReaderBase, write_bytes: number, write_bit?: number, offset?: number): number;
-export declare function buffcheck(obj: Buffer | Uint8Array | ReaderBase): boolean;
-export declare function arraybuffcheck(_this: BiReader | BiWriter | ReaderBase, obj: Buffer | Uint8Array): boolean;
-export declare function extendarray(_this: BiReader | BiWriter | ReaderBase, to_padd: number): void;
-export declare function checkSize(_this: BiReader | BiWriter | ReaderBase, write_bytes: number, write_bit?: number, offset?: number): number;
-export declare function skip(_this: BiReader | BiWriter | ReaderBase, bytes: number, bits?: number): void;
-export declare function align(_this: BiReader | BiWriter | ReaderBase, n: number): void;
-export declare function alignRev(_this: BiReader | BiWriter | ReaderBase, n: number): void;
-export declare function goto(_this: BiReader | BiWriter | ReaderBase, bytes: number, bits?: number): void;
-export declare function remove(_this: BiReader | BiWriter | ReaderBase, startOffset?: number, endOffset?: number, consume?: boolean, remove?: boolean, fillValue?: number): any;
-export declare function addData(_this: BiReader | BiWriter | ReaderBase, data: Buffer | Uint8Array, consume?: boolean, offset?: number, replace?: boolean): void;
 type hexdumpOptions = {
     /**
      * number of bytes to log, default ``192`` or end of data
@@ -63,61 +50,48 @@ type hexdumpOptions = {
  * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
  * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
  */
-export declare function hexdump(src: Uint8Array | Buffer, options?: hexdumpOptions): void | string;
-export declare function hexDump(_this: BiReader | BiWriter | ReaderBase, options?: hexdumpOptions): void | string;
-export declare function AND(_this: BiReader | BiWriter | ReaderBase, and_key: any, start?: number, end?: number, consume?: boolean): any;
-export declare function OR(_this: BiReader | BiWriter | ReaderBase, or_key: any, start?: number, end?: number, consume?: boolean): any;
-export declare function XOR(_this: BiReader | BiWriter | ReaderBase, xor_key: any, start?: number, end?: number, consume?: boolean): any;
-export declare function NOT(_this: BiReader | BiWriter | ReaderBase, start?: number, end?: number, consume?: boolean): any;
-export declare function LSHIFT(_this: BiReader | BiWriter | ReaderBase, shift_key: any, start?: number, end?: number, consume?: boolean): any;
-export declare function RSHIFT(_this: BiReader | BiWriter | ReaderBase, shift_key: any, start?: number, end?: number, consume?: boolean): any;
-export declare function ADD(_this: BiReader | BiWriter | ReaderBase, add_key: any, start?: number, end?: number, consume?: boolean): any;
-export declare function fString(_this: BiReader | BiWriter | ReaderBase, searchString: string): number;
-export declare function fNumber(_this: BiReader | BiWriter | ReaderBase, targetNumber: number, bits: number, unsigned: boolean, endian?: string): number;
-export declare function fHalfFloat(_this: BiReader | BiWriter | ReaderBase, targetNumber: number, endian?: string): number;
-export declare function fFloat(_this: BiReader | BiWriter | ReaderBase, targetNumber: number, endian?: string): number;
-export declare function fBigInt(_this: BiReader | BiWriter | ReaderBase, targetNumber: number, unsigned: boolean, endian?: string): number;
-export declare function fDoubleFloat(_this: BiReader | BiWriter | ReaderBase, targetNumber: number, endian?: string): number;
-export declare function wbit(_this: BiReader | BiWriter | ReaderBase, value: number, bits: number, unsigned?: boolean, endian?: string): void;
-export declare function rbit(_this: BiReader | BiWriter | ReaderBase, bits?: number, unsigned?: boolean, endian?: string): number;
-export declare function wbyte(_this: BiReader | BiWriter | ReaderBase, value: number, unsigned?: boolean): void;
-export declare function rbyte(_this: BiReader | BiWriter | ReaderBase, unsigned?: boolean): number;
-export declare function wint16(_this: BiReader | BiWriter | ReaderBase, value: number, unsigned?: boolean, endian?: string): void;
-export declare function rint16(_this: BiReader | BiWriter | ReaderBase, unsigned?: boolean, endian?: string): number;
-export declare function rhalffloat(_this: BiReader | BiWriter | ReaderBase, endian?: string): number;
-export declare function whalffloat(_this: BiReader | BiWriter | ReaderBase, value: number, endian?: string): void;
-export declare function wint32(_this: BiReader | BiWriter | ReaderBase, value: number, unsigned?: boolean, endian?: string): void;
-export declare function rint32(_this: BiReader | BiWriter | ReaderBase, unsigned?: boolean, endian?: string): number;
-export declare function rfloat(_this: BiReader | BiWriter | ReaderBase, endian?: string): number;
-export declare function wfloat(_this: BiReader | BiWriter | ReaderBase, value: number, endian?: string): void;
-export declare function rint64(_this: BiReader | BiWriter | ReaderBase, unsigned?: boolean, endian?: string): bigint;
-export declare function wint64(_this: BiReader | BiWriter | ReaderBase, value: number, unsigned?: boolean, endian?: string): void;
-export declare function wdfloat(_this: BiReader | BiWriter | ReaderBase, value: number, endian?: string): void;
-export declare function rdfloat(_this: BiReader | BiWriter | ReaderBase, endian?: string): number;
-export declare function rstring(_this: BiReader | BiWriter | ReaderBase, options?: {
+declare function hexdump(src: Uint8Array | Buffer, options?: hexdumpOptions): void | string;
+type stringOptions = {
+    /**
+     * for fixed length, non-terminate value utf strings
+     */
     length?: number;
-    stringType?: string;
+    /**
+     * utf-8, utf-16, pascal or wide-pascal
+     */
+    stringType?: "utf-8" | "utf-16" | "pascal" | "wide-pascal";
+    /**
+     * only with stringType: "utf"
+     */
     terminateValue?: number;
-    lengthReadSize?: number;
+    /**
+     * for pascal strings. 1, 2 or 4 byte length read size
+     */
+    lengthReadSize?: 1 | 2 | 4;
+    /**
+     * for pascal strings. 1, 2 or 4 byte length write size
+     */
+    lengthWriteSize?: 1 | 2 | 4;
+    /**
+     * removes 0x00 characters
+     */
     stripNull?: boolean;
+    /**
+     * TextEncoder accepted types
+     */
     encoding?: string;
-    endian?: string;
-}): string;
-export declare function wstring(_this: BiReader | BiWriter | ReaderBase, string: string, options?: {
-    length?: number;
-    stringType?: string;
-    terminateValue?: number;
-    lengthWriteSize?: number;
-    stripNull?: boolean;
-    encoding?: string;
-    endian?: string;
-}): void;
-export declare class ReaderBase {
+    /**
+     * for wide-pascal and utf-16
+     */
+    endian?: "big" | "little";
+};
+
+declare class BiBase {
     /**
      * Endianness of default read.
-     * @type {'little'|'big'}
+     * @type {endian}
      */
-    endian: string;
+    endian: endian;
     /**
      * Current read byte location.
      */
@@ -157,6 +131,16 @@ export declare class ReaderBase {
      * NOTE: Using ``BiWriter.get`` or ``BiWriter.return`` will now remove all data after the current write position. Use ``BiWriter.data`` to get the full buffer instead.
      */
     extendBufferSize: number;
+    /**
+     * The settings that used when using the .str getter / setter
+     */
+    private strDefaults;
+    /**
+     * Settings for when using .str
+     *
+     * @param {stringOptions} settings options to use with .str
+     */
+    set strSettings(settings: stringOptions);
     isBufferOrUint8Array(obj: Buffer | Uint8Array): boolean;
     extendArray(to_padd: number): void;
     /**
@@ -165,9 +149,9 @@ export declare class ReaderBase {
      *
      * Can be changed at any time, doesn't loose position.
      *
-     * @param {string} endian - endianness ``big`` or ``little``
+     * @param {endian} endian - endianness ``big`` or ``little``
      */
-    endianness(endian: string): void;
+    endianness(endian: endian): void;
     /**
      * Sets endian to big.
      */
@@ -430,9 +414,9 @@ export declare class ReaderBase {
      *
      * @param {number} value - Number to search for.
      * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {string} endian - endianness of value (default set endian).
+     * @param {endian} endian - endianness of value (default set endian).
      */
-    findByte(value: number, unsigned?: boolean, endian?: string): number;
+    findByte(value: number, unsigned?: boolean, endian?: endian): number;
     /**
      * Searches for short value (can be signed or unsigned) position from current read position.
      *
@@ -442,9 +426,9 @@ export declare class ReaderBase {
      *
      * @param {number} value - Number to search for.
      * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {string} endian - endianness of value (default set endian).
+     * @param {endian} endian - endianness of value (default set endian).
      */
-    findShort(value: number, unsigned?: boolean, endian?: string): number;
+    findShort(value: number, unsigned?: boolean, endian?: endian): number;
     /**
      * Searches for integer value (can be signed or unsigned) position from current read position.
      *
@@ -454,9 +438,9 @@ export declare class ReaderBase {
      *
      * @param {number} value - Number to search for.
      * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {string} endian - endianness of value (default set endian).
+     * @param {endian} endian - endianness of value (default set endian).
      */
-    findInt(value: number, unsigned?: boolean, endian?: string): number;
+    findInt(value: number, unsigned?: boolean, endian?: endian): number;
     /**
      * Searches for 64 bit value (can be signed or unsigned) position from current read position.
      *
@@ -466,9 +450,9 @@ export declare class ReaderBase {
      *
      * @param {number} value - Number to search for.
      * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {string} endian - endianness of value (default set endian).
+     * @param {endian} endian - endianness of value (default set endian).
      */
-    findInt64(value: number, unsigned?: boolean, endian?: string): number;
+    findInt64(value: number, unsigned?: boolean, endian?: endian): number;
     /**
      * Searches for half float value position from current read position.
      *
@@ -477,9 +461,9 @@ export declare class ReaderBase {
      * Does not change current read position.
      *
      * @param {number} value - Number to search for.
-     * @param {string} endian - endianness of value (default set endian).
+     * @param {endian} endian - endianness of value (default set endian).
      */
-    findHalfFloat(value: number, endian?: string): number;
+    findHalfFloat(value: number, endian?: endian): number;
     /**
      * Searches for float value position from current read position.
      *
@@ -488,9 +472,9 @@ export declare class ReaderBase {
      * Does not change current read position.
      *
      * @param {number} value - Number to search for.
-     * @param {string} endian - endianness of value (default set endian).
+     * @param {endian} endian - endianness of value (default set endian).
      */
-    findFloat(value: number, endian?: string): number;
+    findFloat(value: number, endian?: endian): number;
     /**
      * Searches for double float value position from current read position.
      *
@@ -499,9 +483,9 @@ export declare class ReaderBase {
      * Does not change current read position.
      *
      * @param {number} value - Number to search for.
-     * @param {string} endian - endianness of value (default set endian).
+     * @param {endian} endian - endianness of value (default set endian).
      */
-    findDoubleFloat(value: number, endian?: string): number;
+    findDoubleFloat(value: number, endian?: endian): number;
     /**
      * Aligns current byte position.
      *
@@ -651,7 +635,7 @@ export declare class ReaderBase {
     /**
      * Replaces data in data.
      *
-     * Note: Must be same data type as supplied data. Errors on strict mode.
+     * Note: Errors on strict mode.
      *
      * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {boolean} consume - Move current byte position to end of data (default false)
@@ -661,7 +645,7 @@ export declare class ReaderBase {
     /**
      * Replaces data in data.
      *
-     * Note: Must be same data type as supplied data. Errors on strict mode.
+     * Note: Errors on strict mode.
      *
      * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {boolean} consume - Move current byte position to end of data (default false)
@@ -721,7 +705,7 @@ export declare class ReaderBase {
     /**
      * Inserts data into data.
      *
-     * Note: Must be same data type as supplied data. Errors on strict mode.
+     * Note: Errors on strict mode.
      *
      * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current byte position to end of data (default false)
@@ -731,7 +715,7 @@ export declare class ReaderBase {
     /**
      * Inserts data into data.
      *
-     * Note: Must be same data type as supplied data. Errors on strict mode.
+     * Note: Errors on strict mode.
      *
      * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current byte position to end of data (default false)
@@ -741,7 +725,7 @@ export declare class ReaderBase {
     /**
      * Adds data to start of supplied data.
      *
-     * Note: Must be same data type as supplied data. Errors on strict mode.
+     * Note: Errors on strict mode.
      *
      * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
@@ -750,7 +734,7 @@ export declare class ReaderBase {
     /**
      * Adds data to start of supplied data.
      *
-     * Note: Must be same data type as supplied data. Errors on strict mode.
+     * Note: Errors on strict mode.
      *
      * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
@@ -759,7 +743,7 @@ export declare class ReaderBase {
     /**
      * Adds data to end of supplied data.
      *
-     * Note: Must be same data type as supplied data. Errors on strict mode.
+     * Note: Errors on strict mode.
      *
      * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
@@ -768,7 +752,7 @@ export declare class ReaderBase {
     /**
      * Adds data to end of supplied data.
      *
-     * Note: Must be same data type as supplied data. Errors on strict mode.
+     * Note: Errors on strict mode.
      *
      * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
@@ -900,9 +884,9 @@ export declare class ReaderBase {
      * @param {number} value - value as int
      * @param {number} bits - number of bits to write
      * @param {boolean} unsigned - if value is unsigned
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      */
-    writeBit(value: number, bits: number, unsigned?: boolean, endian?: string): void;
+    writeBit(value: number, bits: number, unsigned?: boolean, endian?: endian): void;
     /**
      * Bit field writer.
      *
@@ -952,10 +936,10 @@ export declare class ReaderBase {
      *
      * @param {number} bits - bits to read
      * @param {boolean} unsigned - if the value is unsigned
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      * @returns {number}
      */
-    readBit(bits?: number, unsigned?: boolean, endian?: string): number;
+    readBit(bits?: number, unsigned?: boolean, endian?: endian): number;
     /**
      * Bit field reader.
      *
@@ -1039,25 +1023,25 @@ export declare class ReaderBase {
      * Read short.
      *
      * @param {boolean} unsigned - if value is unsigned or not
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      * @returns {number}
      */
-    readInt16(unsigned?: boolean, endian?: string): number;
+    readInt16(unsigned?: boolean, endian?: endian): number;
     /**
      * Write int16.
      *
      * @param {number} value - value as int
      * @param {boolean} unsigned - if the value is unsigned
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      */
-    writeInt16(value: number, unsigned?: boolean, endian?: string): void;
+    writeInt16(value: number, unsigned?: boolean, endian?: endian): void;
     /**
      * Write unsigned int16.
      *
      * @param {number} value - value as int
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      */
-    writeUInt16(value: number, endian?: string): void;
+    writeUInt16(value: number, endian?: endian): void;
     /**
      * Write unsigned int16.
      *
@@ -1079,11 +1063,11 @@ export declare class ReaderBase {
     /**
      * Read unsigned short.
      *
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      *
      * @returns {number}
      */
-    readUInt16(endian?: string): number;
+    readUInt16(endian?: endian): number;
     /**
      * Read unsigned short in little endian.
      *
@@ -1111,17 +1095,17 @@ export declare class ReaderBase {
     /**
      * Read half float.
      *
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      * @returns {number}
      */
-    readHalfFloat(endian?: string): number;
+    readHalfFloat(endian?: endian): number;
     /**
      * Writes half float.
      *
      * @param {number} value - value as int
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      */
-    writeHalfFloat(value: number, endian?: string): void;
+    writeHalfFloat(value: number, endian?: endian): void;
     /**
      * Writes half float.
      *
@@ -1150,25 +1134,25 @@ export declare class ReaderBase {
      * Read 32 bit integer.
      *
      * @param {boolean} unsigned - if value is unsigned or not
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      * @returns {number}
      */
-    readInt32(unsigned?: boolean, endian?: string): number;
+    readInt32(unsigned?: boolean, endian?: endian): number;
     /**
      * Write int32.
      *
      * @param {number} value - value as int
      * @param {boolean} unsigned - if the value is unsigned
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      */
-    writeInt32(value: number, unsigned?: boolean, endian?: string): void;
+    writeInt32(value: number, unsigned?: boolean, endian?: endian): void;
     /**
      * Write unsigned int32.
      *
      * @param {number} value - value as int
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      */
-    writeUInt32(value: number, endian?: string): void;
+    writeUInt32(value: number, endian?: endian): void;
     /**
      * Write signed int32.
      *
@@ -1220,17 +1204,17 @@ export declare class ReaderBase {
     /**
      * Read float.
      *
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      * @returns {number}
      */
-    readFloat(endian?: string): number;
+    readFloat(endian?: endian): number;
     /**
      * Write float.
      *
      * @param {number} value - value as int
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      */
-    writeFloat(value: number, endian?: string): void;
+    writeFloat(value: number, endian?: endian): void;
     /**
      * Write float.
      *
@@ -1259,25 +1243,25 @@ export declare class ReaderBase {
      * Read signed 64 bit integer.
      *
      * @param {boolean} unsigned - if value is unsigned or not
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian?} endian - ``big`` or ``little``
      * @returns {number}
      */
-    readInt64(unsigned?: boolean, endian?: string): bigint;
+    readInt64(unsigned?: boolean, endian?: endian): bigint;
     /**
      * Write 64 bit integer.
      *
      * @param {number} value - value as int
      * @param {boolean} unsigned - if the value is unsigned
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      */
-    writeInt64(value: number, unsigned?: boolean, endian?: string): void;
+    writeInt64(value: number, unsigned?: boolean, endian?: endian): void;
     /**
      * Write unsigned 64 bit integer.
      *
      * @param {number} value - value as int
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      */
-    writeUInt64(value: number, endian?: string): void;
+    writeUInt64(value: number, endian?: endian): void;
     /**
      * Write signed 64 bit integer.
      *
@@ -1335,17 +1319,17 @@ export declare class ReaderBase {
     /**
      * Read double float.
      *
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      * @returns {number}
      */
-    readDoubleFloat(endian?: string): number;
+    readDoubleFloat(endian?: endian): number;
     /**
      * Writes double float.
      *
      * @param {number} value - value as int
-     * @param {string} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
      */
-    writeDoubleFloat(value: number, endian?: string): void;
+    writeDoubleFloat(value: number, endian?: endian): void;
     /**
      * Writes double float.
      *
@@ -1373,55 +1357,110 @@ export declare class ReaderBase {
     /**
     * Reads string, use options object for different types.
     *
-    * @param {object} options
-    * ```javascript
-    * {
-    *  length: number, //for fixed length, non-terminate value utf strings
-    *  stringType: "utf-8", //utf-8, utf-16, pascal or wide-pascal
-    *  terminateValue: 0x00, // only for non-fixed length utf strings
-    *  lengthReadSize: 1, //for pascal strings. 1, 2 or 4 byte length read size
-    *  stripNull: true, // removes 0x00 characters
-    *  encoding: "utf-8", //TextEncoder accepted types
-    *  endian: "little", //for wide-pascal and utf-16
-    * }
-    * ```
-    * @return string
+    * @param {stringOptions} options
+    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
+    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
+    * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
+    * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
+    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
+    * @return {Promise<string>}
     */
-    readString(options?: {
-        length?: number;
-        stringType?: string;
-        terminateValue?: number;
-        lengthReadSize?: number;
-        stripNull?: boolean;
-        encoding?: string;
-        endian?: string;
-    }): string;
+    readString(options?: stringOptions): string;
     /**
     * Writes string, use options object for different types.
     *
-    *
     * @param {string} string - text string
-    * @param {object} options - options:
-    * ```javascript
-    * {
-    *  length: string.length,  //for fixed length, non-terminate value utf strings
-    *  stringType: "utf-8", //utf-8, utf-16, pascal or wide-pascal
-    *  terminateValue: 0x00, // only with stringType: "utf"
-    *  lengthWriteSize: 1, //for pascal strings. 1, 2 or 4 byte length write size
-    *  encoding: "utf-8", //TextEncoder accepted types
-    *  endian: "little", //for wide-pascal and utf-16
-    * }
-    * ```
+    * @param {stringOptions?} options
+    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
+    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
+    * @param {stringOptions["lengthWriteSize"]?} options.lengthWriteSize - for pascal strings. 1, 2 or 4 byte length write size
+    * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
+    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
     */
-    writeString(string: string, options?: {
-        length?: number;
-        stringType?: string;
-        terminateValue?: number;
-        lengthWriteSize?: number;
-        stripNull?: boolean;
-        encoding?: string;
-        endian?: string;
-    }): void;
+    writeString(string: string, options?: stringOptions): void;
 }
-export {};
-//# sourceMappingURL=common.d.ts.map
+
+interface BinaryAliasReader extends BiBase {
+}
+
+declare const BiReaderBase: typeof BiBase;
+/**
+ * Binary reader, includes bitfields and strings.
+ *
+ * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+ * @param {BiOptions?} options - Any options to set at start
+ * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
+ * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
+ * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
+ * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ *
+ * @since 2.0
+ */
+declare class BiReader extends BiReaderBase implements BinaryAliasReader {
+    /**
+     * Binary reader, includes bitfields and strings.
+     *
+     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+     * @param {BiOptions?} options - Any options to set at start
+     * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
+     * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
+     * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+     * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
+     * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     */
+    constructor(data: Buffer | Uint8Array, options?: BiOptions);
+}
+
+interface BinaryAliasWriter extends BiBase {
+}
+
+declare const BiWriterBase: typeof BiBase;
+/**
+ * Binary writer, includes bitfields and strings.
+ *
+ * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+ * @param {BiOptions?} options - Any options to set at start
+ * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
+ * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+ * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+ * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ *
+ * @since 2.0
+ */
+declare class BiWriter extends BiWriterBase implements BinaryAliasWriter {
+    /**
+     * Binary writer, includes bitfields and strings.
+     *
+     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+     * @param {BiOptions?} options - Any options to set at start
+     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
+     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+     * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     */
+    constructor(data?: Buffer | Uint8Array, options?: BiOptions);
+}
+
+/**
+ * Not in use anymore.
+ * @since 3.0
+ * @deprecated Use ``BiReader`` instead.
+ */
+declare class bireader {
+    constructor();
+}
+/**
+ * Not in use anymore.
+ * @since 3.0
+ * @deprecated Use ``BiWriter`` instead.
+ */
+declare class biwriter {
+    constructor();
+}
+
+export { BiReader, BiWriter, bireader, biwriter, hexdump };
