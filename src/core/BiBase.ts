@@ -718,7 +718,7 @@ function fFloat(ctx: BiBase, targetNumber: number, endian?: string): number {
     return -1; // number not found
 }
 
-function fBigInt(ctx: BiBase, targetNumber: number, unsigned: boolean, endian?: string): number {
+function fBigInt(ctx: BiBase, targetNumber: number|bigint, unsigned: boolean, endian?: string): number {
 
     check_size(ctx, 8, 0);
 
@@ -1248,7 +1248,7 @@ function rint64(ctx: BiBase, unsigned?: boolean, endian?: string): bigint {
     return value
 }
 
-function wint64(ctx: BiBase, value: number, unsigned?: boolean, endian?: string): void {
+function wint64(ctx: BiBase, value: number|bigint, unsigned?: boolean, endian?: string): void {
 
     check_size(ctx, 8, 0);
 
@@ -2259,11 +2259,11 @@ export class BiBase{
      * 
      * Does not change current read position.
      * 
-     * @param {number} value - Number to search for.
+     * @param {number|bigint} value - Number to search for.
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findInt64(value: number, unsigned?: boolean, endian?: endian): number {
+    findInt64(value: number|bigint, unsigned?: boolean, endian?: endian): number {
         return fBigInt(this, value, unsigned == undefined ? true : unsigned, endian);
     }
 
@@ -3602,7 +3602,7 @@ export class BiBase{
      * 
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {endian?} endian - ``big`` or ``little``
-     * @returns {number}
+     * @returns {bigint}
      */
     readInt64(unsigned?: boolean, endian?: endian): bigint {
         return rint64(this, unsigned, endian);
@@ -3611,64 +3611,64 @@ export class BiBase{
     /**
      * Write 64 bit integer.
      * 
-     * @param {number} value - value as int 
+     * @param {number|bigint} value - value as int 
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
      */
-    writeInt64(value: number, unsigned?: boolean, endian?: endian): void {
+    writeInt64(value: number|bigint, unsigned?: boolean, endian?: endian): void {
         return wint64(this, value, unsigned, endian);
     }
 
     /**
      * Write unsigned 64 bit integer.
      * 
-     * @param {number} value - value as int 
+     * @param {number|bigint} value - value as int 
      * @param {endian} endian - ``big`` or ``little``
      */
-    writeUInt64(value: number, endian?: endian) {
+    writeUInt64(value: number|bigint, endian?: endian) {
         return this.writeInt64(value, true, endian);
     }
 
     /**
      * Write signed 64 bit integer.
      * 
-     * @param {number} value - value as int 
+     * @param {number|bigint} value - value as int 
      */
-    writeInt64LE(value: number): void {
+    writeInt64LE(value: number|bigint): void {
         return this.writeInt64(value, false, "little");
     }
 
     /**
      * Write unsigned 64 bit integer.
      * 
-     * @param {number} value - value as int 
+     * @param {number|bigint} value - value as int 
      */
-    writeUInt64LE(value: number): void {
+    writeUInt64LE(value: number|bigint): void {
         return this.writeInt64(value, true, "little");
     }
 
     /**
      * Write signed 64 bit integer.
      * 
-     * @param {number} value - value as int 
+     * @param {number|bigint} value - value as int 
      */
-    writeInt64BE(value: number): void {
+    writeInt64BE(value: number|bigint): void {
         return this.writeInt64(value, false, "big");
     }
 
     /**
      * Write unsigned 64 bit integer.
      * 
-     * @param {number} value - value as int 
+     * @param {number|bigint} value - value as int 
      */
-    writeUInt64BE(value: number): void {
+    writeUInt64BE(value: number|bigint): void {
         return this.writeInt64(value, true, "big");
     }
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     readUInt64(): bigint {
         return this.readInt64(true);
@@ -3677,7 +3677,7 @@ export class BiBase{
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     readInt64BE(): bigint {
         return this.readInt64(false, "big");
@@ -3686,7 +3686,7 @@ export class BiBase{
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     readUInt64BE(): bigint {
         return this.readInt64(true, "big");
@@ -3695,7 +3695,7 @@ export class BiBase{
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     readInt64LE(): bigint {
         return this.readInt64(false, "little");
@@ -3704,7 +3704,7 @@ export class BiBase{
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     readUInt64LE(): bigint {
         return this.readInt64(true, "little");

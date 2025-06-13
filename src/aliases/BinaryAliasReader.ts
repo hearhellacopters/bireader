@@ -2212,126 +2212,126 @@ export interface BinaryAliasReader extends BiBase {
     /**
      * Read signed 64 bit integer
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get int64(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get bigint(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get quad(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get uint64(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get ubigint(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get uquad(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get int64be(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get bigintbe(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get quadbe(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get uint64be(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get ubigintbe(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get uquadbe(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get int64le(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get bigintle(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get quadle(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get uint64le(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get ubigintle(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get uquadle(): bigint;
 
@@ -4886,126 +4886,126 @@ export interface BinaryAliasReaderStreamer extends BiBaseStreamer {
     /**
      * Read signed 64 bit integer
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get int64(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get bigint(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get quad(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get uint64(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get ubigint(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get uquad(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get int64be(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get bigintbe(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get quadbe(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get uint64be(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get ubigintbe(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get uquadbe(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get int64le(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get bigintle(): bigint;
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get quadle(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get uint64le(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get ubigintle(): bigint;
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {number}
+     * @returns {bigint}
      */
     get uquadle(): bigint;
 
@@ -8077,7 +8077,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read signed 64 bit integer
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get int64(): bigint {
             return this.readInt64();
@@ -8086,7 +8086,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read signed 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get bigint(): bigint {
             return this.readInt64();
@@ -8095,7 +8095,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read signed 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get quad(): bigint {
             return this.readInt64();
@@ -8104,7 +8104,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read unsigned 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get uint64(): bigint {
             return this.readInt64(true);
@@ -8113,7 +8113,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read unsigned 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get ubigint(): bigint {
             return this.readInt64(true);
@@ -8122,7 +8122,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read unsigned 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get uquad(): bigint {
             return this.readInt64(true);
@@ -8131,7 +8131,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read signed 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get int64be(): bigint {
             return this.readInt64(false, "big");
@@ -8140,7 +8140,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read signed 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get bigintbe(): bigint {
             return this.readInt64(false, "big");
@@ -8149,7 +8149,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read signed 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get quadbe(): bigint {
             return this.readInt64(false, "big");
@@ -8158,7 +8158,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read unsigned 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get uint64be(): bigint {
             return this.readInt64(true, "big");
@@ -8167,7 +8167,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read unsigned 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get ubigintbe(): bigint {
             return this.readInt64(true, "big");
@@ -8176,7 +8176,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read unsigned 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get uquadbe(): bigint {
             return this.readInt64(true, "big");
@@ -8185,7 +8185,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read signed 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get int64le(): bigint {
             return this.readInt64(false, "little");
@@ -8194,7 +8194,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read signed 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get bigintle(): bigint {
             return this.readInt64(false, "little");
@@ -8203,7 +8203,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read signed 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get quadle(): bigint {
             return this.readInt64(false, "little");
@@ -8212,7 +8212,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read unsigned 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get uint64le(): bigint {
             return this.readInt64(true, "little");
@@ -8221,7 +8221,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read unsigned 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get ubigintle(): bigint {
             return this.readInt64(true, "little");
@@ -8230,7 +8230,7 @@ export function applyBinaryAliasReader<T extends new (...args: any[]) => any>(Ba
         /**
          * Read unsigned 64 bit integer.
          * 
-         * @returns {number}
+         * @returns {bigint}
          */
         get uquadle(): bigint {
             return this.readInt64(true, "little");

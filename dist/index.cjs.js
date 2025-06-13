@@ -2271,7 +2271,7 @@ class BiBase {
      *
      * Does not change current read position.
      *
-     * @param {number} value - Number to search for.
+     * @param {number|bigint} value - Number to search for.
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
@@ -3441,7 +3441,7 @@ class BiBase {
      *
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {endian?} endian - ``big`` or ``little``
-     * @returns {number}
+     * @returns {bigint}
      */
     readInt64(unsigned, endian) {
         return rint64$1(this, unsigned, endian);
@@ -3449,7 +3449,7 @@ class BiBase {
     /**
      * Write 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
      */
@@ -3459,7 +3459,7 @@ class BiBase {
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      * @param {endian} endian - ``big`` or ``little``
      */
     writeUInt64(value, endian) {
@@ -3468,7 +3468,7 @@ class BiBase {
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
     writeInt64LE(value) {
         return this.writeInt64(value, false, "little");
@@ -3476,7 +3476,7 @@ class BiBase {
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
     writeUInt64LE(value) {
         return this.writeInt64(value, true, "little");
@@ -3484,7 +3484,7 @@ class BiBase {
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
     writeInt64BE(value) {
         return this.writeInt64(value, false, "big");
@@ -3492,7 +3492,7 @@ class BiBase {
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
     writeUInt64BE(value) {
         return this.writeInt64(value, true, "big");
@@ -3500,7 +3500,7 @@ class BiBase {
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     readUInt64() {
         return this.readInt64(true);
@@ -3508,7 +3508,7 @@ class BiBase {
     /**
      * Read signed 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     readInt64BE() {
         return this.readInt64(false, "big");
@@ -3516,7 +3516,7 @@ class BiBase {
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     readUInt64BE() {
         return this.readInt64(true, "big");
@@ -3524,7 +3524,7 @@ class BiBase {
     /**
      * Read signed 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     readInt64LE() {
         return this.readInt64(false, "little");
@@ -3532,7 +3532,7 @@ class BiBase {
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     readUInt64LE() {
         return this.readInt64(true, "little");
@@ -6079,7 +6079,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read signed 64 bit integer
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get int64() {
             return this.readInt64();
@@ -6087,7 +6087,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read signed 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get bigint() {
             return this.readInt64();
@@ -6095,7 +6095,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read signed 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get quad() {
             return this.readInt64();
@@ -6103,7 +6103,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read unsigned 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get uint64() {
             return this.readInt64(true);
@@ -6111,7 +6111,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read unsigned 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get ubigint() {
             return this.readInt64(true);
@@ -6119,7 +6119,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read unsigned 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get uquad() {
             return this.readInt64(true);
@@ -6127,7 +6127,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read signed 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get int64be() {
             return this.readInt64(false, "big");
@@ -6135,7 +6135,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read signed 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get bigintbe() {
             return this.readInt64(false, "big");
@@ -6143,7 +6143,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read signed 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get quadbe() {
             return this.readInt64(false, "big");
@@ -6151,7 +6151,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read unsigned 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get uint64be() {
             return this.readInt64(true, "big");
@@ -6159,7 +6159,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read unsigned 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get ubigintbe() {
             return this.readInt64(true, "big");
@@ -6167,7 +6167,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read unsigned 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get uquadbe() {
             return this.readInt64(true, "big");
@@ -6175,7 +6175,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read signed 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get int64le() {
             return this.readInt64(false, "little");
@@ -6183,7 +6183,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read signed 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get bigintle() {
             return this.readInt64(false, "little");
@@ -6191,7 +6191,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read signed 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get quadle() {
             return this.readInt64(false, "little");
@@ -6199,7 +6199,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read unsigned 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get uint64le() {
             return this.readInt64(true, "little");
@@ -6207,7 +6207,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read unsigned 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get ubigintle() {
             return this.readInt64(true, "little");
@@ -6215,7 +6215,7 @@ function applyBinaryAliasReader(Base) {
         /**
          * Read unsigned 64 bit integer.
          *
-         * @returns {number}
+         * @returns {bigint}
          */
         get uquadle() {
             return this.readInt64(true, "little");
@@ -10080,7 +10080,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set int64(value) {
             this.writeInt64(value);
@@ -10088,7 +10088,7 @@ function applyBinaryAliasWriter(Base) {
         /**
         * Write 64 bit integer.
         *
-        * @param {number} value - value as int
+        * @param {number|bigint} value - value as int
         */
         set quad(value) {
             this.writeInt64(value);
@@ -10096,7 +10096,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set bigint(value) {
             this.writeInt64(value);
@@ -10104,7 +10104,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set uint64(value) {
             this.writeInt64(value, true);
@@ -10112,7 +10112,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set ubigint(value) {
             this.writeInt64(value, true);
@@ -10120,7 +10120,7 @@ function applyBinaryAliasWriter(Base) {
         /**
         * Write unsigned 64 bit integer.
         *
-        * @param {number} value - value as int
+        * @param {number|bigint} value - value as int
         */
         set uquad(value) {
             this.writeInt64(value, true);
@@ -10128,7 +10128,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write signed 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set int64le(value) {
             this.writeInt64(value, false, "little");
@@ -10136,7 +10136,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write signed 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set bigintle(value) {
             this.writeInt64(value, false, "little");
@@ -10144,7 +10144,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write signed 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set quadle(value) {
             this.writeInt64(value, false, "little");
@@ -10152,7 +10152,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set uint64le(value) {
             this.writeInt64(value, true, "little");
@@ -10160,7 +10160,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set ubigintle(value) {
             this.writeInt64(value, true, "little");
@@ -10168,7 +10168,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set uquadle(value) {
             this.writeInt64(value, true, "little");
@@ -10176,7 +10176,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write signed 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set int64be(value) {
             this.writeInt64(value, false, "big");
@@ -10184,7 +10184,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write signed 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set bigintbe(value) {
             this.writeInt64(value, false, "big");
@@ -10192,7 +10192,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write signed 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set quadbe(value) {
             this.writeInt64(value, false, "big");
@@ -10200,7 +10200,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set uint64be(value) {
             this.writeInt64(value, true, "big");
@@ -10208,7 +10208,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set ubigintbe(value) {
             this.writeInt64(value, true, "big");
@@ -10216,7 +10216,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number} value - value as int
+         * @param {number|bigint} value - value as int
          */
         set uquadbe(value) {
             this.writeInt64(value, true, "big");
@@ -14057,7 +14057,7 @@ class BiBaseStreamer {
      *
      * Does not change current read position.
      *
-     * @param {number} value - Number to search for.
+     * @param {number|bigint} value - Number to search for.
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
@@ -15227,7 +15227,7 @@ class BiBaseStreamer {
      *
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {endian?} endian - ``big`` or ``little``
-     * @returns {number}
+     * @returns {bigint}
      */
     readInt64(unsigned, endian) {
         return rint64(this, unsigned, endian);
@@ -15235,7 +15235,7 @@ class BiBaseStreamer {
     /**
      * Write 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
      */
@@ -15245,7 +15245,7 @@ class BiBaseStreamer {
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      * @param {endian} endian - ``big`` or ``little``
      */
     writeUInt64(value, endian) {
@@ -15254,7 +15254,7 @@ class BiBaseStreamer {
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
     writeInt64LE(value) {
         return this.writeInt64(value, false, "little");
@@ -15262,7 +15262,7 @@ class BiBaseStreamer {
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
     writeUInt64LE(value) {
         return this.writeInt64(value, true, "little");
@@ -15270,7 +15270,7 @@ class BiBaseStreamer {
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
     writeInt64BE(value) {
         return this.writeInt64(value, false, "big");
@@ -15278,7 +15278,7 @@ class BiBaseStreamer {
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
     writeUInt64BE(value) {
         return this.writeInt64(value, true, "big");
@@ -15286,7 +15286,7 @@ class BiBaseStreamer {
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     readUInt64() {
         return this.readInt64(true);
@@ -15294,7 +15294,7 @@ class BiBaseStreamer {
     /**
      * Read signed 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     readInt64BE() {
         return this.readInt64(false, "big");
@@ -15302,7 +15302,7 @@ class BiBaseStreamer {
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     readUInt64BE() {
         return this.readInt64(true, "big");
@@ -15310,7 +15310,7 @@ class BiBaseStreamer {
     /**
      * Read signed 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     readInt64LE() {
         return this.readInt64(false, "little");
@@ -15318,7 +15318,7 @@ class BiBaseStreamer {
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     readUInt64LE() {
         return this.readInt64(true, "little");

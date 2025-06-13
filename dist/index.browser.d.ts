@@ -479,11 +479,11 @@ declare class BiBase {
      *
      * Does not change current read position.
      *
-     * @param {number} value - Number to search for.
+     * @param {number|bigint} value - Number to search for.
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findInt64(value: number, unsigned?: boolean, endian?: endian): number;
+    findInt64(value: number | bigint, unsigned?: boolean, endian?: endian): number;
     /**
      * Searches for half float value position from current read position.
      *
@@ -1275,76 +1275,76 @@ declare class BiBase {
      *
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {endian?} endian - ``big`` or ``little``
-     * @returns {number}
+     * @returns {bigint}
      */
     readInt64(unsigned?: boolean, endian?: endian): bigint;
     /**
      * Write 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
      */
-    writeInt64(value: number, unsigned?: boolean, endian?: endian): void;
+    writeInt64(value: number | bigint, unsigned?: boolean, endian?: endian): void;
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      * @param {endian} endian - ``big`` or ``little``
      */
-    writeUInt64(value: number, endian?: endian): void;
+    writeUInt64(value: number | bigint, endian?: endian): void;
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    writeInt64LE(value: number): void;
+    writeInt64LE(value: number | bigint): void;
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    writeUInt64LE(value: number): void;
+    writeUInt64LE(value: number | bigint): void;
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    writeInt64BE(value: number): void;
+    writeInt64BE(value: number | bigint): void;
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    writeUInt64BE(value: number): void;
+    writeUInt64BE(value: number | bigint): void;
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     readUInt64(): bigint;
     /**
      * Read signed 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     readInt64BE(): bigint;
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     readUInt64BE(): bigint;
     /**
      * Read signed 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     readInt64LE(): bigint;
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     readUInt64LE(): bigint;
     /**
@@ -3342,109 +3342,109 @@ interface BinaryAliasReader extends BiBase {
     /**
      * Read signed 64 bit integer
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get int64(): bigint;
     /**
      * Read signed 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get bigint(): bigint;
     /**
      * Read signed 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get quad(): bigint;
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get uint64(): bigint;
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get ubigint(): bigint;
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get uquad(): bigint;
     /**
      * Read signed 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get int64be(): bigint;
     /**
      * Read signed 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get bigintbe(): bigint;
     /**
      * Read signed 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get quadbe(): bigint;
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get uint64be(): bigint;
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get ubigintbe(): bigint;
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get uquadbe(): bigint;
     /**
      * Read signed 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get int64le(): bigint;
     /**
      * Read signed 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get bigintle(): bigint;
     /**
      * Read signed 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get quadle(): bigint;
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get uint64le(): bigint;
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get ubigintle(): bigint;
     /**
      * Read unsigned 64 bit integer.
      *
-     * @returns {number}
+     * @returns {bigint}
      */
     get uquadle(): bigint;
     /**
@@ -6027,111 +6027,111 @@ interface BinaryAliasWriter extends BiBase {
     /**
      * Write 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set int64(value: number);
+    set int64(value: number | bigint);
     /**
     * Write 64 bit integer.
     *
-    * @param {number} value - value as int
+    * @param {number|bigint} value - value as int
     */
-    set quad(value: number);
+    set quad(value: number | bigint);
     /**
      * Write 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set bigint(value: number);
+    set bigint(value: number | bigint);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set uint64(value: number);
+    set uint64(value: number | bigint);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set ubigint(value: number);
+    set ubigint(value: number | bigint);
     /**
     * Write unsigned 64 bit integer.
     *
-    * @param {number} value - value as int
+    * @param {number|bigint} value - value as int
     */
-    set uquad(value: number);
+    set uquad(value: number | bigint);
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set int64le(value: number);
+    set int64le(value: number | bigint);
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set bigintle(value: number);
+    set bigintle(value: number | bigint);
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set quadle(value: number);
+    set quadle(value: number | bigint);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set uint64le(value: number);
+    set uint64le(value: number | bigint);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set ubigintle(value: number);
+    set ubigintle(value: number | bigint);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set uquadle(value: number);
+    set uquadle(value: number | bigint);
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set int64be(value: number);
+    set int64be(value: number | bigint);
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set bigintbe(value: number);
+    set bigintbe(value: number | bigint);
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set quadbe(value: number);
+    set quadbe(value: number | bigint);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set uint64be(value: number);
+    set uint64be(value: number | bigint);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set ubigintbe(value: number);
+    set ubigintbe(value: number | bigint);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number} value - value as int
+     * @param {number|bigint} value - value as int
      */
-    set uquadbe(value: number);
+    set uquadbe(value: number | bigint);
     /**
      * Writes double float.
      *
