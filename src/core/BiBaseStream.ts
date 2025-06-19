@@ -2226,6 +2226,44 @@ export class BiBaseStreamer {
     }
 
     /**
+     * Renames the file you are working on.
+     * 
+     * Must be full file path and file name.
+     * 
+     * Keeps write / read position.
+     * 
+     * Note: This is permanent and can't be undone.
+     * 
+     * @param {string} newFilePath - New full file path and name.
+     */
+    renameFile(newFilePath:string){
+        fs.closeSync(this.fd);
+
+        this.fd = null;
+
+        fs.renameSync(this.filePath, newFilePath);
+
+        this.filePath = newFilePath;
+
+        this.open();
+    }
+
+    /**
+     * Deletes the working file.
+     * 
+     * Note: This is permanentand can't be undone. 
+     * 
+     * It doesn't send the file to the recycling bin for recovery.
+     */
+    deleteFile(){
+        fs.closeSync(this.fd);
+
+        this.fd = null;
+
+        fs.unlinkSync(this.filePath);
+    }
+
+    /**
      * internal extend
      * 
      * 

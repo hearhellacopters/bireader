@@ -1,6 +1,6 @@
 {
   "name": "bireader",
-  "version": "3.1.4",
+  "version": "3.1.5",
   "description": "Read and write binary data in JavaScript",
   "type": "module",
   "main": "./dist/index.cjs.js",
@@ -13,11 +13,16 @@
   },
   "exports": {
     ".": {
-      "import": {
-        "browser": "./dist/index.browser.js",
-        "default": "./dist/index.esm.js"
+      "types" : {
+        "require": "./dist/index.cjs.d.ts",
+        "import": "./dist/index.esm.d.ts"
       },
-      "require": "./dist/index.cjs.js"
+      "browser": "./dist/index.browser.js",
+      "node": {
+        "require": "./dist/index.cjs.js",
+        "import": "./dist/index.esm.js"
+      },
+      "default": "./dist/index.cjs.js"
     }
   },
   "scripts": {
@@ -55,8 +60,5 @@
     "rollup-plugin-dts": "^6.2.1",
     "tslib": "^2.8.1",
     "typescript": "^5.2.2"
-  },
-  "engines": {
-    "node": ">=12"
   }
 }

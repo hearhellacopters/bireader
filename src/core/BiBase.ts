@@ -1768,6 +1768,18 @@ export class BiBase{
     /**
      * Dummy function, not needed on Non-Stream
      */
+    renameFile(){
+    }
+
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    deleteFile(){
+    }
+
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
     commit(consume: boolean = true): number {
         return consume ? 0 : 1;
     }

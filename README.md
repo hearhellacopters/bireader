@@ -1,6 +1,6 @@
 # BiReader / BiWriter
 
-A feature rich binary reader ***and writer*** that keeps track of your position to quickly create file structures. Includes shared naming conventions, programmable inputs and advanced math for easy data conversions on low level parsing. Accepts `Uint8Array` or `Buffer`.
+A feature rich binary reader ***and writer*** that keeps track of your position to quickly create file structures. Includes shared naming conventions, programmable inputs and advanced math for easy data conversions on low level parsing. Accepts `Uint8Array`, `Buffer` or a ``filePath`` with [Streams](#bistreams).
 
 Supported data types:
 
@@ -18,7 +18,8 @@ Supported data types:
 
 ### v3
  * Added Browser, Node CommonJS and Node ESM modules.
- * Added new ``BiReaderStream`` and ``BiWriterStream`` for use in Node with large file size (4 gig+). See [documention](#bistreams) for how to use.
+ * Added new ``BiReaderStream`` and ``BiWriterStream`` (Node only) that works without loading the whole file into memory. See [documention](#bistreams) for how to use.
+ * Added ``.deleteFile()`` and ``.renameFile(filePath)``.
  * Added setter ``.strSettings`` for use with ``.str`` for easier coding.
  * Added better options for extending array buffer when writing data with ``extendBufferSize``.
  * Consolidated all options argument into single object when creating class.
@@ -27,6 +28,7 @@ Supported data types:
 
 ### v2
  * Created new ``BiReader`` and ``BiWriter`` classes with *get* and *set* functions for easier coding.
+ * Marked ``bireader`` and ``biwriter`` as deprecated. Set to be removed next update.
 
 ### v1
  * Included math functions and value searches.
@@ -36,7 +38,7 @@ Supported data types:
 
 ```npm install bireader```
 
-Provides both CommonJS and ES modules for Browser and Node.
+Provides both CommonJS and ES modules for Node and Browser.
 
 ### Example
 
@@ -743,7 +745,7 @@ Common functions for setup, movement, manipulation and math shared by both.
 
 ## BiStreams
 
-With 3.1 you can now use ``BiReaderStream`` and ``BiWriterStream`` in Node for larger files (or if you don't want or need the whole file loaded to memory all at once).
+With 3.1 you can now use ``BiReaderStream`` and ``BiWriterStream`` (Node only) designed for larger files (or if you don't want or need the whole file loaded to memory all at once).
 
 <table>
 <thead>
@@ -787,7 +789,18 @@ With 3.1 you can now use ``BiReaderStream`` and ``BiWriterStream`` in Node for l
     <td align="center"><b>True if you want to switch to writing in BiReaderStream.</td>
     <td>Note: This changes reader to write mode. Allows file to be expanded in size as well.</td>
   </tr>
-  
+  <tr>
+    <td>Name</td>
+    <td>renameFile(<b>newFilePath</b>)
+    <td align="center"><b>Full path to file to rename.</td>
+    <td>Renames the file on the file system, keeps read / write position.<br/><br/><b>Note: This is permanent.</b></td>
+  </tr>
+  <tr>
+    <td>Name</td>
+    <td>deleteFile()
+    <td align="center"><b>none</td>
+    <td>Unlinks the file from the file system.<br/><br/><b>Note: This is permanent, it doesn't send the file to the recycling bin for recovery.</b></td>
+  </tr>
 </tbody>
 </table>
 

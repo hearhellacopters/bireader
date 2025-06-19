@@ -1816,6 +1816,16 @@ class BiBase {
     /**
      * Dummy function, not needed on Non-Stream
      */
+    renameFile() {
+    }
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    deleteFile() {
+    }
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
     commit(consume = true) {
         return consume ? 0 : 1;
     }
@@ -10059,7 +10069,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set int64(value) {
             this.writeInt64(value);
@@ -10067,7 +10077,7 @@ function applyBinaryAliasWriter(Base) {
         /**
         * Write 64 bit integer.
         *
-        * @param {number|bigint} value - value as int
+        * @param {BigValue} value - value as int
         */
         set quad(value) {
             this.writeInt64(value);
@@ -10075,7 +10085,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set bigint(value) {
             this.writeInt64(value);
@@ -10083,7 +10093,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set uint64(value) {
             this.writeInt64(value, true);
@@ -10091,7 +10101,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set ubigint(value) {
             this.writeInt64(value, true);
@@ -10099,7 +10109,7 @@ function applyBinaryAliasWriter(Base) {
         /**
         * Write unsigned 64 bit integer.
         *
-        * @param {number|bigint} value - value as int
+        * @param {BigValue} value - value as int
         */
         set uquad(value) {
             this.writeInt64(value, true);
@@ -10107,7 +10117,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write signed 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set int64le(value) {
             this.writeInt64(value, false, "little");
@@ -10115,7 +10125,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write signed 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set bigintle(value) {
             this.writeInt64(value, false, "little");
@@ -10123,7 +10133,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write signed 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set quadle(value) {
             this.writeInt64(value, false, "little");
@@ -10131,7 +10141,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set uint64le(value) {
             this.writeInt64(value, true, "little");
@@ -10139,7 +10149,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set ubigintle(value) {
             this.writeInt64(value, true, "little");
@@ -10147,7 +10157,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set uquadle(value) {
             this.writeInt64(value, true, "little");
@@ -10155,7 +10165,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write signed 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set int64be(value) {
             this.writeInt64(value, false, "big");
@@ -10163,7 +10173,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write signed 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set bigintbe(value) {
             this.writeInt64(value, false, "big");
@@ -10171,7 +10181,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write signed 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set quadbe(value) {
             this.writeInt64(value, false, "big");
@@ -10179,7 +10189,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set uint64be(value) {
             this.writeInt64(value, true, "big");
@@ -10187,7 +10197,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set ubigintbe(value) {
             this.writeInt64(value, true, "big");
@@ -10195,7 +10205,7 @@ function applyBinaryAliasWriter(Base) {
         /**
          * Write unsigned 64 bit integer.
          *
-         * @param {number|bigint} value - value as int
+         * @param {BigValue} value - value as int
          */
         set uquadbe(value) {
             this.writeInt64(value, true, "big");
@@ -13581,6 +13591,36 @@ class BiBaseStreamer {
             throw new Error("No data to write.");
         }
         return this.write(this.offset, this.data, consume);
+    }
+    /**
+     * Renames the file you are working on.
+     *
+     * Must be full file path and file name.
+     *
+     * Keeps write / read position.
+     *
+     * Note: This is permanent and can't be undone.
+     *
+     * @param {string} newFilePath - New full file path and name.
+     */
+    renameFile(newFilePath) {
+        fs.closeSync(this.fd);
+        this.fd = null;
+        fs.renameSync(this.filePath, newFilePath);
+        this.filePath = newFilePath;
+        this.open();
+    }
+    /**
+     * Deletes the working file.
+     *
+     * Note: This is permanentand can't be undone.
+     *
+     * It doesn't send the file to the recycling bin for recovery.
+     */
+    deleteFile() {
+        fs.closeSync(this.fd);
+        this.fd = null;
+        fs.unlinkSync(this.filePath);
     }
     /**
      * internal extend

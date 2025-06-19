@@ -176,6 +176,14 @@ declare class BiBase {
     /**
      * Dummy function, not needed on Non-Stream
      */
+    renameFile(): void;
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
+    deleteFile(): void;
+    /**
+     * Dummy function, not needed on Non-Stream
+     */
     commit(consume?: boolean): number;
     extendArray(to_padd: number): void;
     isBufferOrUint8Array(obj: Buffer | Uint8Array): boolean;
@@ -6028,111 +6036,111 @@ interface BinaryAliasWriter extends BiBase {
     /**
      * Write 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set int64(value: number | bigint);
+    set int64(value: BigValue);
     /**
     * Write 64 bit integer.
     *
-    * @param {number|bigint} value - value as int
+    * @param {BigValue} value - value as int
     */
-    set quad(value: number | bigint);
+    set quad(value: BigValue);
     /**
      * Write 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set bigint(value: number | bigint);
+    set bigint(value: BigValue);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set uint64(value: number | bigint);
+    set uint64(value: BigValue);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set ubigint(value: number | bigint);
+    set ubigint(value: BigValue);
     /**
     * Write unsigned 64 bit integer.
     *
-    * @param {number|bigint} value - value as int
+    * @param {BigValue} value - value as int
     */
-    set uquad(value: number | bigint);
+    set uquad(value: BigValue);
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set int64le(value: number | bigint);
+    set int64le(value: BigValue);
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set bigintle(value: number | bigint);
+    set bigintle(value: BigValue);
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set quadle(value: number | bigint);
+    set quadle(value: BigValue);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set uint64le(value: number | bigint);
+    set uint64le(value: BigValue);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set ubigintle(value: number | bigint);
+    set ubigintle(value: BigValue);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set uquadle(value: number | bigint);
+    set uquadle(value: BigValue);
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set int64be(value: number | bigint);
+    set int64be(value: BigValue);
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set bigintbe(value: number | bigint);
+    set bigintbe(value: BigValue);
     /**
      * Write signed 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set quadbe(value: number | bigint);
+    set quadbe(value: BigValue);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set uint64be(value: number | bigint);
+    set uint64be(value: BigValue);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set ubigintbe(value: number | bigint);
+    set ubigintbe(value: BigValue);
     /**
      * Write unsigned 64 bit integer.
      *
-     * @param {number|bigint} value - value as int
+     * @param {BigValue} value - value as int
      */
-    set uquadbe(value: number | bigint);
+    set uquadbe(value: BigValue);
     /**
      * Writes double float.
      *
@@ -6751,6 +6759,22 @@ declare class BiWriter extends BiWriterBase implements BinaryAliasWriter {
 }
 
 /**
+ * Isn't usable in browser.
+ * @since 3.0
+ * @deprecated Use ``BiReader`` instead.
+ */
+declare class BiReaderStream {
+    constructor();
+}
+/**
+ * Isn't usable in browser.
+ * @since 3.0
+ * @deprecated Use ``BiWriter`` instead.
+ */
+declare class BiWriterStream {
+    constructor();
+}
+/**
  * Not in use anymore.
  * @since 3.0
  * @deprecated Use ``BiReader`` instead.
@@ -6767,4 +6791,4 @@ declare class biwriter {
     constructor();
 }
 
-export { BiReader, BiWriter, bireader, biwriter, hexdump };
+export { BiReader, BiReaderStream, BiWriter, BiWriterStream, bireader, biwriter, hexdump };
