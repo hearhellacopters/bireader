@@ -17,7 +17,7 @@ function arraybuffcheck(obj) {
  * @param {hexdumpOptions?} options - hex dump options
  * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
  * @param {number?} options.startByte - byte to start dump (default ``0``)
- * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
+ * @param {boolean?} options.suppressUnicode - Suppress unicode character preview for even columns.
  * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
  */
 function hexdump(src, options = {}) {
@@ -59,7 +59,7 @@ function _hexDump(data, options = {}, start, end) {
         value = value >>> 0;
         return value;
     }
-    var supressUnicode = options && options.supressUnicode || false;
+    var suppressUnicode = options && options.suppressUnicode || false;
     const rows = [];
     var header = "   0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  ";
     var ending = "0123456789ABCDEF";
@@ -83,7 +83,7 @@ function _hexDump(data, options = {}, start, end) {
             // Convert the byte to a character and add it to the result
             result += String.fromCharCode(byte);
         }
-        else if (supressUnicode) {
+        else if (suppressUnicode) {
             result += '.';
         }
         else if (hex_check(byte, 1) == 0) {
@@ -2145,7 +2145,7 @@ class BiBase {
     * @param {hexdumpOptions?} options - hex dump options
     * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
     * @param {number?} options.startByte - byte to start dump (default ``0``)
-    * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
+    * @param {boolean?} options.suppressUnicode - Suppress unicode character preview for even columns.
     * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
     */
     hexdump(options = {}) {
@@ -13961,7 +13961,7 @@ class BiBaseStreamer {
      * @param {hexdumpOptions?} options - hex dump options
      * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
      * @param {number?} options.startByte - byte to start dump (default ``0``)
-     * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
+     * @param {boolean?} options.suppressUnicode - Suppress unicode character preview for even columns.
      * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
      */
     hexdump(options = {}) {

@@ -2143,7 +2143,7 @@ export class BiBase{
      * @param {hexdumpOptions?} options - hex dump options
      * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
      * @param {number?} options.startByte - byte to start dump (default ``0``)
-     * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
+     * @param {boolean?} options.suppressUnicode - Suppress unicode character preview for even columns.
      * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
      */
     hexdump(options: hexdumpOptions = {}): void|string {

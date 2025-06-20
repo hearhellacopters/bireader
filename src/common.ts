@@ -47,9 +47,9 @@ export type hexdumpOptions = {
      */
     startByte?: number, 
     /**
-     * Supress unicode character preview for even columns.
+     * Suppress unicode character preview for even columns.
      */
-    supressUnicode?: boolean,
+    suppressUnicode?: boolean,
     /**
      * Returns the hex dump string instead of logging it.
      */
@@ -63,7 +63,7 @@ export type hexdumpOptions = {
  * @param {hexdumpOptions?} options - hex dump options
  * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
  * @param {number?} options.startByte - byte to start dump (default ``0``)
- * @param {boolean?} options.supressUnicode - Supress unicode character preview for even columns.
+ * @param {boolean?} options.suppressUnicode - Suppress unicode character preview for even columns.
  * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
  */
 export function hexdump(src: Uint8Array | Buffer, options: hexdumpOptions = {}): void|string {
@@ -114,7 +114,7 @@ export function _hexDump(data:Buffer | Uint8Array, options: hexdumpOptions = {},
         value = value >>> 0;
         return value;
     }
-    var supressUnicode: any = options && options.supressUnicode || false;
+    var suppressUnicode: any = options && options.suppressUnicode || false;
     const rows: Array<string> = [];
     var header = "   0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  ";
     var ending = "0123456789ABCDEF";
@@ -141,7 +141,7 @@ export function _hexDump(data:Buffer | Uint8Array, options: hexdumpOptions = {},
             // Convert the byte to a character and add it to the result
             result += String.fromCharCode(byte);
         } 
-        else if (supressUnicode) 
+        else if (suppressUnicode) 
         {
             result += '.';
         } 

@@ -53,7 +53,7 @@ import {BiReader, BiWriter} from 'bireader';
 function parse_webp(data){
   const br = new BiReader(data);
   br.strSettings = {length: 4};
-  br.hexdump({supressUnicode:true}); // console.log data as hex
+  br.hexdump({suppressUnicode:true}); // console.log data as hex
 
   //         0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  0123456789ABCDEF
   // 00000  52 49 46 46 98 3a 00 00 57 45 42 50 56 50 38 58  RIFF.:..WEBPVP8X
@@ -428,8 +428,8 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Name</td>
-    <td>hexdump({length, startByte, supressUnicode})</td>
-    <td align="center">Length of dump in bytes (default 192), byte position to start the dump (default current byte position), supress unicode character preview for cleaner columns (default false)</td>
+    <td>hexdump({length, startByte, suppressUnicode})</td>
+    <td align="center">Length of dump in bytes (default 192), byte position to start the dump (default current byte position), Suppress unicode character preview for cleaner columns (default false)</td>
     <td >Console logs data. Will trigger on error unless turned off (see below)</td>
   </tr>
   <tr>
