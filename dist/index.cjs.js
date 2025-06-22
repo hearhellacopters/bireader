@@ -12489,7 +12489,7 @@ function fFloat(ctx, targetNumber, endian) {
                 return position + z; // Found the number, return the index
             }
         }
-        position += chunkSize;
+        position += buffer.length;
     }
     return -1; // number not found
 }
@@ -12528,7 +12528,7 @@ function fBigInt(ctx, targetNumber, unsigned, endian) {
         }
         // Update the last chunk for the next iteration
         lastChunk = combinedBuffer.subarray(-8 + 1);
-        ctx.offset += chunkSize;
+        ctx.offset += currentChunk.length;
     }
     return -1; // number not found
 }
@@ -12582,7 +12582,7 @@ function fDoubleFloat(ctx, targetNumber, endian) {
                 return position + z; // Found the number, return the index
             }
         }
-        position += chunkSize;
+        position += buffer.length;
     }
     return -1; // number not found
 }

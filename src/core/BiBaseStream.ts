@@ -946,7 +946,7 @@ function fFloat(ctx: BiBaseStreamer, targetNumber: number, endian?: string): num
             }
         }
 
-        position += chunkSize;
+        position += buffer.length;
     }
 
     return -1; // number not found
@@ -992,7 +992,7 @@ function fBigInt(ctx: BiBaseStreamer, targetNumber: BigValue, unsigned: boolean,
 
         // Update the last chunk for the next iteration
         lastChunk = combinedBuffer.subarray(-8 + 1);
-        ctx.offset += chunkSize;
+        ctx.offset += currentChunk.length;
     }
 
     return -1; // number not found
@@ -1049,7 +1049,7 @@ function fDoubleFloat(ctx: BiBaseStreamer, targetNumber: number, endian?: string
             }
         }
 
-        position += chunkSize;
+        position += buffer.length;
     }
 
     return -1; // number not found
