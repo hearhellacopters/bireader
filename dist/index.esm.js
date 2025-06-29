@@ -3608,2990 +3608,6 @@ class BiBase {
     }
 }
 
-function applyBinaryAliasReader(Base) {
-    return class extends Base {
-        constructor(...args) {
-            super(...args);
-        }
-        //
-        // Bit Aliases
-        //
-        /**
-         * Bit field reader.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @param {number} bits - bits to read
-         * @param {boolean} unsigned - if the value is unsigned
-         * @param {endian} endian - ``big`` or ``little``
-         * @returns {number}
-         */
-        bit(bits, unsigned, endian) {
-            return this.readBit(bits, unsigned, endian);
-        }
-        /**
-         * Bit field reader. Unsigned read.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @param {number} bits - bits to read
-         * @param {endian} endian - ``big`` or ``little``
-         * @returns {number}
-         */
-        ubit(bits, endian) {
-            return this.readBit(bits, true, endian);
-        }
-        /**
-         * Bit field reader. Unsigned big endian read.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @param {number} bits - bits to read
-         * @returns {number}
-         */
-        ubitbe(bits) {
-            return this.bit(bits, true, "big");
-        }
-        /**
-         * Bit field reader. Big endian read.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @param {number} bits - bits to read
-         * @param {boolean} unsigned - if the value is unsigned
-         * @returns {number}
-         */
-        bitbe(bits, unsigned) {
-            return this.bit(bits, unsigned, "big");
-        }
-        /**
-         * Bit field reader. Unsigned little endian read.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @param {number} bits - bits to read
-         * @returns {number}
-         */
-        ubitle(bits) {
-            return this.bit(bits, true, "little");
-        }
-        /**
-         * Bit field reader. Little endian read.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @param {number} bits - bits to read
-         * @param {boolean} unsigned - if the value is unsigned
-         * @returns {number}
-         */
-        bitle(bits, unsigned) {
-            return this.bit(bits, unsigned, "little");
-        }
-        /**
-         * Bit field reader. Reads 1 bit.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit1() {
-            return this.bit(1);
-        }
-        /**
-         * Bit field reader. Reads 1 bit.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit1le() {
-            return this.bit(1, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 1 bit.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit1be() {
-            return this.bit(1, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 1 bit.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit1() {
-            return this.bit(1, true);
-        }
-        /**
-         * Bit field reader. Reads 1 bit.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit1le() {
-            return this.bit(1, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 1 bit.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit1be() {
-            return this.bit(1, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 2 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit2() {
-            return this.bit(2);
-        }
-        /**
-         * Bit field reader. Reads 2 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit2le() {
-            return this.bit(2, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 2 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit2be() {
-            return this.bit(2, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 2 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit2() {
-            return this.bit(2, true);
-        }
-        /**
-         * Bit field reader. Reads 2 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit2le() {
-            return this.bit(2, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 2 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit2be() {
-            return this.bit(2, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 3 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit3() {
-            return this.bit(3);
-        }
-        /**
-         * Bit field reader. Reads 3 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit3le() {
-            return this.bit(3, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 3 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit3be() {
-            return this.bit(3, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 3 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit3() {
-            return this.bit(3, true);
-        }
-        /**
-         * Bit field reader. Reads 3 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit3le() {
-            return this.bit(3, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 3 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit3be() {
-            return this.bit(3, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 4 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit4() {
-            return this.bit(4);
-        }
-        /**
-         * Bit field reader. Reads 4 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit4le() {
-            return this.bit(4, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 4 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit4be() {
-            return this.bit(4, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 4 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit4() {
-            return this.bit(4, true);
-        }
-        /**
-         * Bit field reader. Reads 4 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit4le() {
-            return this.bit(4, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 4 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit4be() {
-            return this.bit(4, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 5 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit5() {
-            return this.bit(5);
-        }
-        /**
-         * Bit field reader. Reads 5 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit5le() {
-            return this.bit(5, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 5 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit5be() {
-            return this.bit(5, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 5 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit5() {
-            return this.bit(5, true);
-        }
-        /**
-         * Bit field reader. Reads 5 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit5le() {
-            return this.bit(5, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 5 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit5be() {
-            return this.bit(5, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 6 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit6() {
-            return this.bit(6);
-        }
-        /**
-         * Bit field reader. Reads 6 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit6le() {
-            return this.bit(6, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 6 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit6be() {
-            return this.bit(6, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 6 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit6() {
-            return this.bit(6, true);
-        }
-        /**
-         * Bit field reader. Reads 6 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit6le() {
-            return this.bit(6, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 6 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit6be() {
-            return this.bit(6, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 7 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit7() {
-            return this.bit(7);
-        }
-        /**
-         * Bit field reader. Reads 7 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit7le() {
-            return this.bit(7, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 7 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit7be() {
-            return this.bit(7, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 7 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit7() {
-            return this.bit(7, true);
-        }
-        /**
-         * Bit field reader. Reads 7 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit7le() {
-            return this.bit(7, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 7 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit7be() {
-            return this.bit(7, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 8 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit8() {
-            return this.bit(8);
-        }
-        /**
-         * Bit field reader. Reads 8 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit8le() {
-            return this.bit(8, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 8 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit8be() {
-            return this.bit(8, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 8 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit8() {
-            return this.bit(8, true);
-        }
-        /**
-         * Bit field reader. Reads 8 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit8le() {
-            return this.bit(8, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 8 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit8be() {
-            return this.bit(8, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 9 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit9() {
-            return this.bit(9);
-        }
-        /**
-         * Bit field reader. Reads 9 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit9le() {
-            return this.bit(9, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 9 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit9be() {
-            return this.bit(9, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 9 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit9() {
-            return this.bit(9, true);
-        }
-        /**
-         * Bit field reader. Reads 9 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit9le() {
-            return this.bit(9, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 9 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit9be() {
-            return this.bit(9, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 10 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit10() {
-            return this.bit(10);
-        }
-        /**
-         * Bit field reader. Reads 10 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit10le() {
-            return this.bit(10, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 10 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit10be() {
-            return this.bit(10, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 10 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit10() {
-            return this.bit(10, true);
-        }
-        /**
-         * Bit field reader. Reads 10 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit10le() {
-            return this.bit(10, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 10 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit10be() {
-            return this.bit(10, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 11 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit11() {
-            return this.bit(11);
-        }
-        /**
-         * Bit field reader. Reads 11 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit11le() {
-            return this.bit(11, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 11 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit11be() {
-            return this.bit(11, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 11 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit11() {
-            return this.bit(11, true);
-        }
-        /**
-         * Bit field reader. Reads 11 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit11le() {
-            return this.bit(11, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 11 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit11be() {
-            return this.bit(11, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 12 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit12() {
-            return this.bit(12);
-        }
-        /**
-         * Bit field reader. Reads 12 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit12le() {
-            return this.bit(12, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 12 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit12be() {
-            return this.bit(12, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 12 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit12() {
-            return this.bit(12, true);
-        }
-        /**
-         * Bit field reader. Reads 12 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit12le() {
-            return this.bit(12, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 12 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit12be() {
-            return this.bit(12, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 13 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit13() {
-            return this.bit(13);
-        }
-        /**
-         * Bit field reader. Reads 13 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit13le() {
-            return this.bit(13, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 13 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit13be() {
-            return this.bit(13, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 13 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit13() {
-            return this.bit(13, true);
-        }
-        /**
-         * Bit field reader. Reads 13 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit13le() {
-            return this.bit(13, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 13 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit13be() {
-            return this.bit(13, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 14 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit14() {
-            return this.bit(14);
-        }
-        /**
-         * Bit field reader. Reads 14 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit14le() {
-            return this.bit(14, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 14 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit14be() {
-            return this.bit(14, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 14 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit14() {
-            return this.bit(14, true);
-        }
-        /**
-         * Bit field reader. Reads 14 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit14le() {
-            return this.bit(14, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 14 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit14be() {
-            return this.bit(14, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 15 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit15() {
-            return this.bit(15);
-        }
-        /**
-         * Bit field reader. Reads 15 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit15le() {
-            return this.bit(15, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 15 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit15be() {
-            return this.bit(15, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 15 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit15() {
-            return this.bit(15, true);
-        }
-        /**
-         * Bit field reader. Reads 15 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit15le() {
-            return this.bit(15, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 15 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit15be() {
-            return this.bit(15, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 16 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit16() {
-            return this.bit(16);
-        }
-        /**
-         * Bit field reader. Reads 16 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit16le() {
-            return this.bit(16, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 16 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit16be() {
-            return this.bit(16, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 16 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit16() {
-            return this.bit(16, true);
-        }
-        /**
-         * Bit field reader. Reads 16 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit16le() {
-            return this.bit(16, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 16 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit16be() {
-            return this.bit(16, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 17 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit17() {
-            return this.bit(17);
-        }
-        /**
-         * Bit field reader. Reads 17 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit17le() {
-            return this.bit(17, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 17 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit17be() {
-            return this.bit(17, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 17 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit17() {
-            return this.bit(17, true);
-        }
-        /**
-         * Bit field reader. Reads 17 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit17le() {
-            return this.bit(17, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 17 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit17be() {
-            return this.bit(17, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 18 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit18() {
-            return this.bit(18);
-        }
-        /**
-         * Bit field reader. Reads 18 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit18le() {
-            return this.bit(18, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 18 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit18be() {
-            return this.bit(18, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 18 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit18() {
-            return this.bit(18, true);
-        }
-        /**
-         * Bit field reader. Reads 18 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit18le() {
-            return this.bit(18, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 18 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit18be() {
-            return this.bit(18, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 19 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit19() {
-            return this.bit(19);
-        }
-        /**
-         * Bit field reader. Reads 19 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit19le() {
-            return this.bit(19, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 19 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit19be() {
-            return this.bit(19, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 19 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit19() {
-            return this.bit(19, true);
-        }
-        /**
-         * Bit field reader. Reads 19 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit19le() {
-            return this.bit(19, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 19 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit19be() {
-            return this.bit(19, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 20 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit20() {
-            return this.bit(20);
-        }
-        /**
-         * Bit field reader. Reads 20 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit20le() {
-            return this.bit(20, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 20 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit20be() {
-            return this.bit(20, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 20 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit20() {
-            return this.bit(20, true);
-        }
-        /**
-         * Bit field reader. Reads 20 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit20le() {
-            return this.bit(20, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 20 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit20be() {
-            return this.bit(20, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 21 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit21() {
-            return this.bit(21);
-        }
-        /**
-         * Bit field reader. Reads 21 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit21le() {
-            return this.bit(21, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 21 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit21be() {
-            return this.bit(21, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 21 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit21() {
-            return this.bit(21, true);
-        }
-        /**
-         * Bit field reader. Reads 21 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit21le() {
-            return this.bit(21, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 21 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit21be() {
-            return this.bit(21, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 22 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit22() {
-            return this.bit(22);
-        }
-        /**
-         * Bit field reader. Reads 22 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit22le() {
-            return this.bit(22, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 22 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit22be() {
-            return this.bit(22, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 22 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit22() {
-            return this.bit(22, true);
-        }
-        /**
-         * Bit field reader. Reads 22 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit22le() {
-            return this.bit(22, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 22 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit22be() {
-            return this.bit(22, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 23 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit23() {
-            return this.bit(23);
-        }
-        /**
-         * Bit field reader. Reads 23 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit23le() {
-            return this.bit(23, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 23 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit23be() {
-            return this.bit(23, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 23 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit23() {
-            return this.bit(23, true);
-        }
-        /**
-         * Bit field reader. Reads 23 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit23le() {
-            return this.bit(23, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 23 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit23be() {
-            return this.bit(23, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 24 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit24() {
-            return this.bit(24);
-        }
-        /**
-         * Bit field reader. Reads 24 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit24le() {
-            return this.bit(24, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 24 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit24be() {
-            return this.bit(24, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 24 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit24() {
-            return this.bit(24, true);
-        }
-        /**
-         * Bit field reader. Reads 24 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit24le() {
-            return this.bit(24, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 24 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit24be() {
-            return this.bit(24, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 25 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit25() {
-            return this.bit(25);
-        }
-        /**
-         * Bit field reader. Reads 25 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit25le() {
-            return this.bit(25, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 25 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit25be() {
-            return this.bit(25, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 25 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit25() {
-            return this.bit(25, true);
-        }
-        /**
-         * Bit field reader. Reads 25 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit25le() {
-            return this.bit(25, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 25 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit25be() {
-            return this.bit(25, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 26 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit26() {
-            return this.bit(26);
-        }
-        /**
-         * Bit field reader. Reads 26 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit26le() {
-            return this.bit(26, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 26 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit26be() {
-            return this.bit(26, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 26 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit26() {
-            return this.bit(26, true);
-        }
-        /**
-         * Bit field reader. Reads 26 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit26le() {
-            return this.bit(26, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 26 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit26be() {
-            return this.bit(26, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 27 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit27() {
-            return this.bit(27);
-        }
-        /**
-         * Bit field reader. Reads 27 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit27le() {
-            return this.bit(27, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 27 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit27be() {
-            return this.bit(27, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 27 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit27() {
-            return this.bit(27, true);
-        }
-        /**
-         * Bit field reader. Reads 27 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit27le() {
-            return this.bit(27, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 27 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit27be() {
-            return this.bit(27, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 28 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit28() {
-            return this.bit(28);
-        }
-        /**
-         * Bit field reader. Reads 28 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit28le() {
-            return this.bit(28, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 28 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit28be() {
-            return this.bit(28, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 28 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit28() {
-            return this.bit(28, true);
-        }
-        /**
-         * Bit field reader. Reads 28 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit28le() {
-            return this.bit(28, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 28 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit28be() {
-            return this.bit(28, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 29 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit29() {
-            return this.bit(29);
-        }
-        /**
-         * Bit field reader. Reads 29 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit29le() {
-            return this.bit(29, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 29 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit29be() {
-            return this.bit(29, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 29 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit29() {
-            return this.bit(29, true);
-        }
-        /**
-         * Bit field reader. Reads 29 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit29le() {
-            return this.bit(29, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 29 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit29be() {
-            return this.bit(29, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 30 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit30() {
-            return this.bit(30);
-        }
-        /**
-         * Bit field reader. Reads 30 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit30le() {
-            return this.bit(30, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 30 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit30be() {
-            return this.bit(30, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 30 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit30() {
-            return this.bit(30, true);
-        }
-        /**
-         * Bit field reader. Reads 30 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit30le() {
-            return this.bit(30, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 30 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit30be() {
-            return this.bit(30, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 31 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit31() {
-            return this.bit(31);
-        }
-        /**
-         * Bit field reader. Reads 31 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit31le() {
-            return this.bit(31, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 31 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit31be() {
-            return this.bit(31, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 31 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit31() {
-            return this.bit(31, true);
-        }
-        /**
-         * Bit field reader. Reads 31 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit31le() {
-            return this.bit(31, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 31 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit31be() {
-            return this.bit(31, true, "big");
-        }
-        /**
-         * Bit field reader. Reads 32 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit32() {
-            return this.bit(32);
-        }
-        /**
-         * Bit field reader. Reads 32 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit32le() {
-            return this.bit(32, undefined, "little");
-        }
-        /**
-         * Bit field reader. Reads 32 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get bit32be() {
-            return this.bit(32, undefined, "big");
-        }
-        /**
-         * Bit field reader. Reads 32 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit32() {
-            return this.bit(32, true);
-        }
-        /**
-         * Bit field reader. Reads 32 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit32le() {
-            return this.bit(32, true, "little");
-        }
-        /**
-         * Bit field reader. Reads 32 bits.
-         *
-         * Note: When returning to a byte read, remaining bits are dropped.
-         *
-         * @returns {number}
-         */
-        get ubit32be() {
-            return this.bit(32, true, "big");
-        }
-        //
-        // byte read
-        //
-        /**
-         * Read byte.
-         *
-         * @returns {number}
-         */
-        get byte() {
-            return this.readByte();
-        }
-        /**
-         * Read byte.
-         *
-         * @returns {number}
-         */
-        get int8() {
-            return this.readByte();
-        }
-        /**
-         * Read unsigned byte.
-         *
-         * @returns {number}
-         */
-        get uint8() {
-            return this.readByte(true);
-        }
-        /**
-         * Read unsigned byte.
-         *
-         * @returns {number}
-         */
-        get ubyte() {
-            return this.readByte(true);
-        }
-        //
-        //short16 read
-        //
-        /**
-         * Read short.
-         *
-         * @returns {number}
-         */
-        get int16() {
-            return this.readInt16();
-        }
-        /**
-         * Read short.
-         *
-         * @returns {number}
-         */
-        get short() {
-            return this.readInt16();
-        }
-        /**
-         * Read short.
-         *
-         * @returns {number}
-         */
-        get word() {
-            return this.readInt16();
-        }
-        /**
-         * Read unsigned short.
-         *
-         * @returns {number}
-         */
-        get uint16() {
-            return this.readInt16(true);
-        }
-        /**
-         * Read unsigned short.
-         *
-         * @returns {number}
-         */
-        get ushort() {
-            return this.readInt16(true);
-        }
-        /**
-         * Read unsigned short.
-         *
-         * @returns {number}
-         */
-        get uword() {
-            return this.readInt16(true);
-        }
-        /**
-         * Read unsigned short in little endian.
-         *
-         * @returns {number}
-         */
-        get uint16le() {
-            return this.readInt16(true, "little");
-        }
-        /**
-         * Read unsigned short in little endian.
-         *
-         * @returns {number}
-         */
-        get ushortle() {
-            return this.readInt16(true, "little");
-        }
-        /**
-         * Read unsigned short in little endian.
-         *
-         * @returns {number}
-         */
-        get uwordle() {
-            return this.readInt16(true, "little");
-        }
-        /**
-         * Read signed short in little endian.
-         *
-         * @returns {number}
-         */
-        get int16le() {
-            return this.readInt16(false, "little");
-        }
-        /**
-         * Read signed short in little endian.
-         *
-         * @returns {number}
-         */
-        get shortle() {
-            return this.readInt16(false, "little");
-        }
-        /**
-         * Read signed short in little endian.
-         *
-         * @returns {number}
-         */
-        get wordle() {
-            return this.readInt16(false, "little");
-        }
-        /**
-         * Read unsigned short in big endian.
-         *
-         * @returns {number}
-         */
-        get uint16be() {
-            return this.readInt16(true, "big");
-        }
-        /**
-         * Read unsigned short in big endian.
-         *
-         * @returns {number}
-         */
-        get ushortbe() {
-            return this.readInt16(true, "big");
-        }
-        /**
-         * Read unsigned short in big endian.
-         *
-         * @returns {number}
-         */
-        get uwordbe() {
-            return this.readInt16(true, "big");
-        }
-        /**
-         * Read signed short in big endian.
-         *
-         * @returns {number}
-         */
-        get int16be() {
-            return this.readInt16(false, "big");
-        }
-        /**
-         * Read signed short in big endian.
-         *
-         * @returns {number}
-         */
-        get shortbe() {
-            return this.readInt16(false, "big");
-        }
-        /**
-         * Read signed short in big endian.
-         *
-         * @returns {number}
-         */
-        get wordbe() {
-            return this.readInt16(false, "big");
-        }
-        //
-        //half float read
-        //
-        /**
-         * Read half float.
-         *
-         * @returns {number}
-         */
-        get halffloat() {
-            return this.readHalfFloat();
-        }
-        /**
-         * Read half float
-         *
-         * @returns {number}
-         */
-        get half() {
-            return this.readHalfFloat();
-        }
-        /**
-         * Read half float.
-         *
-         * @returns {number}
-         */
-        get halffloatbe() {
-            return this.readHalfFloat("big");
-        }
-        /**
-         * Read half float.
-         *
-         * @returns {number}
-         */
-        get halfbe() {
-            return this.readHalfFloat("big");
-        }
-        /**
-         * Read half float.
-         *
-         * @returns {number}
-         */
-        get halffloatle() {
-            return this.readHalfFloat("little");
-        }
-        /**
-         * Read half float.
-         *
-         * @returns {number}
-         */
-        get halfle() {
-            return this.readHalfFloat("little");
-        }
-        //
-        //int read
-        //
-        /**
-         * Read 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get int() {
-            return this.readInt32();
-        }
-        /**
-         * Read 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get double() {
-            return this.readInt32();
-        }
-        /**
-         * Read 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get int32() {
-            return this.readInt32();
-        }
-        /**
-         * Read 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get long() {
-            return this.readInt32();
-        }
-        /**
-         * Read unsigned 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get uint() {
-            return this.readInt32(true);
-        }
-        /**
-         * Read unsigned 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get udouble() {
-            return this.readInt32(true);
-        }
-        /**
-         * Read unsigned 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get uint32() {
-            return this.readInt32(true);
-        }
-        /**
-         * Read unsigned 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get ulong() {
-            return this.readInt32(true);
-        }
-        /**
-         * Read signed 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get intbe() {
-            return this.readInt32(false, "big");
-        }
-        /**
-         * Read signed 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get doublebe() {
-            return this.readInt32(false, "big");
-        }
-        /**
-         * Read signed 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get int32be() {
-            return this.readInt32(false, "big");
-        }
-        /**
-         * Read signed 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get longbe() {
-            return this.readInt32(false, "big");
-        }
-        /**
-         * Read unsigned 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get uintbe() {
-            return this.readInt32(true, "big");
-        }
-        /**
-         * Read unsigned 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get udoublebe() {
-            return this.readInt32(true, "big");
-        }
-        /**
-         * Read unsigned 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get uint32be() {
-            return this.readInt32(true, "big");
-        }
-        /**
-         * Read unsigned 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get ulongbe() {
-            return this.readInt32(true, "big");
-        }
-        /**
-         * Read signed 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get intle() {
-            return this.readInt32(false, "little");
-        }
-        /**
-         * Read signed 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get doublele() {
-            return this.readInt32(false, "little");
-        }
-        /**
-         * Read signed 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get int32le() {
-            return this.readInt32(false, "little");
-        }
-        /**
-         * Read signed 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get longle() {
-            return this.readInt32(false, "little");
-        }
-        /**
-         * Read signed 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get uintle() {
-            return this.readInt32(true, "little");
-        }
-        /**
-         * Read signed 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get udoublele() {
-            return this.readInt32(true, "little");
-        }
-        /**
-         * Read signed 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get uint32le() {
-            return this.readInt32(true, "little");
-        }
-        /**
-         * Read signed 32 bit integer.
-         *
-         * @returns {number}
-         */
-        get ulongle() {
-            return this.readInt32(true, "little");
-        }
-        //
-        //float read
-        //
-        /**
-         * Read float.
-         *
-         * @returns {number}
-         */
-        get float() {
-            return this.readFloat();
-        }
-        /**
-         * Read float.
-         *
-         * @returns {number}
-         */
-        get floatbe() {
-            return this.readFloat("big");
-        }
-        /**
-         * Read float.
-         *
-         * @returns {number}
-         */
-        get floatle() {
-            return this.readFloat("little");
-        }
-        //
-        //int64 reader
-        //
-        /**
-         * Read signed 64 bit integer
-         *
-         * @returns {bigint}
-         */
-        get int64() {
-            return this.readInt64();
-        }
-        /**
-         * Read signed 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get bigint() {
-            return this.readInt64();
-        }
-        /**
-         * Read signed 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get quad() {
-            return this.readInt64();
-        }
-        /**
-         * Read unsigned 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get uint64() {
-            return this.readInt64(true);
-        }
-        /**
-         * Read unsigned 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get ubigint() {
-            return this.readInt64(true);
-        }
-        /**
-         * Read unsigned 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get uquad() {
-            return this.readInt64(true);
-        }
-        /**
-         * Read signed 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get int64be() {
-            return this.readInt64(false, "big");
-        }
-        /**
-         * Read signed 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get bigintbe() {
-            return this.readInt64(false, "big");
-        }
-        /**
-         * Read signed 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get quadbe() {
-            return this.readInt64(false, "big");
-        }
-        /**
-         * Read unsigned 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get uint64be() {
-            return this.readInt64(true, "big");
-        }
-        /**
-         * Read unsigned 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get ubigintbe() {
-            return this.readInt64(true, "big");
-        }
-        /**
-         * Read unsigned 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get uquadbe() {
-            return this.readInt64(true, "big");
-        }
-        /**
-         * Read signed 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get int64le() {
-            return this.readInt64(false, "little");
-        }
-        /**
-         * Read signed 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get bigintle() {
-            return this.readInt64(false, "little");
-        }
-        /**
-         * Read signed 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get quadle() {
-            return this.readInt64(false, "little");
-        }
-        /**
-         * Read unsigned 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get uint64le() {
-            return this.readInt64(true, "little");
-        }
-        /**
-         * Read unsigned 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get ubigintle() {
-            return this.readInt64(true, "little");
-        }
-        /**
-         * Read unsigned 64 bit integer.
-         *
-         * @returns {bigint}
-         */
-        get uquadle() {
-            return this.readInt64(true, "little");
-        }
-        //
-        //doublefloat reader
-        //
-        /**
-         * Read double float.
-         *
-         * @returns {number}
-         */
-        get doublefloat() {
-            return this.readDoubleFloat();
-        }
-        /**
-         * Read double float.
-         *
-         * @returns {number}
-         */
-        get dfloat() {
-            return this.readDoubleFloat();
-        }
-        /**
-         * Read double float.
-         *
-         * @returns {number}
-         */
-        get dfloatebe() {
-            return this.readDoubleFloat("big");
-        }
-        /**
-         * Read double float.
-         *
-         * @returns {number}
-         */
-        get doublefloatbe() {
-            return this.readDoubleFloat("big");
-        }
-        /**
-         * Read double float.
-         *
-         * @returns {number}
-         */
-        get dfloatle() {
-            return this.readDoubleFloat("little");
-        }
-        /**
-         * Read double float.
-         *
-         * @returns {number}
-         */
-        get doublefloatle() {
-            return this.readDoubleFloat("little");
-        }
-        //
-        //string reader
-        //
-        /**
-        * Reads string, use options object for different types.
-        *
-        * @param {stringOptions} options
-        * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-        * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
-        * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
-        * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
-        * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
-        * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-        * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
-        * @return {string}
-        */
-        string(options) {
-            return this.readString(options);
-        }
-        /**
-        * Reads string using setting from .strSettings
-        *
-        * Default is ``utf-8``
-        *
-        * @return {string}
-        */
-        get str() {
-            return this.readString(this.strSettings);
-        }
-        /**
-        * Reads UTF-8 (C) string.
-        *
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        utf8string(length, terminateValue, stripNull) {
-            return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
-        }
-        /**
-        * Reads UTF-8 (C) string.
-        *
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        cstring(length, terminateValue, stripNull) {
-            return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
-        }
-        /**
-        * Reads ANSI string.
-        *
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        ansistring(length, terminateValue, stripNull) {
-            return this.string({ stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue, stripNull: stripNull });
-        }
-        /**
-        * Reads UTF-16 (Unicode) string.
-        *
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        *
-        * @return {string}
-        */
-        utf16string(length, terminateValue, stripNull, endian) {
-            return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
-        }
-        /**
-        * Reads UTF-16 (Unicode) string.
-        *
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        *
-        * @return {string}
-        */
-        unistring(length, terminateValue, stripNull, endian) {
-            return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
-        }
-        /**
-        * Reads UTF-16 (Unicode) string in little endian order.
-        *
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        utf16stringle(length, terminateValue, stripNull) {
-            return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
-        }
-        /**
-        * Reads UTF-16 (Unicode) string in little endian order.
-        *
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        unistringle(length, terminateValue, stripNull) {
-            return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
-        }
-        /**
-        * Reads UTF-16 (Unicode) string in big endian order.
-        *
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        utf16stringbe(length, terminateValue, stripNull) {
-            return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
-        }
-        /**
-        * Reads UTF-16 (Unicode) string in big endian order.
-        *
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        unistringbe(length, terminateValue, stripNull) {
-            return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
-        }
-        /**
-        * Reads Pascal string.
-        *
-        * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        *
-        * @return {string}
-        */
-        pstring(lengthReadSize, stripNull, endian) {
-            return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
-        }
-        /**
-        * Reads Pascal string 1 byte length read.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        *
-        * @return {string}
-        */
-        pstring1(stripNull, endian) {
-            return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: endian });
-        }
-        /**
-        * Reads Pascal string 1 byte length read in little endian order.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        pstring1le(stripNull) {
-            return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "little" });
-        }
-        /**
-        * Reads Pascal string 1 byte length read in big endian order.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        pstring1be(stripNull) {
-            return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "big" });
-        }
-        /**
-        * Reads Pascal string 2 byte length read.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        *
-        * @return {string}
-        */
-        pstring2(stripNull, endian) {
-            return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: endian });
-        }
-        /**
-        * Reads Pascal string 2 byte length read in little endian order.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        pstring2le(stripNull) {
-            return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "little" });
-        }
-        /**
-        * Reads Pascal string 2 byte length read in big endian order.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        pstring2be(stripNull) {
-            return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "big" });
-        }
-        /**
-        * Reads Pascal string 4 byte length read.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        *
-        * @return {string}
-        */
-        pstring4(stripNull, endian) {
-            return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: endian });
-        }
-        /**
-        * Reads Pascal string 4 byte length read in little endian order.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        pstring4le(stripNull) {
-            return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "little" });
-        }
-        /**
-        * Reads Pascal string 4 byte length read in big endian order.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        pstring4be(stripNull) {
-            return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "big" });
-        }
-        /**
-        * Reads Wide-Pascal string.
-        *
-        * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        *
-        * @return {string}
-        */
-        wpstring(lengthReadSize, stripNull, endian) {
-            return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: lengthReadSize, endian: endian, stripNull: stripNull });
-        }
-        /**
-        * Reads Wide-Pascal string 1 byte length read.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        *
-        * @return {string}
-        */
-        wpstring1(stripNull, endian) {
-            return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: endian, stripNull: stripNull });
-        }
-        /**
-        * Reads Wide-Pascal string 2 byte length read.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        *
-        * @return {string}
-        */
-        wpstring2(stripNull, endian) {
-            return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: endian, stripNull: stripNull });
-        }
-        /**
-        * Reads Wide-Pascal string 2 byte length read in little endian order.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        wpstring2le(stripNull) {
-            return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "little", stripNull: stripNull });
-        }
-        /**
-        * Reads Wide-Pascal string 2 byte length read in big endian order.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        wpstring2be(stripNull) {
-            return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "big", stripNull: stripNull });
-        }
-        /**
-        * Reads Wide-Pascal string 4 byte length read.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        *
-        * @return {string}
-        */
-        wpstring4(stripNull, endian) {
-            return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: endian, stripNull: stripNull });
-        }
-        /**
-        * Reads Wide-Pascal string 4 byte length read in big endian order.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        wpstring4be(stripNull) {
-            return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "big", stripNull: stripNull });
-        }
-        /**
-        * Reads Wide-Pascal string 4 byte length read in little endian order.
-        *
-        * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-        *
-        * @return {string}
-        */
-        wpstring4le(stripNull) {
-            return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "little", stripNull: stripNull });
-        }
-    };
-}
-
 /**
  * Binary reader, includes bitfields and strings.
  *
@@ -6605,7 +3621,7 @@ function applyBinaryAliasReader(Base) {
  *
  * @since 2.0
  */
-class BiRead extends BiBase {
+class BiReader extends BiBase {
     /**
      * Binary reader, includes bitfields and strings.
      *
@@ -6674,3915 +3690,2982 @@ class BiRead extends BiBase {
             }
         }
     }
+    //
+    // Bit Aliases
+    //
+    /**
+     * Bit field reader.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @param {number} bits - bits to read
+     * @param {boolean} unsigned - if the value is unsigned
+     * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
+     */
     bit(bits, unsigned, endian) {
-        throw new Error("Method not implemented.");
+        return this.readBit(bits, unsigned, endian);
     }
+    /**
+     * Bit field reader. Unsigned read.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @param {number} bits - bits to read
+     * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
+     */
     ubit(bits, endian) {
-        throw new Error("Method not implemented.");
+        return this.readBit(bits, true, endian);
     }
+    /**
+     * Bit field reader. Unsigned big endian read.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @param {number} bits - bits to read
+     * @returns {number}
+     */
     ubitbe(bits) {
-        throw new Error("Method not implemented.");
+        return this.bit(bits, true, "big");
     }
+    /**
+     * Bit field reader. Big endian read.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @param {number} bits - bits to read
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns {number}
+     */
     bitbe(bits, unsigned) {
-        throw new Error("Method not implemented.");
+        return this.bit(bits, unsigned, "big");
     }
+    /**
+     * Bit field reader. Unsigned little endian read.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @param {number} bits - bits to read
+     * @returns {number}
+     */
     ubitle(bits) {
-        throw new Error("Method not implemented.");
+        return this.bit(bits, true, "little");
     }
+    /**
+     * Bit field reader. Little endian read.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @param {number} bits - bits to read
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns {number}
+     */
     bitle(bits, unsigned) {
-        throw new Error("Method not implemented.");
+        return this.bit(bits, unsigned, "little");
     }
+    /**
+     * Bit field reader. Reads 1 bit.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit1() {
-        throw new Error("Method not implemented.");
+        return this.bit(1);
     }
+    /**
+     * Bit field reader. Reads 1 bit.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit1le() {
-        throw new Error("Method not implemented.");
+        return this.bit(1, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 1 bit.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit1be() {
-        throw new Error("Method not implemented.");
+        return this.bit(1, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 1 bit.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit1() {
-        throw new Error("Method not implemented.");
+        return this.bit(1, true);
     }
+    /**
+     * Bit field reader. Reads 1 bit.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit1le() {
-        throw new Error("Method not implemented.");
+        return this.bit(1, true, "little");
     }
+    /**
+     * Bit field reader. Reads 1 bit.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit1be() {
-        throw new Error("Method not implemented.");
+        return this.bit(1, true, "big");
     }
+    /**
+     * Bit field reader. Reads 2 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit2() {
-        throw new Error("Method not implemented.");
+        return this.bit(2);
     }
+    /**
+     * Bit field reader. Reads 2 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit2le() {
-        throw new Error("Method not implemented.");
+        return this.bit(2, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 2 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit2be() {
-        throw new Error("Method not implemented.");
+        return this.bit(2, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 2 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit2() {
-        throw new Error("Method not implemented.");
+        return this.bit(2, true);
     }
+    /**
+     * Bit field reader. Reads 2 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit2le() {
-        throw new Error("Method not implemented.");
+        return this.bit(2, true, "little");
     }
+    /**
+     * Bit field reader. Reads 2 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit2be() {
-        throw new Error("Method not implemented.");
+        return this.bit(2, true, "big");
     }
+    /**
+     * Bit field reader. Reads 3 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit3() {
-        throw new Error("Method not implemented.");
+        return this.bit(3);
     }
+    /**
+     * Bit field reader. Reads 3 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit3le() {
-        throw new Error("Method not implemented.");
+        return this.bit(3, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 3 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit3be() {
-        throw new Error("Method not implemented.");
+        return this.bit(3, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 3 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit3() {
-        throw new Error("Method not implemented.");
+        return this.bit(3, true);
     }
+    /**
+     * Bit field reader. Reads 3 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit3le() {
-        throw new Error("Method not implemented.");
+        return this.bit(3, true, "little");
     }
+    /**
+     * Bit field reader. Reads 3 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit3be() {
-        throw new Error("Method not implemented.");
+        return this.bit(3, true, "big");
     }
+    /**
+     * Bit field reader. Reads 4 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit4() {
-        throw new Error("Method not implemented.");
+        return this.bit(4);
     }
+    /**
+     * Bit field reader. Reads 4 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit4le() {
-        throw new Error("Method not implemented.");
+        return this.bit(4, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 4 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit4be() {
-        throw new Error("Method not implemented.");
+        return this.bit(4, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 4 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit4() {
-        throw new Error("Method not implemented.");
+        return this.bit(4, true);
     }
+    /**
+     * Bit field reader. Reads 4 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit4le() {
-        throw new Error("Method not implemented.");
+        return this.bit(4, true, "little");
     }
+    /**
+     * Bit field reader. Reads 4 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit4be() {
-        throw new Error("Method not implemented.");
+        return this.bit(4, true, "big");
     }
+    /**
+     * Bit field reader. Reads 5 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit5() {
-        throw new Error("Method not implemented.");
+        return this.bit(5);
     }
+    /**
+     * Bit field reader. Reads 5 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit5le() {
-        throw new Error("Method not implemented.");
+        return this.bit(5, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 5 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit5be() {
-        throw new Error("Method not implemented.");
+        return this.bit(5, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 5 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit5() {
-        throw new Error("Method not implemented.");
+        return this.bit(5, true);
     }
+    /**
+     * Bit field reader. Reads 5 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit5le() {
-        throw new Error("Method not implemented.");
+        return this.bit(5, true, "little");
     }
+    /**
+     * Bit field reader. Reads 5 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit5be() {
-        throw new Error("Method not implemented.");
+        return this.bit(5, true, "big");
     }
+    /**
+     * Bit field reader. Reads 6 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit6() {
-        throw new Error("Method not implemented.");
+        return this.bit(6);
     }
+    /**
+     * Bit field reader. Reads 6 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit6le() {
-        throw new Error("Method not implemented.");
+        return this.bit(6, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 6 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit6be() {
-        throw new Error("Method not implemented.");
+        return this.bit(6, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 6 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit6() {
-        throw new Error("Method not implemented.");
+        return this.bit(6, true);
     }
+    /**
+     * Bit field reader. Reads 6 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit6le() {
-        throw new Error("Method not implemented.");
+        return this.bit(6, true, "little");
     }
+    /**
+     * Bit field reader. Reads 6 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit6be() {
-        throw new Error("Method not implemented.");
+        return this.bit(6, true, "big");
     }
+    /**
+     * Bit field reader. Reads 7 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit7() {
-        throw new Error("Method not implemented.");
+        return this.bit(7);
     }
+    /**
+     * Bit field reader. Reads 7 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit7le() {
-        throw new Error("Method not implemented.");
+        return this.bit(7, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 7 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit7be() {
-        throw new Error("Method not implemented.");
+        return this.bit(7, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 7 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit7() {
-        throw new Error("Method not implemented.");
+        return this.bit(7, true);
     }
+    /**
+     * Bit field reader. Reads 7 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit7le() {
-        throw new Error("Method not implemented.");
+        return this.bit(7, true, "little");
     }
+    /**
+     * Bit field reader. Reads 7 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit7be() {
-        throw new Error("Method not implemented.");
+        return this.bit(7, true, "big");
     }
+    /**
+     * Bit field reader. Reads 8 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit8() {
-        throw new Error("Method not implemented.");
+        return this.bit(8);
     }
+    /**
+     * Bit field reader. Reads 8 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit8le() {
-        throw new Error("Method not implemented.");
+        return this.bit(8, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 8 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit8be() {
-        throw new Error("Method not implemented.");
+        return this.bit(8, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 8 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit8() {
-        throw new Error("Method not implemented.");
+        return this.bit(8, true);
     }
+    /**
+     * Bit field reader. Reads 8 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit8le() {
-        throw new Error("Method not implemented.");
+        return this.bit(8, true, "little");
     }
+    /**
+     * Bit field reader. Reads 8 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit8be() {
-        throw new Error("Method not implemented.");
+        return this.bit(8, true, "big");
     }
+    /**
+     * Bit field reader. Reads 9 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit9() {
-        throw new Error("Method not implemented.");
+        return this.bit(9);
     }
+    /**
+     * Bit field reader. Reads 9 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit9le() {
-        throw new Error("Method not implemented.");
+        return this.bit(9, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 9 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit9be() {
-        throw new Error("Method not implemented.");
+        return this.bit(9, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 9 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit9() {
-        throw new Error("Method not implemented.");
+        return this.bit(9, true);
     }
+    /**
+     * Bit field reader. Reads 9 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit9le() {
-        throw new Error("Method not implemented.");
+        return this.bit(9, true, "little");
     }
+    /**
+     * Bit field reader. Reads 9 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit9be() {
-        throw new Error("Method not implemented.");
+        return this.bit(9, true, "big");
     }
+    /**
+     * Bit field reader. Reads 10 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit10() {
-        throw new Error("Method not implemented.");
+        return this.bit(10);
     }
+    /**
+     * Bit field reader. Reads 10 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit10le() {
-        throw new Error("Method not implemented.");
+        return this.bit(10, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 10 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit10be() {
-        throw new Error("Method not implemented.");
+        return this.bit(10, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 10 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit10() {
-        throw new Error("Method not implemented.");
+        return this.bit(10, true);
     }
+    /**
+     * Bit field reader. Reads 10 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit10le() {
-        throw new Error("Method not implemented.");
+        return this.bit(10, true, "little");
     }
+    /**
+     * Bit field reader. Reads 10 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit10be() {
-        throw new Error("Method not implemented.");
+        return this.bit(10, true, "big");
     }
+    /**
+     * Bit field reader. Reads 11 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit11() {
-        throw new Error("Method not implemented.");
+        return this.bit(11);
     }
+    /**
+     * Bit field reader. Reads 11 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit11le() {
-        throw new Error("Method not implemented.");
+        return this.bit(11, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 11 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit11be() {
-        throw new Error("Method not implemented.");
+        return this.bit(11, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 11 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit11() {
-        throw new Error("Method not implemented.");
+        return this.bit(11, true);
     }
+    /**
+     * Bit field reader. Reads 11 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit11le() {
-        throw new Error("Method not implemented.");
+        return this.bit(11, true, "little");
     }
+    /**
+     * Bit field reader. Reads 11 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit11be() {
-        throw new Error("Method not implemented.");
+        return this.bit(11, true, "big");
     }
+    /**
+     * Bit field reader. Reads 12 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit12() {
-        throw new Error("Method not implemented.");
+        return this.bit(12);
     }
+    /**
+     * Bit field reader. Reads 12 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit12le() {
-        throw new Error("Method not implemented.");
+        return this.bit(12, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 12 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit12be() {
-        throw new Error("Method not implemented.");
+        return this.bit(12, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 12 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit12() {
-        throw new Error("Method not implemented.");
+        return this.bit(12, true);
     }
+    /**
+     * Bit field reader. Reads 12 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit12le() {
-        throw new Error("Method not implemented.");
+        return this.bit(12, true, "little");
     }
+    /**
+     * Bit field reader. Reads 12 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit12be() {
-        throw new Error("Method not implemented.");
+        return this.bit(12, true, "big");
     }
+    /**
+     * Bit field reader. Reads 13 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit13() {
-        throw new Error("Method not implemented.");
+        return this.bit(13);
     }
+    /**
+     * Bit field reader. Reads 13 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit13le() {
-        throw new Error("Method not implemented.");
+        return this.bit(13, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 13 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit13be() {
-        throw new Error("Method not implemented.");
+        return this.bit(13, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 13 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit13() {
-        throw new Error("Method not implemented.");
+        return this.bit(13, true);
     }
+    /**
+     * Bit field reader. Reads 13 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit13le() {
-        throw new Error("Method not implemented.");
+        return this.bit(13, true, "little");
     }
+    /**
+     * Bit field reader. Reads 13 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit13be() {
-        throw new Error("Method not implemented.");
+        return this.bit(13, true, "big");
     }
+    /**
+     * Bit field reader. Reads 14 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit14() {
-        throw new Error("Method not implemented.");
+        return this.bit(14);
     }
+    /**
+     * Bit field reader. Reads 14 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit14le() {
-        throw new Error("Method not implemented.");
+        return this.bit(14, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 14 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit14be() {
-        throw new Error("Method not implemented.");
+        return this.bit(14, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 14 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit14() {
-        throw new Error("Method not implemented.");
+        return this.bit(14, true);
     }
+    /**
+     * Bit field reader. Reads 14 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit14le() {
-        throw new Error("Method not implemented.");
+        return this.bit(14, true, "little");
     }
+    /**
+     * Bit field reader. Reads 14 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit14be() {
-        throw new Error("Method not implemented.");
+        return this.bit(14, true, "big");
     }
+    /**
+     * Bit field reader. Reads 15 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit15() {
-        throw new Error("Method not implemented.");
+        return this.bit(15);
     }
+    /**
+     * Bit field reader. Reads 15 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit15le() {
-        throw new Error("Method not implemented.");
+        return this.bit(15, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 15 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit15be() {
-        throw new Error("Method not implemented.");
+        return this.bit(15, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 15 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit15() {
-        throw new Error("Method not implemented.");
+        return this.bit(15, true);
     }
+    /**
+     * Bit field reader. Reads 15 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit15le() {
-        throw new Error("Method not implemented.");
+        return this.bit(15, true, "little");
     }
+    /**
+     * Bit field reader. Reads 15 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit15be() {
-        throw new Error("Method not implemented.");
+        return this.bit(15, true, "big");
     }
+    /**
+     * Bit field reader. Reads 16 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit16() {
-        throw new Error("Method not implemented.");
+        return this.bit(16);
     }
+    /**
+     * Bit field reader. Reads 16 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit16le() {
-        throw new Error("Method not implemented.");
+        return this.bit(16, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 16 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit16be() {
-        throw new Error("Method not implemented.");
+        return this.bit(16, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 16 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit16() {
-        throw new Error("Method not implemented.");
+        return this.bit(16, true);
     }
+    /**
+     * Bit field reader. Reads 16 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit16le() {
-        throw new Error("Method not implemented.");
+        return this.bit(16, true, "little");
     }
+    /**
+     * Bit field reader. Reads 16 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit16be() {
-        throw new Error("Method not implemented.");
+        return this.bit(16, true, "big");
     }
+    /**
+     * Bit field reader. Reads 17 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit17() {
-        throw new Error("Method not implemented.");
+        return this.bit(17);
     }
+    /**
+     * Bit field reader. Reads 17 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit17le() {
-        throw new Error("Method not implemented.");
+        return this.bit(17, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 17 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit17be() {
-        throw new Error("Method not implemented.");
+        return this.bit(17, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 17 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit17() {
-        throw new Error("Method not implemented.");
+        return this.bit(17, true);
     }
+    /**
+     * Bit field reader. Reads 17 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit17le() {
-        throw new Error("Method not implemented.");
+        return this.bit(17, true, "little");
     }
+    /**
+     * Bit field reader. Reads 17 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit17be() {
-        throw new Error("Method not implemented.");
+        return this.bit(17, true, "big");
     }
+    /**
+     * Bit field reader. Reads 18 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit18() {
-        throw new Error("Method not implemented.");
+        return this.bit(18);
     }
+    /**
+     * Bit field reader. Reads 18 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit18le() {
-        throw new Error("Method not implemented.");
+        return this.bit(18, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 18 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit18be() {
-        throw new Error("Method not implemented.");
+        return this.bit(18, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 18 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit18() {
-        throw new Error("Method not implemented.");
+        return this.bit(18, true);
     }
+    /**
+     * Bit field reader. Reads 18 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit18le() {
-        throw new Error("Method not implemented.");
+        return this.bit(18, true, "little");
     }
+    /**
+     * Bit field reader. Reads 18 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit18be() {
-        throw new Error("Method not implemented.");
+        return this.bit(18, true, "big");
     }
+    /**
+     * Bit field reader. Reads 19 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit19() {
-        throw new Error("Method not implemented.");
+        return this.bit(19);
     }
+    /**
+     * Bit field reader. Reads 19 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit19le() {
-        throw new Error("Method not implemented.");
+        return this.bit(19, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 19 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit19be() {
-        throw new Error("Method not implemented.");
+        return this.bit(19, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 19 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit19() {
-        throw new Error("Method not implemented.");
+        return this.bit(19, true);
     }
+    /**
+     * Bit field reader. Reads 19 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit19le() {
-        throw new Error("Method not implemented.");
+        return this.bit(19, true, "little");
     }
+    /**
+     * Bit field reader. Reads 19 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit19be() {
-        throw new Error("Method not implemented.");
+        return this.bit(19, true, "big");
     }
+    /**
+     * Bit field reader. Reads 20 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit20() {
-        throw new Error("Method not implemented.");
+        return this.bit(20);
     }
+    /**
+     * Bit field reader. Reads 20 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit20le() {
-        throw new Error("Method not implemented.");
+        return this.bit(20, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 20 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit20be() {
-        throw new Error("Method not implemented.");
+        return this.bit(20, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 20 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit20() {
-        throw new Error("Method not implemented.");
+        return this.bit(20, true);
     }
+    /**
+     * Bit field reader. Reads 20 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit20le() {
-        throw new Error("Method not implemented.");
+        return this.bit(20, true, "little");
     }
+    /**
+     * Bit field reader. Reads 20 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit20be() {
-        throw new Error("Method not implemented.");
+        return this.bit(20, true, "big");
     }
+    /**
+     * Bit field reader. Reads 21 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit21() {
-        throw new Error("Method not implemented.");
+        return this.bit(21);
     }
+    /**
+     * Bit field reader. Reads 21 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit21le() {
-        throw new Error("Method not implemented.");
+        return this.bit(21, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 21 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit21be() {
-        throw new Error("Method not implemented.");
+        return this.bit(21, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 21 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit21() {
-        throw new Error("Method not implemented.");
+        return this.bit(21, true);
     }
+    /**
+     * Bit field reader. Reads 21 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit21le() {
-        throw new Error("Method not implemented.");
+        return this.bit(21, true, "little");
     }
+    /**
+     * Bit field reader. Reads 21 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit21be() {
-        throw new Error("Method not implemented.");
+        return this.bit(21, true, "big");
     }
+    /**
+     * Bit field reader. Reads 22 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit22() {
-        throw new Error("Method not implemented.");
+        return this.bit(22);
     }
+    /**
+     * Bit field reader. Reads 22 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit22le() {
-        throw new Error("Method not implemented.");
+        return this.bit(22, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 22 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit22be() {
-        throw new Error("Method not implemented.");
+        return this.bit(22, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 22 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit22() {
-        throw new Error("Method not implemented.");
+        return this.bit(22, true);
     }
+    /**
+     * Bit field reader. Reads 22 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit22le() {
-        throw new Error("Method not implemented.");
+        return this.bit(22, true, "little");
     }
+    /**
+     * Bit field reader. Reads 22 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit22be() {
-        throw new Error("Method not implemented.");
+        return this.bit(22, true, "big");
     }
+    /**
+     * Bit field reader. Reads 23 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit23() {
-        throw new Error("Method not implemented.");
+        return this.bit(23);
     }
+    /**
+     * Bit field reader. Reads 23 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit23le() {
-        throw new Error("Method not implemented.");
+        return this.bit(23, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 23 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit23be() {
-        throw new Error("Method not implemented.");
+        return this.bit(23, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 23 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit23() {
-        throw new Error("Method not implemented.");
+        return this.bit(23, true);
     }
+    /**
+     * Bit field reader. Reads 23 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit23le() {
-        throw new Error("Method not implemented.");
+        return this.bit(23, true, "little");
     }
+    /**
+     * Bit field reader. Reads 23 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit23be() {
-        throw new Error("Method not implemented.");
+        return this.bit(23, true, "big");
     }
+    /**
+     * Bit field reader. Reads 24 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit24() {
-        throw new Error("Method not implemented.");
+        return this.bit(24);
     }
+    /**
+     * Bit field reader. Reads 24 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit24le() {
-        throw new Error("Method not implemented.");
+        return this.bit(24, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 24 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit24be() {
-        throw new Error("Method not implemented.");
+        return this.bit(24, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 24 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit24() {
-        throw new Error("Method not implemented.");
+        return this.bit(24, true);
     }
+    /**
+     * Bit field reader. Reads 24 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit24le() {
-        throw new Error("Method not implemented.");
+        return this.bit(24, true, "little");
     }
+    /**
+     * Bit field reader. Reads 24 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit24be() {
-        throw new Error("Method not implemented.");
+        return this.bit(24, true, "big");
     }
+    /**
+     * Bit field reader. Reads 25 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit25() {
-        throw new Error("Method not implemented.");
+        return this.bit(25);
     }
+    /**
+     * Bit field reader. Reads 25 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit25le() {
-        throw new Error("Method not implemented.");
+        return this.bit(25, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 25 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit25be() {
-        throw new Error("Method not implemented.");
+        return this.bit(25, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 25 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit25() {
-        throw new Error("Method not implemented.");
+        return this.bit(25, true);
     }
+    /**
+     * Bit field reader. Reads 25 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit25le() {
-        throw new Error("Method not implemented.");
+        return this.bit(25, true, "little");
     }
+    /**
+     * Bit field reader. Reads 25 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit25be() {
-        throw new Error("Method not implemented.");
+        return this.bit(25, true, "big");
     }
+    /**
+     * Bit field reader. Reads 26 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit26() {
-        throw new Error("Method not implemented.");
+        return this.bit(26);
     }
+    /**
+     * Bit field reader. Reads 26 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit26le() {
-        throw new Error("Method not implemented.");
+        return this.bit(26, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 26 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit26be() {
-        throw new Error("Method not implemented.");
+        return this.bit(26, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 26 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit26() {
-        throw new Error("Method not implemented.");
+        return this.bit(26, true);
     }
+    /**
+     * Bit field reader. Reads 26 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit26le() {
-        throw new Error("Method not implemented.");
+        return this.bit(26, true, "little");
     }
+    /**
+     * Bit field reader. Reads 26 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit26be() {
-        throw new Error("Method not implemented.");
+        return this.bit(26, true, "big");
     }
+    /**
+     * Bit field reader. Reads 27 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit27() {
-        throw new Error("Method not implemented.");
+        return this.bit(27);
     }
+    /**
+     * Bit field reader. Reads 27 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit27le() {
-        throw new Error("Method not implemented.");
+        return this.bit(27, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 27 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit27be() {
-        throw new Error("Method not implemented.");
+        return this.bit(27, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 27 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit27() {
-        throw new Error("Method not implemented.");
+        return this.bit(27, true);
     }
+    /**
+     * Bit field reader. Reads 27 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit27le() {
-        throw new Error("Method not implemented.");
+        return this.bit(27, true, "little");
     }
+    /**
+     * Bit field reader. Reads 27 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit27be() {
-        throw new Error("Method not implemented.");
+        return this.bit(27, true, "big");
     }
+    /**
+     * Bit field reader. Reads 28 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit28() {
-        throw new Error("Method not implemented.");
+        return this.bit(28);
     }
+    /**
+     * Bit field reader. Reads 28 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit28le() {
-        throw new Error("Method not implemented.");
+        return this.bit(28, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 28 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit28be() {
-        throw new Error("Method not implemented.");
+        return this.bit(28, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 28 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit28() {
-        throw new Error("Method not implemented.");
+        return this.bit(28, true);
     }
+    /**
+     * Bit field reader. Reads 28 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit28le() {
-        throw new Error("Method not implemented.");
+        return this.bit(28, true, "little");
     }
+    /**
+     * Bit field reader. Reads 28 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit28be() {
-        throw new Error("Method not implemented.");
+        return this.bit(28, true, "big");
     }
+    /**
+     * Bit field reader. Reads 29 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit29() {
-        throw new Error("Method not implemented.");
+        return this.bit(29);
     }
+    /**
+     * Bit field reader. Reads 29 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit29le() {
-        throw new Error("Method not implemented.");
+        return this.bit(29, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 29 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit29be() {
-        throw new Error("Method not implemented.");
+        return this.bit(29, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 29 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit29() {
-        throw new Error("Method not implemented.");
+        return this.bit(29, true);
     }
+    /**
+     * Bit field reader. Reads 29 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit29le() {
-        throw new Error("Method not implemented.");
+        return this.bit(29, true, "little");
     }
+    /**
+     * Bit field reader. Reads 29 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit29be() {
-        throw new Error("Method not implemented.");
+        return this.bit(29, true, "big");
     }
+    /**
+     * Bit field reader. Reads 30 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit30() {
-        throw new Error("Method not implemented.");
+        return this.bit(30);
     }
+    /**
+     * Bit field reader. Reads 30 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit30le() {
-        throw new Error("Method not implemented.");
+        return this.bit(30, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 30 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit30be() {
-        throw new Error("Method not implemented.");
+        return this.bit(30, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 30 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit30() {
-        throw new Error("Method not implemented.");
+        return this.bit(30, true);
     }
+    /**
+     * Bit field reader. Reads 30 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit30le() {
-        throw new Error("Method not implemented.");
+        return this.bit(30, true, "little");
     }
+    /**
+     * Bit field reader. Reads 30 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit30be() {
-        throw new Error("Method not implemented.");
+        return this.bit(30, true, "big");
     }
+    /**
+     * Bit field reader. Reads 31 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit31() {
-        throw new Error("Method not implemented.");
+        return this.bit(31);
     }
+    /**
+     * Bit field reader. Reads 31 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit31le() {
-        throw new Error("Method not implemented.");
+        return this.bit(31, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 31 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit31be() {
-        throw new Error("Method not implemented.");
+        return this.bit(31, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 31 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit31() {
-        throw new Error("Method not implemented.");
+        return this.bit(31, true);
     }
+    /**
+     * Bit field reader. Reads 31 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit31le() {
-        throw new Error("Method not implemented.");
+        return this.bit(31, true, "little");
     }
+    /**
+     * Bit field reader. Reads 31 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit31be() {
-        throw new Error("Method not implemented.");
+        return this.bit(31, true, "big");
     }
+    /**
+     * Bit field reader. Reads 32 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit32() {
-        throw new Error("Method not implemented.");
+        return this.bit(32);
     }
+    /**
+     * Bit field reader. Reads 32 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit32le() {
-        throw new Error("Method not implemented.");
+        return this.bit(32, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 32 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit32be() {
-        throw new Error("Method not implemented.");
+        return this.bit(32, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 32 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit32() {
-        throw new Error("Method not implemented.");
+        return this.bit(32, true);
     }
+    /**
+     * Bit field reader. Reads 32 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit32le() {
-        throw new Error("Method not implemented.");
+        return this.bit(32, true, "little");
     }
+    /**
+     * Bit field reader. Reads 32 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit32be() {
-        throw new Error("Method not implemented.");
+        return this.bit(32, true, "big");
     }
+    //
+    // byte read
+    //
+    /**
+     * Read byte.
+     *
+     * @returns {number}
+     */
     get byte() {
-        throw new Error("Method not implemented.");
+        return this.readByte();
     }
+    /**
+     * Read byte.
+     *
+     * @returns {number}
+     */
     get int8() {
-        throw new Error("Method not implemented.");
+        return this.readByte();
     }
+    /**
+     * Read unsigned byte.
+     *
+     * @returns {number}
+     */
     get uint8() {
-        throw new Error("Method not implemented.");
+        return this.readByte(true);
     }
+    /**
+     * Read unsigned byte.
+     *
+     * @returns {number}
+     */
     get ubyte() {
-        throw new Error("Method not implemented.");
+        return this.readByte(true);
     }
+    //
+    //short16 read
+    //
+    /**
+     * Read short.
+     *
+     * @returns {number}
+     */
     get int16() {
-        throw new Error("Method not implemented.");
+        return this.readInt16();
     }
+    /**
+     * Read short.
+     *
+     * @returns {number}
+     */
     get short() {
-        throw new Error("Method not implemented.");
+        return this.readInt16();
     }
+    /**
+     * Read short.
+     *
+     * @returns {number}
+     */
     get word() {
-        throw new Error("Method not implemented.");
+        return this.readInt16();
     }
+    /**
+     * Read unsigned short.
+     *
+     * @returns {number}
+     */
     get uint16() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true);
     }
+    /**
+     * Read unsigned short.
+     *
+     * @returns {number}
+     */
     get ushort() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true);
     }
+    /**
+     * Read unsigned short.
+     *
+     * @returns {number}
+     */
     get uword() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true);
     }
+    /**
+     * Read unsigned short in little endian.
+     *
+     * @returns {number}
+     */
     get uint16le() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true, "little");
     }
+    /**
+     * Read unsigned short in little endian.
+     *
+     * @returns {number}
+     */
     get ushortle() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true, "little");
     }
+    /**
+     * Read unsigned short in little endian.
+     *
+     * @returns {number}
+     */
     get uwordle() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true, "little");
     }
+    /**
+     * Read signed short in little endian.
+     *
+     * @returns {number}
+     */
     get int16le() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(false, "little");
     }
+    /**
+     * Read signed short in little endian.
+     *
+     * @returns {number}
+     */
     get shortle() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(false, "little");
     }
+    /**
+     * Read signed short in little endian.
+     *
+     * @returns {number}
+     */
     get wordle() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(false, "little");
     }
+    /**
+     * Read unsigned short in big endian.
+     *
+     * @returns {number}
+     */
     get uint16be() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true, "big");
     }
+    /**
+     * Read unsigned short in big endian.
+     *
+     * @returns {number}
+     */
     get ushortbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true, "big");
     }
+    /**
+     * Read unsigned short in big endian.
+     *
+     * @returns {number}
+     */
     get uwordbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true, "big");
     }
+    /**
+     * Read signed short in big endian.
+     *
+     * @returns {number}
+     */
     get int16be() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(false, "big");
     }
+    /**
+     * Read signed short in big endian.
+     *
+     * @returns {number}
+     */
     get shortbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(false, "big");
     }
+    /**
+     * Read signed short in big endian.
+     *
+     * @returns {number}
+     */
     get wordbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(false, "big");
     }
+    //
+    //half float read
+    //
+    /**
+     * Read half float.
+     *
+     * @returns {number}
+     */
     get halffloat() {
-        throw new Error("Method not implemented.");
+        return this.readHalfFloat();
     }
+    /**
+     * Read half float
+     *
+     * @returns {number}
+     */
     get half() {
-        throw new Error("Method not implemented.");
+        return this.readHalfFloat();
     }
+    /**
+     * Read half float.
+     *
+     * @returns {number}
+     */
     get halffloatbe() {
-        throw new Error("Method not implemented.");
+        return this.readHalfFloat("big");
     }
+    /**
+     * Read half float.
+     *
+     * @returns {number}
+     */
     get halfbe() {
-        throw new Error("Method not implemented.");
+        return this.readHalfFloat("big");
     }
+    /**
+     * Read half float.
+     *
+     * @returns {number}
+     */
     get halffloatle() {
-        throw new Error("Method not implemented.");
+        return this.readHalfFloat("little");
     }
+    /**
+     * Read half float.
+     *
+     * @returns {number}
+     */
     get halfle() {
-        throw new Error("Method not implemented.");
+        return this.readHalfFloat("little");
     }
+    //
+    //int read
+    //
+    /**
+     * Read 32 bit integer.
+     *
+     * @returns {number}
+     */
     get int() {
-        throw new Error("Method not implemented.");
+        return this.readInt32();
     }
+    /**
+     * Read 32 bit integer.
+     *
+     * @returns {number}
+     */
     get double() {
-        throw new Error("Method not implemented.");
+        return this.readInt32();
     }
+    /**
+     * Read 32 bit integer.
+     *
+     * @returns {number}
+     */
     get int32() {
-        throw new Error("Method not implemented.");
+        return this.readInt32();
     }
+    /**
+     * Read 32 bit integer.
+     *
+     * @returns {number}
+     */
     get long() {
-        throw new Error("Method not implemented.");
+        return this.readInt32();
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get uint() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true);
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get udouble() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true);
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get uint32() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true);
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get ulong() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true);
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get intbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "big");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get doublebe() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "big");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get int32be() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "big");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get longbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "big");
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get uintbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "big");
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get udoublebe() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "big");
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get uint32be() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "big");
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get ulongbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "big");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get intle() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "little");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get doublele() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "little");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get int32le() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "little");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get longle() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "little");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get uintle() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "little");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get udoublele() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "little");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get uint32le() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "little");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get ulongle() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "little");
     }
+    //
+    //float read
+    //
+    /**
+     * Read float.
+     *
+     * @returns {number}
+     */
     get float() {
-        throw new Error("Method not implemented.");
+        return this.readFloat();
     }
+    /**
+     * Read float.
+     *
+     * @returns {number}
+     */
     get floatbe() {
-        throw new Error("Method not implemented.");
+        return this.readFloat("big");
     }
+    /**
+     * Read float.
+     *
+     * @returns {number}
+     */
     get floatle() {
-        throw new Error("Method not implemented.");
+        return this.readFloat("little");
     }
+    //
+    //int64 reader
+    //
+    /**
+     * Read signed 64 bit integer
+     *
+     * @returns {bigint}
+     */
     get int64() {
-        throw new Error("Method not implemented.");
+        return this.readInt64();
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get bigint() {
-        throw new Error("Method not implemented.");
+        return this.readInt64();
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get quad() {
-        throw new Error("Method not implemented.");
+        return this.readInt64();
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get uint64() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true);
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get ubigint() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true);
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get uquad() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true);
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get int64be() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(false, "big");
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get bigintbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(false, "big");
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get quadbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(false, "big");
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get uint64be() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true, "big");
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get ubigintbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true, "big");
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get uquadbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true, "big");
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get int64le() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(false, "little");
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get bigintle() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(false, "little");
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get quadle() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(false, "little");
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get uint64le() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true, "little");
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get ubigintle() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true, "little");
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get uquadle() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true, "little");
     }
+    //
+    //doublefloat reader
+    //
+    /**
+     * Read double float.
+     *
+     * @returns {number}
+     */
     get doublefloat() {
-        throw new Error("Method not implemented.");
+        return this.readDoubleFloat();
     }
+    /**
+     * Read double float.
+     *
+     * @returns {number}
+     */
     get dfloat() {
-        throw new Error("Method not implemented.");
+        return this.readDoubleFloat();
     }
+    /**
+     * Read double float.
+     *
+     * @returns {number}
+     */
     get dfloatebe() {
-        throw new Error("Method not implemented.");
+        return this.readDoubleFloat("big");
     }
+    /**
+     * Read double float.
+     *
+     * @returns {number}
+     */
     get doublefloatbe() {
-        throw new Error("Method not implemented.");
+        return this.readDoubleFloat("big");
     }
+    /**
+     * Read double float.
+     *
+     * @returns {number}
+     */
     get dfloatle() {
-        throw new Error("Method not implemented.");
+        return this.readDoubleFloat("little");
     }
+    /**
+     * Read double float.
+     *
+     * @returns {number}
+     */
     get doublefloatle() {
-        throw new Error("Method not implemented.");
+        return this.readDoubleFloat("little");
     }
+    //
+    //string reader
+    //
+    /**
+    * Reads string, use options object for different types.
+    *
+    * @param {stringOptions} options
+    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
+    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
+    * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
+    * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
+    * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
+    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
+    * @return {string}
+    */
     string(options) {
-        throw new Error("Method not implemented.");
+        return this.readString(options);
     }
+    /**
+    * Reads string using setting from .strSettings
+    *
+    * Default is ``utf-8``
+    *
+    * @return {string}
+    */
     get str() {
-        throw new Error("Method not implemented.");
+        return this.readString(this.strSettings);
     }
+    /**
+    * Reads UTF-8 (C) string.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     utf8string(length, terminateValue, stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
     }
+    /**
+    * Reads UTF-8 (C) string.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     cstring(length, terminateValue, stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
     }
+    /**
+    * Reads ANSI string.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     ansistring(length, terminateValue, stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue, stripNull: stripNull });
     }
+    /**
+    * Reads UTF-16 (Unicode) string.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     utf16string(length, terminateValue, stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
     }
+    /**
+    * Reads UTF-16 (Unicode) string.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     unistring(length, terminateValue, stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
     }
+    /**
+    * Reads UTF-16 (Unicode) string in little endian order.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     utf16stringle(length, terminateValue, stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
     }
+    /**
+    * Reads UTF-16 (Unicode) string in little endian order.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     unistringle(length, terminateValue, stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
     }
+    /**
+    * Reads UTF-16 (Unicode) string in big endian order.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     utf16stringbe(length, terminateValue, stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
     }
+    /**
+    * Reads UTF-16 (Unicode) string in big endian order.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     unistringbe(length, terminateValue, stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
     }
+    /**
+    * Reads Pascal string.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     pstring(lengthReadSize, stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
     }
+    /**
+    * Reads Pascal string 1 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     pstring1(stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: endian });
     }
+    /**
+    * Reads Pascal string 1 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     pstring1le(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "little" });
     }
+    /**
+    * Reads Pascal string 1 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     pstring1be(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "big" });
     }
+    /**
+    * Reads Pascal string 2 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     pstring2(stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: endian });
     }
+    /**
+    * Reads Pascal string 2 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     pstring2le(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "little" });
     }
+    /**
+    * Reads Pascal string 2 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     pstring2be(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "big" });
     }
+    /**
+    * Reads Pascal string 4 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     pstring4(stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: endian });
     }
+    /**
+    * Reads Pascal string 4 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     pstring4le(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "little" });
     }
+    /**
+    * Reads Pascal string 4 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     pstring4be(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "big" });
     }
+    /**
+    * Reads Wide-Pascal string.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     wpstring(lengthReadSize, stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: lengthReadSize, endian: endian, stripNull: stripNull });
     }
+    /**
+    * Reads Wide-Pascal string 1 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     wpstring1(stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: endian, stripNull: stripNull });
     }
+    /**
+    * Reads Wide-Pascal string 2 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     wpstring2(stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: endian, stripNull: stripNull });
     }
+    /**
+    * Reads Wide-Pascal string 2 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     wpstring2le(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "little", stripNull: stripNull });
     }
+    /**
+    * Reads Wide-Pascal string 2 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     wpstring2be(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "big", stripNull: stripNull });
     }
+    /**
+    * Reads Wide-Pascal string 4 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     wpstring4(stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: endian, stripNull: stripNull });
     }
+    /**
+    * Reads Wide-Pascal string 4 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     wpstring4be(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "big", stripNull: stripNull });
     }
+    /**
+    * Reads Wide-Pascal string 4 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     wpstring4le(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "little", stripNull: stripNull });
     }
-}
-/**
- * Binary reader, includes bitfields and strings.
- *
- * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
- * @param {BiOptions?} options - Any options to set at start
- * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
- * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
- * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
- * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- *
- * @since 2.0
- */
-const BiReader = applyBinaryAliasReader(BiRead);
-
-function applyBinaryAliasWriter(Base) {
-    return class extends Base {
-        constructor(...args) {
-            super(...args);
-        }
-        //
-        // Bit Aliases
-        //
-        /**
-         * Bit field writer.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         * @param {number} bits - bits to write
-         * @param {boolean} unsigned - if the value is unsigned
-         * @param {endian} endian - ``big`` or ``little``
-         * @returns {number}
-         */
-        bit(value, bits, unsigned, endian) {
-            return this.writeBit(value, bits, unsigned, endian);
-        }
-        /**
-         * Bit field writer.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         * @param {number} bits - bits to write
-         * @param {endian} endian - ``big`` or ``little``
-         * @returns {number}
-         */
-        ubit(value, bits, endian) {
-            return this.writeBit(value, bits, true, endian);
-        }
-        /**
-         * Bit field writer.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         * @param {number} bits - bits to write
-         * @param {boolean} unsigned - if the value is unsigned
-         * @returns {number}
-         */
-        bitbe(value, bits, unsigned) {
-            return this.bit(value, bits, unsigned, "big");
-        }
-        /**
-         * Bit field writer.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         * @param {number} bits - bits to write
-         * @returns {number}
-         */
-        ubitbe(value, bits) {
-            return this.bit(value, bits, true, "big");
-        }
-        /**
-         * Bit field writer.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         * @param {number} bits - bits to write
-         * @returns {number}
-         */
-        ubitle(value, bits) {
-            return this.bit(value, bits, true, "little");
-        }
-        /**
-         * Bit field writer.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         * @param {number} bits - bits to write
-         * @param {boolean} unsigned - if the value is unsigned
-         * @returns {number}
-         */
-        bitle(value, bits, unsigned) {
-            return this.bit(value, bits, unsigned, "little");
-        }
-        /**
-         * Bit field writer. Writes 1 bit.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit1(value) {
-            this.bit(value, 1);
-        }
-        /**
-         * Bit field writer. Writes 1 bit.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit1le(value) {
-            this.bit(value, 1, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 1 bit.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit1be(value) {
-            this.bit(value, 1, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 1 bit.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit1(value) {
-            this.bit(value, 1, true);
-        }
-        /**
-         * Bit field writer. Writes 1 bit.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit1le(value) {
-            this.bit(value, 1, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 1 bit.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit1be(value) {
-            this.bit(value, 1, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 2 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit2(value) {
-            this.bit(value, 2);
-        }
-        /**
-         * Bit field writer. Writes 2 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit2le(value) {
-            this.bit(value, 2, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 2 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit2be(value) {
-            this.bit(value, 2, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 2 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit2(value) {
-            this.bit(value, 2, true);
-        }
-        /**
-         * Bit field writer. Writes 2 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit2le(value) {
-            this.bit(value, 2, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 2 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit2be(value) {
-            this.bit(value, 2, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 3 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit3(value) {
-            this.bit(value, 3);
-        }
-        /**
-         * Bit field writer. Writes 3 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit3le(value) {
-            this.bit(value, 3, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 3 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit3be(value) {
-            this.bit(value, 3, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 3 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit3(value) {
-            this.bit(value, 3, true);
-        }
-        /**
-         * Bit field writer. Writes 3 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit3le(value) {
-            this.bit(value, 3, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 3 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit3be(value) {
-            this.bit(value, 3, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 4 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit4(value) {
-            this.bit(value, 4);
-        }
-        /**
-         * Bit field writer. Writes 4 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit4le(value) {
-            this.bit(value, 4, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 4 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit4be(value) {
-            this.bit(value, 4, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 4 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit4(value) {
-            this.bit(value, 4, true);
-        }
-        /**
-         * Bit field writer. Writes 4 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit4le(value) {
-            this.bit(value, 4, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 4 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit4be(value) {
-            this.bit(value, 4, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 5 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit5(value) {
-            this.bit(value, 5);
-        }
-        /**
-         * Bit field writer. Writes 5 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit5le(value) {
-            this.bit(value, 5, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 5 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit5be(value) {
-            this.bit(value, 5, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 5 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit5(value) {
-            this.bit(value, 5, true);
-        }
-        /**
-         * Bit field writer. Writes 5 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit5le(value) {
-            this.bit(value, 5, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 5 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit5be(value) {
-            this.bit(value, 5, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 6 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit6(value) {
-            this.bit(value, 6);
-        }
-        /**
-         * Bit field writer. Writes 6 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit6le(value) {
-            this.bit(value, 6, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 6 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit6be(value) {
-            this.bit(value, 6, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 6 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit6(value) {
-            this.bit(value, 6, true);
-        }
-        /**
-         * Bit field writer. Writes 6 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit6le(value) {
-            this.bit(value, 6, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 6 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit6be(value) {
-            this.bit(value, 6, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 7 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit7(value) {
-            this.bit(value, 7);
-        }
-        /**
-         * Bit field writer. Writes 7 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit7le(value) {
-            this.bit(value, 7, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 7 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit7be(value) {
-            this.bit(value, 7, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 7 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit7(value) {
-            this.bit(value, 7, true);
-        }
-        /**
-         * Bit field writer. Writes 7 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit7le(value) {
-            this.bit(value, 7, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 7 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit7be(value) {
-            this.bit(value, 7, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 8 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit8(value) {
-            this.bit(value, 8);
-        }
-        /**
-         * Bit field writer. Writes 8 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit8le(value) {
-            this.bit(value, 8, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 8 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit8be(value) {
-            this.bit(value, 8, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 8 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit8(value) {
-            this.bit(value, 8, true);
-        }
-        /**
-         * Bit field writer. Writes 8 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit8le(value) {
-            this.bit(value, 8, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 8 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit8be(value) {
-            this.bit(value, 8, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 9 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit9(value) {
-            this.bit(value, 9);
-        }
-        /**
-         * Bit field writer. Writes 9 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit9le(value) {
-            this.bit(value, 9, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 9 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit9be(value) {
-            this.bit(value, 9, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 9 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit9(value) {
-            this.bit(value, 9, true);
-        }
-        /**
-         * Bit field writer. Writes 9 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit9le(value) {
-            this.bit(value, 9, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 9 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit9be(value) {
-            this.bit(value, 9, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 10 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit10(value) {
-            this.bit(value, 10);
-        }
-        /**
-         * Bit field writer. Writes 10 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit10le(value) {
-            this.bit(value, 10, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 10 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit10be(value) {
-            this.bit(value, 10, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 10 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit10(value) {
-            this.bit(value, 10, true);
-        }
-        /**
-         * Bit field writer. Writes 10 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit10le(value) {
-            this.bit(value, 10, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 10 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit10be(value) {
-            this.bit(value, 10, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 11 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit11(value) {
-            this.bit(value, 11);
-        }
-        /**
-         * Bit field writer. Writes 11 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit11le(value) {
-            this.bit(value, 11, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 11 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit11be(value) {
-            this.bit(value, 11, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 11 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit11(value) {
-            this.bit(value, 11, true);
-        }
-        /**
-         * Bit field writer. Writes 11 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit11le(value) {
-            this.bit(value, 11, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 11 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit11be(value) {
-            this.bit(value, 11, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 12 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit12(value) {
-            this.bit(value, 12);
-        }
-        /**
-         * Bit field writer. Writes 12 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit12le(value) {
-            this.bit(value, 12, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 12 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit12be(value) {
-            this.bit(value, 12, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 12 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit12(value) {
-            this.bit(value, 12, true);
-        }
-        /**
-         * Bit field writer. Writes 12 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit12le(value) {
-            this.bit(value, 12, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 12 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit12be(value) {
-            this.bit(value, 12, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 13 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit13(value) {
-            this.bit(value, 13);
-        }
-        /**
-         * Bit field writer. Writes 13 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit13le(value) {
-            this.bit(value, 13, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 13 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit13be(value) {
-            this.bit(value, 13, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 13 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit13(value) {
-            this.bit(value, 13, true);
-        }
-        /**
-         * Bit field writer. Writes 13 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit13le(value) {
-            this.bit(value, 13, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 13 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit13be(value) {
-            this.bit(value, 13, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 14 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit14(value) {
-            this.bit(value, 14);
-        }
-        /**
-         * Bit field writer. Writes 14 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit14le(value) {
-            this.bit(value, 14, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 14 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit14be(value) {
-            this.bit(value, 14, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 14 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit14(value) {
-            this.bit(value, 14, true);
-        }
-        /**
-         * Bit field writer. Writes 14 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit14le(value) {
-            this.bit(value, 14, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 14 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit14be(value) {
-            this.bit(value, 14, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 15 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit15(value) {
-            this.bit(value, 15);
-        }
-        /**
-         * Bit field writer. Writes 15 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit15le(value) {
-            this.bit(value, 15, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 15 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit15be(value) {
-            this.bit(value, 15, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 15 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit15(value) {
-            this.bit(value, 15, true);
-        }
-        /**
-         * Bit field writer. Writes 15 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit15le(value) {
-            this.bit(value, 15, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 15 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit15be(value) {
-            this.bit(value, 15, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 16 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit16(value) {
-            this.bit(value, 16);
-        }
-        /**
-         * Bit field writer. Writes 16 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit16le(value) {
-            this.bit(value, 16, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 16 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit16be(value) {
-            this.bit(value, 16, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 16 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit16(value) {
-            this.bit(value, 16, true);
-        }
-        /**
-         * Bit field writer. Writes 16 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit16le(value) {
-            this.bit(value, 16, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 16 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit16be(value) {
-            this.bit(value, 16, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 17 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit17(value) {
-            this.bit(value, 17);
-        }
-        /**
-         * Bit field writer. Writes 17 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit17le(value) {
-            this.bit(value, 17, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 17 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit17be(value) {
-            this.bit(value, 17, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 17 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit17(value) {
-            this.bit(value, 17, true);
-        }
-        /**
-         * Bit field writer. Writes 17 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit17le(value) {
-            this.bit(value, 17, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 17 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit17be(value) {
-            this.bit(value, 17, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 18 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit18(value) {
-            this.bit(value, 18);
-        }
-        /**
-         * Bit field writer. Writes 18 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit18le(value) {
-            this.bit(value, 18, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 18 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit18be(value) {
-            this.bit(value, 18, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 18 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit18(value) {
-            this.bit(value, 18, true);
-        }
-        /**
-         * Bit field writer. Writes 18 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit18le(value) {
-            this.bit(value, 18, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 18 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit18be(value) {
-            this.bit(value, 18, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 19 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit19(value) {
-            this.bit(value, 19);
-        }
-        /**
-         * Bit field writer. Writes 19 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit19le(value) {
-            this.bit(value, 19, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 19 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit19be(value) {
-            this.bit(value, 19, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 19 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit19(value) {
-            this.bit(value, 19, true);
-        }
-        /**
-         * Bit field writer. Writes 19 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit19le(value) {
-            this.bit(value, 19, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 19 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit19be(value) {
-            this.bit(value, 19, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 20 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit20(value) {
-            this.bit(value, 20);
-        }
-        /**
-         * Bit field writer. Writes 20 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit20le(value) {
-            this.bit(value, 20, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 20 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit20be(value) {
-            this.bit(value, 20, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 20 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit20(value) {
-            this.bit(value, 20, true);
-        }
-        /**
-         * Bit field writer. Writes 20 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit20le(value) {
-            this.bit(value, 20, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 20 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit20be(value) {
-            this.bit(value, 20, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 21 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit21(value) {
-            this.bit(value, 21);
-        }
-        /**
-         * Bit field writer. Writes 21 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit21le(value) {
-            this.bit(value, 21, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 21 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit21be(value) {
-            this.bit(value, 21, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 21 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit21(value) {
-            this.bit(value, 21, true);
-        }
-        /**
-         * Bit field writer. Writes 21 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit21le(value) {
-            this.bit(value, 21, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 21 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit21be(value) {
-            this.bit(value, 21, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 22 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit22(value) {
-            this.bit(value, 22);
-        }
-        /**
-         * Bit field writer. Writes 22 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit22le(value) {
-            this.bit(value, 22, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 22 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit22be(value) {
-            this.bit(value, 22, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 22 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit22(value) {
-            this.bit(value, 22, true);
-        }
-        /**
-         * Bit field writer. Writes 22 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit22le(value) {
-            this.bit(value, 22, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 22 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit22be(value) {
-            this.bit(value, 22, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 23 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit23(value) {
-            this.bit(value, 23);
-        }
-        /**
-         * Bit field writer. Writes 23 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit23le(value) {
-            this.bit(value, 23, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 23 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit23be(value) {
-            this.bit(value, 23, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 23 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit23(value) {
-            this.bit(value, 23, true);
-        }
-        /**
-         * Bit field writer. Writes 23 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit23le(value) {
-            this.bit(value, 23, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 23 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit23be(value) {
-            this.bit(value, 23, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 24 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit24(value) {
-            this.bit(value, 24);
-        }
-        /**
-         * Bit field writer. Writes 24 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit24le(value) {
-            this.bit(value, 24, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 24 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit24be(value) {
-            this.bit(value, 24, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 24 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit24(value) {
-            this.bit(value, 24, true);
-        }
-        /**
-         * Bit field writer. Writes 24 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit24le(value) {
-            this.bit(value, 24, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 24 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit24be(value) {
-            this.bit(value, 24, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 25 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit25(value) {
-            this.bit(value, 25);
-        }
-        /**
-         * Bit field writer. Writes 25 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit25le(value) {
-            this.bit(value, 25, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 25 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit25be(value) {
-            this.bit(value, 25, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 25 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit25(value) {
-            this.bit(value, 25, true);
-        }
-        /**
-         * Bit field writer. Writes 25 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit25le(value) {
-            this.bit(value, 25, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 25 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit25be(value) {
-            this.bit(value, 25, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 26 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit26(value) {
-            this.bit(value, 26);
-        }
-        /**
-         * Bit field writer. Writes 26 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit26le(value) {
-            this.bit(value, 26, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 26 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit26be(value) {
-            this.bit(value, 26, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 26 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit26(value) {
-            this.bit(value, 26, true);
-        }
-        /**
-         * Bit field writer. Writes 26 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit26le(value) {
-            this.bit(value, 26, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 26 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit26be(value) {
-            this.bit(value, 26, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 27 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit27(value) {
-            this.bit(value, 27);
-        }
-        /**
-         * Bit field writer. Writes 27 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit27le(value) {
-            this.bit(value, 27, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 27 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit27be(value) {
-            this.bit(value, 27, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 27 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit27(value) {
-            this.bit(value, 27, true);
-        }
-        /**
-         * Bit field writer. Writes 27 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit27le(value) {
-            this.bit(value, 27, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 27 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit27be(value) {
-            this.bit(value, 27, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 28 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit28(value) {
-            this.bit(value, 28);
-        }
-        /**
-         * Bit field writer. Writes 28 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit28le(value) {
-            this.bit(value, 28, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 28 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit28be(value) {
-            this.bit(value, 28, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 28 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit28(value) {
-            this.bit(value, 28, true);
-        }
-        /**
-         * Bit field writer. Writes 28 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit28le(value) {
-            this.bit(value, 28, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 28 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit28be(value) {
-            this.bit(value, 28, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 29 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit29(value) {
-            this.bit(value, 29);
-        }
-        /**
-         * Bit field writer. Writes 29 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit29le(value) {
-            this.bit(value, 29, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 29 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit29be(value) {
-            this.bit(value, 29, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 29 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit29(value) {
-            this.bit(value, 29, true);
-        }
-        /**
-         * Bit field writer. Writes 29 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit29le(value) {
-            this.bit(value, 29, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 29 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit29be(value) {
-            this.bit(value, 29, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 30 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit30(value) {
-            this.bit(value, 30);
-        }
-        /**
-         * Bit field writer. Writes 30 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit30le(value) {
-            this.bit(value, 30, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 30 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit30be(value) {
-            this.bit(value, 30, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 30 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit30(value) {
-            this.bit(value, 30, true);
-        }
-        /**
-         * Bit field writer. Writes 30 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit30le(value) {
-            this.bit(value, 30, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 30 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit30be(value) {
-            this.bit(value, 30, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 31 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit31(value) {
-            this.bit(value, 31);
-        }
-        /**
-         * Bit field writer. Writes 31 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit31le(value) {
-            this.bit(value, 31, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 31 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit31be(value) {
-            this.bit(value, 31, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 31 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit31(value) {
-            this.bit(value, 31, true);
-        }
-        /**
-         * Bit field writer. Writes 31 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit31le(value) {
-            this.bit(value, 31, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 31 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit31be(value) {
-            this.bit(value, 31, true, "big");
-        }
-        /**
-         * Bit field writer. Writes 32 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit32(value) {
-            this.bit(value, 32);
-        }
-        /**
-         * Bit field writer. Writes 32 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit32le(value) {
-            this.bit(value, 32, undefined, "little");
-        }
-        /**
-         * Bit field writer. Writes 32 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set bit32be(value) {
-            this.bit(value, 32, undefined, "big");
-        }
-        /**
-         * Bit field writer. Writes 32 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit32(value) {
-            this.bit(value, 32, true);
-        }
-        /**
-         * Bit field writer. Writes 32 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit32le(value) {
-            this.bit(value, 32, true, "little");
-        }
-        /**
-         * Bit field writer. Writes 32 bits.
-         *
-         * Note: When returning to a byte write, remaining bits are dropped.
-         *
-         * @param {number} value - value as int
-         */
-        set ubit32be(value) {
-            this.bit(value, 32, true, "big");
-        }
-        //
-        // byte write
-        //
-        /**
-         * Write byte.
-         *
-         * @param {number} value - value as int
-         */
-        set byte(value) {
-            this.writeByte(value);
-        }
-        /**
-         * Write byte.
-         *
-         * @param {number} value - value as int
-         */
-        set int8(value) {
-            this.writeByte(value);
-        }
-        /**
-         * Write unsigned byte.
-         *
-         * @param {number} value - value as int
-         */
-        set uint8(value) {
-            this.writeByte(value, true);
-        }
-        /**
-         * Write unsigned byte.
-         *
-         * @param {number} value - value as int
-         */
-        set ubyte(value) {
-            this.writeByte(value, true);
-        }
-        //
-        // short writes
-        //
-        /**
-         * Write int16.
-         *
-         * @param {number} value - value as int
-         */
-        set int16(value) {
-            this.writeInt16(value);
-        }
-        /**
-         * Write int16.
-         *
-         * @param {number} value - value as int
-         */
-        set short(value) {
-            this.writeInt16(value);
-        }
-        /**
-         * Write int16.
-         *
-         * @param {number} value - value as int
-         */
-        set word(value) {
-            this.writeInt16(value);
-        }
-        /**
-         * Write unsigned int16.
-         *
-         * @param {number} value - value as int
-         */
-        set uint16(value) {
-            this.writeInt16(value, true);
-        }
-        /**
-         * Write unsigned int16.
-         *
-         * @param {number} value - value as int
-         */
-        set ushort(value) {
-            this.writeInt16(value, true);
-        }
-        /**
-         * Write unsigned int16.
-         *
-         * @param {number} value - value as int
-         */
-        set uword(value) {
-            this.writeInt16(value, true);
-        }
-        /**
-         * Write signed int16.
-         *
-         * @param {number} value - value as int
-         */
-        set int16be(value) {
-            this.writeInt16(value, false, "big");
-        }
-        /**
-         * Write signed int16.
-         *
-         * @param {number} value - value as int
-         */
-        set shortbe(value) {
-            this.writeInt16(value, false, "big");
-        }
-        /**
-         * Write signed int16.
-         *
-         * @param {number} value - value as int
-         */
-        set wordbe(value) {
-            this.writeInt16(value, false, "big");
-        }
-        /**
-         * Write unsigned int16.
-         *
-         * @param {number} value - value as int
-         */
-        set uint16be(value) {
-            this.writeInt16(value, true, "big");
-        }
-        /**
-         * Write unsigned int16.
-         *
-         * @param {number} value - value as int
-         */
-        set ushortbe(value) {
-            this.writeInt16(value, true, "big");
-        }
-        /**
-         * Write unsigned int16.
-         *
-         * @param {number} value - value as int
-         */
-        set uwordbe(value) {
-            this.writeInt16(value, true, "big");
-        }
-        /**
-         * Write signed int16.
-         *
-         * @param {number} value - value as int
-         */
-        set int16le(value) {
-            this.writeInt16(value, false, "little");
-        }
-        /**
-         * Write signed int16.
-         *
-         * @param {number} value - value as int
-         */
-        set shortle(value) {
-            this.writeInt16(value, false, "little");
-        }
-        /**
-         * Write signed int16.
-         *
-         * @param {number} value - value as int
-         */
-        set wordle(value) {
-            this.writeInt16(value, false, "little");
-        }
-        /**
-         * Write unsigned int16.
-         *
-         * @param {number} value - value as int
-         */
-        set uint16le(value) {
-            this.writeInt16(value, true, "little");
-        }
-        /**
-         * Write unsigned int16.
-         *
-         * @param {number} value - value as int
-         */
-        set ushortle(value) {
-            this.writeInt16(value, true, "little");
-        }
-        /**
-         * Write unsigned int16.
-         *
-         * @param {number} value - value as int
-         */
-        set uwordle(value) {
-            this.writeInt16(value, true, "little");
-        }
-        //
-        // half float
-        //
-        /**
-         * Writes half float.
-         *
-         * @param {number} value - value as int
-         */
-        set half(value) {
-            this.writeHalfFloat(value);
-        }
-        /**
-         * Writes half float.
-         *
-         * @param {number} value - value as int
-         */
-        set halffloat(value) {
-            this.writeHalfFloat(value);
-        }
-        /**
-         * Writes half float.
-         *
-         * @param {number} value - value as int
-         */
-        set halffloatbe(value) {
-            this.writeHalfFloat(value, "big");
-        }
-        /**
-         * Writes half float.
-         *
-         * @param {number} value - value as int
-         */
-        set halfbe(value) {
-            this.writeHalfFloat(value, "big");
-        }
-        /**
-         * Writes half float.
-         *
-         * @param {number} value - value as int
-         */
-        set halffloatle(value) {
-            this.writeHalfFloat(value, "little");
-        }
-        /**
-         * Writes half float.
-         *
-         * @param {number} value - value as int
-         */
-        set halfle(value) {
-            this.writeHalfFloat(value, "little");
-        }
-        //
-        // int32 write
-        //
-        /**
-         * Write int32.
-         *
-         * @param {number} value - value as int
-         */
-        set int(value) {
-            this.writeInt32(value);
-        }
-        /**
-        * Write int32.
-        *
-        * @param {number} value - value as int
-        */
-        set int32(value) {
-            this.writeInt32(value);
-        }
-        /**
-         * Write int32.
-         *
-         * @param {number} value - value as int
-         */
-        set double(value) {
-            this.writeInt32(value);
-        }
-        /**
-         * Write int32.
-         *
-         * @param {number} value - value as int
-         */
-        set long(value) {
-            this.writeInt32(value);
-        }
-        /**
-         * Write unsigned int32.
-         *
-         * @param {number} value - value as int
-         */
-        set uint32(value) {
-            this.writeInt32(value, true);
-        }
-        /**
-         * Write unsigned int32.
-         *
-         * @param {number} value - value as int
-         */
-        set uint(value) {
-            this.writeInt32(value, true);
-        }
-        /**
-        * Write unsigned int32.
-        *
-        * @param {number} value - value as int
-        */
-        set udouble(value) {
-            this.writeInt32(value, true);
-        }
-        /**
-        * Write unsigned int32.
-        *
-        * @param {number} value - value as int
-        */
-        set ulong(value) {
-            this.writeInt32(value, true);
-        }
-        /**
-         * Write signed int32.
-         *
-         * @param {number} value - value as int
-         */
-        set int32le(value) {
-            this.writeInt32(value, false, "little");
-        }
-        /**
-         * Write signed int32.
-         *
-         * @param {number} value - value as int
-         */
-        set intle(value) {
-            this.writeInt32(value, false, "little");
-        }
-        /**
-         * Write signed int32.
-         *
-         * @param {number} value - value as int
-         */
-        set doublele(value) {
-            this.writeInt32(value, false, "little");
-        }
-        /**
-         * Write signed int32.
-         *
-         * @param {number} value - value as int
-         */
-        set longle(value) {
-            this.writeInt32(value, false, "little");
-        }
-        /**
-         * Write unsigned int32.
-         *
-         * @param {number} value - value as int
-         */
-        set uint32le(value) {
-            this.writeInt32(value, true, "little");
-        }
-        /**
-         * Write unsigned int32.
-         *
-         * @param {number} value - value as int
-         */
-        set uintle(value) {
-            this.writeInt32(value, true, "little");
-        }
-        /**
-         * Write unsigned int32.
-         *
-         * @param {number} value - value as int
-         */
-        set udoublele(value) {
-            this.writeInt32(value, true, "little");
-        }
-        /**
-         * Write unsigned int32.
-         *
-         * @param {number} value - value as int
-         */
-        set ulongle(value) {
-            this.writeInt32(value, true, "little");
-        }
-        /**
-         * Write signed int32.
-         *
-         * @param {number} value - value as int
-         */
-        set intbe(value) {
-            this.writeInt32(value, false, "big");
-        }
-        /**
-         * Write signed int32.
-         *
-         * @param {number} value - value as int
-         */
-        set int32be(value) {
-            this.writeInt32(value, false, "big");
-        }
-        /**
-         * Write signed int32.
-         *
-         * @param {number} value - value as int
-         */
-        set doublebe(value) {
-            this.writeInt32(value, false, "big");
-        }
-        /**
-         * Write signed int32.
-         *
-         * @param {number} value - value as int
-         */
-        set longbe(value) {
-            this.writeInt32(value, false, "big");
-        }
-        /**
-         * Write unsigned int32.
-         *
-         * @param {number} value - value as int
-         */
-        set writeUInt32BE(value) {
-            this.writeInt32(value, true, "big");
-        }
-        /**
-         * Write unsigned int32.
-         *
-         * @param {number} value - value as int
-         */
-        set uint32be(value) {
-            this.writeInt32(value, true, "big");
-        }
-        /**
-         * Write unsigned int32.
-         *
-         * @param {number} value - value as int
-         */
-        set uintbe(value) {
-            this.writeInt32(value, true, "big");
-        }
-        /**
-         * Write unsigned int32.
-         *
-         * @param {number} value - value as int
-         */
-        set udoublebe(value) {
-            this.writeInt32(value, true, "big");
-        }
-        /**
-         * Write unsigned int32.
-         *
-         * @param {number} value - value as int
-         */
-        set ulongbe(value) {
-            this.writeInt32(value, true, "big");
-        }
-        //
-        // float write
-        //
-        /**
-        * Write float.
-        *
-        * @param {number} value - value as int
-        */
-        set float(value) {
-            this.writeFloat(value);
-        }
-        /**
-         * Write float.
-         *
-         * @param {number} value - value as int
-         */
-        set floatle(value) {
-            this.writeFloat(value, "little");
-        }
-        /**
-        * Write float.
-        *
-        * @param {number} value - value as int
-        */
-        set floatbe(value) {
-            this.writeFloat(value, "big");
-        }
-        //
-        // int64 write
-        //
-        /**
-         * Write 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set int64(value) {
-            this.writeInt64(value);
-        }
-        /**
-        * Write 64 bit integer.
-        *
-        * @param {BigValue} value - value as int
-        */
-        set quad(value) {
-            this.writeInt64(value);
-        }
-        /**
-         * Write 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set bigint(value) {
-            this.writeInt64(value);
-        }
-        /**
-         * Write unsigned 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set uint64(value) {
-            this.writeInt64(value, true);
-        }
-        /**
-         * Write unsigned 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set ubigint(value) {
-            this.writeInt64(value, true);
-        }
-        /**
-        * Write unsigned 64 bit integer.
-        *
-        * @param {BigValue} value - value as int
-        */
-        set uquad(value) {
-            this.writeInt64(value, true);
-        }
-        /**
-         * Write signed 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set int64le(value) {
-            this.writeInt64(value, false, "little");
-        }
-        /**
-         * Write signed 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set bigintle(value) {
-            this.writeInt64(value, false, "little");
-        }
-        /**
-         * Write signed 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set quadle(value) {
-            this.writeInt64(value, false, "little");
-        }
-        /**
-         * Write unsigned 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set uint64le(value) {
-            this.writeInt64(value, true, "little");
-        }
-        /**
-         * Write unsigned 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set ubigintle(value) {
-            this.writeInt64(value, true, "little");
-        }
-        /**
-         * Write unsigned 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set uquadle(value) {
-            this.writeInt64(value, true, "little");
-        }
-        /**
-         * Write signed 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set int64be(value) {
-            this.writeInt64(value, false, "big");
-        }
-        /**
-         * Write signed 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set bigintbe(value) {
-            this.writeInt64(value, false, "big");
-        }
-        /**
-         * Write signed 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set quadbe(value) {
-            this.writeInt64(value, false, "big");
-        }
-        /**
-         * Write unsigned 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set uint64be(value) {
-            this.writeInt64(value, true, "big");
-        }
-        /**
-         * Write unsigned 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set ubigintbe(value) {
-            this.writeInt64(value, true, "big");
-        }
-        /**
-         * Write unsigned 64 bit integer.
-         *
-         * @param {BigValue} value - value as int
-         */
-        set uquadbe(value) {
-            this.writeInt64(value, true, "big");
-        }
-        //
-        // doublefloat
-        //
-        /**
-         * Writes double float.
-         *
-         * @param {number} value - value as int
-         */
-        set doublefloat(value) {
-            this.writeDoubleFloat(value);
-        }
-        /**
-         * Writes double float.
-         *
-         * @param {number} value - value as int
-         */
-        set dfloat(value) {
-            this.writeDoubleFloat(value);
-        }
-        /**
-         * Writes double float.
-         *
-         * @param {number} value - value as int
-         */
-        set dfloatbe(value) {
-            this.writeDoubleFloat(value, "big");
-        }
-        /**
-         * Writes double float.
-         *
-         * @param {number} value - value as int
-         */
-        set doublefloatbe(value) {
-            this.writeDoubleFloat(value, "big");
-        }
-        /**
-         * Writes double float.
-         *
-         * @param {number} value - value as int
-         */
-        set dfloatle(value) {
-            this.writeDoubleFloat(value, "little");
-        }
-        /**
-         * Writes double float.
-         *
-         * @param {number} value - value as int
-         */
-        set doublefloatle(value) {
-            this.writeDoubleFloat(value, "little");
-        }
-        //
-        // string
-        //
-        /**
-        * Writes string, use options object for different types.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions?} options
-        * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-        * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
-        * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
-        * @param {stringOptions["lengthWriteSize"]?} options.lengthWriteSize - for pascal strings. 1, 2 or 4 byte length write size
-        * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-        * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
-        */
-        string(string, options) {
-            return this.writeString(string, options);
-        }
-        /**
-        * Writes string using setting from .strSettings
-        *
-        * Default is ``utf-8``
-        *
-        * @param {string} string - text string
-        */
-        set str(string) {
-            this.writeString(string, this.strSettings);
-        }
-        /**
-        * Writes UTF-8 (C) string.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        */
-        utf8string(string, length, terminateValue) {
-            return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
-        }
-        /**
-        * Writes UTF-8 (C) string.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        */
-        cstring(string, length, terminateValue) {
-            return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
-        }
-        /**
-        * Writes ANSI string.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        */
-        ansistring(string, length, terminateValue) {
-            return this.string(string, { stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue });
-        }
-        /**
-        * Writes UTF-16 (Unicode) string.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
-        */
-        utf16string(string, length, terminateValue, endian) {
-            return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
-        }
-        /**
-        * Writes UTF-16 (Unicode) string.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
-        */
-        unistring(string, length, terminateValue, endian) {
-            return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
-        }
-        /**
-        * Writes UTF-16 (Unicode) string in little endian order.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        */
-        utf16stringle(string, length, terminateValue) {
-            return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
-        }
-        /**
-        * Writes UTF-16 (Unicode) string in little endian order.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        */
-        unistringle(string, length, terminateValue) {
-            return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
-        }
-        /**
-        * Writes UTF-16 (Unicode) string in big endian order.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        */
-        utf16stringbe(string, length, terminateValue) {
-            return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
-        }
-        /**
-        * Writes UTF-16 (Unicode) string in big endian order.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["length"]} length - for fixed length utf strings
-        * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-        */
-        unistringbe(string, length, terminateValue) {
-            return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
-        }
-        /**
-        * Writes Pascal string.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little`` for 2 or 4 byte length write size
-        */
-        pstring(string, lengthWriteSize, endian) {
-            return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: lengthWriteSize, endian: endian });
-        }
-        /**
-        * Writes Pascal string 1 byte length read.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little`` for 2 or 4 byte length write size
-        */
-        pstring1(string, endian) {
-            return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: endian });
-        }
-        /**
-        * Writes Pascal string 1 byte length read in little endian order.
-        *
-        * @param {string} string - text string
-        */
-        pstring1le(string) {
-            return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "little" });
-        }
-        /**
-        * Writes Pascal string 1 byte length read in big endian order.
-        *
-        * @param {string} string - text string
-        */
-        pstring1be(string) {
-            return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "big" });
-        }
-        /**
-        * Writes Pascal string 2 byte length read.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        */
-        pstring2(string, endian) {
-            return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: endian });
-        }
-        /**
-        * Writes Pascal string 2 byte length read in little endian order.
-        *
-        * @param {string} string - text string
-        */
-        pstring2le(string) {
-            return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "little" });
-        }
-        /**
-        * Writes Pascal string 2 byte length read in big endian order.
-        *
-        * @param {string} string - text string
-        */
-        pstring2be(string) {
-            return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "big" });
-        }
-        /**
-        * Writes Pascal string 4 byte length read.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        */
-        pstring4(string, endian) {
-            return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: endian });
-        }
-        /**
-        * Writes Pascal string 4 byte length read in big endian order.
-        *
-        * @param {string} string - text string
-        */
-        pstring4be(string) {
-            return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "big" });
-        }
-        /**
-        * Writes Pascal string 4 byte length read in little endian order.
-        *
-        * @param {string} string - text string
-        */
-        pstring4le(string) {
-            return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "little" });
-        }
-        /**
-        * Writes Wide-Pascal string.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        */
-        wpstring(string, lengthWriteSize, endian) {
-            return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: endian });
-        }
-        /**
-        * Writes Wide-Pascal string in big endian order.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
-        */
-        wpstringbe(string, lengthWriteSize) {
-            return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "big" });
-        }
-        /**
-        * Writes Wide-Pascal string in little endian order.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
-        */
-        wpstringle(string, lengthWriteSize) {
-            return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "little" });
-        }
-        /**
-        * Writes Wide-Pascal string.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        */
-        wpstring1(string, endian) {
-            return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: endian });
-        }
-        /**
-        * Writes Wide-Pascal string 1 byte length read in big endian order.
-        *
-        * @param {string} string - text string
-        */
-        wpstring1be(string) {
-            return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "big" });
-        }
-        /**
-        * Writes Wide-Pascal string 1 byte length read in little endian order.
-        *
-        * @param {string} string - text string
-        */
-        wpstring1le(string) {
-            return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "little" });
-        }
-        /**
-        * Writes Wide-Pascal string 2 byte length read.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        */
-        wpstring2(string, endian) {
-            return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: endian });
-        }
-        /**
-        * Writes Wide-Pascal string 2 byte length read in little endian order.
-        *
-        * @param {string} string - text string
-        */
-        wpstring2le(string) {
-            return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "little" });
-        }
-        /**
-        * Writes Wide-Pascal string 2 byte length read in big endian order.
-        *
-        * @param {string} string - text string
-        */
-        wpstring2be(string) {
-            return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "big" });
-        }
-        /**
-        * Writes Wide-Pascal string 4 byte length read.
-        *
-        * @param {string} string - text string
-        * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-        */
-        wpstring4(string, endian) {
-            return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: endian });
-        }
-        /**
-        * Writes Wide-Pascal string 4 byte length read in little endian order.
-        *
-        * @param {string} string - text string
-        */
-        wpstring4le(string) {
-            return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "little" });
-        }
-        /**
-        * Writes Wide-Pascal string 4 byte length read in big endian order.
-        *
-        * @param {string} string - text string
-        */
-        wpstring4be(string) {
-            return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "big" });
-        }
-    };
 }
 
 /**
@@ -10598,7 +6681,7 @@ function applyBinaryAliasWriter(Base) {
  *
  * @since 2.0
  */
-class BiWrite extends BiBase {
+class BiWriter extends BiBase {
     /**
      * Binary writer, includes bitfields and strings.
      *
@@ -10672,954 +6755,2976 @@ class BiWrite extends BiBase {
             }
         }
     }
+    //
+    // Bit Aliases
+    //
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @param {boolean} unsigned - if the value is unsigned
+     * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
+     */
     bit(value, bits, unsigned, endian) {
-        throw new Error("Method not implemented.");
+        return this.writeBit(value, bits, unsigned, endian);
     }
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
+     */
     ubit(value, bits, endian) {
-        throw new Error("Method not implemented.");
+        return this.writeBit(value, bits, true, endian);
     }
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns {number}
+     */
     bitbe(value, bits, unsigned) {
-        throw new Error("Method not implemented.");
+        return this.bit(value, bits, unsigned, "big");
     }
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @returns {number}
+     */
     ubitbe(value, bits) {
-        throw new Error("Method not implemented.");
+        return this.bit(value, bits, true, "big");
     }
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @returns {number}
+     */
     ubitle(value, bits) {
-        throw new Error("Method not implemented.");
+        return this.bit(value, bits, true, "little");
     }
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns {number}
+     */
     bitle(value, bits, unsigned) {
-        throw new Error("Method not implemented.");
+        return this.bit(value, bits, unsigned, "little");
     }
+    /**
+     * Bit field writer. Writes 1 bit.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit1(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 1);
     }
+    /**
+     * Bit field writer. Writes 1 bit.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit1le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 1, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 1 bit.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit1be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 1, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 1 bit.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit1(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 1, true);
     }
+    /**
+     * Bit field writer. Writes 1 bit.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit1le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 1, true, "little");
     }
+    /**
+     * Bit field writer. Writes 1 bit.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit1be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 1, true, "big");
     }
+    /**
+     * Bit field writer. Writes 2 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit2(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 2);
     }
+    /**
+     * Bit field writer. Writes 2 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit2le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 2, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 2 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit2be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 2, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 2 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit2(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 2, true);
     }
+    /**
+     * Bit field writer. Writes 2 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit2le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 2, true, "little");
     }
+    /**
+     * Bit field writer. Writes 2 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit2be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 2, true, "big");
     }
+    /**
+     * Bit field writer. Writes 3 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit3(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 3);
     }
+    /**
+     * Bit field writer. Writes 3 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit3le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 3, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 3 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit3be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 3, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 3 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit3(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 3, true);
     }
+    /**
+     * Bit field writer. Writes 3 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit3le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 3, true, "little");
     }
+    /**
+     * Bit field writer. Writes 3 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit3be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 3, true, "big");
     }
+    /**
+     * Bit field writer. Writes 4 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit4(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 4);
     }
+    /**
+     * Bit field writer. Writes 4 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit4le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 4, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 4 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit4be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 4, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 4 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit4(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 4, true);
     }
+    /**
+     * Bit field writer. Writes 4 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit4le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 4, true, "little");
     }
+    /**
+     * Bit field writer. Writes 4 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit4be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 4, true, "big");
     }
+    /**
+     * Bit field writer. Writes 5 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit5(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 5);
     }
+    /**
+     * Bit field writer. Writes 5 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit5le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 5, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 5 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit5be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 5, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 5 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit5(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 5, true);
     }
+    /**
+     * Bit field writer. Writes 5 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit5le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 5, true, "little");
     }
+    /**
+     * Bit field writer. Writes 5 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit5be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 5, true, "big");
     }
+    /**
+     * Bit field writer. Writes 6 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit6(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 6);
     }
+    /**
+     * Bit field writer. Writes 6 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit6le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 6, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 6 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit6be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 6, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 6 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit6(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 6, true);
     }
+    /**
+     * Bit field writer. Writes 6 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit6le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 6, true, "little");
     }
+    /**
+     * Bit field writer. Writes 6 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit6be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 6, true, "big");
     }
+    /**
+     * Bit field writer. Writes 7 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit7(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 7);
     }
+    /**
+     * Bit field writer. Writes 7 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit7le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 7, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 7 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit7be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 7, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 7 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit7(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 7, true);
     }
+    /**
+     * Bit field writer. Writes 7 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit7le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 7, true, "little");
     }
+    /**
+     * Bit field writer. Writes 7 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit7be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 7, true, "big");
     }
+    /**
+     * Bit field writer. Writes 8 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit8(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 8);
     }
+    /**
+     * Bit field writer. Writes 8 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit8le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 8, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 8 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit8be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 8, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 8 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit8(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 8, true);
     }
+    /**
+     * Bit field writer. Writes 8 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit8le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 8, true, "little");
     }
+    /**
+     * Bit field writer. Writes 8 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit8be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 8, true, "big");
     }
+    /**
+     * Bit field writer. Writes 9 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit9(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 9);
     }
+    /**
+     * Bit field writer. Writes 9 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit9le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 9, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 9 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit9be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 9, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 9 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit9(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 9, true);
     }
+    /**
+     * Bit field writer. Writes 9 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit9le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 9, true, "little");
     }
+    /**
+     * Bit field writer. Writes 9 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit9be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 9, true, "big");
     }
+    /**
+     * Bit field writer. Writes 10 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit10(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 10);
     }
+    /**
+     * Bit field writer. Writes 10 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit10le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 10, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 10 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit10be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 10, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 10 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit10(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 10, true);
     }
+    /**
+     * Bit field writer. Writes 10 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit10le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 10, true, "little");
     }
+    /**
+     * Bit field writer. Writes 10 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit10be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 10, true, "big");
     }
+    /**
+     * Bit field writer. Writes 11 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit11(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 11);
     }
+    /**
+     * Bit field writer. Writes 11 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit11le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 11, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 11 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit11be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 11, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 11 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit11(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 11, true);
     }
+    /**
+     * Bit field writer. Writes 11 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit11le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 11, true, "little");
     }
+    /**
+     * Bit field writer. Writes 11 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit11be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 11, true, "big");
     }
+    /**
+     * Bit field writer. Writes 12 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit12(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 12);
     }
+    /**
+     * Bit field writer. Writes 12 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit12le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 12, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 12 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit12be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 12, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 12 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit12(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 12, true);
     }
+    /**
+     * Bit field writer. Writes 12 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit12le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 12, true, "little");
     }
+    /**
+     * Bit field writer. Writes 12 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit12be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 12, true, "big");
     }
+    /**
+     * Bit field writer. Writes 13 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit13(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 13);
     }
+    /**
+     * Bit field writer. Writes 13 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit13le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 13, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 13 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit13be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 13, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 13 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit13(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 13, true);
     }
+    /**
+     * Bit field writer. Writes 13 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit13le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 13, true, "little");
     }
+    /**
+     * Bit field writer. Writes 13 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit13be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 13, true, "big");
     }
+    /**
+     * Bit field writer. Writes 14 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit14(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 14);
     }
+    /**
+     * Bit field writer. Writes 14 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit14le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 14, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 14 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit14be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 14, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 14 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit14(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 14, true);
     }
+    /**
+     * Bit field writer. Writes 14 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit14le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 14, true, "little");
     }
+    /**
+     * Bit field writer. Writes 14 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit14be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 14, true, "big");
     }
+    /**
+     * Bit field writer. Writes 15 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit15(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 15);
     }
+    /**
+     * Bit field writer. Writes 15 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit15le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 15, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 15 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit15be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 15, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 15 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit15(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 15, true);
     }
+    /**
+     * Bit field writer. Writes 15 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit15le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 15, true, "little");
     }
+    /**
+     * Bit field writer. Writes 15 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit15be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 15, true, "big");
     }
+    /**
+     * Bit field writer. Writes 16 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit16(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 16);
     }
+    /**
+     * Bit field writer. Writes 16 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit16le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 16, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 16 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit16be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 16, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 16 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit16(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 16, true);
     }
+    /**
+     * Bit field writer. Writes 16 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit16le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 16, true, "little");
     }
+    /**
+     * Bit field writer. Writes 16 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit16be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 16, true, "big");
     }
+    /**
+     * Bit field writer. Writes 17 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit17(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 17);
     }
+    /**
+     * Bit field writer. Writes 17 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit17le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 17, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 17 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit17be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 17, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 17 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit17(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 17, true);
     }
+    /**
+     * Bit field writer. Writes 17 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit17le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 17, true, "little");
     }
+    /**
+     * Bit field writer. Writes 17 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit17be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 17, true, "big");
     }
+    /**
+     * Bit field writer. Writes 18 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit18(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 18);
     }
+    /**
+     * Bit field writer. Writes 18 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit18le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 18, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 18 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit18be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 18, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 18 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit18(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 18, true);
     }
+    /**
+     * Bit field writer. Writes 18 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit18le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 18, true, "little");
     }
+    /**
+     * Bit field writer. Writes 18 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit18be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 18, true, "big");
     }
+    /**
+     * Bit field writer. Writes 19 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit19(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 19);
     }
+    /**
+     * Bit field writer. Writes 19 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit19le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 19, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 19 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit19be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 19, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 19 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit19(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 19, true);
     }
+    /**
+     * Bit field writer. Writes 19 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit19le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 19, true, "little");
     }
+    /**
+     * Bit field writer. Writes 19 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit19be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 19, true, "big");
     }
+    /**
+     * Bit field writer. Writes 20 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit20(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 20);
     }
+    /**
+     * Bit field writer. Writes 20 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit20le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 20, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 20 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit20be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 20, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 20 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit20(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 20, true);
     }
+    /**
+     * Bit field writer. Writes 20 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit20le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 20, true, "little");
     }
+    /**
+     * Bit field writer. Writes 20 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit20be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 20, true, "big");
     }
+    /**
+     * Bit field writer. Writes 21 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit21(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 21);
     }
+    /**
+     * Bit field writer. Writes 21 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit21le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 21, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 21 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit21be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 21, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 21 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit21(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 21, true);
     }
+    /**
+     * Bit field writer. Writes 21 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit21le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 21, true, "little");
     }
+    /**
+     * Bit field writer. Writes 21 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit21be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 21, true, "big");
     }
+    /**
+     * Bit field writer. Writes 22 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit22(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 22);
     }
+    /**
+     * Bit field writer. Writes 22 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit22le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 22, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 22 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit22be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 22, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 22 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit22(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 22, true);
     }
+    /**
+     * Bit field writer. Writes 22 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit22le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 22, true, "little");
     }
+    /**
+     * Bit field writer. Writes 22 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit22be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 22, true, "big");
     }
+    /**
+     * Bit field writer. Writes 23 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit23(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 23);
     }
+    /**
+     * Bit field writer. Writes 23 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit23le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 23, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 23 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit23be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 23, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 23 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit23(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 23, true);
     }
+    /**
+     * Bit field writer. Writes 23 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit23le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 23, true, "little");
     }
+    /**
+     * Bit field writer. Writes 23 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit23be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 23, true, "big");
     }
+    /**
+     * Bit field writer. Writes 24 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit24(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 24);
     }
+    /**
+     * Bit field writer. Writes 24 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit24le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 24, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 24 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit24be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 24, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 24 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit24(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 24, true);
     }
+    /**
+     * Bit field writer. Writes 24 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit24le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 24, true, "little");
     }
+    /**
+     * Bit field writer. Writes 24 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit24be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 24, true, "big");
     }
+    /**
+     * Bit field writer. Writes 25 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit25(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 25);
     }
+    /**
+     * Bit field writer. Writes 25 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit25le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 25, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 25 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit25be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 25, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 25 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit25(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 25, true);
     }
+    /**
+     * Bit field writer. Writes 25 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit25le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 25, true, "little");
     }
+    /**
+     * Bit field writer. Writes 25 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit25be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 25, true, "big");
     }
+    /**
+     * Bit field writer. Writes 26 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit26(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 26);
     }
+    /**
+     * Bit field writer. Writes 26 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit26le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 26, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 26 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit26be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 26, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 26 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit26(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 26, true);
     }
+    /**
+     * Bit field writer. Writes 26 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit26le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 26, true, "little");
     }
+    /**
+     * Bit field writer. Writes 26 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit26be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 26, true, "big");
     }
+    /**
+     * Bit field writer. Writes 27 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit27(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 27);
     }
+    /**
+     * Bit field writer. Writes 27 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit27le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 27, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 27 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit27be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 27, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 27 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit27(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 27, true);
     }
+    /**
+     * Bit field writer. Writes 27 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit27le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 27, true, "little");
     }
+    /**
+     * Bit field writer. Writes 27 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit27be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 27, true, "big");
     }
+    /**
+     * Bit field writer. Writes 28 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit28(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 28);
     }
+    /**
+     * Bit field writer. Writes 28 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit28le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 28, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 28 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit28be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 28, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 28 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit28(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 28, true);
     }
+    /**
+     * Bit field writer. Writes 28 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit28le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 28, true, "little");
     }
+    /**
+     * Bit field writer. Writes 28 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit28be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 28, true, "big");
     }
+    /**
+     * Bit field writer. Writes 29 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit29(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 29);
     }
+    /**
+     * Bit field writer. Writes 29 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit29le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 29, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 29 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit29be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 29, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 29 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit29(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 29, true);
     }
+    /**
+     * Bit field writer. Writes 29 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit29le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 29, true, "little");
     }
+    /**
+     * Bit field writer. Writes 29 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit29be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 29, true, "big");
     }
+    /**
+     * Bit field writer. Writes 30 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit30(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 30);
     }
+    /**
+     * Bit field writer. Writes 30 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit30le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 30, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 30 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit30be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 30, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 30 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit30(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 30, true);
     }
+    /**
+     * Bit field writer. Writes 30 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit30le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 30, true, "little");
     }
+    /**
+     * Bit field writer. Writes 30 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit30be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 30, true, "big");
     }
+    /**
+     * Bit field writer. Writes 31 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit31(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 31);
     }
+    /**
+     * Bit field writer. Writes 31 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit31le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 31, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 31 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit31be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 31, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 31 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit31(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 31, true);
     }
+    /**
+     * Bit field writer. Writes 31 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit31le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 31, true, "little");
     }
+    /**
+     * Bit field writer. Writes 31 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit31be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 31, true, "big");
     }
+    /**
+     * Bit field writer. Writes 32 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit32(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 32);
     }
+    /**
+     * Bit field writer. Writes 32 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit32le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 32, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 32 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit32be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 32, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 32 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit32(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 32, true);
     }
+    /**
+     * Bit field writer. Writes 32 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit32le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 32, true, "little");
     }
+    /**
+     * Bit field writer. Writes 32 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit32be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 32, true, "big");
     }
+    //
+    // byte write
+    //
+    /**
+     * Write byte.
+     *
+     * @param {number} value - value as int
+     */
     set byte(value) {
-        throw new Error("Method not implemented.");
+        this.writeByte(value);
     }
+    /**
+     * Write byte.
+     *
+     * @param {number} value - value as int
+     */
     set int8(value) {
-        throw new Error("Method not implemented.");
+        this.writeByte(value);
     }
+    /**
+     * Write unsigned byte.
+     *
+     * @param {number} value - value as int
+     */
     set uint8(value) {
-        throw new Error("Method not implemented.");
+        this.writeByte(value, true);
     }
+    /**
+     * Write unsigned byte.
+     *
+     * @param {number} value - value as int
+     */
     set ubyte(value) {
-        throw new Error("Method not implemented.");
+        this.writeByte(value, true);
     }
+    //
+    // short writes
+    //
+    /**
+     * Write int16.
+     *
+     * @param {number} value - value as int
+     */
     set int16(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value);
     }
+    /**
+     * Write int16.
+     *
+     * @param {number} value - value as int
+     */
     set short(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value);
     }
+    /**
+     * Write int16.
+     *
+     * @param {number} value - value as int
+     */
     set word(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value);
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set uint16(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true);
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set ushort(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true);
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set uword(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true);
     }
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int
+     */
     set int16be(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, false, "big");
     }
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int
+     */
     set shortbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, false, "big");
     }
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int
+     */
     set wordbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, false, "big");
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set uint16be(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true, "big");
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set ushortbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true, "big");
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set uwordbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true, "big");
     }
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int
+     */
     set int16le(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, false, "little");
     }
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int
+     */
     set shortle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, false, "little");
     }
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int
+     */
     set wordle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, false, "little");
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set uint16le(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true, "little");
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set ushortle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true, "little");
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set uwordle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true, "little");
     }
+    //
+    // half float
+    //
+    /**
+     * Writes half float.
+     *
+     * @param {number} value - value as int
+     */
     set half(value) {
-        throw new Error("Method not implemented.");
+        this.writeHalfFloat(value);
     }
+    /**
+     * Writes half float.
+     *
+     * @param {number} value - value as int
+     */
     set halffloat(value) {
-        throw new Error("Method not implemented.");
+        this.writeHalfFloat(value);
     }
+    /**
+     * Writes half float.
+     *
+     * @param {number} value - value as int
+     */
     set halffloatbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeHalfFloat(value, "big");
     }
+    /**
+     * Writes half float.
+     *
+     * @param {number} value - value as int
+     */
     set halfbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeHalfFloat(value, "big");
     }
+    /**
+     * Writes half float.
+     *
+     * @param {number} value - value as int
+     */
     set halffloatle(value) {
-        throw new Error("Method not implemented.");
+        this.writeHalfFloat(value, "little");
     }
+    /**
+     * Writes half float.
+     *
+     * @param {number} value - value as int
+     */
     set halfle(value) {
-        throw new Error("Method not implemented.");
+        this.writeHalfFloat(value, "little");
     }
+    //
+    // int32 write
+    //
+    /**
+     * Write int32.
+     *
+     * @param {number} value - value as int
+     */
     set int(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value);
     }
+    /**
+    * Write int32.
+    *
+    * @param {number} value - value as int
+    */
     set int32(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value);
     }
+    /**
+     * Write int32.
+     *
+     * @param {number} value - value as int
+     */
     set double(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value);
     }
+    /**
+     * Write int32.
+     *
+     * @param {number} value - value as int
+     */
     set long(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value);
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set uint32(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true);
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set uint(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true);
     }
+    /**
+    * Write unsigned int32.
+    *
+    * @param {number} value - value as int
+    */
     set udouble(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true);
     }
+    /**
+    * Write unsigned int32.
+    *
+    * @param {number} value - value as int
+    */
     set ulong(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true);
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set int32le(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "little");
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set intle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "little");
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set doublele(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "little");
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set longle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "little");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set uint32le(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "little");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set uintle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "little");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set udoublele(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "little");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set ulongle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "little");
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set intbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "big");
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set int32be(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "big");
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set doublebe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "big");
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set longbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "big");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set writeUInt32BE(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "big");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set uint32be(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "big");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set uintbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "big");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set udoublebe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "big");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set ulongbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "big");
     }
+    //
+    // float write
+    //
+    /**
+    * Write float.
+    *
+    * @param {number} value - value as int
+    */
     set float(value) {
-        throw new Error("Method not implemented.");
+        this.writeFloat(value);
     }
+    /**
+     * Write float.
+     *
+     * @param {number} value - value as int
+     */
     set floatle(value) {
-        throw new Error("Method not implemented.");
+        this.writeFloat(value, "little");
     }
+    /**
+    * Write float.
+    *
+    * @param {number} value - value as int
+    */
     set floatbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeFloat(value, "big");
     }
+    //
+    // int64 write
+    //
+    /**
+     * Write 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set int64(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value);
     }
+    /**
+    * Write 64 bit integer.
+    *
+    * @param {BigValue} value - value as int
+    */
     set quad(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value);
     }
+    /**
+     * Write 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set bigint(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value);
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set uint64(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true);
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set ubigint(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true);
     }
+    /**
+    * Write unsigned 64 bit integer.
+    *
+    * @param {BigValue} value - value as int
+    */
     set uquad(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true);
     }
+    /**
+     * Write signed 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set int64le(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, false, "little");
     }
+    /**
+     * Write signed 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set bigintle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, false, "little");
     }
+    /**
+     * Write signed 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set quadle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, false, "little");
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set uint64le(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true, "little");
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set ubigintle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true, "little");
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set uquadle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true, "little");
     }
+    /**
+     * Write signed 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set int64be(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, false, "big");
     }
+    /**
+     * Write signed 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set bigintbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, false, "big");
     }
+    /**
+     * Write signed 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set quadbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, false, "big");
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set uint64be(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true, "big");
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set ubigintbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true, "big");
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set uquadbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true, "big");
     }
+    //
+    // doublefloat
+    //
+    /**
+     * Writes double float.
+     *
+     * @param {number} value - value as int
+     */
     set doublefloat(value) {
-        throw new Error("Method not implemented.");
+        this.writeDoubleFloat(value);
     }
+    /**
+     * Writes double float.
+     *
+     * @param {number} value - value as int
+     */
     set dfloat(value) {
-        throw new Error("Method not implemented.");
+        this.writeDoubleFloat(value);
     }
+    /**
+     * Writes double float.
+     *
+     * @param {number} value - value as int
+     */
     set dfloatbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeDoubleFloat(value, "big");
     }
+    /**
+     * Writes double float.
+     *
+     * @param {number} value - value as int
+     */
     set doublefloatbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeDoubleFloat(value, "big");
     }
+    /**
+     * Writes double float.
+     *
+     * @param {number} value - value as int
+     */
     set dfloatle(value) {
-        throw new Error("Method not implemented.");
+        this.writeDoubleFloat(value, "little");
     }
+    /**
+     * Writes double float.
+     *
+     * @param {number} value - value as int
+     */
     set doublefloatle(value) {
-        throw new Error("Method not implemented.");
+        this.writeDoubleFloat(value, "little");
     }
+    //
+    // string
+    //
+    /**
+    * Writes string, use options object for different types.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions?} options
+    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
+    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
+    * @param {stringOptions["lengthWriteSize"]?} options.lengthWriteSize - for pascal strings. 1, 2 or 4 byte length write size
+    * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
+    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
+    */
     string(string, options) {
-        throw new Error("Method not implemented.");
+        return this.writeString(string, options);
     }
+    /**
+    * Writes string using setting from .strSettings
+    *
+    * Default is ``utf-8``
+    *
+    * @param {string} string - text string
+    */
     set str(string) {
-        throw new Error("Method not implemented.");
+        this.writeString(string, this.strSettings);
     }
+    /**
+    * Writes UTF-8 (C) string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
     utf8string(string, length, terminateValue) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
     }
+    /**
+    * Writes UTF-8 (C) string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
     cstring(string, length, terminateValue) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
     }
+    /**
+    * Writes ANSI string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
     ansistring(string, length, terminateValue) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue });
     }
+    /**
+    * Writes UTF-16 (Unicode) string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
+    */
     utf16string(string, length, terminateValue, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
     }
+    /**
+    * Writes UTF-16 (Unicode) string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
+    */
     unistring(string, length, terminateValue, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
     }
+    /**
+    * Writes UTF-16 (Unicode) string in little endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
     utf16stringle(string, length, terminateValue) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
     }
+    /**
+    * Writes UTF-16 (Unicode) string in little endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
     unistringle(string, length, terminateValue) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
     }
+    /**
+    * Writes UTF-16 (Unicode) string in big endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
     utf16stringbe(string, length, terminateValue) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
     }
+    /**
+    * Writes UTF-16 (Unicode) string in big endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
     unistringbe(string, length, terminateValue) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
     }
+    /**
+    * Writes Pascal string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little`` for 2 or 4 byte length write size
+    */
     pstring(string, lengthWriteSize, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: lengthWriteSize, endian: endian });
     }
+    /**
+    * Writes Pascal string 1 byte length read.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little`` for 2 or 4 byte length write size
+    */
     pstring1(string, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: endian });
     }
+    /**
+    * Writes Pascal string 1 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
     pstring1le(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "little" });
     }
+    /**
+    * Writes Pascal string 1 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
     pstring1be(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "big" });
     }
+    /**
+    * Writes Pascal string 2 byte length read.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
     pstring2(string, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: endian });
     }
+    /**
+    * Writes Pascal string 2 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
     pstring2le(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "little" });
     }
+    /**
+    * Writes Pascal string 2 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
     pstring2be(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "big" });
     }
+    /**
+    * Writes Pascal string 4 byte length read.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
     pstring4(string, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: endian });
     }
+    /**
+    * Writes Pascal string 4 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
     pstring4be(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "big" });
     }
+    /**
+    * Writes Pascal string 4 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
     pstring4le(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "little" });
     }
+    /**
+    * Writes Wide-Pascal string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
     wpstring(string, lengthWriteSize, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: endian });
     }
+    /**
+    * Writes Wide-Pascal string in big endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    */
     wpstringbe(string, lengthWriteSize) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "big" });
     }
+    /**
+    * Writes Wide-Pascal string in little endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    */
     wpstringle(string, lengthWriteSize) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "little" });
     }
+    /**
+    * Writes Wide-Pascal string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
     wpstring1(string, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: endian });
     }
+    /**
+    * Writes Wide-Pascal string 1 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
     wpstring1be(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "big" });
     }
+    /**
+    * Writes Wide-Pascal string 1 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
     wpstring1le(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "little" });
     }
+    /**
+    * Writes Wide-Pascal string 2 byte length read.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
     wpstring2(string, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: endian });
     }
+    /**
+    * Writes Wide-Pascal string 2 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
     wpstring2le(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "little" });
     }
+    /**
+    * Writes Wide-Pascal string 2 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
     wpstring2be(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "big" });
     }
+    /**
+    * Writes Wide-Pascal string 4 byte length read.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
     wpstring4(string, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: endian });
     }
+    /**
+    * Writes Wide-Pascal string 4 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
     wpstring4le(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "little" });
     }
+    /**
+    * Writes Wide-Pascal string 4 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
     wpstring4be(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "big" });
     }
 }
-/**
- * Binary writer, includes bitfields and strings.
- *
- * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
- * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- *
- * @since 2.0
- */
-const BiWriter = applyBinaryAliasWriter(BiWrite);
 
 function MAX_LENGTH() {
     return buff.constants.MAX_LENGTH;
@@ -15463,7 +13568,7 @@ class BiBaseStreamer {
  *
  * @since 3.1
  */
-class BiReaderStreamer extends BiBaseStreamer {
+class BiReaderStream extends BiBaseStreamer {
     /**
      * Binary reader, includes bitfields and strings.
      *
@@ -15501,939 +13606,2983 @@ class BiReaderStreamer extends BiBaseStreamer {
         this.offset = options.byteOffset ?? 0;
         this.bitoffset = options.bitOffset ?? 0;
     }
+    //
+    // Bit Aliases
+    //
+    /**
+     * Bit field reader.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @param {number} bits - bits to read
+     * @param {boolean} unsigned - if the value is unsigned
+     * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
+     */
     bit(bits, unsigned, endian) {
-        throw new Error("Method not implemented.");
+        return this.readBit(bits, unsigned, endian);
     }
+    /**
+     * Bit field reader. Unsigned read.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @param {number} bits - bits to read
+     * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
+     */
     ubit(bits, endian) {
-        throw new Error("Method not implemented.");
+        return this.readBit(bits, true, endian);
     }
+    /**
+     * Bit field reader. Unsigned big endian read.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @param {number} bits - bits to read
+     * @returns {number}
+     */
     ubitbe(bits) {
-        throw new Error("Method not implemented.");
+        return this.bit(bits, true, "big");
     }
+    /**
+     * Bit field reader. Big endian read.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @param {number} bits - bits to read
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns {number}
+     */
     bitbe(bits, unsigned) {
-        throw new Error("Method not implemented.");
+        return this.bit(bits, unsigned, "big");
     }
+    /**
+     * Bit field reader. Unsigned little endian read.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @param {number} bits - bits to read
+     * @returns {number}
+     */
     ubitle(bits) {
-        throw new Error("Method not implemented.");
+        return this.bit(bits, true, "little");
     }
+    /**
+     * Bit field reader. Little endian read.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @param {number} bits - bits to read
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns {number}
+     */
     bitle(bits, unsigned) {
-        throw new Error("Method not implemented.");
+        return this.bit(bits, unsigned, "little");
     }
+    /**
+     * Bit field reader. Reads 1 bit.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit1() {
-        throw new Error("Method not implemented.");
+        return this.bit(1);
     }
+    /**
+     * Bit field reader. Reads 1 bit.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit1le() {
-        throw new Error("Method not implemented.");
+        return this.bit(1, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 1 bit.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit1be() {
-        throw new Error("Method not implemented.");
+        return this.bit(1, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 1 bit.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit1() {
-        throw new Error("Method not implemented.");
+        return this.bit(1, true);
     }
+    /**
+     * Bit field reader. Reads 1 bit.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit1le() {
-        throw new Error("Method not implemented.");
+        return this.bit(1, true, "little");
     }
+    /**
+     * Bit field reader. Reads 1 bit.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit1be() {
-        throw new Error("Method not implemented.");
+        return this.bit(1, true, "big");
     }
+    /**
+     * Bit field reader. Reads 2 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit2() {
-        throw new Error("Method not implemented.");
+        return this.bit(2);
     }
+    /**
+     * Bit field reader. Reads 2 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit2le() {
-        throw new Error("Method not implemented.");
+        return this.bit(2, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 2 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit2be() {
-        throw new Error("Method not implemented.");
+        return this.bit(2, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 2 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit2() {
-        throw new Error("Method not implemented.");
+        return this.bit(2, true);
     }
+    /**
+     * Bit field reader. Reads 2 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit2le() {
-        throw new Error("Method not implemented.");
+        return this.bit(2, true, "little");
     }
+    /**
+     * Bit field reader. Reads 2 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit2be() {
-        throw new Error("Method not implemented.");
+        return this.bit(2, true, "big");
     }
+    /**
+     * Bit field reader. Reads 3 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit3() {
-        throw new Error("Method not implemented.");
+        return this.bit(3);
     }
+    /**
+     * Bit field reader. Reads 3 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit3le() {
-        throw new Error("Method not implemented.");
+        return this.bit(3, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 3 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit3be() {
-        throw new Error("Method not implemented.");
+        return this.bit(3, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 3 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit3() {
-        throw new Error("Method not implemented.");
+        return this.bit(3, true);
     }
+    /**
+     * Bit field reader. Reads 3 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit3le() {
-        throw new Error("Method not implemented.");
+        return this.bit(3, true, "little");
     }
+    /**
+     * Bit field reader. Reads 3 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit3be() {
-        throw new Error("Method not implemented.");
+        return this.bit(3, true, "big");
     }
+    /**
+     * Bit field reader. Reads 4 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit4() {
-        throw new Error("Method not implemented.");
+        return this.bit(4);
     }
+    /**
+     * Bit field reader. Reads 4 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit4le() {
-        throw new Error("Method not implemented.");
+        return this.bit(4, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 4 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit4be() {
-        throw new Error("Method not implemented.");
+        return this.bit(4, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 4 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit4() {
-        throw new Error("Method not implemented.");
+        return this.bit(4, true);
     }
+    /**
+     * Bit field reader. Reads 4 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit4le() {
-        throw new Error("Method not implemented.");
+        return this.bit(4, true, "little");
     }
+    /**
+     * Bit field reader. Reads 4 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit4be() {
-        throw new Error("Method not implemented.");
+        return this.bit(4, true, "big");
     }
+    /**
+     * Bit field reader. Reads 5 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit5() {
-        throw new Error("Method not implemented.");
+        return this.bit(5);
     }
+    /**
+     * Bit field reader. Reads 5 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit5le() {
-        throw new Error("Method not implemented.");
+        return this.bit(5, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 5 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit5be() {
-        throw new Error("Method not implemented.");
+        return this.bit(5, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 5 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit5() {
-        throw new Error("Method not implemented.");
+        return this.bit(5, true);
     }
+    /**
+     * Bit field reader. Reads 5 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit5le() {
-        throw new Error("Method not implemented.");
+        return this.bit(5, true, "little");
     }
+    /**
+     * Bit field reader. Reads 5 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit5be() {
-        throw new Error("Method not implemented.");
+        return this.bit(5, true, "big");
     }
+    /**
+     * Bit field reader. Reads 6 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit6() {
-        throw new Error("Method not implemented.");
+        return this.bit(6);
     }
+    /**
+     * Bit field reader. Reads 6 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit6le() {
-        throw new Error("Method not implemented.");
+        return this.bit(6, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 6 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit6be() {
-        throw new Error("Method not implemented.");
+        return this.bit(6, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 6 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit6() {
-        throw new Error("Method not implemented.");
+        return this.bit(6, true);
     }
+    /**
+     * Bit field reader. Reads 6 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit6le() {
-        throw new Error("Method not implemented.");
+        return this.bit(6, true, "little");
     }
+    /**
+     * Bit field reader. Reads 6 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit6be() {
-        throw new Error("Method not implemented.");
+        return this.bit(6, true, "big");
     }
+    /**
+     * Bit field reader. Reads 7 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit7() {
-        throw new Error("Method not implemented.");
+        return this.bit(7);
     }
+    /**
+     * Bit field reader. Reads 7 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit7le() {
-        throw new Error("Method not implemented.");
+        return this.bit(7, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 7 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit7be() {
-        throw new Error("Method not implemented.");
+        return this.bit(7, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 7 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit7() {
-        throw new Error("Method not implemented.");
+        return this.bit(7, true);
     }
+    /**
+     * Bit field reader. Reads 7 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit7le() {
-        throw new Error("Method not implemented.");
+        return this.bit(7, true, "little");
     }
+    /**
+     * Bit field reader. Reads 7 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit7be() {
-        throw new Error("Method not implemented.");
+        return this.bit(7, true, "big");
     }
+    /**
+     * Bit field reader. Reads 8 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit8() {
-        throw new Error("Method not implemented.");
+        return this.bit(8);
     }
+    /**
+     * Bit field reader. Reads 8 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit8le() {
-        throw new Error("Method not implemented.");
+        return this.bit(8, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 8 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit8be() {
-        throw new Error("Method not implemented.");
+        return this.bit(8, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 8 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit8() {
-        throw new Error("Method not implemented.");
+        return this.bit(8, true);
     }
+    /**
+     * Bit field reader. Reads 8 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit8le() {
-        throw new Error("Method not implemented.");
+        return this.bit(8, true, "little");
     }
+    /**
+     * Bit field reader. Reads 8 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit8be() {
-        throw new Error("Method not implemented.");
+        return this.bit(8, true, "big");
     }
+    /**
+     * Bit field reader. Reads 9 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit9() {
-        throw new Error("Method not implemented.");
+        return this.bit(9);
     }
+    /**
+     * Bit field reader. Reads 9 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit9le() {
-        throw new Error("Method not implemented.");
+        return this.bit(9, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 9 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit9be() {
-        throw new Error("Method not implemented.");
+        return this.bit(9, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 9 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit9() {
-        throw new Error("Method not implemented.");
+        return this.bit(9, true);
     }
+    /**
+     * Bit field reader. Reads 9 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit9le() {
-        throw new Error("Method not implemented.");
+        return this.bit(9, true, "little");
     }
+    /**
+     * Bit field reader. Reads 9 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit9be() {
-        throw new Error("Method not implemented.");
+        return this.bit(9, true, "big");
     }
+    /**
+     * Bit field reader. Reads 10 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit10() {
-        throw new Error("Method not implemented.");
+        return this.bit(10);
     }
+    /**
+     * Bit field reader. Reads 10 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit10le() {
-        throw new Error("Method not implemented.");
+        return this.bit(10, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 10 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit10be() {
-        throw new Error("Method not implemented.");
+        return this.bit(10, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 10 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit10() {
-        throw new Error("Method not implemented.");
+        return this.bit(10, true);
     }
+    /**
+     * Bit field reader. Reads 10 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit10le() {
-        throw new Error("Method not implemented.");
+        return this.bit(10, true, "little");
     }
+    /**
+     * Bit field reader. Reads 10 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit10be() {
-        throw new Error("Method not implemented.");
+        return this.bit(10, true, "big");
     }
+    /**
+     * Bit field reader. Reads 11 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit11() {
-        throw new Error("Method not implemented.");
+        return this.bit(11);
     }
+    /**
+     * Bit field reader. Reads 11 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit11le() {
-        throw new Error("Method not implemented.");
+        return this.bit(11, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 11 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit11be() {
-        throw new Error("Method not implemented.");
+        return this.bit(11, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 11 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit11() {
-        throw new Error("Method not implemented.");
+        return this.bit(11, true);
     }
+    /**
+     * Bit field reader. Reads 11 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit11le() {
-        throw new Error("Method not implemented.");
+        return this.bit(11, true, "little");
     }
+    /**
+     * Bit field reader. Reads 11 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit11be() {
-        throw new Error("Method not implemented.");
+        return this.bit(11, true, "big");
     }
+    /**
+     * Bit field reader. Reads 12 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit12() {
-        throw new Error("Method not implemented.");
+        return this.bit(12);
     }
+    /**
+     * Bit field reader. Reads 12 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit12le() {
-        throw new Error("Method not implemented.");
+        return this.bit(12, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 12 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit12be() {
-        throw new Error("Method not implemented.");
+        return this.bit(12, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 12 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit12() {
-        throw new Error("Method not implemented.");
+        return this.bit(12, true);
     }
+    /**
+     * Bit field reader. Reads 12 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit12le() {
-        throw new Error("Method not implemented.");
+        return this.bit(12, true, "little");
     }
+    /**
+     * Bit field reader. Reads 12 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit12be() {
-        throw new Error("Method not implemented.");
+        return this.bit(12, true, "big");
     }
+    /**
+     * Bit field reader. Reads 13 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit13() {
-        throw new Error("Method not implemented.");
+        return this.bit(13);
     }
+    /**
+     * Bit field reader. Reads 13 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit13le() {
-        throw new Error("Method not implemented.");
+        return this.bit(13, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 13 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit13be() {
-        throw new Error("Method not implemented.");
+        return this.bit(13, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 13 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit13() {
-        throw new Error("Method not implemented.");
+        return this.bit(13, true);
     }
+    /**
+     * Bit field reader. Reads 13 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit13le() {
-        throw new Error("Method not implemented.");
+        return this.bit(13, true, "little");
     }
+    /**
+     * Bit field reader. Reads 13 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit13be() {
-        throw new Error("Method not implemented.");
+        return this.bit(13, true, "big");
     }
+    /**
+     * Bit field reader. Reads 14 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit14() {
-        throw new Error("Method not implemented.");
+        return this.bit(14);
     }
+    /**
+     * Bit field reader. Reads 14 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit14le() {
-        throw new Error("Method not implemented.");
+        return this.bit(14, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 14 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit14be() {
-        throw new Error("Method not implemented.");
+        return this.bit(14, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 14 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit14() {
-        throw new Error("Method not implemented.");
+        return this.bit(14, true);
     }
+    /**
+     * Bit field reader. Reads 14 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit14le() {
-        throw new Error("Method not implemented.");
+        return this.bit(14, true, "little");
     }
+    /**
+     * Bit field reader. Reads 14 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit14be() {
-        throw new Error("Method not implemented.");
+        return this.bit(14, true, "big");
     }
+    /**
+     * Bit field reader. Reads 15 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit15() {
-        throw new Error("Method not implemented.");
+        return this.bit(15);
     }
+    /**
+     * Bit field reader. Reads 15 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit15le() {
-        throw new Error("Method not implemented.");
+        return this.bit(15, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 15 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit15be() {
-        throw new Error("Method not implemented.");
+        return this.bit(15, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 15 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit15() {
-        throw new Error("Method not implemented.");
+        return this.bit(15, true);
     }
+    /**
+     * Bit field reader. Reads 15 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit15le() {
-        throw new Error("Method not implemented.");
+        return this.bit(15, true, "little");
     }
+    /**
+     * Bit field reader. Reads 15 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit15be() {
-        throw new Error("Method not implemented.");
+        return this.bit(15, true, "big");
     }
+    /**
+     * Bit field reader. Reads 16 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit16() {
-        throw new Error("Method not implemented.");
+        return this.bit(16);
     }
+    /**
+     * Bit field reader. Reads 16 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit16le() {
-        throw new Error("Method not implemented.");
+        return this.bit(16, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 16 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit16be() {
-        throw new Error("Method not implemented.");
+        return this.bit(16, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 16 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit16() {
-        throw new Error("Method not implemented.");
+        return this.bit(16, true);
     }
+    /**
+     * Bit field reader. Reads 16 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit16le() {
-        throw new Error("Method not implemented.");
+        return this.bit(16, true, "little");
     }
+    /**
+     * Bit field reader. Reads 16 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit16be() {
-        throw new Error("Method not implemented.");
+        return this.bit(16, true, "big");
     }
+    /**
+     * Bit field reader. Reads 17 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit17() {
-        throw new Error("Method not implemented.");
+        return this.bit(17);
     }
+    /**
+     * Bit field reader. Reads 17 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit17le() {
-        throw new Error("Method not implemented.");
+        return this.bit(17, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 17 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit17be() {
-        throw new Error("Method not implemented.");
+        return this.bit(17, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 17 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit17() {
-        throw new Error("Method not implemented.");
+        return this.bit(17, true);
     }
+    /**
+     * Bit field reader. Reads 17 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit17le() {
-        throw new Error("Method not implemented.");
+        return this.bit(17, true, "little");
     }
+    /**
+     * Bit field reader. Reads 17 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit17be() {
-        throw new Error("Method not implemented.");
+        return this.bit(17, true, "big");
     }
+    /**
+     * Bit field reader. Reads 18 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit18() {
-        throw new Error("Method not implemented.");
+        return this.bit(18);
     }
+    /**
+     * Bit field reader. Reads 18 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit18le() {
-        throw new Error("Method not implemented.");
+        return this.bit(18, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 18 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit18be() {
-        throw new Error("Method not implemented.");
+        return this.bit(18, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 18 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit18() {
-        throw new Error("Method not implemented.");
+        return this.bit(18, true);
     }
+    /**
+     * Bit field reader. Reads 18 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit18le() {
-        throw new Error("Method not implemented.");
+        return this.bit(18, true, "little");
     }
+    /**
+     * Bit field reader. Reads 18 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit18be() {
-        throw new Error("Method not implemented.");
+        return this.bit(18, true, "big");
     }
+    /**
+     * Bit field reader. Reads 19 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit19() {
-        throw new Error("Method not implemented.");
+        return this.bit(19);
     }
+    /**
+     * Bit field reader. Reads 19 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit19le() {
-        throw new Error("Method not implemented.");
+        return this.bit(19, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 19 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit19be() {
-        throw new Error("Method not implemented.");
+        return this.bit(19, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 19 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit19() {
-        throw new Error("Method not implemented.");
+        return this.bit(19, true);
     }
+    /**
+     * Bit field reader. Reads 19 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit19le() {
-        throw new Error("Method not implemented.");
+        return this.bit(19, true, "little");
     }
+    /**
+     * Bit field reader. Reads 19 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit19be() {
-        throw new Error("Method not implemented.");
+        return this.bit(19, true, "big");
     }
+    /**
+     * Bit field reader. Reads 20 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit20() {
-        throw new Error("Method not implemented.");
+        return this.bit(20);
     }
+    /**
+     * Bit field reader. Reads 20 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit20le() {
-        throw new Error("Method not implemented.");
+        return this.bit(20, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 20 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit20be() {
-        throw new Error("Method not implemented.");
+        return this.bit(20, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 20 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit20() {
-        throw new Error("Method not implemented.");
+        return this.bit(20, true);
     }
+    /**
+     * Bit field reader. Reads 20 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit20le() {
-        throw new Error("Method not implemented.");
+        return this.bit(20, true, "little");
     }
+    /**
+     * Bit field reader. Reads 20 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit20be() {
-        throw new Error("Method not implemented.");
+        return this.bit(20, true, "big");
     }
+    /**
+     * Bit field reader. Reads 21 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit21() {
-        throw new Error("Method not implemented.");
+        return this.bit(21);
     }
+    /**
+     * Bit field reader. Reads 21 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit21le() {
-        throw new Error("Method not implemented.");
+        return this.bit(21, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 21 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit21be() {
-        throw new Error("Method not implemented.");
+        return this.bit(21, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 21 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit21() {
-        throw new Error("Method not implemented.");
+        return this.bit(21, true);
     }
+    /**
+     * Bit field reader. Reads 21 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit21le() {
-        throw new Error("Method not implemented.");
+        return this.bit(21, true, "little");
     }
+    /**
+     * Bit field reader. Reads 21 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit21be() {
-        throw new Error("Method not implemented.");
+        return this.bit(21, true, "big");
     }
+    /**
+     * Bit field reader. Reads 22 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit22() {
-        throw new Error("Method not implemented.");
+        return this.bit(22);
     }
+    /**
+     * Bit field reader. Reads 22 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit22le() {
-        throw new Error("Method not implemented.");
+        return this.bit(22, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 22 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit22be() {
-        throw new Error("Method not implemented.");
+        return this.bit(22, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 22 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit22() {
-        throw new Error("Method not implemented.");
+        return this.bit(22, true);
     }
+    /**
+     * Bit field reader. Reads 22 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit22le() {
-        throw new Error("Method not implemented.");
+        return this.bit(22, true, "little");
     }
+    /**
+     * Bit field reader. Reads 22 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit22be() {
-        throw new Error("Method not implemented.");
+        return this.bit(22, true, "big");
     }
+    /**
+     * Bit field reader. Reads 23 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit23() {
-        throw new Error("Method not implemented.");
+        return this.bit(23);
     }
+    /**
+     * Bit field reader. Reads 23 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit23le() {
-        throw new Error("Method not implemented.");
+        return this.bit(23, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 23 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit23be() {
-        throw new Error("Method not implemented.");
+        return this.bit(23, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 23 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit23() {
-        throw new Error("Method not implemented.");
+        return this.bit(23, true);
     }
+    /**
+     * Bit field reader. Reads 23 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit23le() {
-        throw new Error("Method not implemented.");
+        return this.bit(23, true, "little");
     }
+    /**
+     * Bit field reader. Reads 23 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit23be() {
-        throw new Error("Method not implemented.");
+        return this.bit(23, true, "big");
     }
+    /**
+     * Bit field reader. Reads 24 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit24() {
-        throw new Error("Method not implemented.");
+        return this.bit(24);
     }
+    /**
+     * Bit field reader. Reads 24 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit24le() {
-        throw new Error("Method not implemented.");
+        return this.bit(24, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 24 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit24be() {
-        throw new Error("Method not implemented.");
+        return this.bit(24, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 24 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit24() {
-        throw new Error("Method not implemented.");
+        return this.bit(24, true);
     }
+    /**
+     * Bit field reader. Reads 24 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit24le() {
-        throw new Error("Method not implemented.");
+        return this.bit(24, true, "little");
     }
+    /**
+     * Bit field reader. Reads 24 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit24be() {
-        throw new Error("Method not implemented.");
+        return this.bit(24, true, "big");
     }
+    /**
+     * Bit field reader. Reads 25 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit25() {
-        throw new Error("Method not implemented.");
+        return this.bit(25);
     }
+    /**
+     * Bit field reader. Reads 25 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit25le() {
-        throw new Error("Method not implemented.");
+        return this.bit(25, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 25 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit25be() {
-        throw new Error("Method not implemented.");
+        return this.bit(25, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 25 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit25() {
-        throw new Error("Method not implemented.");
+        return this.bit(25, true);
     }
+    /**
+     * Bit field reader. Reads 25 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit25le() {
-        throw new Error("Method not implemented.");
+        return this.bit(25, true, "little");
     }
+    /**
+     * Bit field reader. Reads 25 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit25be() {
-        throw new Error("Method not implemented.");
+        return this.bit(25, true, "big");
     }
+    /**
+     * Bit field reader. Reads 26 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit26() {
-        throw new Error("Method not implemented.");
+        return this.bit(26);
     }
+    /**
+     * Bit field reader. Reads 26 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit26le() {
-        throw new Error("Method not implemented.");
+        return this.bit(26, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 26 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit26be() {
-        throw new Error("Method not implemented.");
+        return this.bit(26, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 26 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit26() {
-        throw new Error("Method not implemented.");
+        return this.bit(26, true);
     }
+    /**
+     * Bit field reader. Reads 26 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit26le() {
-        throw new Error("Method not implemented.");
+        return this.bit(26, true, "little");
     }
+    /**
+     * Bit field reader. Reads 26 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit26be() {
-        throw new Error("Method not implemented.");
+        return this.bit(26, true, "big");
     }
+    /**
+     * Bit field reader. Reads 27 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit27() {
-        throw new Error("Method not implemented.");
+        return this.bit(27);
     }
+    /**
+     * Bit field reader. Reads 27 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit27le() {
-        throw new Error("Method not implemented.");
+        return this.bit(27, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 27 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit27be() {
-        throw new Error("Method not implemented.");
+        return this.bit(27, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 27 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit27() {
-        throw new Error("Method not implemented.");
+        return this.bit(27, true);
     }
+    /**
+     * Bit field reader. Reads 27 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit27le() {
-        throw new Error("Method not implemented.");
+        return this.bit(27, true, "little");
     }
+    /**
+     * Bit field reader. Reads 27 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit27be() {
-        throw new Error("Method not implemented.");
+        return this.bit(27, true, "big");
     }
+    /**
+     * Bit field reader. Reads 28 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit28() {
-        throw new Error("Method not implemented.");
+        return this.bit(28);
     }
+    /**
+     * Bit field reader. Reads 28 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit28le() {
-        throw new Error("Method not implemented.");
+        return this.bit(28, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 28 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit28be() {
-        throw new Error("Method not implemented.");
+        return this.bit(28, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 28 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit28() {
-        throw new Error("Method not implemented.");
+        return this.bit(28, true);
     }
+    /**
+     * Bit field reader. Reads 28 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit28le() {
-        throw new Error("Method not implemented.");
+        return this.bit(28, true, "little");
     }
+    /**
+     * Bit field reader. Reads 28 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit28be() {
-        throw new Error("Method not implemented.");
+        return this.bit(28, true, "big");
     }
+    /**
+     * Bit field reader. Reads 29 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit29() {
-        throw new Error("Method not implemented.");
+        return this.bit(29);
     }
+    /**
+     * Bit field reader. Reads 29 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit29le() {
-        throw new Error("Method not implemented.");
+        return this.bit(29, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 29 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit29be() {
-        throw new Error("Method not implemented.");
+        return this.bit(29, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 29 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit29() {
-        throw new Error("Method not implemented.");
+        return this.bit(29, true);
     }
+    /**
+     * Bit field reader. Reads 29 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit29le() {
-        throw new Error("Method not implemented.");
+        return this.bit(29, true, "little");
     }
+    /**
+     * Bit field reader. Reads 29 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit29be() {
-        throw new Error("Method not implemented.");
+        return this.bit(29, true, "big");
     }
+    /**
+     * Bit field reader. Reads 30 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit30() {
-        throw new Error("Method not implemented.");
+        return this.bit(30);
     }
+    /**
+     * Bit field reader. Reads 30 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit30le() {
-        throw new Error("Method not implemented.");
+        return this.bit(30, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 30 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit30be() {
-        throw new Error("Method not implemented.");
+        return this.bit(30, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 30 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit30() {
-        throw new Error("Method not implemented.");
+        return this.bit(30, true);
     }
+    /**
+     * Bit field reader. Reads 30 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit30le() {
-        throw new Error("Method not implemented.");
+        return this.bit(30, true, "little");
     }
+    /**
+     * Bit field reader. Reads 30 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit30be() {
-        throw new Error("Method not implemented.");
+        return this.bit(30, true, "big");
     }
+    /**
+     * Bit field reader. Reads 31 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit31() {
-        throw new Error("Method not implemented.");
+        return this.bit(31);
     }
+    /**
+     * Bit field reader. Reads 31 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit31le() {
-        throw new Error("Method not implemented.");
+        return this.bit(31, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 31 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit31be() {
-        throw new Error("Method not implemented.");
+        return this.bit(31, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 31 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit31() {
-        throw new Error("Method not implemented.");
+        return this.bit(31, true);
     }
+    /**
+     * Bit field reader. Reads 31 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit31le() {
-        throw new Error("Method not implemented.");
+        return this.bit(31, true, "little");
     }
+    /**
+     * Bit field reader. Reads 31 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit31be() {
-        throw new Error("Method not implemented.");
+        return this.bit(31, true, "big");
     }
+    /**
+     * Bit field reader. Reads 32 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit32() {
-        throw new Error("Method not implemented.");
+        return this.bit(32);
     }
+    /**
+     * Bit field reader. Reads 32 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit32le() {
-        throw new Error("Method not implemented.");
+        return this.bit(32, undefined, "little");
     }
+    /**
+     * Bit field reader. Reads 32 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get bit32be() {
-        throw new Error("Method not implemented.");
+        return this.bit(32, undefined, "big");
     }
+    /**
+     * Bit field reader. Reads 32 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit32() {
-        throw new Error("Method not implemented.");
+        return this.bit(32, true);
     }
+    /**
+     * Bit field reader. Reads 32 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit32le() {
-        throw new Error("Method not implemented.");
+        return this.bit(32, true, "little");
     }
+    /**
+     * Bit field reader. Reads 32 bits.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @returns {number}
+     */
     get ubit32be() {
-        throw new Error("Method not implemented.");
+        return this.bit(32, true, "big");
     }
+    //
+    // byte read
+    //
+    /**
+     * Read byte.
+     *
+     * @returns {number}
+     */
     get byte() {
-        throw new Error("Method not implemented.");
+        return this.readByte();
     }
+    /**
+     * Read byte.
+     *
+     * @returns {number}
+     */
     get int8() {
-        throw new Error("Method not implemented.");
+        return this.readByte();
     }
+    /**
+     * Read unsigned byte.
+     *
+     * @returns {number}
+     */
     get uint8() {
-        throw new Error("Method not implemented.");
+        return this.readByte(true);
     }
+    /**
+     * Read unsigned byte.
+     *
+     * @returns {number}
+     */
     get ubyte() {
-        throw new Error("Method not implemented.");
+        return this.readByte(true);
     }
+    //
+    //short16 read
+    //
+    /**
+     * Read short.
+     *
+     * @returns {number}
+     */
     get int16() {
-        throw new Error("Method not implemented.");
+        return this.readInt16();
     }
+    /**
+     * Read short.
+     *
+     * @returns {number}
+     */
     get short() {
-        throw new Error("Method not implemented.");
+        return this.readInt16();
     }
+    /**
+     * Read short.
+     *
+     * @returns {number}
+     */
     get word() {
-        throw new Error("Method not implemented.");
+        return this.readInt16();
     }
+    /**
+     * Read unsigned short.
+     *
+     * @returns {number}
+     */
     get uint16() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true);
     }
+    /**
+     * Read unsigned short.
+     *
+     * @returns {number}
+     */
     get ushort() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true);
     }
+    /**
+     * Read unsigned short.
+     *
+     * @returns {number}
+     */
     get uword() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true);
     }
+    /**
+     * Read unsigned short in little endian.
+     *
+     * @returns {number}
+     */
     get uint16le() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true, "little");
     }
+    /**
+     * Read unsigned short in little endian.
+     *
+     * @returns {number}
+     */
     get ushortle() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true, "little");
     }
+    /**
+     * Read unsigned short in little endian.
+     *
+     * @returns {number}
+     */
     get uwordle() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true, "little");
     }
+    /**
+     * Read signed short in little endian.
+     *
+     * @returns {number}
+     */
     get int16le() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(false, "little");
     }
+    /**
+     * Read signed short in little endian.
+     *
+     * @returns {number}
+     */
     get shortle() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(false, "little");
     }
+    /**
+     * Read signed short in little endian.
+     *
+     * @returns {number}
+     */
     get wordle() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(false, "little");
     }
+    /**
+     * Read unsigned short in big endian.
+     *
+     * @returns {number}
+     */
     get uint16be() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true, "big");
     }
+    /**
+     * Read unsigned short in big endian.
+     *
+     * @returns {number}
+     */
     get ushortbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true, "big");
     }
+    /**
+     * Read unsigned short in big endian.
+     *
+     * @returns {number}
+     */
     get uwordbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(true, "big");
     }
+    /**
+     * Read signed short in big endian.
+     *
+     * @returns {number}
+     */
     get int16be() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(false, "big");
     }
+    /**
+     * Read signed short in big endian.
+     *
+     * @returns {number}
+     */
     get shortbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(false, "big");
     }
+    /**
+     * Read signed short in big endian.
+     *
+     * @returns {number}
+     */
     get wordbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt16(false, "big");
     }
+    //
+    //half float read
+    //
+    /**
+     * Read half float.
+     *
+     * @returns {number}
+     */
     get halffloat() {
-        throw new Error("Method not implemented.");
+        return this.readHalfFloat();
     }
+    /**
+     * Read half float
+     *
+     * @returns {number}
+     */
     get half() {
-        throw new Error("Method not implemented.");
+        return this.readHalfFloat();
     }
+    /**
+     * Read half float.
+     *
+     * @returns {number}
+     */
     get halffloatbe() {
-        throw new Error("Method not implemented.");
+        return this.readHalfFloat("big");
     }
+    /**
+     * Read half float.
+     *
+     * @returns {number}
+     */
     get halfbe() {
-        throw new Error("Method not implemented.");
+        return this.readHalfFloat("big");
     }
+    /**
+     * Read half float.
+     *
+     * @returns {number}
+     */
     get halffloatle() {
-        throw new Error("Method not implemented.");
+        return this.readHalfFloat("little");
     }
+    /**
+     * Read half float.
+     *
+     * @returns {number}
+     */
     get halfle() {
-        throw new Error("Method not implemented.");
+        return this.readHalfFloat("little");
     }
+    //
+    //int read
+    //
+    /**
+     * Read 32 bit integer.
+     *
+     * @returns {number}
+     */
     get int() {
-        throw new Error("Method not implemented.");
+        return this.readInt32();
     }
+    /**
+     * Read 32 bit integer.
+     *
+     * @returns {number}
+     */
     get double() {
-        throw new Error("Method not implemented.");
+        return this.readInt32();
     }
+    /**
+     * Read 32 bit integer.
+     *
+     * @returns {number}
+     */
     get int32() {
-        throw new Error("Method not implemented.");
+        return this.readInt32();
     }
+    /**
+     * Read 32 bit integer.
+     *
+     * @returns {number}
+     */
     get long() {
-        throw new Error("Method not implemented.");
+        return this.readInt32();
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get uint() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true);
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get udouble() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true);
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get uint32() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true);
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get ulong() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true);
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get intbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "big");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get doublebe() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "big");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get int32be() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "big");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get longbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "big");
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get uintbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "big");
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get udoublebe() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "big");
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get uint32be() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "big");
     }
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
     get ulongbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "big");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get intle() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "little");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get doublele() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "little");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get int32le() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "little");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get longle() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(false, "little");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get uintle() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "little");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get udoublele() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "little");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get uint32le() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "little");
     }
+    /**
+     * Read signed 32 bit integer.
+     *
+     * @returns {number}
+     */
     get ulongle() {
-        throw new Error("Method not implemented.");
+        return this.readInt32(true, "little");
     }
+    //
+    //float read
+    //
+    /**
+     * Read float.
+     *
+     * @returns {number}
+     */
     get float() {
-        throw new Error("Method not implemented.");
+        return this.readFloat();
     }
+    /**
+     * Read float.
+     *
+     * @returns {number}
+     */
     get floatbe() {
-        throw new Error("Method not implemented.");
+        return this.readFloat("big");
     }
+    /**
+     * Read float.
+     *
+     * @returns {number}
+     */
     get floatle() {
-        throw new Error("Method not implemented.");
+        return this.readFloat("little");
     }
+    //
+    //int64 reader
+    //
+    /**
+     * Read signed 64 bit integer
+     *
+     * @returns {bigint}
+     */
     get int64() {
-        throw new Error("Method not implemented.");
+        return this.readInt64();
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get bigint() {
-        throw new Error("Method not implemented.");
+        return this.readInt64();
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get quad() {
-        throw new Error("Method not implemented.");
+        return this.readInt64();
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get uint64() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true);
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get ubigint() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true);
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get uquad() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true);
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get int64be() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(false, "big");
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get bigintbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(false, "big");
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get quadbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(false, "big");
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get uint64be() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true, "big");
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get ubigintbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true, "big");
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get uquadbe() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true, "big");
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get int64le() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(false, "little");
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get bigintle() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(false, "little");
     }
+    /**
+     * Read signed 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get quadle() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(false, "little");
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get uint64le() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true, "little");
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get ubigintle() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true, "little");
     }
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * @returns {bigint}
+     */
     get uquadle() {
-        throw new Error("Method not implemented.");
+        return this.readInt64(true, "little");
     }
+    //
+    //doublefloat reader
+    //
+    /**
+     * Read double float.
+     *
+     * @returns {number}
+     */
     get doublefloat() {
-        throw new Error("Method not implemented.");
+        return this.readDoubleFloat();
     }
+    /**
+     * Read double float.
+     *
+     * @returns {number}
+     */
     get dfloat() {
-        throw new Error("Method not implemented.");
+        return this.readDoubleFloat();
     }
+    /**
+     * Read double float.
+     *
+     * @returns {number}
+     */
     get dfloatebe() {
-        throw new Error("Method not implemented.");
+        return this.readDoubleFloat("big");
     }
+    /**
+     * Read double float.
+     *
+     * @returns {number}
+     */
     get doublefloatbe() {
-        throw new Error("Method not implemented.");
+        return this.readDoubleFloat("big");
     }
+    /**
+     * Read double float.
+     *
+     * @returns {number}
+     */
     get dfloatle() {
-        throw new Error("Method not implemented.");
+        return this.readDoubleFloat("little");
     }
+    /**
+     * Read double float.
+     *
+     * @returns {number}
+     */
     get doublefloatle() {
-        throw new Error("Method not implemented.");
+        return this.readDoubleFloat("little");
     }
+    //
+    //string reader
+    //
+    /**
+    * Reads string, use options object for different types.
+    *
+    * @param {stringOptions} options
+    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
+    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
+    * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
+    * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
+    * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
+    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
+    * @return {string}
+    */
     string(options) {
-        throw new Error("Method not implemented.");
+        return this.readString(options);
     }
+    /**
+    * Reads string using setting from .strSettings
+    *
+    * Default is ``utf-8``
+    *
+    * @return {string}
+    */
     get str() {
-        throw new Error("Method not implemented.");
+        return this.readString(this.strSettings);
     }
+    /**
+    * Reads UTF-8 (C) string.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     utf8string(length, terminateValue, stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
     }
+    /**
+    * Reads UTF-8 (C) string.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     cstring(length, terminateValue, stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
     }
+    /**
+    * Reads ANSI string.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     ansistring(length, terminateValue, stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue, stripNull: stripNull });
     }
+    /**
+    * Reads UTF-16 (Unicode) string.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     utf16string(length, terminateValue, stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
     }
+    /**
+    * Reads UTF-16 (Unicode) string.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     unistring(length, terminateValue, stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
     }
+    /**
+    * Reads UTF-16 (Unicode) string in little endian order.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     utf16stringle(length, terminateValue, stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
     }
+    /**
+    * Reads UTF-16 (Unicode) string in little endian order.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     unistringle(length, terminateValue, stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
     }
+    /**
+    * Reads UTF-16 (Unicode) string in big endian order.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     utf16stringbe(length, terminateValue, stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
     }
+    /**
+    * Reads UTF-16 (Unicode) string in big endian order.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     unistringbe(length, terminateValue, stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
     }
+    /**
+    * Reads Pascal string.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     pstring(lengthReadSize, stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
     }
+    /**
+    * Reads Pascal string 1 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     pstring1(stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: endian });
     }
+    /**
+    * Reads Pascal string 1 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     pstring1le(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "little" });
     }
+    /**
+    * Reads Pascal string 1 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     pstring1be(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "big" });
     }
+    /**
+    * Reads Pascal string 2 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     pstring2(stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: endian });
     }
+    /**
+    * Reads Pascal string 2 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     pstring2le(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "little" });
     }
+    /**
+    * Reads Pascal string 2 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     pstring2be(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "big" });
     }
+    /**
+    * Reads Pascal string 4 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     pstring4(stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: endian });
     }
+    /**
+    * Reads Pascal string 4 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     pstring4le(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "little" });
     }
+    /**
+    * Reads Pascal string 4 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     pstring4be(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "big" });
     }
+    /**
+    * Reads Wide-Pascal string.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     wpstring(lengthReadSize, stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: lengthReadSize, endian: endian, stripNull: stripNull });
     }
+    /**
+    * Reads Wide-Pascal string 1 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     wpstring1(stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: endian, stripNull: stripNull });
     }
+    /**
+    * Reads Wide-Pascal string 2 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     wpstring2(stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: endian, stripNull: stripNull });
     }
+    /**
+    * Reads Wide-Pascal string 2 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     wpstring2le(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "little", stripNull: stripNull });
     }
+    /**
+    * Reads Wide-Pascal string 2 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     wpstring2be(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "big", stripNull: stripNull });
     }
+    /**
+    * Reads Wide-Pascal string 4 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
+    */
     wpstring4(stripNull, endian) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: endian, stripNull: stripNull });
     }
+    /**
+    * Reads Wide-Pascal string 4 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     wpstring4be(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "big", stripNull: stripNull });
     }
+    /**
+    * Reads Wide-Pascal string 4 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @return {string}
+    */
     wpstring4le(stripNull) {
-        throw new Error("Method not implemented.");
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "little", stripNull: stripNull });
     }
 }
-/**
- * Binary reader, includes bitfields and strings.
- *
- * @param {string} filePath - Path to file
- * @param {BiOptions?} options - Any options to set at start
- * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
- * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
- * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
- * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- *
- * @since 3.1
- */
-const BiReaderStream = applyBinaryAliasReader(BiReaderStreamer);
 
 /**
  * Binary writer, includes bitfields and strings.
@@ -16450,7 +16599,7 @@ const BiReaderStream = applyBinaryAliasReader(BiReaderStreamer);
  *
  * @since 3.1
  */
-class BiWriterStreamer extends BiBaseStreamer {
+class BiWriterStream extends BiBaseStreamer {
     /**
      * Binary writer, includes bitfields and strings.
      *
@@ -16488,956 +16637,2976 @@ class BiWriterStreamer extends BiBaseStreamer {
         this.offset = options.byteOffset ?? 0;
         this.bitoffset = options.bitOffset ?? 0;
     }
+    //
+    // Bit Aliases
+    //
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @param {boolean} unsigned - if the value is unsigned
+     * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
+     */
     bit(value, bits, unsigned, endian) {
-        throw new Error("Method not implemented.");
+        return this.writeBit(value, bits, unsigned, endian);
     }
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
+     */
     ubit(value, bits, endian) {
-        throw new Error("Method not implemented.");
+        return this.writeBit(value, bits, true, endian);
     }
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns {number}
+     */
     bitbe(value, bits, unsigned) {
-        throw new Error("Method not implemented.");
+        return this.bit(value, bits, unsigned, "big");
     }
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @returns {number}
+     */
     ubitbe(value, bits) {
-        throw new Error("Method not implemented.");
+        return this.bit(value, bits, true, "big");
     }
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @returns {number}
+     */
     ubitle(value, bits) {
-        throw new Error("Method not implemented.");
+        return this.bit(value, bits, true, "little");
     }
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns {number}
+     */
     bitle(value, bits, unsigned) {
-        throw new Error("Method not implemented.");
+        return this.bit(value, bits, unsigned, "little");
     }
+    /**
+     * Bit field writer. Writes 1 bit.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit1(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 1);
     }
+    /**
+     * Bit field writer. Writes 1 bit.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit1le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 1, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 1 bit.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit1be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 1, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 1 bit.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit1(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 1, true);
     }
+    /**
+     * Bit field writer. Writes 1 bit.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit1le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 1, true, "little");
     }
+    /**
+     * Bit field writer. Writes 1 bit.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit1be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 1, true, "big");
     }
+    /**
+     * Bit field writer. Writes 2 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit2(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 2);
     }
+    /**
+     * Bit field writer. Writes 2 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit2le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 2, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 2 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit2be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 2, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 2 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit2(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 2, true);
     }
+    /**
+     * Bit field writer. Writes 2 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit2le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 2, true, "little");
     }
+    /**
+     * Bit field writer. Writes 2 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit2be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 2, true, "big");
     }
+    /**
+     * Bit field writer. Writes 3 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit3(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 3);
     }
+    /**
+     * Bit field writer. Writes 3 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit3le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 3, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 3 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit3be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 3, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 3 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit3(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 3, true);
     }
+    /**
+     * Bit field writer. Writes 3 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit3le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 3, true, "little");
     }
+    /**
+     * Bit field writer. Writes 3 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit3be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 3, true, "big");
     }
+    /**
+     * Bit field writer. Writes 4 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit4(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 4);
     }
+    /**
+     * Bit field writer. Writes 4 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit4le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 4, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 4 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit4be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 4, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 4 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit4(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 4, true);
     }
+    /**
+     * Bit field writer. Writes 4 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit4le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 4, true, "little");
     }
+    /**
+     * Bit field writer. Writes 4 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit4be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 4, true, "big");
     }
+    /**
+     * Bit field writer. Writes 5 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit5(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 5);
     }
+    /**
+     * Bit field writer. Writes 5 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit5le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 5, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 5 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit5be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 5, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 5 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit5(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 5, true);
     }
+    /**
+     * Bit field writer. Writes 5 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit5le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 5, true, "little");
     }
+    /**
+     * Bit field writer. Writes 5 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit5be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 5, true, "big");
     }
+    /**
+     * Bit field writer. Writes 6 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit6(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 6);
     }
+    /**
+     * Bit field writer. Writes 6 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit6le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 6, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 6 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit6be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 6, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 6 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit6(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 6, true);
     }
+    /**
+     * Bit field writer. Writes 6 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit6le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 6, true, "little");
     }
+    /**
+     * Bit field writer. Writes 6 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit6be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 6, true, "big");
     }
+    /**
+     * Bit field writer. Writes 7 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit7(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 7);
     }
+    /**
+     * Bit field writer. Writes 7 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit7le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 7, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 7 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit7be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 7, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 7 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit7(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 7, true);
     }
+    /**
+     * Bit field writer. Writes 7 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit7le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 7, true, "little");
     }
+    /**
+     * Bit field writer. Writes 7 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit7be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 7, true, "big");
     }
+    /**
+     * Bit field writer. Writes 8 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit8(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 8);
     }
+    /**
+     * Bit field writer. Writes 8 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit8le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 8, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 8 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit8be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 8, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 8 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit8(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 8, true);
     }
+    /**
+     * Bit field writer. Writes 8 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit8le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 8, true, "little");
     }
+    /**
+     * Bit field writer. Writes 8 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit8be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 8, true, "big");
     }
+    /**
+     * Bit field writer. Writes 9 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit9(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 9);
     }
+    /**
+     * Bit field writer. Writes 9 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit9le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 9, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 9 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit9be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 9, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 9 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit9(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 9, true);
     }
+    /**
+     * Bit field writer. Writes 9 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit9le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 9, true, "little");
     }
+    /**
+     * Bit field writer. Writes 9 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit9be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 9, true, "big");
     }
+    /**
+     * Bit field writer. Writes 10 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit10(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 10);
     }
+    /**
+     * Bit field writer. Writes 10 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit10le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 10, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 10 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit10be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 10, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 10 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit10(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 10, true);
     }
+    /**
+     * Bit field writer. Writes 10 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit10le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 10, true, "little");
     }
+    /**
+     * Bit field writer. Writes 10 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit10be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 10, true, "big");
     }
+    /**
+     * Bit field writer. Writes 11 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit11(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 11);
     }
+    /**
+     * Bit field writer. Writes 11 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit11le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 11, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 11 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit11be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 11, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 11 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit11(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 11, true);
     }
+    /**
+     * Bit field writer. Writes 11 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit11le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 11, true, "little");
     }
+    /**
+     * Bit field writer. Writes 11 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit11be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 11, true, "big");
     }
+    /**
+     * Bit field writer. Writes 12 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit12(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 12);
     }
+    /**
+     * Bit field writer. Writes 12 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit12le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 12, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 12 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit12be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 12, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 12 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit12(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 12, true);
     }
+    /**
+     * Bit field writer. Writes 12 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit12le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 12, true, "little");
     }
+    /**
+     * Bit field writer. Writes 12 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit12be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 12, true, "big");
     }
+    /**
+     * Bit field writer. Writes 13 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit13(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 13);
     }
+    /**
+     * Bit field writer. Writes 13 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit13le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 13, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 13 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit13be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 13, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 13 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit13(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 13, true);
     }
+    /**
+     * Bit field writer. Writes 13 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit13le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 13, true, "little");
     }
+    /**
+     * Bit field writer. Writes 13 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit13be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 13, true, "big");
     }
+    /**
+     * Bit field writer. Writes 14 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit14(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 14);
     }
+    /**
+     * Bit field writer. Writes 14 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit14le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 14, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 14 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit14be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 14, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 14 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit14(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 14, true);
     }
+    /**
+     * Bit field writer. Writes 14 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit14le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 14, true, "little");
     }
+    /**
+     * Bit field writer. Writes 14 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit14be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 14, true, "big");
     }
+    /**
+     * Bit field writer. Writes 15 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit15(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 15);
     }
+    /**
+     * Bit field writer. Writes 15 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit15le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 15, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 15 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit15be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 15, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 15 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit15(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 15, true);
     }
+    /**
+     * Bit field writer. Writes 15 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit15le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 15, true, "little");
     }
+    /**
+     * Bit field writer. Writes 15 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit15be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 15, true, "big");
     }
+    /**
+     * Bit field writer. Writes 16 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit16(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 16);
     }
+    /**
+     * Bit field writer. Writes 16 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit16le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 16, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 16 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit16be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 16, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 16 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit16(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 16, true);
     }
+    /**
+     * Bit field writer. Writes 16 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit16le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 16, true, "little");
     }
+    /**
+     * Bit field writer. Writes 16 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit16be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 16, true, "big");
     }
+    /**
+     * Bit field writer. Writes 17 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit17(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 17);
     }
+    /**
+     * Bit field writer. Writes 17 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit17le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 17, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 17 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit17be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 17, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 17 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit17(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 17, true);
     }
+    /**
+     * Bit field writer. Writes 17 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit17le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 17, true, "little");
     }
+    /**
+     * Bit field writer. Writes 17 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit17be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 17, true, "big");
     }
+    /**
+     * Bit field writer. Writes 18 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit18(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 18);
     }
+    /**
+     * Bit field writer. Writes 18 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit18le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 18, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 18 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit18be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 18, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 18 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit18(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 18, true);
     }
+    /**
+     * Bit field writer. Writes 18 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit18le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 18, true, "little");
     }
+    /**
+     * Bit field writer. Writes 18 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit18be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 18, true, "big");
     }
+    /**
+     * Bit field writer. Writes 19 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit19(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 19);
     }
+    /**
+     * Bit field writer. Writes 19 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit19le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 19, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 19 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit19be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 19, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 19 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit19(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 19, true);
     }
+    /**
+     * Bit field writer. Writes 19 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit19le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 19, true, "little");
     }
+    /**
+     * Bit field writer. Writes 19 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit19be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 19, true, "big");
     }
+    /**
+     * Bit field writer. Writes 20 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit20(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 20);
     }
+    /**
+     * Bit field writer. Writes 20 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit20le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 20, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 20 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit20be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 20, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 20 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit20(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 20, true);
     }
+    /**
+     * Bit field writer. Writes 20 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit20le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 20, true, "little");
     }
+    /**
+     * Bit field writer. Writes 20 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit20be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 20, true, "big");
     }
+    /**
+     * Bit field writer. Writes 21 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit21(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 21);
     }
+    /**
+     * Bit field writer. Writes 21 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit21le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 21, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 21 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit21be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 21, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 21 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit21(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 21, true);
     }
+    /**
+     * Bit field writer. Writes 21 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit21le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 21, true, "little");
     }
+    /**
+     * Bit field writer. Writes 21 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit21be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 21, true, "big");
     }
+    /**
+     * Bit field writer. Writes 22 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit22(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 22);
     }
+    /**
+     * Bit field writer. Writes 22 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit22le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 22, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 22 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit22be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 22, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 22 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit22(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 22, true);
     }
+    /**
+     * Bit field writer. Writes 22 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit22le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 22, true, "little");
     }
+    /**
+     * Bit field writer. Writes 22 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit22be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 22, true, "big");
     }
+    /**
+     * Bit field writer. Writes 23 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit23(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 23);
     }
+    /**
+     * Bit field writer. Writes 23 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit23le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 23, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 23 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit23be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 23, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 23 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit23(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 23, true);
     }
+    /**
+     * Bit field writer. Writes 23 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit23le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 23, true, "little");
     }
+    /**
+     * Bit field writer. Writes 23 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit23be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 23, true, "big");
     }
+    /**
+     * Bit field writer. Writes 24 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit24(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 24);
     }
+    /**
+     * Bit field writer. Writes 24 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit24le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 24, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 24 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit24be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 24, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 24 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit24(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 24, true);
     }
+    /**
+     * Bit field writer. Writes 24 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit24le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 24, true, "little");
     }
+    /**
+     * Bit field writer. Writes 24 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit24be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 24, true, "big");
     }
+    /**
+     * Bit field writer. Writes 25 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit25(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 25);
     }
+    /**
+     * Bit field writer. Writes 25 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit25le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 25, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 25 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit25be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 25, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 25 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit25(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 25, true);
     }
+    /**
+     * Bit field writer. Writes 25 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit25le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 25, true, "little");
     }
+    /**
+     * Bit field writer. Writes 25 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit25be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 25, true, "big");
     }
+    /**
+     * Bit field writer. Writes 26 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit26(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 26);
     }
+    /**
+     * Bit field writer. Writes 26 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit26le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 26, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 26 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit26be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 26, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 26 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit26(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 26, true);
     }
+    /**
+     * Bit field writer. Writes 26 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit26le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 26, true, "little");
     }
+    /**
+     * Bit field writer. Writes 26 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit26be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 26, true, "big");
     }
+    /**
+     * Bit field writer. Writes 27 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit27(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 27);
     }
+    /**
+     * Bit field writer. Writes 27 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit27le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 27, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 27 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit27be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 27, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 27 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit27(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 27, true);
     }
+    /**
+     * Bit field writer. Writes 27 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit27le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 27, true, "little");
     }
+    /**
+     * Bit field writer. Writes 27 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit27be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 27, true, "big");
     }
+    /**
+     * Bit field writer. Writes 28 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit28(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 28);
     }
+    /**
+     * Bit field writer. Writes 28 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit28le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 28, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 28 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit28be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 28, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 28 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit28(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 28, true);
     }
+    /**
+     * Bit field writer. Writes 28 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit28le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 28, true, "little");
     }
+    /**
+     * Bit field writer. Writes 28 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit28be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 28, true, "big");
     }
+    /**
+     * Bit field writer. Writes 29 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit29(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 29);
     }
+    /**
+     * Bit field writer. Writes 29 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit29le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 29, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 29 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit29be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 29, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 29 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit29(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 29, true);
     }
+    /**
+     * Bit field writer. Writes 29 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit29le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 29, true, "little");
     }
+    /**
+     * Bit field writer. Writes 29 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit29be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 29, true, "big");
     }
+    /**
+     * Bit field writer. Writes 30 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit30(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 30);
     }
+    /**
+     * Bit field writer. Writes 30 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit30le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 30, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 30 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit30be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 30, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 30 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit30(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 30, true);
     }
+    /**
+     * Bit field writer. Writes 30 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit30le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 30, true, "little");
     }
+    /**
+     * Bit field writer. Writes 30 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit30be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 30, true, "big");
     }
+    /**
+     * Bit field writer. Writes 31 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit31(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 31);
     }
+    /**
+     * Bit field writer. Writes 31 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit31le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 31, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 31 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit31be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 31, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 31 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit31(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 31, true);
     }
+    /**
+     * Bit field writer. Writes 31 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit31le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 31, true, "little");
     }
+    /**
+     * Bit field writer. Writes 31 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit31be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 31, true, "big");
     }
+    /**
+     * Bit field writer. Writes 32 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit32(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 32);
     }
+    /**
+     * Bit field writer. Writes 32 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit32le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 32, undefined, "little");
     }
+    /**
+     * Bit field writer. Writes 32 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set bit32be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 32, undefined, "big");
     }
+    /**
+     * Bit field writer. Writes 32 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit32(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 32, true);
     }
+    /**
+     * Bit field writer. Writes 32 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit32le(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 32, true, "little");
     }
+    /**
+     * Bit field writer. Writes 32 bits.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     */
     set ubit32be(value) {
-        throw new Error("Method not implemented.");
+        this.bit(value, 32, true, "big");
     }
+    //
+    // byte write
+    //
+    /**
+     * Write byte.
+     *
+     * @param {number} value - value as int
+     */
     set byte(value) {
-        throw new Error("Method not implemented.");
+        this.writeByte(value);
     }
+    /**
+     * Write byte.
+     *
+     * @param {number} value - value as int
+     */
     set int8(value) {
-        throw new Error("Method not implemented.");
+        this.writeByte(value);
     }
+    /**
+     * Write unsigned byte.
+     *
+     * @param {number} value - value as int
+     */
     set uint8(value) {
-        throw new Error("Method not implemented.");
+        this.writeByte(value, true);
     }
+    /**
+     * Write unsigned byte.
+     *
+     * @param {number} value - value as int
+     */
     set ubyte(value) {
-        throw new Error("Method not implemented.");
+        this.writeByte(value, true);
     }
+    //
+    // short writes
+    //
+    /**
+     * Write int16.
+     *
+     * @param {number} value - value as int
+     */
     set int16(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value);
     }
+    /**
+     * Write int16.
+     *
+     * @param {number} value - value as int
+     */
     set short(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value);
     }
+    /**
+     * Write int16.
+     *
+     * @param {number} value - value as int
+     */
     set word(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value);
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set uint16(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true);
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set ushort(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true);
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set uword(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true);
     }
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int
+     */
     set int16be(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, false, "big");
     }
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int
+     */
     set shortbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, false, "big");
     }
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int
+     */
     set wordbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, false, "big");
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set uint16be(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true, "big");
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set ushortbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true, "big");
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set uwordbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true, "big");
     }
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int
+     */
     set int16le(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, false, "little");
     }
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int
+     */
     set shortle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, false, "little");
     }
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int
+     */
     set wordle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, false, "little");
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set uint16le(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true, "little");
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set ushortle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true, "little");
     }
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
     set uwordle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt16(value, true, "little");
     }
+    //
+    // half float
+    //
+    /**
+     * Writes half float.
+     *
+     * @param {number} value - value as int
+     */
     set half(value) {
-        throw new Error("Method not implemented.");
+        this.writeHalfFloat(value);
     }
+    /**
+     * Writes half float.
+     *
+     * @param {number} value - value as int
+     */
     set halffloat(value) {
-        throw new Error("Method not implemented.");
+        this.writeHalfFloat(value);
     }
+    /**
+     * Writes half float.
+     *
+     * @param {number} value - value as int
+     */
     set halffloatbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeHalfFloat(value, "big");
     }
+    /**
+     * Writes half float.
+     *
+     * @param {number} value - value as int
+     */
     set halfbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeHalfFloat(value, "big");
     }
+    /**
+     * Writes half float.
+     *
+     * @param {number} value - value as int
+     */
     set halffloatle(value) {
-        throw new Error("Method not implemented.");
+        this.writeHalfFloat(value, "little");
     }
+    /**
+     * Writes half float.
+     *
+     * @param {number} value - value as int
+     */
     set halfle(value) {
-        throw new Error("Method not implemented.");
+        this.writeHalfFloat(value, "little");
     }
+    //
+    // int32 write
+    //
+    /**
+     * Write int32.
+     *
+     * @param {number} value - value as int
+     */
     set int(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value);
     }
+    /**
+    * Write int32.
+    *
+    * @param {number} value - value as int
+    */
     set int32(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value);
     }
+    /**
+     * Write int32.
+     *
+     * @param {number} value - value as int
+     */
     set double(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value);
     }
+    /**
+     * Write int32.
+     *
+     * @param {number} value - value as int
+     */
     set long(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value);
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set uint32(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true);
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set uint(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true);
     }
+    /**
+    * Write unsigned int32.
+    *
+    * @param {number} value - value as int
+    */
     set udouble(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true);
     }
+    /**
+    * Write unsigned int32.
+    *
+    * @param {number} value - value as int
+    */
     set ulong(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true);
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set int32le(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "little");
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set intle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "little");
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set doublele(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "little");
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set longle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "little");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set uint32le(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "little");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set uintle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "little");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set udoublele(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "little");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set ulongle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "little");
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set intbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "big");
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set int32be(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "big");
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set doublebe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "big");
     }
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
     set longbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, false, "big");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set writeUInt32BE(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "big");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set uint32be(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "big");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set uintbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "big");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set udoublebe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "big");
     }
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
     set ulongbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt32(value, true, "big");
     }
+    //
+    // float write
+    //
+    /**
+    * Write float.
+    *
+    * @param {number} value - value as int
+    */
     set float(value) {
-        throw new Error("Method not implemented.");
+        this.writeFloat(value);
     }
+    /**
+     * Write float.
+     *
+     * @param {number} value - value as int
+     */
     set floatle(value) {
-        throw new Error("Method not implemented.");
+        this.writeFloat(value, "little");
     }
+    /**
+    * Write float.
+    *
+    * @param {number} value - value as int
+    */
     set floatbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeFloat(value, "big");
     }
+    //
+    // int64 write
+    //
+    /**
+     * Write 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set int64(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value);
     }
+    /**
+    * Write 64 bit integer.
+    *
+    * @param {BigValue} value - value as int
+    */
     set quad(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value);
     }
+    /**
+     * Write 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set bigint(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value);
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set uint64(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true);
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set ubigint(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true);
     }
+    /**
+    * Write unsigned 64 bit integer.
+    *
+    * @param {BigValue} value - value as int
+    */
     set uquad(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true);
     }
+    /**
+     * Write signed 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set int64le(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, false, "little");
     }
+    /**
+     * Write signed 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set bigintle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, false, "little");
     }
+    /**
+     * Write signed 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set quadle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, false, "little");
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set uint64le(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true, "little");
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set ubigintle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true, "little");
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set uquadle(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true, "little");
     }
+    /**
+     * Write signed 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set int64be(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, false, "big");
     }
+    /**
+     * Write signed 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set bigintbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, false, "big");
     }
+    /**
+     * Write signed 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set quadbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, false, "big");
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set uint64be(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true, "big");
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set ubigintbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true, "big");
     }
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     set uquadbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeInt64(value, true, "big");
     }
+    //
+    // doublefloat
+    //
+    /**
+     * Writes double float.
+     *
+     * @param {number} value - value as int
+     */
     set doublefloat(value) {
-        throw new Error("Method not implemented.");
+        this.writeDoubleFloat(value);
     }
+    /**
+     * Writes double float.
+     *
+     * @param {number} value - value as int
+     */
     set dfloat(value) {
-        throw new Error("Method not implemented.");
+        this.writeDoubleFloat(value);
     }
+    /**
+     * Writes double float.
+     *
+     * @param {number} value - value as int
+     */
     set dfloatbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeDoubleFloat(value, "big");
     }
+    /**
+     * Writes double float.
+     *
+     * @param {number} value - value as int
+     */
     set doublefloatbe(value) {
-        throw new Error("Method not implemented.");
+        this.writeDoubleFloat(value, "big");
     }
+    /**
+     * Writes double float.
+     *
+     * @param {number} value - value as int
+     */
     set dfloatle(value) {
-        throw new Error("Method not implemented.");
+        this.writeDoubleFloat(value, "little");
     }
+    /**
+     * Writes double float.
+     *
+     * @param {number} value - value as int
+     */
     set doublefloatle(value) {
-        throw new Error("Method not implemented.");
+        this.writeDoubleFloat(value, "little");
     }
+    //
+    // string
+    //
+    /**
+    * Writes string, use options object for different types.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions?} options
+    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
+    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
+    * @param {stringOptions["lengthWriteSize"]?} options.lengthWriteSize - for pascal strings. 1, 2 or 4 byte length write size
+    * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
+    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
+    */
     string(string, options) {
-        throw new Error("Method not implemented.");
+        return this.writeString(string, options);
     }
+    /**
+    * Writes string using setting from .strSettings
+    *
+    * Default is ``utf-8``
+    *
+    * @param {string} string - text string
+    */
     set str(string) {
-        throw new Error("Method not implemented.");
+        this.writeString(string, this.strSettings);
     }
+    /**
+    * Writes UTF-8 (C) string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
     utf8string(string, length, terminateValue) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
     }
+    /**
+    * Writes UTF-8 (C) string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
     cstring(string, length, terminateValue) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
     }
+    /**
+    * Writes ANSI string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
     ansistring(string, length, terminateValue) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue });
     }
+    /**
+    * Writes UTF-16 (Unicode) string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
+    */
     utf16string(string, length, terminateValue, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
     }
+    /**
+    * Writes UTF-16 (Unicode) string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
+    */
     unistring(string, length, terminateValue, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
     }
+    /**
+    * Writes UTF-16 (Unicode) string in little endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
     utf16stringle(string, length, terminateValue) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
     }
+    /**
+    * Writes UTF-16 (Unicode) string in little endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
     unistringle(string, length, terminateValue) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
     }
+    /**
+    * Writes UTF-16 (Unicode) string in big endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
     utf16stringbe(string, length, terminateValue) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
     }
+    /**
+    * Writes UTF-16 (Unicode) string in big endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
     unistringbe(string, length, terminateValue) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
     }
+    /**
+    * Writes Pascal string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little`` for 2 or 4 byte length write size
+    */
     pstring(string, lengthWriteSize, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: lengthWriteSize, endian: endian });
     }
+    /**
+    * Writes Pascal string 1 byte length read.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little`` for 2 or 4 byte length write size
+    */
     pstring1(string, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: endian });
     }
+    /**
+    * Writes Pascal string 1 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
     pstring1le(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "little" });
     }
+    /**
+    * Writes Pascal string 1 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
     pstring1be(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "big" });
     }
+    /**
+    * Writes Pascal string 2 byte length read.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
     pstring2(string, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: endian });
     }
+    /**
+    * Writes Pascal string 2 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
     pstring2le(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "little" });
     }
+    /**
+    * Writes Pascal string 2 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
     pstring2be(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "big" });
     }
+    /**
+    * Writes Pascal string 4 byte length read.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
     pstring4(string, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: endian });
     }
+    /**
+    * Writes Pascal string 4 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
     pstring4be(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "big" });
     }
+    /**
+    * Writes Pascal string 4 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
     pstring4le(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "little" });
     }
+    /**
+    * Writes Wide-Pascal string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
     wpstring(string, lengthWriteSize, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: endian });
     }
+    /**
+    * Writes Wide-Pascal string in big endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    */
     wpstringbe(string, lengthWriteSize) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "big" });
     }
+    /**
+    * Writes Wide-Pascal string in little endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    */
     wpstringle(string, lengthWriteSize) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "little" });
     }
+    /**
+    * Writes Wide-Pascal string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
     wpstring1(string, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: endian });
     }
+    /**
+    * Writes Wide-Pascal string 1 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
     wpstring1be(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "big" });
     }
+    /**
+    * Writes Wide-Pascal string 1 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
     wpstring1le(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "little" });
     }
+    /**
+    * Writes Wide-Pascal string 2 byte length read.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
     wpstring2(string, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: endian });
     }
+    /**
+    * Writes Wide-Pascal string 2 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
     wpstring2le(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "little" });
     }
+    /**
+    * Writes Wide-Pascal string 2 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
     wpstring2be(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "big" });
     }
+    /**
+    * Writes Wide-Pascal string 4 byte length read.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
     wpstring4(string, endian) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: endian });
     }
+    /**
+    * Writes Wide-Pascal string 4 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
     wpstring4le(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "little" });
     }
+    /**
+    * Writes Wide-Pascal string 4 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
     wpstring4be(string) {
-        throw new Error("Method not implemented.");
+        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "big" });
     }
 }
-/**
- * Binary writer, includes bitfields and strings.
- *
- * Note: Must start with .open() before writing.
- *
- * @param {string} filePath - Path to file
- * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- *
- * @since 3.1
- */
-const BiWriterStream = applyBinaryAliasWriter(BiWriterStreamer);
 
 /**
  * Not in use anymore.

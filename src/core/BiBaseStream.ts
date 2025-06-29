@@ -135,13 +135,11 @@ function remove(ctx: BiBaseStreamer, startOffset?: number, endOffset?: number, c
         throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + ctx.size);
     }
     const removedLength = new_offset - new_start;
-    if (ctx.maxFileSize && removedLength > ctx.maxFileSize) 
-    {
+    if (ctx.maxFileSize && removedLength > ctx.maxFileSize) {
         // can not return buffer, cant extract, must write new file of removed data
         // if not removed, only fill, just creat a new file with filled data 
 
-        if (fillValue != undefined && remove == false) 
-        {
+        if (fillValue != undefined && remove == false) {
             // fills current file
             // no need to dupe
             console.warn(`File size for return Buffer is larger than the max Buffer Node can handle.`);
@@ -156,8 +154,7 @@ function remove(ctx: BiBaseStreamer, startOffset?: number, endOffset?: number, c
                 readStart += bytesWritten;
             }
         }
-        else if (remove) 
-        {
+        else if (remove) {
             // dupe file for extract, remove data
 
             const removeData = ctx.filePath + +"_" + startOffset + "_" + removedLength + ".removed";
@@ -197,8 +194,7 @@ function remove(ctx: BiBaseStreamer, startOffset?: number, endOffset?: number, c
 
             ctx.updateSize();
         }
-        else 
-        {
+        else {
             // no remove, can't extract
 
             const removeData = ctx.filePath + +"_" + startOffset + "_" + removedLength + ".removed";
@@ -267,8 +263,7 @@ function remove(ctx: BiBaseStreamer, startOffset?: number, endOffset?: number, c
 
             return removedBuffer;
         }
-        else 
-        {
+        else {
             if (fillValue != undefined) {
                 const removedBuffer = Buffer.alloc(removedLength);
                 removedBuffer.fill(fillValue & 0xff);
@@ -435,8 +430,7 @@ function AND(ctx: BiBaseStreamer, and_key: any, start?: number, end?: number, co
             throw new Error("AND key must be a byte value, string, Uint8Array or Buffer");
         }
     }
-    if (!consume) 
-    {
+    if (!consume) {
         ctx.offset = previousStart;
     }
     return;
@@ -467,8 +461,7 @@ function OR(ctx: BiBaseStreamer, or_key: any, start?: number, end?: number, cons
             new_start += input.length;
         }
     }
-    else 
-    {
+    else {
         if (arraybuffcheck(or_key)) {
             let number = -1;
             while (new_start <= new_end) {
@@ -490,8 +483,7 @@ function OR(ctx: BiBaseStreamer, or_key: any, start?: number, end?: number, cons
             throw new Error("OR key must be a byte value, string, Uint8Array or Buffer");
         }
     }
-    if (!consume) 
-    {
+    if (!consume) {
         ctx.offset = previousStart;
     }
     return;
@@ -522,8 +514,7 @@ function XOR(ctx: BiBaseStreamer, xor_key: any, start?: number, end?: number, co
             new_start += input.length;
         }
     }
-    else 
-    {
+    else {
         if (arraybuffcheck(xor_key)) {
             var keyIndex = -1;
             while (new_start <= new_end) {
@@ -545,8 +536,7 @@ function XOR(ctx: BiBaseStreamer, xor_key: any, start?: number, end?: number, co
             throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
         }
     }
-    if (!consume) 
-    {
+    if (!consume) {
         ctx.offset = previousStart;
     }
     return;
@@ -576,8 +566,7 @@ function NOT(ctx: BiBaseStreamer, start?: number, end?: number, consume?: boolea
         ctx.commit(true);
         new_start += input.length;
     }
-    if (!consume) 
-    {
+    if (!consume) {
         ctx.offset = previousStart;
     }
     return;
@@ -608,8 +597,7 @@ function LSHIFT(ctx: BiBaseStreamer, shift_key: any, start?: number, end?: numbe
             new_start += input.length;
         }
     }
-    else 
-    {
+    else {
         if (arraybuffcheck(shift_key)) {
             let keyIndex = -1;
             while (new_start <= new_end) {
@@ -631,8 +619,7 @@ function LSHIFT(ctx: BiBaseStreamer, shift_key: any, start?: number, end?: numbe
             throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
         }
     }
-    if (!consume) 
-    {
+    if (!consume) {
         ctx.offset = previousStart;
     }
     return;
@@ -664,8 +651,7 @@ function RSHIFT(ctx: BiBaseStreamer, shift_key: any, start?: number, end?: numbe
         }
         return;
     }
-    else 
-    {
+    else {
         if (arraybuffcheck(shift_key)) {
             let keyIndex = -1;
             while (new_start <= new_end) {
@@ -687,8 +673,7 @@ function RSHIFT(ctx: BiBaseStreamer, shift_key: any, start?: number, end?: numbe
             throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
         }
     }
-    if (!consume) 
-    {
+    if (!consume) {
         ctx.offset = previousStart;
     }
     return;
@@ -742,8 +727,7 @@ function ADD(ctx: BiBaseStreamer, add_key: any, start?: number, end?: number, co
             throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
         }
     }
-    if (!consume) 
-    {
+    if (!consume) {
         ctx.offset = previousStart;
     }
     return;
@@ -2081,7 +2065,7 @@ export class BiBaseStreamer {
     /**
      * Internal update size
      */
-    updateSize():void {
+    updateSize(): void {
         if (fs == undefined) {
             throw new Error("Can't use BitStream without Node.");
         }
@@ -2236,7 +2220,7 @@ export class BiBaseStreamer {
      * 
      * @param {string} newFilePath - New full file path and name.
      */
-    renameFile(newFilePath:string){
+    renameFile(newFilePath: string) {
         fs.closeSync(this.fd);
 
         this.fd = null;
@@ -2255,7 +2239,7 @@ export class BiBaseStreamer {
      * 
      * It doesn't send the file to the recycling bin for recovery.
      */
-    deleteFile(){
+    deleteFile() {
         fs.closeSync(this.fd);
 
         this.fd = null;

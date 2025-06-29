@@ -1,20 +1,20 @@
-export type endian = "little"|"big";
+export type endian = "little" | "big";
 
-export type BigValue = number|bigint;
+export type BigValue = number | bigint;
 
 export type BiOptions = {
     /**
      * Byte offset to start writer, default is 0 
      */
-    byteOffset? : number,
+    byteOffset?: number,
     /**
      *  Byte offset to start writer, default is 0 
      */
-    bitOffset? :number,
+    bitOffset?: number,
     /**
      * Endianness ``big`` or ``little`` (default little)
      */
-    endianness? : endian,
+    endianness?: endian,
     /**
      * Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
      */
@@ -45,7 +45,7 @@ export type hexdumpOptions = {
     /**
      * byte to start dump (default ``0``)
      */
-    startByte?: number, 
+    startByte?: number,
     /**
      * Suppress unicode character preview for even columns.
      */
@@ -66,7 +66,7 @@ export type hexdumpOptions = {
  * @param {boolean?} options.suppressUnicode - Suppress unicode character preview for even columns.
  * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
  */
-export function hexdump(src: Uint8Array | Buffer, options: hexdumpOptions = {}): void|string {
+export function hexdump(src: Uint8Array | Buffer, options: hexdumpOptions = {}): void | string {
 
     if (!(src instanceof Uint8Array || isBuffer(src))) {
         throw new Error("Write data must be Uint8Array or Buffer.");
@@ -96,8 +96,8 @@ export function hexdump(src: Uint8Array | Buffer, options: hexdumpOptions = {}):
     return _hexDump(data, options, start, end);
 }
 
-export function _hexDump(data:Buffer | Uint8Array, options: hexdumpOptions = {}, start:number, end:number): string{
-     function hex_check(byte: number, bits: number,): number {
+export function _hexDump(data: Buffer | Uint8Array, options: hexdumpOptions = {}, start: number, end: number): string {
+    function hex_check(byte: number, bits: number,): number {
         var value = 0;
         for (var i = 0; i < bits;) {
             var remaining = bits - i;
@@ -128,68 +128,53 @@ export function _hexDump(data:Buffer | Uint8Array, options: hexdumpOptions = {},
     let result = '';
     let make_wide: boolean = false;
     let i = start;
-    while (i < end) 
-    {
+    while (i < end) {
         const byte = data[i] as number;
-        if (byte < 32 || byte == 127) 
-        {
+        if (byte < 32 || byte == 127) {
             result += '.';
-        } 
-        else if (byte < 127) 
-        {
+        }
+        else if (byte < 127) {
             // Valid UTF-8 start byte or single-byte character
             // Convert the byte to a character and add it to the result
             result += String.fromCharCode(byte);
-        } 
-        else if (suppressUnicode) 
-        {
+        }
+        else if (suppressUnicode) {
             result += '.';
-        } 
-        else if (hex_check(byte, 1) == 0) 
-        {
+        }
+        else if (hex_check(byte, 1) == 0) {
             //Byte 1
             result += String.fromCharCode(byte);
-        } 
-        else if (hex_check(byte, 3) == 6) 
-        {
+        }
+        else if (hex_check(byte, 3) == 6) {
             //Byte 2
-            if (i + 1 <= end) 
-            {
+            if (i + 1 <= end) {
                 //check second byte
                 const byte2 = data[i + 1] as number;
-                if (hex_check(byte2, 2) == 2) 
-                {
+                if (hex_check(byte2, 2) == 2) {
                     const charCode = ((byte & 0x1f) << 6) | (byte2 & 0x3f);
                     i++;
                     make_wide = true;
                     const read = " " + String.fromCharCode(charCode);
                     result += read;
-                } 
-                else 
-                {
+                }
+                else {
                     result += ".";
                 }
-            } 
-            else 
-            {
+            }
+            else {
                 result += ".";
             }
-        } 
-        else if (hex_check(byte, 4) == 14) 
-        {
+        }
+        else if (hex_check(byte, 4) == 14) {
             //Byte 3
-            if (i + 1 <= end) 
-            {
+            if (i + 1 <= end) {
                 //check second byte
                 const byte2 = data[i + 1] as number;
-                if (hex_check(byte2, 2) == 2)
-                {
-                    if (i + 2 <= end) 
-                    {
+                if (hex_check(byte2, 2) == 2) {
+                    if (i + 2 <= end) {
                         //check third byte
                         const byte3 = data[i + 2] as number;
-                        if (hex_check(byte3, 2) == 2) 
-                        {
+                        if (hex_check(byte3, 2) == 2) {
                             const charCode =
                                 ((byte & 0x0f) << 12) |
                                 ((byte2 & 0x3f) << 6) |
@@ -198,92 +183,74 @@ export function _hexDump(data:Buffer | Uint8Array, options: hexdumpOptions = {},
                             make_wide = true;
                             const read = "  " + String.fromCharCode(charCode);
                             result += read;
-                        } 
-                        else 
-                        {
+                        }
+                        else {
                             i++;
                             result += " .";
                         }
-                    } 
-                    else 
-                    {
+                    }
+                    else {
                         i++;
                         result += " .";
                     }
-                } 
-                else 
-                {
+                }
+                else {
                     result += ".";
                 }
-            } 
-            else 
-            {
+            }
+            else {
                 result += ".";
             }
         }
-        else if (hex_check(byte, 5) == 28) 
-        {
+        else if (hex_check(byte, 5) == 28) {
             //Byte 4
-            if (i + 1 <= end) 
-            {
+            if (i + 1 <= end) {
                 //check second byte
                 const byte2 = data[i + 1] as number;
-                if (hex_check(byte2, 2) == 2) 
-                {
-                    if (i + 2 <= end) 
-                    {
+                if (hex_check(byte2, 2) == 2) {
+                    if (i + 2 <= end) {
                         //check third byte
                         const byte3 = data[i + 2] as number;
-                        if (hex_check(byte3, 2) == 2) 
-                        {
-                            if (i + 3 <= end) 
-                            {
+                        if (hex_check(byte3, 2) == 2) {
+                            if (i + 3 <= end) {
                                 //check fourth byte
                                 const byte4 = data[i + 2] as number;
-                                if (hex_check(byte4, 2) == 2) 
-                                {
+                                if (hex_check(byte4, 2) == 2) {
                                     const charCode = (((byte4 & 0xFF) << 24) | ((byte3 & 0xFF) << 16) | ((byte2 & 0xFF) << 8) | (byte & 0xFF));
                                     i += 3
                                     make_wide = true;
                                     const read = "   " + String.fromCharCode(charCode);
                                     result += read;
-                                } 
-                                else 
-                                {
+                                }
+                                else {
                                     i += 2
                                     result += "  .";
                                 }
-                            } 
-                            else 
-                            {
+                            }
+                            else {
                                 i += 2
                                 result += "  .";
                             }
-                        } 
-                        else 
-                        {
+                        }
+                        else {
                             i++;
                             result += " .";
                         }
-                    } 
-                    else 
-                    {
+                    }
+                    else {
                         i++;
                         result += " .";
                     }
-                } 
-                else 
-                {
+                }
+                else {
                     result += ".";
                 }
-            } 
-            else 
-            {
+            }
+            else {
                 result += ".";
             }
-        } 
-        else 
-        {
+        }
+        else {
             // Invalid UTF-8 byte, add a period to the result
             result += '.';
         }
@@ -295,16 +262,13 @@ export function _hexDump(data:Buffer | Uint8Array, options: hexdumpOptions = {},
     })
     header = "".padStart(addr.length) + header + (make_wide ? "" : ending);
     rows.unshift(header);
-    if (make_wide) 
-    {
+    if (make_wide) {
         rows.push("*Removed character byte header on unicode detection");
     }
-    if(options && options.returnString)
-    {
+    if (options && options.returnString) {
         return rows.join("\n");
     }
-    else
-    {
+    else {
         const retVal = rows.join("\n");
         console.log(retVal);
         return retVal;
@@ -319,7 +283,7 @@ export type stringOptions = {
     /**
      * utf-8, utf-16, pascal or wide-pascal
      */
-    stringType?: "utf-8"|"utf-16"|"pascal"|"wide-pascal"
+    stringType?: "utf-8" | "utf-16" | "pascal" | "wide-pascal"
     /**
      * only with stringType: "utf"
      */
@@ -327,11 +291,11 @@ export type stringOptions = {
     /**
      * for pascal strings. 1, 2 or 4 byte length read size
      */
-    lengthReadSize?: 1|2|4,
+    lengthReadSize?: 1 | 2 | 4,
     /**
      * for pascal strings. 1, 2 or 4 byte length write size
      */
-    lengthWriteSize?: 1|2|4,
+    lengthWriteSize?: 1 | 2 | 4,
     /**
      * removes 0x00 characters
      */
@@ -343,5 +307,5 @@ export type stringOptions = {
     /**
      * for wide-pascal and utf-16
      */
-    endian?: "big"|"little",
+    endian?: "big" | "little",
 };

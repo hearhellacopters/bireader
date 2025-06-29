@@ -1,4 +1,4 @@
-import { 
+import {
     BigValue,
     isBuffer,
     endian,
@@ -13,18 +13,18 @@ function hexDumpBase(ctx: BiBase, options: hexdumpOptions = {}): string {
     var startByte: any = options && options.startByte;
 
     if ((startByte || 0) > ctx.size) {
-        ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
+        ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
         throw new Error("Hexdump start is outside of data size: " + startByte + " of " + ctx.size);
     }
     const start = startByte || ctx.offset;
     const end = Math.min(start + (length || 192), ctx.size);
     if (start + (length || 0) > ctx.size) {
-        ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
+        ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
         throw new Error("Hexdump amount is outside of data size: " + (start + (length || 0)) + " of " + end);
     }
     const data = ctx.data;
 
-   return _hexDump(data, options, start, end);
+    return _hexDump(data, options, start, end);
 }
 
 function skip(ctx: BiBase, bytes: number, bits?: number): void {
@@ -35,16 +35,14 @@ function skip(ctx: BiBase, bytes: number, bits?: number): void {
 
     if (new_size > ctx.size) {
         if (ctx.strict == false) {
-            if(ctx.extendBufferSize != 0)
-            {
+            if (ctx.extendBufferSize != 0) {
                 ctx.extendArray(ctx.extendBufferSize);
             }
-            else 
-            {
+            else {
                 ctx.extendArray(new_size - ctx.size);
             }
         } else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
+            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: Seek of range of data: seek " + new_size + " of " + ctx.size);
         }
     }
@@ -82,16 +80,14 @@ function goto(ctx: BiBase, bytes: number, bits?: number): void {
     }
     if (new_size > ctx.size) {
         if (ctx.strict == false) {
-            if(ctx.extendBufferSize != 0)
-            {
+            if (ctx.extendBufferSize != 0) {
                 ctx.extendArray(ctx.extendBufferSize);
             }
-            else 
-            {
+            else {
                 ctx.extendArray(new_size - ctx.size);
             }
         } else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
+            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: Goto utside of range of data: goto " + new_size + " of " + ctx.size);
         }
     }
@@ -123,16 +119,14 @@ function checkSize(ctx: BiBase, write_bytes: number, write_bit?: number, offset?
     if (needed_size > ctx.size) {
         const dif = needed_size - ctx.size;
         if (ctx.strict == false) {
-            if(ctx.extendBufferSize != 0)
-            {
+            if (ctx.extendBufferSize != 0) {
                 ctx.extendArray(ctx.extendBufferSize);
             }
-            else 
-            {
+            else {
                 ctx.extendArray(dif);
             }
         } else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
+            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: writing to ` + needed_size + " at " + ctx.offset + " of " + ctx.size);
         }
     }
@@ -157,21 +151,19 @@ function remove(ctx: BiBase, startOffset?: number, endOffset?: number, consume?:
     const new_offset = (endOffset || ctx.offset);
     if (new_offset > ctx.size) {
         if (ctx.strict == false) {
-            if(ctx.extendBufferSize != 0)
-            {
+            if (ctx.extendBufferSize != 0) {
                 ctx.extendArray(ctx.extendBufferSize);
             }
-            else 
-            {
+            else {
                 ctx.extendArray(new_offset - ctx.size);
             }
         } else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
+            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + endOffset + " of " + ctx.size);
         }
     }
     if (ctx.strict == true && remove == true) {
-        ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
+        ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
         throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + ctx.size);
     }
     const data_removed = ctx.data.subarray(new_start, new_offset);
@@ -213,7 +205,7 @@ function remove(ctx: BiBase, startOffset?: number, endOffset?: number, consume?:
 
 function addData(ctx: BiBase, data: Buffer | Uint8Array, consume?: boolean, offset?: number, replace?: boolean): void {
     if (ctx.strict == true) {
-        ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
+        ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
         throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Can not insert data in strict mode. Use unrestrict() to enable.`);
     }
     if (typeof Buffer !== 'undefined' && data instanceof Buffer && !(ctx.data instanceof Buffer)) {
@@ -255,16 +247,14 @@ function AND(ctx: BiBase, and_key: any, start?: number, end?: number, consume?: 
     const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
-            if(ctx.extendBufferSize != 0)
-            {
+            if (ctx.extendBufferSize != 0) {
                 ctx.extendArray(ctx.extendBufferSize);
             }
-            else 
-            {
+            else {
                 ctx.extendArray((end || 0) - ctx.size);
             }
         } else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
+            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
         }
     }
@@ -301,16 +291,14 @@ function OR(ctx: BiBase, or_key: any, start?: number, end?: number, consume?: bo
     const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
-            if(ctx.extendBufferSize != 0)
-            {
+            if (ctx.extendBufferSize != 0) {
                 ctx.extendArray(ctx.extendBufferSize);
             }
-            else 
-            {
+            else {
                 ctx.extendArray((end || 0) - ctx.size);
             }
         } else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
+            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
         }
     }
@@ -347,16 +335,14 @@ function XOR(ctx: BiBase, xor_key: any, start?: number, end?: number, consume?: 
     const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
-            if(ctx.extendBufferSize != 0)
-            {
+            if (ctx.extendBufferSize != 0) {
                 ctx.extendArray(ctx.extendBufferSize);
             }
-            else 
-            {
+            else {
                 ctx.extendArray((end || 0) - ctx.size);
             }
         } else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
+            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
         }
     }
@@ -392,16 +378,14 @@ function XOR(ctx: BiBase, xor_key: any, start?: number, end?: number, consume?: 
 function NOT(ctx: BiBase, start?: number, end?: number, consume?: boolean): any {
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
-            if(ctx.extendBufferSize != 0)
-            {
+            if (ctx.extendBufferSize != 0) {
                 ctx.extendArray(ctx.extendBufferSize);
             }
-            else 
-            {
+            else {
                 ctx.extendArray((end || 0) - ctx.size);
             }
         } else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
+            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
         }
     }
@@ -418,16 +402,14 @@ function LSHIFT(ctx: BiBase, shift_key: any, start?: number, end?: number, consu
     const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
-            if(ctx.extendBufferSize != 0)
-            {
+            if (ctx.extendBufferSize != 0) {
                 ctx.extendArray(ctx.extendBufferSize);
             }
-            else 
-            {
+            else {
                 ctx.extendArray((end || 0) - ctx.size);
             }
         } else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
+            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
         }
     }
@@ -464,16 +446,14 @@ function RSHIFT(ctx: BiBase, shift_key: any, start?: number, end?: number, consu
     const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
-            if(ctx.extendBufferSize != 0)
-            {
+            if (ctx.extendBufferSize != 0) {
                 ctx.extendArray(ctx.extendBufferSize);
             }
-            else 
-            {
+            else {
                 ctx.extendArray((end || 0) - ctx.size);
             }
         } else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
+            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
         }
     }
@@ -510,16 +490,14 @@ function ADD(ctx: BiBase, add_key: any, start?: number, end?: number, consume?: 
     const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
-            if(ctx.extendBufferSize != 0)
-            {
+            if (ctx.extendBufferSize != 0) {
                 ctx.extendArray(ctx.extendBufferSize);
             }
-            else 
-            {
+            else {
                 ctx.extendArray((end || 0) - ctx.size);
             }
         } else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
+            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
         }
     }
@@ -837,12 +815,10 @@ function wbit(ctx: BiBase, value: number, bits: number, unsigned?: boolean, endi
     const size_needed = ((((bits - 1) + ctx.bitoffset) / 8) + ctx.offset);
     if (size_needed > ctx.size) {
         //add size
-        if(ctx.extendBufferSize != 0)
-        {
+        if (ctx.extendBufferSize != 0) {
             ctx.extendArray(ctx.extendBufferSize);
         }
-        else 
-        {
+        else {
             ctx.extendArray(size_needed - ctx.size);
         }
     }
@@ -1633,7 +1609,7 @@ function wstring(ctx: BiBase, string: string, options?: stringOptions): void {
     }
 }
 
-export class BiBase{
+export class BiBase {
     /**
      * Endianness of default read. 
      * @type {endian}
@@ -1667,7 +1643,7 @@ export class BiBase{
      * Current buffer data.
      * @type {Buffer|Uint8Array|null}
      */
-    public data: Buffer|Uint8Array|null = null;
+    public data: Buffer | Uint8Array | null = null;
     /**
      * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
      * 
@@ -1676,9 +1652,9 @@ export class BiBase{
      * This can greatly speed up data writes when large files are being written.
      * 
      * NOTE: Using ``BiWriter.get`` or ``BiWriter.return`` will now remove all data after the current write position. Use ``BiWriter.data`` to get the full buffer instead.
-     */    
+     */
     public extendBufferSize: number = 0;
-    
+
     public fd = null;
 
     public filePath = "";
@@ -1688,11 +1664,11 @@ export class BiBase{
     /**
      * The settings that used when using the .str getter / setter
      */
-    private strDefaults: stringOptions = {stringType: "utf-8", terminateValue: 0x0};
+    private strDefaults: stringOptions = { stringType: "utf-8", terminateValue: 0x0 };
 
     public maxFileSize: number | null = null;
 
-    constructor(){
+    constructor() {
 
     }
 
@@ -1701,7 +1677,7 @@ export class BiBase{
      * 
      * @param {stringOptions} settings options to use with .str
      */
-    set strSettings(settings:stringOptions){
+    set strSettings(settings: stringOptions) {
         this.strDefaults.encoding = settings.encoding;
         this.strDefaults.endian = settings.endian;
         this.strDefaults.length = settings.length;
@@ -1722,8 +1698,7 @@ export class BiBase{
             this.strict = false;
             return;
         }
-        else 
-        {
+        else {
             this.strict = true;
             return;
         }
@@ -1732,14 +1707,14 @@ export class BiBase{
     /**
      * Dummy function, not needed on Non-Stream
      */
-    open():number{
+    open(): number {
         return this.size;
     }
 
     /**
      * Dummy function, not needed on Non-Stream
      */
-    updateSize():void{
+    updateSize(): void {
         this.return;
     }
 
@@ -1753,8 +1728,8 @@ export class BiBase{
     /**
      * Dummy function, not needed on Non-Stream
      */
-    read(start: number, length: number, consume: boolean = false){
-        return this.lift(start, start+length, consume);
+    read(start: number, length: number, consume: boolean = false) {
+        return this.lift(start, start + length, consume);
     }
 
     /**
@@ -1768,13 +1743,13 @@ export class BiBase{
     /**
      * Dummy function, not needed on Non-Stream
      */
-    renameFile(){
+    renameFile() {
     }
 
     /**
      * Dummy function, not needed on Non-Stream
      */
-    deleteFile(){
+    deleteFile() {
     }
 
     /**
@@ -1795,7 +1770,7 @@ export class BiBase{
     ///////////////////////////////
     //         ENDIANNESS        //
     ///////////////////////////////
-    
+
     /**
      *
      * Change endian, defaults to little.
@@ -1959,7 +1934,7 @@ export class BiBase{
      *
      * @return {number} current byte position
      */
-    get off(): number{
+    get off(): number {
         return this.offset;
     }
 
@@ -1995,7 +1970,7 @@ export class BiBase{
      *
      * @return {number} current bit position
      */
-    get offb():number{
+    get offb(): number {
         return this.bitoffset;
     }
 
@@ -2040,7 +2015,7 @@ export class BiBase{
      *
      * @return {number} current absolute bit position
      */
-    get offab():number{
+    get offab(): number {
         return (this.offset * 8) + this.bitoffset;
     }
 
@@ -2112,8 +2087,7 @@ export class BiBase{
      * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
      */
     get get(): Buffer | Uint8Array {
-        if(this.extendBufferSize != 0)
-        {
+        if (this.extendBufferSize != 0) {
             this.trim();
         }
         return this.data;
@@ -2129,24 +2103,23 @@ export class BiBase{
      * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
      */
     get return(): Buffer | Uint8Array {
-        if(this.extendBufferSize != 0)
-        {
+        if (this.extendBufferSize != 0) {
             this.trim();
         }
         return this.data;
     }
 
-     /**
-     * Creates hex dump string. Will console log or return string if set in options.
-     * 
-     * @param {object} options 
-     * @param {hexdumpOptions?} options - hex dump options
-     * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
-     * @param {number?} options.startByte - byte to start dump (default ``0``)
-     * @param {boolean?} options.suppressUnicode - Suppress unicode character preview for even columns.
-     * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
-     */
-    hexdump(options: hexdumpOptions = {}): void|string {
+    /**
+    * Creates hex dump string. Will console log or return string if set in options.
+    * 
+    * @param {object} options 
+    * @param {hexdumpOptions?} options - hex dump options
+    * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
+    * @param {number?} options.startByte - byte to start dump (default ``0``)
+    * @param {boolean?} options.suppressUnicode - Suppress unicode character preview for even columns.
+    * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
+    */
+    hexdump(options: hexdumpOptions = {}): void | string {
         return hexDumpBase(this, options);
     }
 
@@ -2724,20 +2697,16 @@ export class BiBase{
      */
     xor(xorKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void {
         var XORKey: any = xorKey;
-        if (typeof xorKey == "number")
-        {
+        if (typeof xorKey == "number") {
             //pass
-        } 
-        else if (typeof xorKey == "string") 
-        {
+        }
+        else if (typeof xorKey == "string") {
             xorKey = new TextEncoder().encode(xorKey);
-        } 
-        else if (this.isBufferOrUint8Array(XORKey)) 
-        {
+        }
+        else if (this.isBufferOrUint8Array(XORKey)) {
             //pass
-        } 
-        else 
-        {
+        }
+        else {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
         return XOR(this, xorKey, startOffset || this.offset, endOffset || this.size, consume || false);
@@ -2753,22 +2722,18 @@ export class BiBase{
     xorThis(xorKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void {
         var Length: number = length || 1;
         var XORKey: any = xorKey;
-        if (typeof xorKey == "number") 
-        {
+        if (typeof xorKey == "number") {
             Length = length || 1;
-        } 
-        else if (typeof xorKey == "string") 
-        {
+        }
+        else if (typeof xorKey == "string") {
             const encoder = new TextEncoder().encode(xorKey);
             XORKey = encoder;
             Length = length || encoder.length;
-        } 
-        else if (this.isBufferOrUint8Array(XORKey)) 
-        {
+        }
+        else if (this.isBufferOrUint8Array(XORKey)) {
             Length = length || xorKey.length;
-        } 
-        else 
-        {
+        }
+        else {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
         return XOR(this, XORKey, this.offset, this.offset + Length, consume || false);
@@ -2784,20 +2749,16 @@ export class BiBase{
      */
     or(orKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void {
         var ORKey: any = orKey;
-        if (typeof orKey == "number") 
-        {
+        if (typeof orKey == "number") {
             //pass
-        } 
-        else if (typeof orKey == "string") 
-        {
+        }
+        else if (typeof orKey == "string") {
             orKey = new TextEncoder().encode(orKey);
-        } 
-        else if (this.isBufferOrUint8Array(ORKey)) 
-        {
+        }
+        else if (this.isBufferOrUint8Array(ORKey)) {
             //pass
-        } 
-        else 
-        {
+        }
+        else {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
         return OR(this, orKey, startOffset || this.offset, endOffset || this.size, consume || false);
@@ -2813,22 +2774,18 @@ export class BiBase{
     orThis(orKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void {
         var Length: number = length || 1;
         var ORKey: any = orKey;
-        if (typeof orKey == "number") 
-        {
+        if (typeof orKey == "number") {
             Length = length || 1;
-        } 
-        else if (typeof orKey == "string") 
-        {
+        }
+        else if (typeof orKey == "string") {
             const encoder = new TextEncoder().encode(orKey);
             ORKey = encoder;
             Length = length || encoder.length;
-        } 
-        else if (this.isBufferOrUint8Array(ORKey)) 
-        {
+        }
+        else if (this.isBufferOrUint8Array(ORKey)) {
             Length = length || orKey.length
-        } 
-        else 
-        {
+        }
+        else {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
         return OR(this, ORKey, this.offset, this.offset + Length, consume || false);
@@ -2844,20 +2801,16 @@ export class BiBase{
      */
     and(andKey: number | string | Array<number> | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void {
         var ANDKey: any = andKey;
-        if (typeof ANDKey == "number") 
-        {
+        if (typeof ANDKey == "number") {
             //pass
         }
-        else if (typeof ANDKey == "string") 
-        {
+        else if (typeof ANDKey == "string") {
             ANDKey = new TextEncoder().encode(ANDKey);
-        } 
-        else if (typeof ANDKey == "object") 
-        {
+        }
+        else if (typeof ANDKey == "object") {
             //pass
-        } 
-        else 
-        {
+        }
+        else {
             throw new Error("AND must be a number, string, number array or Buffer");
         }
         return AND(this, andKey, startOffset || this.offset, endOffset || this.size, consume || false);
@@ -2873,22 +2826,18 @@ export class BiBase{
     andThis(andKey: number | string | Array<number> | Buffer, length?: number, consume?: boolean): void {
         var Length: number = length || 1;
         var ANDKey: any = andKey;
-        if (typeof andKey == "number") 
-        {
+        if (typeof andKey == "number") {
             Length = length || 1;
-        } 
-        else if (typeof andKey == "string") 
-        {
+        }
+        else if (typeof andKey == "string") {
             const encoder = new TextEncoder().encode(andKey);
             ANDKey = encoder;
             Length = length || encoder.length;
-        } 
-        else if (typeof andKey == "object") 
-        {
+        }
+        else if (typeof andKey == "object") {
             Length = length || andKey.length;
-        } 
-        else 
-        {
+        }
+        else {
             throw new Error("AND must be a number, string, number array or Buffer");
         }
         return AND(this, ANDKey, this.offset, this.offset + Length, consume || false);
@@ -2906,17 +2855,14 @@ export class BiBase{
         var addedKey: any = addKey;
         if (typeof addedKey == "number") {
             //pass
-        } 
-        else if (typeof addedKey == "string") 
-        {
+        }
+        else if (typeof addedKey == "string") {
             addedKey = new TextEncoder().encode(addedKey);
-        } 
-        else if (typeof addedKey == "object") 
-        {
+        }
+        else if (typeof addedKey == "object") {
             //pass
-        } 
-        else 
-        {
+        }
+        else {
             throw new Error("Add key must be a number, string, number array or Buffer");
         }
         return ADD(this, addedKey, startOffset || this.offset, endOffset || this.size, consume || false);
@@ -2932,21 +2878,17 @@ export class BiBase{
     addThis(addKey: number | string | Array<number> | Buffer, length?: number, consume?: boolean): void {
         var Length: number = length || 1;
         var AddedKey: any = addKey;
-        if (typeof AddedKey == "number") 
-        {
+        if (typeof AddedKey == "number") {
             Length = length || 1;
-        } else if (typeof AddedKey == "string") 
-        {
+        } else if (typeof AddedKey == "string") {
             const encoder = new TextEncoder().encode(AddedKey);
             AddedKey = encoder;
             Length = length || encoder.length;
-        } 
-        else if (typeof AddedKey == "object") 
-        {
+        }
+        else if (typeof AddedKey == "object") {
             Length = length || AddedKey.length;
-        } 
-        else 
-        {
+        }
+        else {
             throw new Error("Add key must be a number, string, number array or Buffer");
         }
         return ADD(this, AddedKey, this.offset, this.offset + Length, consume || false);
@@ -2983,20 +2925,16 @@ export class BiBase{
      */
     lShift(shiftKey: number | string | Array<number> | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void {
         var lShiftKey: any = shiftKey;
-        if (typeof lShiftKey == "number") 
-        {
+        if (typeof lShiftKey == "number") {
             //pass
-        } 
-        else if (typeof lShiftKey == "string") 
-        {
+        }
+        else if (typeof lShiftKey == "string") {
             lShiftKey = new TextEncoder().encode(lShiftKey);
-        } 
-        else if (typeof lShiftKey == "object") 
-        {
+        }
+        else if (typeof lShiftKey == "object") {
             //pass
-        } 
-        else 
-        {
+        }
+        else {
             throw new Error("Left shift must be a number, string, number array or Buffer");
         }
         return LSHIFT(this, lShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
@@ -3012,21 +2950,17 @@ export class BiBase{
     lShiftThis(shiftKey: number | string | Array<number> | Buffer, length?: number, consume?: boolean): void {
         var Length: number = length || 1;
         var lShiftKey: any = shiftKey;
-        if (typeof lShiftKey == "number") 
-        {
+        if (typeof lShiftKey == "number") {
             Length = length || 1;
-        } 
-        else if (typeof lShiftKey == "string") 
-        {
+        }
+        else if (typeof lShiftKey == "string") {
             const encoder = new TextEncoder().encode(lShiftKey);
             lShiftKey = encoder;
             Length = length || encoder.length;
-        } else if (typeof lShiftKey == "object") 
-        {
+        } else if (typeof lShiftKey == "object") {
             Length = length || lShiftKey.length;
-        } 
-        else 
-        {
+        }
+        else {
             throw new Error("Left shift must be a number, string, number array or Buffer");
         }
         return LSHIFT(this, shiftKey, this.offset, this.offset + Length, consume || false);
@@ -3042,16 +2976,13 @@ export class BiBase{
      */
     rShift(shiftKey: number | string | Array<number> | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void {
         var rShiftKey: any = shiftKey;
-        if (typeof rShiftKey == "number") 
-        {
+        if (typeof rShiftKey == "number") {
             //pass
-        } 
-        else if (typeof rShiftKey == "string") 
-        {
+        }
+        else if (typeof rShiftKey == "string") {
             rShiftKey = new TextEncoder().encode(rShiftKey);
-        } 
-        else if (typeof rShiftKey == "object")
-        {
+        }
+        else if (typeof rShiftKey == "object") {
             //pass
         } else {
             throw new Error("Right shift must be a number, string, number array or Buffer");
@@ -3069,22 +3000,18 @@ export class BiBase{
     rShiftThis(shiftKey: number | string | Array<number> | Buffer, length?: number, consume?: boolean): void {
         var Length: number = length || 1;
         var lShiftKey: any = shiftKey;
-        if (typeof lShiftKey == "number") 
-        {
+        if (typeof lShiftKey == "number") {
             Length = length || 1;
-        } 
-        else if (typeof lShiftKey == "string") 
-        {
+        }
+        else if (typeof lShiftKey == "string") {
             const encoder = new TextEncoder().encode(lShiftKey);
             lShiftKey = encoder;
             Length = length || encoder.length;
-        } 
-        else if (typeof lShiftKey == "object") 
-        {
+        }
+        else if (typeof lShiftKey == "object") {
             Length = length || lShiftKey.length;
-        } 
-        else 
-        {
+        }
+        else {
             throw new Error("Right shift must be a number, string, number array or Buffer");
         }
         return RSHIFT(this, lShiftKey, this.offset, this.offset + Length, consume || false);
@@ -3118,7 +3045,7 @@ export class BiBase{
      * @param {number} bits - bits to write
      * @returns number
      */
-    writeUBitBE(value: number, bits: number): void{
+    writeUBitBE(value: number, bits: number): void {
         return wbit(this, value, bits, true, "big");
     }
 
@@ -3132,7 +3059,7 @@ export class BiBase{
      * @param {boolean} unsigned - if the value is unsigned
      * @returns number
      */
-    writeBitBE(value: number, bits: number, unsigned?: boolean): void{
+    writeBitBE(value: number, bits: number, unsigned?: boolean): void {
         return wbit(this, value, bits, unsigned, "big");
     }
 
@@ -3145,7 +3072,7 @@ export class BiBase{
      * @param {number} bits - bits to write
      * @returns number
      */
-    writeUBitLE(value: number,bits: number): void{
+    writeUBitLE(value: number, bits: number): void {
         return wbit(this, value, bits, true, "little");
     }
 
@@ -3159,7 +3086,7 @@ export class BiBase{
      * @param {boolean} unsigned - if the value is unsigned
      * @returns number
      */
-    writeBitLE(value: number,bits: number, unsigned?: boolean): void{
+    writeBitLE(value: number, bits: number, unsigned?: boolean): void {
         return wbit(this, value, bits, unsigned, "little");
     }
 
@@ -3244,8 +3171,8 @@ export class BiBase{
      * @param {boolean} unsigned - if value is unsigned or not
      * @returns {number[]}
      */
-    readBytes(amount:number, unsigned?: boolean): number[] {
-        return Array.from({length: amount}, () => rbyte(this, unsigned));
+    readBytes(amount: number, unsigned?: boolean): number[] {
+        return Array.from({ length: amount }, () => rbyte(this, unsigned));
     }
 
     /**
@@ -3419,7 +3346,7 @@ export class BiBase{
      * 
      * @param {number} value - value as int 
      */
-    writeHalfFloatBE(value: number): void{
+    writeHalfFloatBE(value: number): void {
         return this.writeHalfFloat(value, "big");
     }
 
@@ -3428,7 +3355,7 @@ export class BiBase{
      * 
      * @param {number} value - value as int 
      */
-    writeHalfFloatLE(value: number): void{
+    writeHalfFloatLE(value: number): void {
         return this.writeHalfFloat(value, "little");
     }
 
@@ -3579,7 +3506,7 @@ export class BiBase{
      * 
      * @param {number} value - value as int 
      */
-    writeFloatLE(value: number): void{
+    writeFloatLE(value: number): void {
         return this.writeFloat(value, "little");
     }
 
@@ -3588,7 +3515,7 @@ export class BiBase{
      * 
      * @param {number} value - value as int 
      */
-    writeFloatBE(value: number): void{
+    writeFloatBE(value: number): void {
         return this.writeFloat(value, "big");
     }
 
@@ -3748,7 +3675,7 @@ export class BiBase{
      * 
      * @param {number} value - value as int 
      */
-    writeDoubleFloatBE(value: number): void{
+    writeDoubleFloatBE(value: number): void {
         return this.writeDoubleFloat(value, "big");
     }
 
@@ -3757,7 +3684,7 @@ export class BiBase{
      * 
      * @param {number} value - value as int 
      */
-    writeDoubleFloatLE(value: number): void{
+    writeDoubleFloatLE(value: number): void {
         return this.writeDoubleFloat(value, "little");
     }
 

@@ -1422,7 +1422,32 @@ declare class BiBase {
     writeString(string: string, options?: stringOptions): void;
 }
 
-interface BinaryAliasReader extends BiBase {
+/**
+ * Binary reader, includes bitfields and strings.
+ *
+ * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+ * @param {BiOptions?} options - Any options to set at start
+ * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
+ * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
+ * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
+ * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ *
+ * @since 2.0
+ */
+declare class BiReader extends BiBase {
+    /**
+     * Binary reader, includes bitfields and strings.
+     *
+     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+     * @param {BiOptions?} options - Any options to set at start
+     * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
+     * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
+     * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+     * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
+     * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     */
+    constructor(data: Buffer | Uint8Array, options?: BiOptions);
     /**
      * Bit field reader.
      *
@@ -3550,7 +3575,9 @@ interface BinaryAliasReader extends BiBase {
     * @param {stringOptions["length"]} length - for fixed length utf strings
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param ;
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @return {string}
     */
     utf16string(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
     /**
@@ -3761,354 +3788,31 @@ interface BinaryAliasReader extends BiBase {
 }
 
 /**
- * Binary reader, includes bitfields and strings.
+ * Binary writer, includes bitfields and strings.
  *
- * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+ * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
  * @param {BiOptions?} options - Any options to set at start
- * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
- * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
- * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
- * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
+ * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+ * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+ * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
  *
  * @since 2.0
  */
-declare class BiRead extends BiBase implements BinaryAliasReader {
+declare class BiWriter extends BiBase {
     /**
-     * Binary reader, includes bitfields and strings.
+     * Binary writer, includes bitfields and strings.
      *
-     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
      * @param {BiOptions?} options - Any options to set at start
-     * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
-     * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
-     * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
-     * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
+     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+     * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
      */
-    constructor(data: Buffer | Uint8Array, options?: BiOptions);
-    bit(bits: number, unsigned?: boolean, endian?: endian): number;
-    ubit(bits: number, endian?: endian): number;
-    ubitbe(bits: number): number;
-    bitbe(bits: number, unsigned?: boolean): number;
-    ubitle(bits: number): number;
-    bitle(bits: number, unsigned?: boolean): number;
-    get bit1(): number;
-    get bit1le(): number;
-    get bit1be(): number;
-    get ubit1(): number;
-    get ubit1le(): number;
-    get ubit1be(): number;
-    get bit2(): number;
-    get bit2le(): number;
-    get bit2be(): number;
-    get ubit2(): number;
-    get ubit2le(): number;
-    get ubit2be(): number;
-    get bit3(): number;
-    get bit3le(): number;
-    get bit3be(): number;
-    get ubit3(): number;
-    get ubit3le(): number;
-    get ubit3be(): number;
-    get bit4(): number;
-    get bit4le(): number;
-    get bit4be(): number;
-    get ubit4(): number;
-    get ubit4le(): number;
-    get ubit4be(): number;
-    get bit5(): number;
-    get bit5le(): number;
-    get bit5be(): number;
-    get ubit5(): number;
-    get ubit5le(): number;
-    get ubit5be(): number;
-    get bit6(): number;
-    get bit6le(): number;
-    get bit6be(): number;
-    get ubit6(): number;
-    get ubit6le(): number;
-    get ubit6be(): number;
-    get bit7(): number;
-    get bit7le(): number;
-    get bit7be(): number;
-    get ubit7(): number;
-    get ubit7le(): number;
-    get ubit7be(): number;
-    get bit8(): number;
-    get bit8le(): number;
-    get bit8be(): number;
-    get ubit8(): number;
-    get ubit8le(): number;
-    get ubit8be(): number;
-    get bit9(): number;
-    get bit9le(): number;
-    get bit9be(): number;
-    get ubit9(): number;
-    get ubit9le(): number;
-    get ubit9be(): number;
-    get bit10(): number;
-    get bit10le(): number;
-    get bit10be(): number;
-    get ubit10(): number;
-    get ubit10le(): number;
-    get ubit10be(): number;
-    get bit11(): number;
-    get bit11le(): number;
-    get bit11be(): number;
-    get ubit11(): number;
-    get ubit11le(): number;
-    get ubit11be(): number;
-    get bit12(): number;
-    get bit12le(): number;
-    get bit12be(): number;
-    get ubit12(): number;
-    get ubit12le(): number;
-    get ubit12be(): number;
-    get bit13(): number;
-    get bit13le(): number;
-    get bit13be(): number;
-    get ubit13(): number;
-    get ubit13le(): number;
-    get ubit13be(): number;
-    get bit14(): number;
-    get bit14le(): number;
-    get bit14be(): number;
-    get ubit14(): number;
-    get ubit14le(): number;
-    get ubit14be(): number;
-    get bit15(): number;
-    get bit15le(): number;
-    get bit15be(): number;
-    get ubit15(): number;
-    get ubit15le(): number;
-    get ubit15be(): number;
-    get bit16(): number;
-    get bit16le(): number;
-    get bit16be(): number;
-    get ubit16(): number;
-    get ubit16le(): number;
-    get ubit16be(): number;
-    get bit17(): number;
-    get bit17le(): number;
-    get bit17be(): number;
-    get ubit17(): number;
-    get ubit17le(): number;
-    get ubit17be(): number;
-    get bit18(): number;
-    get bit18le(): number;
-    get bit18be(): number;
-    get ubit18(): number;
-    get ubit18le(): number;
-    get ubit18be(): number;
-    get bit19(): number;
-    get bit19le(): number;
-    get bit19be(): number;
-    get ubit19(): number;
-    get ubit19le(): number;
-    get ubit19be(): number;
-    get bit20(): number;
-    get bit20le(): number;
-    get bit20be(): number;
-    get ubit20(): number;
-    get ubit20le(): number;
-    get ubit20be(): number;
-    get bit21(): number;
-    get bit21le(): number;
-    get bit21be(): number;
-    get ubit21(): number;
-    get ubit21le(): number;
-    get ubit21be(): number;
-    get bit22(): number;
-    get bit22le(): number;
-    get bit22be(): number;
-    get ubit22(): number;
-    get ubit22le(): number;
-    get ubit22be(): number;
-    get bit23(): number;
-    get bit23le(): number;
-    get bit23be(): number;
-    get ubit23(): number;
-    get ubit23le(): number;
-    get ubit23be(): number;
-    get bit24(): number;
-    get bit24le(): number;
-    get bit24be(): number;
-    get ubit24(): number;
-    get ubit24le(): number;
-    get ubit24be(): number;
-    get bit25(): number;
-    get bit25le(): number;
-    get bit25be(): number;
-    get ubit25(): number;
-    get ubit25le(): number;
-    get ubit25be(): number;
-    get bit26(): number;
-    get bit26le(): number;
-    get bit26be(): number;
-    get ubit26(): number;
-    get ubit26le(): number;
-    get ubit26be(): number;
-    get bit27(): number;
-    get bit27le(): number;
-    get bit27be(): number;
-    get ubit27(): number;
-    get ubit27le(): number;
-    get ubit27be(): number;
-    get bit28(): number;
-    get bit28le(): number;
-    get bit28be(): number;
-    get ubit28(): number;
-    get ubit28le(): number;
-    get ubit28be(): number;
-    get bit29(): number;
-    get bit29le(): number;
-    get bit29be(): number;
-    get ubit29(): number;
-    get ubit29le(): number;
-    get ubit29be(): number;
-    get bit30(): number;
-    get bit30le(): number;
-    get bit30be(): number;
-    get ubit30(): number;
-    get ubit30le(): number;
-    get ubit30be(): number;
-    get bit31(): number;
-    get bit31le(): number;
-    get bit31be(): number;
-    get ubit31(): number;
-    get ubit31le(): number;
-    get ubit31be(): number;
-    get bit32(): number;
-    get bit32le(): number;
-    get bit32be(): number;
-    get ubit32(): number;
-    get ubit32le(): number;
-    get ubit32be(): number;
-    get byte(): number;
-    get int8(): number;
-    get uint8(): number;
-    get ubyte(): number;
-    get int16(): number;
-    get short(): number;
-    get word(): number;
-    get uint16(): number;
-    get ushort(): number;
-    get uword(): number;
-    get uint16le(): number;
-    get ushortle(): number;
-    get uwordle(): number;
-    get int16le(): number;
-    get shortle(): number;
-    get wordle(): number;
-    get uint16be(): number;
-    get ushortbe(): number;
-    get uwordbe(): number;
-    get int16be(): number;
-    get shortbe(): number;
-    get wordbe(): number;
-    get halffloat(): number;
-    get half(): number;
-    get halffloatbe(): number;
-    get halfbe(): number;
-    get halffloatle(): number;
-    get halfle(): number;
-    get int(): number;
-    get double(): number;
-    get int32(): number;
-    get long(): number;
-    get uint(): number;
-    get udouble(): number;
-    get uint32(): number;
-    get ulong(): number;
-    get intbe(): number;
-    get doublebe(): number;
-    get int32be(): number;
-    get longbe(): number;
-    get uintbe(): number;
-    get udoublebe(): number;
-    get uint32be(): number;
-    get ulongbe(): number;
-    get intle(): number;
-    get doublele(): number;
-    get int32le(): number;
-    get longle(): number;
-    get uintle(): number;
-    get udoublele(): number;
-    get uint32le(): number;
-    get ulongle(): number;
-    get float(): number;
-    get floatbe(): number;
-    get floatle(): number;
-    get int64(): bigint;
-    get bigint(): bigint;
-    get quad(): bigint;
-    get uint64(): bigint;
-    get ubigint(): bigint;
-    get uquad(): bigint;
-    get int64be(): bigint;
-    get bigintbe(): bigint;
-    get quadbe(): bigint;
-    get uint64be(): bigint;
-    get ubigintbe(): bigint;
-    get uquadbe(): bigint;
-    get int64le(): bigint;
-    get bigintle(): bigint;
-    get quadle(): bigint;
-    get uint64le(): bigint;
-    get ubigintle(): bigint;
-    get uquadle(): bigint;
-    get doublefloat(): number;
-    get dfloat(): number;
-    get dfloatebe(): number;
-    get doublefloatbe(): number;
-    get dfloatle(): number;
-    get doublefloatle(): number;
-    string(options?: stringOptions): string;
-    get str(): string;
-    utf8string(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
-    cstring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
-    ansistring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
-    utf16string(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
-    unistring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
-    utf16stringle(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
-    unistringle(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
-    utf16stringbe(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
-    unistringbe(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
-    pstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
-    pstring1(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
-    pstring1le(stripNull?: stringOptions["stripNull"]): string;
-    pstring1be(stripNull?: stringOptions["stripNull"]): string;
-    pstring2(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
-    pstring2le(stripNull?: stringOptions["stripNull"]): string;
-    pstring2be(stripNull?: stringOptions["stripNull"]): string;
-    pstring4(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
-    pstring4le(stripNull?: stringOptions["stripNull"]): string;
-    pstring4be(stripNull?: stringOptions["stripNull"]): string;
-    wpstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
-    wpstring1(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
-    wpstring2(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
-    wpstring2le(stripNull?: stringOptions["stripNull"]): string;
-    wpstring2be(stripNull?: stringOptions["stripNull"]): string;
-    wpstring4(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
-    wpstring4be(stripNull?: stringOptions["stripNull"]): string;
-    wpstring4le(stripNull?: stringOptions["stripNull"]): string;
-}
-/**
- * Binary reader, includes bitfields and strings.
- *
- * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
- * @param {BiOptions?} options - Any options to set at start
- * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
- * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
- * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
- * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- *
- * @since 2.0
- */
-declare const BiReader: typeof BiRead;
-
-interface BinaryAliasWriter extends BiBase {
+    constructor(data?: Buffer | Uint8Array, options?: BiOptions);
     /**
      * Bit field writer.
      *
@@ -6430,359 +6134,6 @@ interface BinaryAliasWriter extends BiBase {
     */
     wpstring4be(string: string): void;
 }
-
-/**
- * Binary writer, includes bitfields and strings.
- *
- * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
- * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- *
- * @since 2.0
- */
-declare class BiWrite extends BiBase implements BinaryAliasWriter {
-    /**
-     * Binary writer, includes bitfields and strings.
-     *
-     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
-     * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     */
-    constructor(data?: Buffer | Uint8Array, options?: BiOptions);
-    bit(value: number, bits: number, unsigned?: boolean, endian?: endian): void;
-    ubit(value: number, bits: number, endian?: endian): void;
-    bitbe(value: number, bits: number, unsigned?: boolean): void;
-    ubitbe(value: number, bits: number): void;
-    ubitle(value: number, bits: number): void;
-    bitle(value: number, bits: number, unsigned?: boolean): void;
-    set bit1(value: number);
-    set bit1le(value: number);
-    set bit1be(value: number);
-    set ubit1(value: number);
-    set ubit1le(value: number);
-    set ubit1be(value: number);
-    set bit2(value: number);
-    set bit2le(value: number);
-    set bit2be(value: number);
-    set ubit2(value: number);
-    set ubit2le(value: number);
-    set ubit2be(value: number);
-    set bit3(value: number);
-    set bit3le(value: number);
-    set bit3be(value: number);
-    set ubit3(value: number);
-    set ubit3le(value: number);
-    set ubit3be(value: number);
-    set bit4(value: number);
-    set bit4le(value: number);
-    set bit4be(value: number);
-    set ubit4(value: number);
-    set ubit4le(value: number);
-    set ubit4be(value: number);
-    set bit5(value: number);
-    set bit5le(value: number);
-    set bit5be(value: number);
-    set ubit5(value: number);
-    set ubit5le(value: number);
-    set ubit5be(value: number);
-    set bit6(value: number);
-    set bit6le(value: number);
-    set bit6be(value: number);
-    set ubit6(value: number);
-    set ubit6le(value: number);
-    set ubit6be(value: number);
-    set bit7(value: number);
-    set bit7le(value: number);
-    set bit7be(value: number);
-    set ubit7(value: number);
-    set ubit7le(value: number);
-    set ubit7be(value: number);
-    set bit8(value: number);
-    set bit8le(value: number);
-    set bit8be(value: number);
-    set ubit8(value: number);
-    set ubit8le(value: number);
-    set ubit8be(value: number);
-    set bit9(value: number);
-    set bit9le(value: number);
-    set bit9be(value: number);
-    set ubit9(value: number);
-    set ubit9le(value: number);
-    set ubit9be(value: number);
-    set bit10(value: number);
-    set bit10le(value: number);
-    set bit10be(value: number);
-    set ubit10(value: number);
-    set ubit10le(value: number);
-    set ubit10be(value: number);
-    set bit11(value: number);
-    set bit11le(value: number);
-    set bit11be(value: number);
-    set ubit11(value: number);
-    set ubit11le(value: number);
-    set ubit11be(value: number);
-    set bit12(value: number);
-    set bit12le(value: number);
-    set bit12be(value: number);
-    set ubit12(value: number);
-    set ubit12le(value: number);
-    set ubit12be(value: number);
-    set bit13(value: number);
-    set bit13le(value: number);
-    set bit13be(value: number);
-    set ubit13(value: number);
-    set ubit13le(value: number);
-    set ubit13be(value: number);
-    set bit14(value: number);
-    set bit14le(value: number);
-    set bit14be(value: number);
-    set ubit14(value: number);
-    set ubit14le(value: number);
-    set ubit14be(value: number);
-    set bit15(value: number);
-    set bit15le(value: number);
-    set bit15be(value: number);
-    set ubit15(value: number);
-    set ubit15le(value: number);
-    set ubit15be(value: number);
-    set bit16(value: number);
-    set bit16le(value: number);
-    set bit16be(value: number);
-    set ubit16(value: number);
-    set ubit16le(value: number);
-    set ubit16be(value: number);
-    set bit17(value: number);
-    set bit17le(value: number);
-    set bit17be(value: number);
-    set ubit17(value: number);
-    set ubit17le(value: number);
-    set ubit17be(value: number);
-    set bit18(value: number);
-    set bit18le(value: number);
-    set bit18be(value: number);
-    set ubit18(value: number);
-    set ubit18le(value: number);
-    set ubit18be(value: number);
-    set bit19(value: number);
-    set bit19le(value: number);
-    set bit19be(value: number);
-    set ubit19(value: number);
-    set ubit19le(value: number);
-    set ubit19be(value: number);
-    set bit20(value: number);
-    set bit20le(value: number);
-    set bit20be(value: number);
-    set ubit20(value: number);
-    set ubit20le(value: number);
-    set ubit20be(value: number);
-    set bit21(value: number);
-    set bit21le(value: number);
-    set bit21be(value: number);
-    set ubit21(value: number);
-    set ubit21le(value: number);
-    set ubit21be(value: number);
-    set bit22(value: number);
-    set bit22le(value: number);
-    set bit22be(value: number);
-    set ubit22(value: number);
-    set ubit22le(value: number);
-    set ubit22be(value: number);
-    set bit23(value: number);
-    set bit23le(value: number);
-    set bit23be(value: number);
-    set ubit23(value: number);
-    set ubit23le(value: number);
-    set ubit23be(value: number);
-    set bit24(value: number);
-    set bit24le(value: number);
-    set bit24be(value: number);
-    set ubit24(value: number);
-    set ubit24le(value: number);
-    set ubit24be(value: number);
-    set bit25(value: number);
-    set bit25le(value: number);
-    set bit25be(value: number);
-    set ubit25(value: number);
-    set ubit25le(value: number);
-    set ubit25be(value: number);
-    set bit26(value: number);
-    set bit26le(value: number);
-    set bit26be(value: number);
-    set ubit26(value: number);
-    set ubit26le(value: number);
-    set ubit26be(value: number);
-    set bit27(value: number);
-    set bit27le(value: number);
-    set bit27be(value: number);
-    set ubit27(value: number);
-    set ubit27le(value: number);
-    set ubit27be(value: number);
-    set bit28(value: number);
-    set bit28le(value: number);
-    set bit28be(value: number);
-    set ubit28(value: number);
-    set ubit28le(value: number);
-    set ubit28be(value: number);
-    set bit29(value: number);
-    set bit29le(value: number);
-    set bit29be(value: number);
-    set ubit29(value: number);
-    set ubit29le(value: number);
-    set ubit29be(value: number);
-    set bit30(value: number);
-    set bit30le(value: number);
-    set bit30be(value: number);
-    set ubit30(value: number);
-    set ubit30le(value: number);
-    set ubit30be(value: number);
-    set bit31(value: number);
-    set bit31le(value: number);
-    set bit31be(value: number);
-    set ubit31(value: number);
-    set ubit31le(value: number);
-    set ubit31be(value: number);
-    set bit32(value: number);
-    set bit32le(value: number);
-    set bit32be(value: number);
-    set ubit32(value: number);
-    set ubit32le(value: number);
-    set ubit32be(value: number);
-    set byte(value: number);
-    set int8(value: number);
-    set uint8(value: number);
-    set ubyte(value: number);
-    set int16(value: number);
-    set short(value: number);
-    set word(value: number);
-    set uint16(value: number);
-    set ushort(value: number);
-    set uword(value: number);
-    set int16be(value: number);
-    set shortbe(value: number);
-    set wordbe(value: number);
-    set uint16be(value: number);
-    set ushortbe(value: number);
-    set uwordbe(value: number);
-    set int16le(value: number);
-    set shortle(value: number);
-    set wordle(value: number);
-    set uint16le(value: number);
-    set ushortle(value: number);
-    set uwordle(value: number);
-    set half(value: number);
-    set halffloat(value: number);
-    set halffloatbe(value: number);
-    set halfbe(value: number);
-    set halffloatle(value: number);
-    set halfle(value: number);
-    set int(value: number);
-    set int32(value: number);
-    set double(value: number);
-    set long(value: number);
-    set uint32(value: number);
-    set uint(value: number);
-    set udouble(value: number);
-    set ulong(value: number);
-    set int32le(value: number);
-    set intle(value: number);
-    set doublele(value: number);
-    set longle(value: number);
-    set uint32le(value: number);
-    set uintle(value: number);
-    set udoublele(value: number);
-    set ulongle(value: number);
-    set intbe(value: number);
-    set int32be(value: number);
-    set doublebe(value: number);
-    set longbe(value: number);
-    set writeUInt32BE(value: number);
-    set uint32be(value: number);
-    set uintbe(value: number);
-    set udoublebe(value: number);
-    set ulongbe(value: number);
-    set float(value: number);
-    set floatle(value: number);
-    set floatbe(value: number);
-    set int64(value: BigValue);
-    set quad(value: BigValue);
-    set bigint(value: BigValue);
-    set uint64(value: BigValue);
-    set ubigint(value: BigValue);
-    set uquad(value: BigValue);
-    set int64le(value: BigValue);
-    set bigintle(value: BigValue);
-    set quadle(value: BigValue);
-    set uint64le(value: BigValue);
-    set ubigintle(value: BigValue);
-    set uquadle(value: BigValue);
-    set int64be(value: BigValue);
-    set bigintbe(value: BigValue);
-    set quadbe(value: BigValue);
-    set uint64be(value: BigValue);
-    set ubigintbe(value: BigValue);
-    set uquadbe(value: BigValue);
-    set doublefloat(value: number);
-    set dfloat(value: number);
-    set dfloatbe(value: number);
-    set doublefloatbe(value: number);
-    set dfloatle(value: number);
-    set doublefloatle(value: number);
-    string(string: string, options?: stringOptions): void;
-    set str(string: string);
-    utf8string(string: string, length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"]): void;
-    cstring(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]): void;
-    ansistring(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]): void;
-    utf16string(string: string, length?: number, terminateValue?: stringOptions["terminateValue"], endian?: stringOptions["endian"]): void;
-    unistring(string: string, length?: number, terminateValue?: stringOptions["terminateValue"], endian?: stringOptions["endian"]): void;
-    utf16stringle(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]): void;
-    unistringle(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]): void;
-    utf16stringbe(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]): void;
-    unistringbe(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]): void;
-    pstring(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"], endian?: stringOptions["endian"]): void;
-    pstring1(string: string, endian?: stringOptions["endian"]): void;
-    pstring1le(string: string): void;
-    pstring1be(string: string): void;
-    pstring2(string: string, endian?: stringOptions["endian"]): void;
-    pstring2le(string: string): void;
-    pstring2be(string: string): void;
-    pstring4(string: string, endian?: stringOptions["endian"]): void;
-    pstring4be(string: string): void;
-    pstring4le(string: string): void;
-    wpstring(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"], endian?: stringOptions["endian"]): void;
-    wpstringbe(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"]): void;
-    wpstringle(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"]): void;
-    wpstring1(string: string, endian?: stringOptions["endian"]): void;
-    wpstring1be(string: string): void;
-    wpstring1le(string: string): void;
-    wpstring2(string: string, endian?: stringOptions["endian"]): void;
-    wpstring2le(string: string): void;
-    wpstring2be(string: string): void;
-    wpstring4(string: string, endian?: stringOptions["endian"]): void;
-    wpstring4le(string: string): void;
-    wpstring4be(string: string): void;
-}
-/**
- * Binary writer, includes bitfields and strings.
- *
- * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
- * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- *
- * @since 2.0
- */
-declare const BiWriter: typeof BiWrite;
 
 /**
  * Isn't usable in browser.
