@@ -2,8 +2,6 @@ import { BiOptions, endian, stringOptions } from "./common.js";
 import { BiBase } from './core/BiBase.js';
 import { applyBinaryAliasReader, BinaryAliasReader } from "./aliases/BinaryAliasReader.js";
 
-const BiReaderBase = applyBinaryAliasReader(BiBase);
-
 /**
  * Binary reader, includes bitfields and strings.
  *
@@ -17,7 +15,7 @@ const BiReaderBase = applyBinaryAliasReader(BiBase);
  * 
  * @since 2.0
  */
-export class BiReader extends BiReaderBase implements BinaryAliasReader {
+class BiRead extends BiBase implements BinaryAliasReader {
 
     /**
      * Binary reader, includes bitfields and strings.
@@ -1012,3 +1010,20 @@ export class BiReader extends BiReaderBase implements BinaryAliasReader {
         throw new Error("Method not implemented.");
     }
 };
+
+/**
+ * Binary reader, includes bitfields and strings.
+ *
+ * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+ * @param {BiOptions?} options - Any options to set at start
+ * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
+ * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
+ * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
+ * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ * 
+ * @since 2.0
+ */
+const BiReader = applyBinaryAliasReader(BiRead);
+
+export { BiReader };

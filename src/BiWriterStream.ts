@@ -2,8 +2,6 @@ import { BigValue, BiOptions, endian, stringOptions } from "./common.js";
 import { BiBaseStreamer } from './core/BiBaseStream.js';
 import { applyBinaryAliasWriter, BinaryAliasWriterStreamer } from "./aliases/BinaryAliasWriter.js";
 
-const BiWriterStreamer = applyBinaryAliasWriter(BiBaseStreamer);
-
 /**
  * Binary writer, includes bitfields and strings.
  * 
@@ -19,7 +17,7 @@ const BiWriterStreamer = applyBinaryAliasWriter(BiBaseStreamer);
  * 
  * @since 3.1
  */
-export class BiWriterStream extends BiWriterStreamer implements BinaryAliasWriterStreamer {
+class BiWriterStreamer extends BiBaseStreamer implements BinaryAliasWriterStreamer {
     /**
      * Binary writer, includes bitfields and strings.
      * 
@@ -995,4 +993,23 @@ export class BiWriterStream extends BiWriterStreamer implements BinaryAliasWrite
     wpstring4be(string: string): void {
         throw new Error("Method not implemented.");
     }
-}
+};
+
+/**
+ * Binary writer, includes bitfields and strings.
+ * 
+ * Note: Must start with .open() before writing.
+ *
+ * @param {string} filePath - Path to file
+ * @param {BiOptions?} options - Any options to set at start
+ * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
+ * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+ * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+ * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ * 
+ * @since 3.1
+ */
+const BiWriterStream = applyBinaryAliasWriter(BiWriterStreamer);
+
+export { BiWriterStream };

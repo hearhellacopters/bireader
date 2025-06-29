@@ -7478,7 +7478,6 @@ interface BinaryAliasReaderStreamer extends BiBaseStreamer {
     wpstring4le(stripNull?: stringOptions["stripNull"]): string;
 }
 
-declare const BiReaderBase: typeof BiBase;
 /**
  * Binary reader, includes bitfields and strings.
  *
@@ -7492,7 +7491,7 @@ declare const BiReaderBase: typeof BiBase;
  *
  * @since 2.0
  */
-declare class BiReader extends BiReaderBase implements BinaryAliasReader {
+declare class BiRead extends BiBase implements BinaryAliasReader {
     /**
      * Binary reader, includes bitfields and strings.
      *
@@ -7812,6 +7811,20 @@ declare class BiReader extends BiReaderBase implements BinaryAliasReader {
     wpstring4be(stripNull?: stringOptions["stripNull"]): string;
     wpstring4le(stripNull?: stringOptions["stripNull"]): string;
 }
+/**
+ * Binary reader, includes bitfields and strings.
+ *
+ * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+ * @param {BiOptions?} options - Any options to set at start
+ * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
+ * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
+ * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
+ * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ *
+ * @since 2.0
+ */
+declare const BiReader: typeof BiRead;
 
 interface BinaryAliasWriter extends BiBase {
     /**
@@ -12458,7 +12471,6 @@ interface BinaryAliasWriterStreamer extends BiBaseStreamer {
     wpstring4be(string: string): void;
 }
 
-declare const BiWriterBase: typeof BiBase;
 /**
  * Binary writer, includes bitfields and strings.
  *
@@ -12472,7 +12484,7 @@ declare const BiWriterBase: typeof BiBase;
  *
  * @since 2.0
  */
-declare class BiWriter extends BiWriterBase implements BinaryAliasWriter {
+declare class BiWrite extends BiBase implements BinaryAliasWriter {
     /**
      * Binary writer, includes bitfields and strings.
      *
@@ -12797,8 +12809,21 @@ declare class BiWriter extends BiWriterBase implements BinaryAliasWriter {
     wpstring4le(string: string): void;
     wpstring4be(string: string): void;
 }
+/**
+ * Binary writer, includes bitfields and strings.
+ *
+ * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+ * @param {BiOptions?} options - Any options to set at start
+ * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
+ * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+ * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+ * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ *
+ * @since 2.0
+ */
+declare const BiWriter: typeof BiWrite;
 
-declare const BiReaderStreamer: typeof BiBaseStreamer;
 /**
  * Binary reader, includes bitfields and strings.
  *
@@ -12812,7 +12837,7 @@ declare const BiReaderStreamer: typeof BiBaseStreamer;
  *
  * @since 3.1
  */
-declare class BiReaderStream extends BiReaderStreamer implements BinaryAliasReaderStreamer {
+declare class BiReaderStreamer extends BiBaseStreamer implements BinaryAliasReaderStreamer {
     /**
      * Binary reader, includes bitfields and strings.
      *
@@ -13134,8 +13159,21 @@ declare class BiReaderStream extends BiReaderStreamer implements BinaryAliasRead
     wpstring4be(stripNull?: stringOptions["stripNull"]): string;
     wpstring4le(stripNull?: stringOptions["stripNull"]): string;
 }
+/**
+ * Binary reader, includes bitfields and strings.
+ *
+ * @param {string} filePath - Path to file
+ * @param {BiOptions?} options - Any options to set at start
+ * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
+ * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
+ * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
+ * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ *
+ * @since 3.1
+ */
+declare const BiReaderStream: typeof BiReaderStreamer;
 
-declare const BiWriterStreamer: typeof BiBaseStreamer;
 /**
  * Binary writer, includes bitfields and strings.
  *
@@ -13151,7 +13189,7 @@ declare const BiWriterStreamer: typeof BiBaseStreamer;
  *
  * @since 3.1
  */
-declare class BiWriterStream extends BiWriterStreamer implements BinaryAliasWriterStreamer {
+declare class BiWriterStreamer extends BiBaseStreamer implements BinaryAliasWriterStreamer {
     /**
      * Binary writer, includes bitfields and strings.
      *
@@ -13478,6 +13516,22 @@ declare class BiWriterStream extends BiWriterStreamer implements BinaryAliasWrit
     wpstring4le(string: string): void;
     wpstring4be(string: string): void;
 }
+/**
+ * Binary writer, includes bitfields and strings.
+ *
+ * Note: Must start with .open() before writing.
+ *
+ * @param {string} filePath - Path to file
+ * @param {BiOptions?} options - Any options to set at start
+ * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
+ * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+ * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+ * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ *
+ * @since 3.1
+ */
+declare const BiWriterStream: typeof BiWriterStreamer;
 
 /**
  * Not in use anymore.

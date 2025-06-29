@@ -121,7 +121,7 @@ export function _hexDump(data:Buffer | Uint8Array, options: hexdumpOptions = {},
     var addr: string = "";
     for (let i = start; i < end; i += 16) {
         addr = i.toString(16).padStart(5, '0');
-        var row = <unknown>data.slice(i, i + 16) as number[] || [];
+        var row = <unknown>data.subarray(i, i + 16) as number[] || [];
         var hex = Array.from(row, (byte) => byte.toString(16).padStart(2, '0')).join(' ');
         rows.push(`${addr}  ${hex.padEnd(47)}  `);
     }

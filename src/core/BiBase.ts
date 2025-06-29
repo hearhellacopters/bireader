@@ -174,7 +174,7 @@ function remove(ctx: BiBase, startOffset?: number, endOffset?: number, consume?:
         ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({returnString:true})) : "";
         throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + ctx.size);
     }
-    const data_removed = ctx.data.slice(new_start, new_offset);
+    const data_removed = ctx.data.subarray(new_start, new_offset);
     if (remove) {
         const part1 = ctx.data.subarray(0, new_start);
         const part2 = ctx.data.subarray(new_offset, ctx.size);

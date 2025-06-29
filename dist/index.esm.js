@@ -66,7 +66,7 @@ function _hexDump(data, options = {}, start, end) {
     var addr = "";
     for (let i = start; i < end; i += 16) {
         addr = i.toString(16).padStart(5, '0');
-        var row = data.slice(i, i + 16) || [];
+        var row = data.subarray(i, i + 16) || [];
         var hex = Array.from(row, (byte) => byte.toString(16).padStart(2, '0')).join(' ');
         rows.push(`${addr}  ${hex.padEnd(47)}  `);
     }
@@ -370,7 +370,7 @@ function remove$1(ctx, startOffset, endOffset, consume, remove, fillValue) {
         ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
         throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + ctx.size);
     }
-    const data_removed = ctx.data.slice(new_start, new_offset);
+    const data_removed = ctx.data.subarray(new_start, new_offset);
     if (remove) {
         const part1 = ctx.data.subarray(0, new_start);
         const part2 = ctx.data.subarray(new_offset, ctx.size);
@@ -6592,7 +6592,6 @@ function applyBinaryAliasReader(Base) {
     };
 }
 
-const BiReaderBase = applyBinaryAliasReader(BiBase);
 /**
  * Binary reader, includes bitfields and strings.
  *
@@ -6606,7 +6605,7 @@ const BiReaderBase = applyBinaryAliasReader(BiBase);
  *
  * @since 2.0
  */
-class BiReader extends BiReaderBase {
+class BiRead extends BiBase {
     /**
      * Binary reader, includes bitfields and strings.
      *
@@ -7594,6 +7593,20 @@ class BiReader extends BiReaderBase {
         throw new Error("Method not implemented.");
     }
 }
+/**
+ * Binary reader, includes bitfields and strings.
+ *
+ * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+ * @param {BiOptions?} options - Any options to set at start
+ * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
+ * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
+ * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
+ * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ *
+ * @since 2.0
+ */
+const BiReader = applyBinaryAliasReader(BiRead);
 
 function applyBinaryAliasWriter(Base) {
     return class extends Base {
@@ -10572,7 +10585,6 @@ function applyBinaryAliasWriter(Base) {
     };
 }
 
-const BiWriterBase = applyBinaryAliasWriter(BiBase);
 /**
  * Binary writer, includes bitfields and strings.
  *
@@ -10586,7 +10598,7 @@ const BiWriterBase = applyBinaryAliasWriter(BiBase);
  *
  * @since 2.0
  */
-class BiWriter extends BiWriterBase {
+class BiWrite extends BiBase {
     /**
      * Binary writer, includes bitfields and strings.
      *
@@ -11594,6 +11606,20 @@ class BiWriter extends BiWriterBase {
         throw new Error("Method not implemented.");
     }
 }
+/**
+ * Binary writer, includes bitfields and strings.
+ *
+ * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+ * @param {BiOptions?} options - Any options to set at start
+ * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
+ * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+ * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+ * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ *
+ * @since 2.0
+ */
+const BiWriter = applyBinaryAliasWriter(BiWrite);
 
 function MAX_LENGTH() {
     return buff.constants.MAX_LENGTH;
@@ -15424,7 +15450,6 @@ class BiBaseStreamer {
     }
 }
 
-const BiReaderStreamer = applyBinaryAliasReader(BiBaseStreamer);
 /**
  * Binary reader, includes bitfields and strings.
  *
@@ -15438,7 +15463,7 @@ const BiReaderStreamer = applyBinaryAliasReader(BiBaseStreamer);
  *
  * @since 3.1
  */
-class BiReaderStream extends BiReaderStreamer {
+class BiReaderStreamer extends BiBaseStreamer {
     /**
      * Binary reader, includes bitfields and strings.
      *
@@ -16395,8 +16420,21 @@ class BiReaderStream extends BiReaderStreamer {
         throw new Error("Method not implemented.");
     }
 }
+/**
+ * Binary reader, includes bitfields and strings.
+ *
+ * @param {string} filePath - Path to file
+ * @param {BiOptions?} options - Any options to set at start
+ * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
+ * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
+ * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
+ * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ *
+ * @since 3.1
+ */
+const BiReaderStream = applyBinaryAliasReader(BiReaderStreamer);
 
-const BiWriterStreamer = applyBinaryAliasWriter(BiBaseStreamer);
 /**
  * Binary writer, includes bitfields and strings.
  *
@@ -16412,7 +16450,7 @@ const BiWriterStreamer = applyBinaryAliasWriter(BiBaseStreamer);
  *
  * @since 3.1
  */
-class BiWriterStream extends BiWriterStreamer {
+class BiWriterStreamer extends BiBaseStreamer {
     /**
      * Binary writer, includes bitfields and strings.
      *
@@ -17384,6 +17422,22 @@ class BiWriterStream extends BiWriterStreamer {
         throw new Error("Method not implemented.");
     }
 }
+/**
+ * Binary writer, includes bitfields and strings.
+ *
+ * Note: Must start with .open() before writing.
+ *
+ * @param {string} filePath - Path to file
+ * @param {BiOptions?} options - Any options to set at start
+ * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
+ * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+ * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+ * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ *
+ * @since 3.1
+ */
+const BiWriterStream = applyBinaryAliasWriter(BiWriterStreamer);
 
 /**
  * Not in use anymore.

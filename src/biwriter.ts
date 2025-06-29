@@ -2,8 +2,6 @@ import { BigValue, BiOptions, endian, stringOptions } from "./common.js";
 import { BiBase } from './core/BiBase.js';
 import { applyBinaryAliasWriter, BinaryAliasWriter } from "./aliases/BinaryAliasWriter.js";
 
-const BiWriterBase = applyBinaryAliasWriter(BiBase);
-
 /**
  * Binary writer, includes bitfields and strings.
  *
@@ -17,7 +15,7 @@ const BiWriterBase = applyBinaryAliasWriter(BiBase);
  * 
  * @since 2.0
  */
-export class BiWriter extends BiWriterBase implements BinaryAliasWriter {
+class BiWrite extends BiBase implements BinaryAliasWriter {
     /**
      * Binary writer, includes bitfields and strings.
      *
@@ -1030,3 +1028,20 @@ export class BiWriter extends BiWriterBase implements BinaryAliasWriter {
         throw new Error("Method not implemented.");
     }
 };
+
+/**
+ * Binary writer, includes bitfields and strings.
+ *
+ * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+ * @param {BiOptions?} options - Any options to set at start
+ * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
+ * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+ * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+ * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ * 
+ * @since 2.0
+ */
+const BiWriter = applyBinaryAliasWriter(BiWrite);
+
+export { BiWriter };
