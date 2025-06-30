@@ -1,5 +1,6 @@
 import {
     BigValue,
+    isSafeInt64,
     isBuffer,
     endian,
     arraybuffcheck,
@@ -1194,7 +1195,7 @@ function wfloat(ctx: BiBase, value: number, endian?: string): void {
     ctx.bitoffset = 0;
 }
 
-function rint64(ctx: BiBase, unsigned?: boolean, endian?: string): bigint {
+function rint64(ctx: BiBase, unsigned?: boolean, endian?: string): BigValue {
 
     check_size(ctx, 8);
 
@@ -1221,8 +1222,18 @@ function rint64(ctx: BiBase, unsigned?: boolean, endian?: string): bigint {
             }
         }
     }
+
     ctx.bitoffset = 0;
-    return value
+
+    if(ctx.enforceBigInt){
+        return value;
+    } else {
+        if(isSafeInt64(value)){
+            return Number(value);
+        }
+    }
+
+    return value;
 }
 
 function wint64(ctx: BiBase, value: BigValue, unsigned?: boolean, endian?: string): void {
@@ -1317,9 +1328,9 @@ function wdfloat(ctx: BiBase, value: number, endian?: string): void {
 function rdfloat(ctx: BiBase, endian?: endian): number {
     endian = (endian == undefined ? ctx.endian : endian);
     var uint64Value = ctx.readInt64(true, endian);
-    const sign = (uint64Value & 0x8000000000000000n) >> 63n;
-    const exponent = Number((uint64Value & 0x7FF0000000000000n) >> 52n) - 1023;
-    const fraction = Number(uint64Value & 0x000FFFFFFFFFFFFFn) / Math.pow(2, 52);
+    const sign = (BigInt(uint64Value) & 0x8000000000000000n) >> 63n;
+    const exponent = Number((BigInt(uint64Value) & 0x7FF0000000000000n) >> 52n) - 1023;
+    const fraction = Number(BigInt(uint64Value) & 0x000FFFFFFFFFFFFFn) / Math.pow(2, 52);
 
     var floatValue: number;
 
@@ -1667,6 +1678,8 @@ export class BiBase {
     private strDefaults: stringOptions = { stringType: "utf-8", terminateValue: 0x0 };
 
     public maxFileSize: number | null = null;
+
+    public enforceBigInt = false;
 
     constructor() {
 
@@ -3540,11 +3553,13 @@ export class BiBase {
     /**
      * Read signed 64 bit integer.
      * 
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {endian?} endian - ``big`` or ``little``
-     * @returns {bigint}
+     * @returns {BigValue}
      */
-    readInt64(unsigned?: boolean, endian?: endian): bigint {
+    readInt64(unsigned?: boolean, endian?: endian): BigValue {
         return rint64(this, unsigned, endian);
     }
 
@@ -3608,45 +3623,55 @@ export class BiBase {
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    readUInt64(): bigint {
+    readUInt64(): BigValue {
         return this.readInt64(true);
     }
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    readInt64BE(): bigint {
+    readInt64BE(): BigValue {
         return this.readInt64(false, "big");
     }
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    readUInt64BE(): bigint {
+    readUInt64BE(): BigValue {
         return this.readInt64(true, "big");
     }
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    readInt64LE(): bigint {
+    readInt64LE(): BigValue {
         return this.readInt64(false, "little");
     }
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    readUInt64LE(): bigint {
+    readUInt64LE(): BigValue {
         return this.readInt64(true, "little");
     }
 

@@ -11,6 +11,7 @@ import { BiBase } from './core/BiBase.js';
  * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
  * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
  * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
  * 
  * @since 2.0
  */
@@ -26,6 +27,7 @@ export class BiWriter extends BiBase {
      * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
      * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
      * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
      */
     constructor(data?: Buffer | Uint8Array, options: BiOptions = {}) {
         super();
@@ -42,6 +44,8 @@ export class BiWriter extends BiBase {
             }
             this.data = data;
         }
+
+        this.enforceBigInt = options?.enforceBigInt ?? false;
 
         if (options.extendBufferSize != undefined && options.extendBufferSize != 0) {
             this.extendBufferSize = options.extendBufferSize;

@@ -22,8 +22,22 @@ export type BiOptions = {
     /**
      * Amount of data to add when extending the buffer array when strict mode is false. Note: Changes login in ``.get`` and ``.return``.
      */
-    extendBufferSize?: number
+    extendBufferSize?: number,
+    /**
+     * When reading a 64 bit value, the reader checks if the value is safe for a ``number`` type and convert it.
+     * 
+     * Set this to ``true`` if you wish for it to always stay a ``BigInt``.
+     */
+    enforceBigInt?: boolean
 };
+
+const MIN_SAFE = BigInt(Number.MIN_SAFE_INTEGER);
+
+const MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
+
+export function isSafeInt64(big: bigint): boolean {
+  return big >= MIN_SAFE && big <= MAX_SAFE;
+}
 
 export function isBuffer(obj: Buffer | Uint8Array): boolean {
     return buffcheck(obj);

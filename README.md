@@ -17,6 +17,7 @@ Supported data types:
 ## What's New?
 
 ### v3
+ * Added ``enforceBigInt`` option for always returning a ``BigInt`` type on 64 bit reads, otherwise will return a ``number`` if integer safe.
  * Added Browser, Node CommonJS and Node ESM modules.
  * Added new ``BiReaderStream`` and ``BiWriterStream`` (Node only) that works without loading the whole file into memory. See [documention](#bistreams) for how to use.
  * Added ``.deleteFile()`` and ``.renameFile(filePath)``.
@@ -311,14 +312,14 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
   <tr>
     <td>Name</td>
-    <td>new BiReader(<b>data</b>, {byteOffset, bitOffset, endianess, strict, extendBufferSize})</td>
-    <td align="center" rowspan="2"><b>Buffer or Uint8Array</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending initially supplied data (default true for reader, false for writer), extended Buffer size amount.
+    <td>new BiReader(<b>data</b>, {byteOffset, bitOffset, endianess, strict, extendBufferSize, enforceBigInt})</td>
+    <td align="center" rowspan="2"><b>Buffer or Uint8Array</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending initially supplied data (default true for reader, false for writer), extended Buffer size amount, always return BigInt values on 64 bit reads.
     </td>
-    <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> Supplied data can always be found with <b>.data</b>.<br><br><b>Writing data note:</b> while BiWriter can be created with a 0 length Uint8Array or Buffer, each new value write will create a new array and concat the two. For large data writes this will lead to a degraded performance. It's best to supply a larger than needed buffer when creating the Writer and use <b>.trim()</b> after you're finished. You can also set the <b>extendBufferSize</b> value to always extend by a fixed amount when reaching the end. This will also change the logic for <b>.return</b> and <b>.get</b> to trim the remining data from the current position for you. Use <b>.data</b> instead if you want to get the whole padded buffer array.</td>
+    <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> Supplied data can always be found with <b>.data</b>.<br><br><b>Writing data note:</b> while BiWriter can be created with a 0 length Uint8Array or Buffer, each new value write will create a new array and concat the two. For large data writes this will lead to a degraded performance. It's best to supply a larger than needed buffer when creating the Writer and use <b>.trim()</b> after you're finished. <br><br> You can set the <b>extendBufferSize</b> value to always extend by a fixed amount when reaching the end. This will also change the logic for <b>.return</b> and <b>.get</b> to trim the remining data from the current position for you. Use <b>.data</b> instead if you want to get the whole padded buffer array.</td>
   </tr>
   <tr>
     <td>Name</td>
-    <td>new BiWriter(data, {byteOffset, bitOffset, endianess, strict, extendBufferSize})</td>
+    <td>new BiWriter(data, {byteOffset, bitOffset, endianess, strict, extendBufferSize, enforceBigInt})</td>
   </tr>
   <tr>
     <td>Name</td>

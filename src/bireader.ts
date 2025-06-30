@@ -1,4 +1,4 @@
-import { BiOptions, endian, stringOptions } from "./common.js";
+import { BigValue, BiOptions, endian, stringOptions } from "./common.js";
 import { BiBase } from './core/BiBase.js';
 
 /**
@@ -6,11 +6,12 @@ import { BiBase } from './core/BiBase.js';
  *
  * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
  * @param {BiOptions?} options - Any options to set at start
- * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
- * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
- * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
- * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
+ * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+ * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+ * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+ * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
  * 
  * @since 2.0
  */
@@ -21,11 +22,12 @@ export class BiReader extends BiBase {
      *
      * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
      * @param {BiOptions?} options - Any options to set at start
-     * @param {number?} options.byteOffset - Byte offset to start reader (default ``0``)
-     * @param {number?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
-     * @param {string?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {boolean?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
-     * @param {number?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
+     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+     * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
      */
     constructor(data: Buffer | Uint8Array, options: BiOptions = {}) {
         super();
@@ -38,6 +40,8 @@ export class BiReader extends BiBase {
             }
             this.data = data;
         }
+
+        this.enforceBigInt = options?.enforceBigInt ?? false;
 
         if (options.extendBufferSize != undefined && options.extendBufferSize != 0) {
             this.extendBufferSize = options.extendBufferSize;
@@ -2803,162 +2807,198 @@ export class BiReader extends BiBase {
     /**
      * Read signed 64 bit integer
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get int64(): bigint {
+    get int64(): BigValue {
         return this.readInt64();
     }
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get bigint(): bigint {
+    get bigint(): BigValue {
         return this.readInt64();
     }
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get quad(): bigint {
+    get quad(): BigValue{
         return this.readInt64();
     }
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get uint64(): bigint {
+    get uint64(): BigValue {
         return this.readInt64(true);
     }
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get ubigint(): bigint {
+    get ubigint(): BigValue {
         return this.readInt64(true);
     }
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get uquad(): bigint {
+    get uquad(): BigValue {
         return this.readInt64(true);
     }
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get int64be(): bigint {
+    get int64be(): BigValue {
         return this.readInt64(false, "big");
     }
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get bigintbe(): bigint {
+    get bigintbe(): BigValue {
         return this.readInt64(false, "big");
     }
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get quadbe(): bigint {
+    get quadbe(): BigValue {
         return this.readInt64(false, "big");
     }
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get uint64be(): bigint {
+    get uint64be(): BigValue {
         return this.readInt64(true, "big");
     }
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get ubigintbe(): bigint {
+    get ubigintbe(): BigValue {
         return this.readInt64(true, "big");
     }
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get uquadbe(): bigint {
+    get uquadbe(): BigValue {
         return this.readInt64(true, "big");
     }
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get int64le(): bigint {
+    get int64le(): BigValue {
         return this.readInt64(false, "little");
     }
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get bigintle(): bigint {
+    get bigintle(): BigValue {
         return this.readInt64(false, "little");
     }
 
     /**
      * Read signed 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get quadle(): bigint {
+    get quadle(): BigValue {
         return this.readInt64(false, "little");
     }
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get uint64le(): bigint {
+    get uint64le(): BigValue {
         return this.readInt64(true, "little");
     }
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get ubigintle(): bigint {
+    get ubigintle(): BigValue {
         return this.readInt64(true, "little");
     }
 
     /**
      * Read unsigned 64 bit integer.
      * 
-     * @returns {bigint}
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
      */
-    get uquadle(): bigint {
+    get uquadle(): BigValue {
         return this.readInt64(true, "little");
     }
 
