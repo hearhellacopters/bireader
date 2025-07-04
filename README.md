@@ -746,7 +746,9 @@ Common functions for setup, movement, manipulation and math shared by both.
 
 ## BiStreams
 
-With 3.1 you can now use ``BiReaderStream`` and ``BiWriterStream`` (Node only) designed for larger files (or if you don't want or need the whole file loaded to memory all at once).
+With 3.1 you can now use ``BiReaderStream`` and ``BiWriterStream`` (Node.js only) designed for larger files (or if you don't want to or need to load the whole file loaded to memory all at once).
+
+**Programmers Note:** These are *NOT* data streams like ``fs.createReadStream`` where the whole file is streamed over time. It uses ``fs.openSync`` and ``fs.readSync`` and ``fs.writeSync`` to read and write just the data requested at the position requested at the time of operation, saving memory but costing processing power. This is mostly for legacy uses and niche cases as the newer versions of the Node.js have a much larger Buffer size over the older 4gig limit.
 
 <table>
 <thead>

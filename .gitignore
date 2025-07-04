@@ -1,7 +1,6 @@
 node_modules/
 package-lock.json
 test*
-lib/
 dist/*
 !dist/index.d.ts
 !dist/index.browser.js

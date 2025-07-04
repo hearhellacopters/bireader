@@ -977,7 +977,7 @@ function wbit(ctx, value, bits, unsigned, endian) {
     if (bits <= 0 || bits > 32) {
         throw new Error('Bit length must be between 1 and 32. Got ' + bits);
     }
-    if (unsigned == true) {
+    if (unsigned == true || bits == 1) {
         if (value < 0 || value > Math.pow(2, bits)) {
             ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
             throw new Error(`Value is out of range for the specified ${bits}bit length.` + " min: " + 0 + " max: " + Math.pow(2, bits) + " value: " + value);
@@ -991,7 +991,7 @@ function wbit(ctx, value, bits, unsigned, endian) {
             throw new Error(`Value is out of range for the specified ${bits}bit length.` + " min: " + minValue + " max: " + maxValue + " value: " + value);
         }
     }
-    if (unsigned == true) {
+    if (unsigned == true || bits == 1) {
         const maxValue = Math.pow(2, bits) - 1;
         value = value & maxValue;
     }
