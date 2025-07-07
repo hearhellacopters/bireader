@@ -2999,7 +2999,7 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * @returns {number}
      */
-    get dfloatebe(): number {
+    get dfloatbe(): number {
         return this.readDoubleFloat("big");
     };
 

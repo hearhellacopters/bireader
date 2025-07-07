@@ -2159,7 +2159,7 @@ export class BiBaseStreamer {
         this.data = data;
 
         if (consume) {
-            this.offset = this.offset + data.length;
+            this.offset = start + data.length;
             this.bitoffset = 0;
         }
         return data;
@@ -2203,7 +2203,7 @@ export class BiBaseStreamer {
 
         this.updateSize();
 
-        if (consume) this.offset += bytesWritten;
+        if (consume) this.offset = start + bytesWritten;
 
         return bytesWritten;
     };

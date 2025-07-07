@@ -3555,7 +3555,7 @@ declare class BiReader extends BiBase {
      *
      * @returns {number}
      */
-    get dfloatebe(): number;
+    get dfloatbe(): number;
     /**
      * Read double float.
      *

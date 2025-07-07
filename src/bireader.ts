@@ -3029,7 +3029,7 @@ export class BiReader extends BiBase {
      * 
      * @returns {number}
      */
-    get dfloatebe(): number {
+    get dfloatbe(): number {
         return this.readDoubleFloat("big");
     };
 

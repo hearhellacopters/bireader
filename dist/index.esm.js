@@ -6829,7 +6829,7 @@ class BiReader extends BiBase {
      *
      * @returns {number}
      */
-    get dfloatebe() {
+    get dfloatbe() {
         return this.readDoubleFloat("big");
     }
     ;
@@ -12404,7 +12404,7 @@ class BiBaseStreamer {
         this.enforceBigInt = false;
         this.filePath = filePath;
         if (this.maxFileSize == null) {
-            this.maxFileSize = MAX_LENGTH();
+            this.maxFileSize = MAX_LENGTH() || 0x80000000;
         }
         if (readwrite) {
             this.fsMode = "w+";
@@ -12552,7 +12552,7 @@ class BiBaseStreamer {
         fs.readSync(this.fd, data, 0, data.length, start);
         this.data = data;
         if (consume) {
-            this.offset = this.offset + data.length;
+            this.offset = start + data.length;
             this.bitoffset = 0;
         }
         return data;
@@ -12589,7 +12589,7 @@ class BiBaseStreamer {
         const bytesWritten = fs.writeSync(this.fd, data, 0, data.length, start);
         this.updateSize();
         if (consume)
-            this.offset += bytesWritten;
+            this.offset = start + bytesWritten;
         return bytesWritten;
     }
     ;
@@ -17610,7 +17610,7 @@ class BiReaderStream extends BiBaseStreamer {
      *
      * @returns {number}
      */
-    get dfloatebe() {
+    get dfloatbe() {
         return this.readDoubleFloat("big");
     }
     ;

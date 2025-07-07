@@ -6826,7 +6826,7 @@ class BiReader extends BiBase {
      *
      * @returns {number}
      */
-    get dfloatebe() {
+    get dfloatbe() {
         return this.readDoubleFloat("big");
     }
     ;
