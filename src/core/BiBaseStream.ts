@@ -8,20 +8,21 @@ import {
     stringOptions
 } from '../common.js';
 import fs from 'node:fs';
-import * as buff from 'node:buffer';
+import { constants as bufferConstants } from "node:buffer";
 
 /**
  * For file system in Node
  */
 type FileDescriptor = number;
+
 /**
  * file system read modes
  */
 type fsMode = "w+" | "r";
 
 function MAX_LENGTH() {
-    return buff.constants.MAX_LENGTH;
-}
+    return bufferConstants.MAX_LENGTH;
+};
 
 function skip(ctx: BiBaseStreamer, bytes: number, bits?: number): void {
     var new_size = (((bytes || 0) + ctx.offset) + Math.ceil((ctx.bitoffset + (bits || 0)) / 8));
@@ -294,7 +295,7 @@ function remove(ctx: BiBaseStreamer, startOffset?: number, endOffset?: number, c
             }
         }
     }
-}
+};
 
 function addData(ctx: BiBaseStreamer, data: Buffer | Uint8Array, consume?: boolean, offset?: number, replace?: boolean): void {
     if (ctx.strict == true) {
@@ -363,7 +364,7 @@ function addData(ctx: BiBaseStreamer, data: Buffer | Uint8Array, consume?: boole
     }
 
     return;
-}
+};
 
 function hexDump(ctx: BiBaseStreamer, options: hexdumpOptions = {}): string {
     var length: any = options && options.length;
@@ -380,7 +381,7 @@ function hexDump(ctx: BiBaseStreamer, options: hexdumpOptions = {}): string {
     const data = ctx.read(startByte, length, false);
 
     return _hexDump(data, options, start, end);
-}
+};
 
 function AND(ctx: BiBaseStreamer, and_key: any, start?: number, end?: number, consume?: boolean): void {
     if ((end || 0) > ctx.size) {
@@ -435,7 +436,7 @@ function AND(ctx: BiBaseStreamer, and_key: any, start?: number, end?: number, co
         ctx.offset = previousStart;
     }
     return;
-}
+};
 
 function OR(ctx: BiBaseStreamer, or_key: any, start?: number, end?: number, consume?: boolean): void {
     if ((end || 0) > ctx.size) {
@@ -488,7 +489,7 @@ function OR(ctx: BiBaseStreamer, or_key: any, start?: number, end?: number, cons
         ctx.offset = previousStart;
     }
     return;
-}
+};
 
 function XOR(ctx: BiBaseStreamer, xor_key: any, start?: number, end?: number, consume?: boolean): void {
     if ((end || 0) > ctx.size) {
@@ -541,7 +542,7 @@ function XOR(ctx: BiBaseStreamer, xor_key: any, start?: number, end?: number, co
         ctx.offset = previousStart;
     }
     return;
-}
+};
 
 function NOT(ctx: BiBaseStreamer, start?: number, end?: number, consume?: boolean): void {
     if ((end || 0) > ctx.size) {
@@ -571,7 +572,7 @@ function NOT(ctx: BiBaseStreamer, start?: number, end?: number, consume?: boolea
         ctx.offset = previousStart;
     }
     return;
-}
+};
 
 function LSHIFT(ctx: BiBaseStreamer, shift_key: any, start?: number, end?: number, consume?: boolean): void {
     if ((end || 0) > ctx.size) {
@@ -624,7 +625,7 @@ function LSHIFT(ctx: BiBaseStreamer, shift_key: any, start?: number, end?: numbe
         ctx.offset = previousStart;
     }
     return;
-}
+};
 
 function RSHIFT(ctx: BiBaseStreamer, shift_key: any, start?: number, end?: number, consume?: boolean): void {
     if ((end || 0) > ctx.size) {
@@ -678,7 +679,7 @@ function RSHIFT(ctx: BiBaseStreamer, shift_key: any, start?: number, end?: numbe
         ctx.offset = previousStart;
     }
     return;
-}
+};
 
 function ADD(ctx: BiBaseStreamer, add_key: any, start?: number, end?: number, consume?: boolean): void {
     if ((end || 0) > ctx.size) {
@@ -732,7 +733,7 @@ function ADD(ctx: BiBaseStreamer, add_key: any, start?: number, end?: number, co
         ctx.offset = previousStart;
     }
     return;
-}
+};
 
 function fString(ctx: BiBaseStreamer, searchString: string): number {
     ctx.open();
@@ -769,7 +770,7 @@ function fString(ctx: BiBaseStreamer, searchString: string): number {
 
     ctx.strict = strict_saver;
     return -1;
-}
+};
 
 function fNumber(ctx: BiBaseStreamer, targetNumber: number, bits: number, unsigned: boolean, endian?: string): number {
     ctx.open();
@@ -833,7 +834,7 @@ function fNumber(ctx: BiBaseStreamer, targetNumber: number, bits: number, unsign
     }
 
     return -1; // number not found
-}
+};
 
 function fHalfFloat(ctx: BiBaseStreamer, targetNumber: number, endian?: string): number {
     ctx.open();
@@ -885,7 +886,7 @@ function fHalfFloat(ctx: BiBaseStreamer, targetNumber: number, endian?: string):
     }
 
     return -1; // number not found
-}
+};
 
 function fFloat(ctx: BiBaseStreamer, targetNumber: number, endian?: string): number {
     ctx.open();
@@ -935,7 +936,7 @@ function fFloat(ctx: BiBaseStreamer, targetNumber: number, endian?: string): num
     }
 
     return -1; // number not found
-}
+};
 
 function fBigInt(ctx: BiBaseStreamer, targetNumber: BigValue, unsigned: boolean, endian?: string): number {
     ctx.open();
@@ -981,7 +982,7 @@ function fBigInt(ctx: BiBaseStreamer, targetNumber: BigValue, unsigned: boolean,
     }
 
     return -1; // number not found
-}
+};
 
 function fDoubleFloat(ctx: BiBaseStreamer, targetNumber: number, endian?: string): number {
     ctx.open();
@@ -1038,7 +1039,7 @@ function fDoubleFloat(ctx: BiBaseStreamer, targetNumber: number, endian?: string
     }
 
     return -1; // number not found
-}
+};
 
 function wbit(ctx: BiBaseStreamer, value: number, bits: number, unsigned?: boolean, endian?: string): void {
     ctx.open();
@@ -1114,7 +1115,7 @@ function wbit(ctx: BiBaseStreamer, value: number, bits: number, unsigned?: boole
 
     ctx.offset = ctx.offset + Math.floor(((bits) + ctx.bitoffset) / 8); //end byte
     ctx.bitoffset = ((bits) + ctx.bitoffset) % 8;
-}
+};
 
 function rbit(ctx: BiBaseStreamer, bits?: number, unsigned?: boolean, endian?: string): number {
     ctx.open();
@@ -1179,7 +1180,7 @@ function rbit(ctx: BiBaseStreamer, bits?: number, unsigned?: boolean, endian?: s
     }
 
     return value;
-}
+};
 
 function wbyte(ctx: BiBaseStreamer, value: number, unsigned?: boolean): void {
 
@@ -1206,7 +1207,7 @@ function wbyte(ctx: BiBaseStreamer, value: number, unsigned?: boolean): void {
     ctx.offset += 1;
     ctx.bitoffset = 0;
     return;
-}
+};
 
 function rbyte(ctx: BiBaseStreamer, unsigned?: boolean): number {
 
@@ -1222,7 +1223,7 @@ function rbyte(ctx: BiBaseStreamer, unsigned?: boolean): number {
     } else {
         return read[0] > 127 ? read[0] - 256 : read[0];
     }
-}
+};
 
 function wint16(ctx: BiBaseStreamer, value: number, unsigned?: boolean, endian?: string): void {
 
@@ -1255,7 +1256,7 @@ function wint16(ctx: BiBaseStreamer, value: number, unsigned?: boolean, endian?:
     ctx.offset += 2;
     ctx.bitoffset = 0;
     return;
-}
+};
 
 function rint16(ctx: BiBaseStreamer, unsigned?: boolean, endian?: string): number {
 
@@ -1278,7 +1279,7 @@ function rint16(ctx: BiBaseStreamer, unsigned?: boolean, endian?: string): numbe
     } else {
         return read & 0xFFFF;
     }
-}
+};
 
 function rhalffloat(ctx: BiBaseStreamer, endian?: endian): number {
 
@@ -1308,7 +1309,7 @@ function rhalffloat(ctx: BiBaseStreamer, endian?: endian): number {
     }
 
     return floatValue;
-}
+};
 
 function whalffloat(ctx: BiBaseStreamer, value: number, endian?: string): void {
 
@@ -1359,7 +1360,7 @@ function whalffloat(ctx: BiBaseStreamer, value: number, endian?: string): void {
     ctx.commit(false);
     ctx.offset += 2;
     ctx.bitoffset = 0;
-}
+};
 
 function wint32(ctx: BiBaseStreamer, value: number, unsigned?: boolean, endian?: string): void {
 
@@ -1395,7 +1396,7 @@ function wint32(ctx: BiBaseStreamer, value: number, unsigned?: boolean, endian?:
     ctx.commit(false);
     ctx.offset += 4;
     ctx.bitoffset = 0;
-}
+};
 
 function rint32(ctx: BiBaseStreamer, unsigned?: boolean, endian?: string): number {
 
@@ -1417,7 +1418,7 @@ function rint32(ctx: BiBaseStreamer, unsigned?: boolean, endian?: string): numbe
     } else {
         return read >>> 0;
     }
-}
+};
 
 function rfloat(ctx: BiBaseStreamer, endian?: endian): number {
 
@@ -1444,7 +1445,7 @@ function rfloat(ctx: BiBaseStreamer, endian?: endian): number {
     }
 
     return floatValue;
-}
+};
 
 function wfloat(ctx: BiBaseStreamer, value: number, endian?: string): void {
 
@@ -1479,7 +1480,7 @@ function wfloat(ctx: BiBaseStreamer, value: number, endian?: string): void {
     ctx.commit(false);
     ctx.offset += 4;
     ctx.bitoffset = 0;
-}
+};
 
 function rint64(ctx: BiBaseStreamer, unsigned?: boolean, endian?: string): BigValue {
 
@@ -1522,7 +1523,7 @@ function rint64(ctx: BiBaseStreamer, unsigned?: boolean, endian?: string): BigVa
     }
 
     return value
-}
+};
 
 function wint64(ctx: BiBaseStreamer, value: BigValue, unsigned?: boolean, endian?: string): void {
 
@@ -1582,7 +1583,7 @@ function wint64(ctx: BiBaseStreamer, value: BigValue, unsigned?: boolean, endian
     ctx.commit(false);
     ctx.offset += 8;
     ctx.bitoffset = 0;
-}
+};
 
 function wdfloat(ctx: BiBaseStreamer, value: number, endian?: string): void {
 
@@ -1619,7 +1620,7 @@ function wdfloat(ctx: BiBaseStreamer, value: number, endian?: string): void {
     ctx.commit(false);
     ctx.offset += 8;
     ctx.bitoffset = 0;
-}
+};
 
 function rdfloat(ctx: BiBaseStreamer, endian?: endian): number {
     endian = (endian == undefined ? ctx.endian : endian);
@@ -1649,7 +1650,7 @@ function rdfloat(ctx: BiBaseStreamer, endian?: endian): number {
     }
 
     return floatValue;
-}
+};
 
 function rstring(ctx: BiBaseStreamer, options?: stringOptions): string {
 
@@ -1779,7 +1780,7 @@ function rstring(ctx: BiBaseStreamer, options?: stringOptions): string {
     } else {
         throw new Error('Unsupported string type: ' + stringType);
     }
-}
+};
 
 function wstring(ctx: BiBaseStreamer, string: string, options?: stringOptions): void {
     ctx.open();
@@ -1922,7 +1923,7 @@ function wstring(ctx: BiBaseStreamer, string: string, options?: stringOptions): 
     } else {
         throw new Error('Unsupported string type: ' + stringType);
     }
-}
+};
 
 export class BiBaseStreamer {
     /**
@@ -1988,10 +1989,15 @@ export class BiBaseStreamer {
 
     constructor(filePath: string, readwrite: boolean) {
         this.filePath = filePath;
+
+        if (this.maxFileSize == null) {
+            this.maxFileSize = MAX_LENGTH() || 0x80000000;
+        }
+
         if (readwrite) {
             this.fsMode = "w+";
         }
-    }
+    };
 
     /**
      * Settings for when using .str
@@ -2007,7 +2013,7 @@ export class BiBaseStreamer {
         this.strDefaults.stringType = settings.stringType;
         this.strDefaults.stripNull = settings.stripNull;
         this.strDefaults.terminateValue = settings.terminateValue;
-    }
+    };
 
     /**
      * Enabling write mode in reader.
@@ -2027,7 +2033,7 @@ export class BiBaseStreamer {
             this.open();
             return;
         }
-    }
+    };
 
     /**
      * Opens the file. Must be run before reading or writing.
@@ -2039,7 +2045,7 @@ export class BiBaseStreamer {
             return this.size;
         }
 
-        if (buff == undefined || fs == undefined) {
+        if (bufferConstants == undefined || fs == undefined) {
             throw new Error("Can't use BitStream without Node.");
         }
 
@@ -2072,7 +2078,7 @@ export class BiBaseStreamer {
         }
 
         return this.size;
-    }
+    };
 
     /**
      * Internal update size
@@ -2087,7 +2093,7 @@ export class BiBaseStreamer {
             this.size = stat.size;
             this.sizeB = this.size * 8;
         }
-    }
+    };
 
     /**
      * Closes the file.
@@ -2106,7 +2112,7 @@ export class BiBaseStreamer {
         fs.closeSync(this.fd);
         this.fd = null;
         return;
-    }
+    };
 
     /**
      * Internal reader
@@ -2157,7 +2163,7 @@ export class BiBaseStreamer {
             this.bitoffset = 0;
         }
         return data;
-    }
+    };
 
     /**
      * Internal writer
@@ -2200,7 +2206,7 @@ export class BiBaseStreamer {
         if (consume) this.offset += bytesWritten;
 
         return bytesWritten;
-    }
+    };
 
     /**
      * internal write commit
@@ -2219,7 +2225,7 @@ export class BiBaseStreamer {
             throw new Error("No data to write.");
         }
         return this.write(this.offset, this.data, consume);
-    }
+    };
 
     /**
      * Renames the file you are working on.
@@ -2242,7 +2248,7 @@ export class BiBaseStreamer {
         this.filePath = newFilePath;
 
         this.open();
-    }
+    };
 
     /**
      * Deletes the working file.
@@ -2257,7 +2263,7 @@ export class BiBaseStreamer {
         this.fd = null;
 
         fs.unlinkSync(this.filePath);
-    }
+    };
 
     /**
      * internal extend
@@ -2290,11 +2296,11 @@ export class BiBaseStreamer {
         fs.ftruncateSync(this.fd, this.size + length);
 
         this.updateSize();
-    }
+    };
 
     isBufferOrUint8Array(obj: Buffer | Uint8Array): boolean {
         return arraybuffcheck(obj);
-    }
+    };
 
     ///////////////////////////////
     //         ENDIANNESS        //
@@ -2316,49 +2322,49 @@ export class BiBaseStreamer {
             throw new Error("Endian must be big or little");
         }
         this.endian = endian;
-    }
+    };
 
     /**
      * Sets endian to big.
      */
     bigEndian(): void {
         this.endianness("big");
-    }
+    };
 
     /**
      * Sets endian to big.
      */
     big(): void {
         this.endianness("big");
-    }
+    };
 
     /**
      * Sets endian to big.
      */
     be(): void {
         this.endianness("big");
-    }
+    };
 
     /**
      * Sets endian to little.
      */
     littleEndian(): void {
         this.endianness("little");
-    }
+    };
 
     /**
      * Sets endian to little.
      */
     little(): void {
         this.endianness("little");
-    }
+    };
 
     /**
      * Sets endian to little.
      */
     le(): void {
         this.endianness("little");
-    }
+    };
 
     ///////////////////////////////
     //            SIZE           //
@@ -2371,7 +2377,7 @@ export class BiBaseStreamer {
      */
     get length(): number {
         return this.size;
-    }
+    };
 
     /**
      * Size in bytes of the current buffer.
@@ -2380,7 +2386,7 @@ export class BiBaseStreamer {
      */
     get len(): number {
         return this.size;
-    }
+    };
 
     /**
      * Size in bytes of the current buffer.
@@ -2389,7 +2395,7 @@ export class BiBaseStreamer {
      */
     get FileSize(): number {
         return this.size;
-    }
+    };
 
     /**
      * Size in bits of the current buffer.
@@ -2398,7 +2404,7 @@ export class BiBaseStreamer {
      */
     get lengthB(): number {
         return this.sizeB;
-    }
+    };
 
     /**
      * Size in bits of the current buffer.
@@ -2407,7 +2413,7 @@ export class BiBaseStreamer {
      */
     get FileSizeB(): number {
         return this.sizeB;
-    }
+    };
 
     /**
      * Size in bits of the current buffer.
@@ -2416,7 +2422,7 @@ export class BiBaseStreamer {
      */
     get lenb(): number {
         return this.sizeB;
-    }
+    };
 
     ///////////////////////////////
     //         POSITION          //
@@ -2429,7 +2435,7 @@ export class BiBaseStreamer {
      */
     get tell(): number {
         return this.offset;
-    }
+    };
 
     /**
      * Get the current byte position.
@@ -2438,7 +2444,7 @@ export class BiBaseStreamer {
      */
     get FTell(): number {
         return this.offset;
-    }
+    };
 
     /**
      * Get the current byte position.
@@ -2447,7 +2453,7 @@ export class BiBaseStreamer {
      */
     get getOffset(): number {
         return this.offset;
-    }
+    };
 
     /**
      * Get the current byte position;
@@ -2456,7 +2462,7 @@ export class BiBaseStreamer {
      */
     get saveOffset(): number {
         return this.offset;
-    }
+    };
 
     /**
      * Get the current byte position;
@@ -2465,7 +2471,7 @@ export class BiBaseStreamer {
      */
     get off(): number {
         return this.offset;
-    }
+    };
 
     /**
      * Get the current bit position (0-7).
@@ -2474,7 +2480,7 @@ export class BiBaseStreamer {
      */
     get getOffsetBit(): number {
         return this.bitoffset;
-    }
+    };
 
     /**
      * Get the current bit position (0-7).
@@ -2483,7 +2489,7 @@ export class BiBaseStreamer {
      */
     get tellB(): number {
         return this.bitoffset;
-    }
+    };
 
     /**
      * Get the current bit position (0-7).
@@ -2492,7 +2498,7 @@ export class BiBaseStreamer {
      */
     get FTellB(): number {
         return this.bitoffset;
-    }
+    };
 
     /**
      * Get the current bit position (0-7).
@@ -2501,7 +2507,7 @@ export class BiBaseStreamer {
      */
     get offb(): number {
         return this.bitoffset;
-    }
+    };
 
     /**
      * Get the current absolute bit position (from start of data).
@@ -2510,7 +2516,7 @@ export class BiBaseStreamer {
      */
     get getOffsetAbsBit(): number {
         return (this.offset * 8) + this.bitoffset;
-    }
+    };
 
     /**
      * Get the current absolute bit position (from start of data).
@@ -2519,7 +2525,7 @@ export class BiBaseStreamer {
      */
     get saveOffsetAbsBit(): number {
         return (this.offset * 8) + this.bitoffset;
-    }
+    };
 
     /**
      * Get the current absolute bit position (from start of data).
@@ -2528,7 +2534,7 @@ export class BiBaseStreamer {
      */
     get tellAbsB(): number {
         return (this.offset * 8) + this.bitoffset;
-    }
+    };
 
     /**
      * Get the current absolute bit position (from start of data).
@@ -2537,7 +2543,7 @@ export class BiBaseStreamer {
      */
     get saveOffsetBit(): number {
         return (this.offset * 8) + this.bitoffset;
-    }
+    };
 
     /**
      * Get the current absolute bit position (from start of data).
@@ -2546,7 +2552,7 @@ export class BiBaseStreamer {
      */
     get offab(): number {
         return (this.offset * 8) + this.bitoffset;
-    }
+    };
 
     /**
      * Size in bytes of current read position to the end
@@ -2555,7 +2561,7 @@ export class BiBaseStreamer {
      */
     get remain(): number {
         return this.size - this.offset;
-    }
+    };
 
     /**
      * Size in bytes of current read position to the end
@@ -2564,7 +2570,7 @@ export class BiBaseStreamer {
      */
     get FEoF(): number {
         return this.size - this.offset;
-    }
+    };
 
     /**
      * Size in bits of current read position to the end
@@ -2573,7 +2579,7 @@ export class BiBaseStreamer {
      */
     get remainB(): number {
         return (this.size * 8) - this.saveOffsetAbsBit;
-    }
+    };
 
     /**
      * Size in bits of current read position to the end
@@ -2582,7 +2588,7 @@ export class BiBaseStreamer {
      */
     get FEoFB(): number {
         return (this.size * 8) - this.saveOffsetAbsBit;
-    }
+    };
 
     /**
      * Row line of the file (16 bytes per row).
@@ -2591,7 +2597,7 @@ export class BiBaseStreamer {
      */
     get getLine(): number {
         return Math.abs(Math.floor((this.offset - 1) / 16));
-    }
+    };
 
     /**
      * Row line of the file (16 bytes per row).
@@ -2600,7 +2606,7 @@ export class BiBaseStreamer {
      */
     get row(): number {
         return Math.abs(Math.floor((this.offset - 1) / 16));
-    }
+    };
 
     ///////////////////////////////
     //        FINISHING          //
@@ -2620,7 +2626,7 @@ export class BiBaseStreamer {
             this.trim();
         }
         return this.data || Buffer.alloc(0);
-    }
+    };
 
     /**
      * Returns current data.
@@ -2636,7 +2642,7 @@ export class BiBaseStreamer {
             this.trim();
         }
         return this.data || Buffer.alloc(0);
-    }
+    };
 
     /**
      * Creates hex dump string. Will console log or return string if set in options.
@@ -2650,21 +2656,21 @@ export class BiBaseStreamer {
      */
     hexdump(options: hexdumpOptions = {}): void | string {
         return hexDump(this, options);
-    }
+    };
 
     /**
      * Turn hexdump on error off (default on).
      */
     errorDumpOff(): void {
         this.errorDump = false;
-    }
+    };
 
     /**
      * Turn hexdump on error on (default on).
      */
     errorDumpOn(): void {
         this.errorDump = true;
-    }
+    };
 
     ///////////////////////////////
     //       STRICTMODE          //
@@ -2675,35 +2681,35 @@ export class BiBaseStreamer {
      */
     restrict(): void {
         this.strict = true;
-    }
+    };
 
     /**
      * Allows extending data if position is outside of max size.
      */
     unrestrict(): void {
         this.strict = false;
-    }
+    };
 
     /**
      * removes data.
      */
     end(): void {
         this.data = null;
-    }
+    };
 
     /**
      * removes data.
      */
     done(): void {
         this.data = null;
-    }
+    };
 
     /**
      * removes data.
      */
     finished(): void {
         this.data = null;
-    }
+    };
 
     ///////////////////////////////
     //          FIND             //
@@ -2720,7 +2726,7 @@ export class BiBaseStreamer {
      */
     findString(string: string): number {
         return fString(this, string);
-    }
+    };
 
     /**
      * Searches for byte value (can be signed or unsigned) position from current read position.
@@ -2735,7 +2741,7 @@ export class BiBaseStreamer {
      */
     findByte(value: number, unsigned?: boolean, endian?: endian): number {
         return fNumber(this, value, 8, unsigned == undefined ? true : unsigned, endian);
-    }
+    };
 
     /**
      * Searches for short value (can be signed or unsigned) position from current read position.
@@ -2750,7 +2756,7 @@ export class BiBaseStreamer {
      */
     findShort(value: number, unsigned?: boolean, endian?: endian): number {
         return fNumber(this, value, 16, unsigned == undefined ? true : unsigned, endian);
-    }
+    };
 
     /**
      * Searches for integer value (can be signed or unsigned) position from current read position.
@@ -2765,7 +2771,7 @@ export class BiBaseStreamer {
      */
     findInt(value: number, unsigned?: boolean, endian?: endian): number {
         return fNumber(this, value, 32, unsigned == undefined ? true : unsigned, endian);
-    }
+    };
 
     /**
      * Searches for 64 bit value (can be signed or unsigned) position from current read position.
@@ -2780,7 +2786,7 @@ export class BiBaseStreamer {
      */
     findInt64(value: BigValue, unsigned?: boolean, endian?: endian): number {
         return fBigInt(this, value, unsigned == undefined ? true : unsigned, endian);
-    }
+    };
 
     /**
      * Searches for half float value position from current read position.
@@ -2794,7 +2800,7 @@ export class BiBaseStreamer {
      */
     findHalfFloat(value: number, endian?: endian): number {
         return fHalfFloat(this, value, endian);
-    }
+    };
 
     /**
      * Searches for float value position from current read position.
@@ -2808,7 +2814,7 @@ export class BiBaseStreamer {
      */
     findFloat(value: number, endian?: endian): number {
         return fFloat(this, value, endian);
-    }
+    };
 
     /**
      * Searches for double float value position from current read position.
@@ -2822,7 +2828,7 @@ export class BiBaseStreamer {
      */
     findDoubleFloat(value: number, endian?: endian): number {
         return fDoubleFloat(this, value, endian);
-    }
+    };
 
     ///////////////////////////////
     //        MOVE TO            //
@@ -2837,7 +2843,7 @@ export class BiBaseStreamer {
      */
     align(number: number): void {
         return align(this, number);
-    }
+    };
 
     /**
      * Reverse aligns current byte position.
@@ -2848,7 +2854,7 @@ export class BiBaseStreamer {
      */
     alignRev(number: number): void {
         return alignRev(this, number);
-    }
+    };
 
     /**
      * Offset current byte or bit position.
@@ -2860,7 +2866,7 @@ export class BiBaseStreamer {
      */
     skip(bytes: number, bits?: number): void {
         return skip(this, bytes, bits);
-    }
+    };
 
     /**
     * Offset current byte or bit position.
@@ -2872,7 +2878,7 @@ export class BiBaseStreamer {
     */
     jump(bytes: number, bits?: number): void {
         this.skip(bytes, bits);
-    }
+    };
 
     /**
      * Change position directly to address.
@@ -2884,7 +2890,7 @@ export class BiBaseStreamer {
      */
     FSeek(byte: number, bit?: number): void {
         return goto(this, byte, bit)
-    }
+    };
 
     /**
      * Offset current byte or bit position.
@@ -2896,7 +2902,7 @@ export class BiBaseStreamer {
      */
     seek(bytes: number, bits?: number): void {
         return this.skip(bytes, bits)
-    }
+    };
 
     /**
      * Change position directly to address.
@@ -2908,7 +2914,7 @@ export class BiBaseStreamer {
      */
     goto(byte: number, bit?: number): void {
         return goto(this, byte, bit);
-    }
+    };
 
     /**
      * Change position directly to address.
@@ -2920,7 +2926,7 @@ export class BiBaseStreamer {
      */
     pointer(byte: number, bit?: number): void {
         return this.goto(byte, bit)
-    }
+    };
 
     /**
      * Change position directly to address.
@@ -2932,7 +2938,7 @@ export class BiBaseStreamer {
      */
     warp(byte: number, bit?: number): void {
         return this.goto(byte, bit)
-    }
+    };
 
     /**
      * Set byte and bit position to start of data.
@@ -2940,14 +2946,14 @@ export class BiBaseStreamer {
     rewind(): void {
         this.offset = 0;
         this.bitoffset = 0;
-    }
+    };
 
     /**
      * Set byte and bit position to start of data.
      */
     gotoStart(): void {
         return this.rewind();
-    }
+    };
 
     /**
      * Set current byte and bit position to end of data.
@@ -2955,7 +2961,7 @@ export class BiBaseStreamer {
     last(): void {
         this.offset = this.size;
         this.bitoffset = 0;
-    }
+    };
 
     /**
      * Set current byte and bit position to end of data.
@@ -2963,7 +2969,7 @@ export class BiBaseStreamer {
     gotoEnd(): void {
         this.offset = this.size;
         this.bitoffset = 0;
-    }
+    };
 
     /**
      * Set byte and bit position to start of data.
@@ -2971,7 +2977,7 @@ export class BiBaseStreamer {
     EoF(): void {
         this.offset = this.size;
         this.bitoffset = 0;
-    }
+    };
 
     ///////////////////////////////
     //         REMOVE            //
@@ -2989,7 +2995,7 @@ export class BiBaseStreamer {
      */
     delete(startOffset?: number, endOffset?: number, consume?: boolean): Buffer {
         return remove(this, startOffset || 0, endOffset || this.offset, consume || false, true);
-    }
+    };
 
     /**
      * Deletes part of data from current byte position to end, returns removed.
@@ -3000,7 +3006,7 @@ export class BiBaseStreamer {
      */
     clip(): Buffer {
         return remove(this, this.offset, this.size, false, true);
-    }
+    };
 
     /**
      * Deletes part of data from current byte position to end, returns removed.
@@ -3011,7 +3017,7 @@ export class BiBaseStreamer {
      */
     trim(): Buffer {
         return remove(this, this.offset, this.size, false, true);
-    }
+    };
 
     /**
      * Deletes part of data from current byte position to supplied length, returns removed.
@@ -3024,7 +3030,7 @@ export class BiBaseStreamer {
      */
     crop(length: number, consume?: boolean): Buffer {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, true);
-    }
+    };
 
     /**
      * Deletes part of data from current position to supplied length, returns removed.
@@ -3037,7 +3043,7 @@ export class BiBaseStreamer {
      */
     drop(length: number, consume?: boolean): Buffer {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, true);
-    }
+    };
 
     /**
      * Replaces data in data.
@@ -3050,7 +3056,7 @@ export class BiBaseStreamer {
      */
     replace(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void {
         return addData(this, data, consume || false, offset || this.offset, true);
-    }
+    };
 
     /**
      * Replaces data in data.
@@ -3063,7 +3069,7 @@ export class BiBaseStreamer {
      */
     overwrite(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void {
         return addData(this, data, consume || false, offset || this.offset, true);
-    }
+    };
 
     ///////////////////////////////
     //        COPY OUT           //
@@ -3080,7 +3086,7 @@ export class BiBaseStreamer {
      */
     lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Buffer {
         return remove(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
-    }
+    };
 
     /**
      * Returns part of data from current byte position to end of data unless supplied.
@@ -3093,7 +3099,7 @@ export class BiBaseStreamer {
      */
     fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Buffer {
         return remove(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
-    }
+    };
 
     /**
      * Extract data from current position to length supplied.
@@ -3106,7 +3112,7 @@ export class BiBaseStreamer {
      */
     extract(length: number, consume?: boolean): Buffer {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, false);
-    }
+    };
 
     /**
      * Extract data from current position to length supplied.
@@ -3119,7 +3125,7 @@ export class BiBaseStreamer {
      */
     slice(length: number, consume?: boolean): Buffer {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, false);
-    }
+    };
 
     /**
      * Extract data from current position to length supplied.
@@ -3132,7 +3138,7 @@ export class BiBaseStreamer {
      */
     wrap(length: number, consume?: boolean): Buffer {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, false);
-    }
+    };
 
     ///////////////////////////////
     //          INSERT           //
@@ -3149,7 +3155,7 @@ export class BiBaseStreamer {
      */
     insert(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void {
         return addData(this, data, consume || false, offset || this.offset, false);
-    }
+    };
 
     /**
      * Inserts data into data.
@@ -3162,7 +3168,7 @@ export class BiBaseStreamer {
      */
     place(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void {
         return addData(this, data, consume || false, offset || this.offset, false);
-    }
+    };
 
     /**
      * Adds data to start of supplied data.
@@ -3174,7 +3180,7 @@ export class BiBaseStreamer {
      */
     unshift(data: Buffer | Uint8Array, consume?: boolean): void {
         return addData(this, data, consume || false, 0, false);
-    }
+    };
 
     /**
      * Adds data to start of supplied data.
@@ -3186,7 +3192,7 @@ export class BiBaseStreamer {
      */
     prepend(data: Buffer | Uint8Array, consume?: boolean): void {
         return addData(this, data, consume || false, 0, false);
-    }
+    };
 
     /**
      * Adds data to end of supplied data.
@@ -3198,7 +3204,7 @@ export class BiBaseStreamer {
      */
     push(data: Buffer | Uint8Array, consume?: boolean): void {
         return addData(this, data, consume || false, this.size, false);
-    }
+    };
 
     /**
      * Adds data to end of supplied data.
@@ -3210,7 +3216,7 @@ export class BiBaseStreamer {
      */
     append(data: Buffer | Uint8Array, consume?: boolean): void {
         return addData(this, data, consume || false, this.size, false);
-    }
+    };
 
     ///////////////////////////////
     //          MATH             //
@@ -3239,7 +3245,7 @@ export class BiBaseStreamer {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
         return XOR(this, xorKey, startOffset || this.offset, endOffset || this.size, consume || false);
-    }
+    };
 
     /**
      * XOR data.
@@ -3266,7 +3272,7 @@ export class BiBaseStreamer {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
         return XOR(this, XORKey, this.offset, this.offset + Length, consume || false);
-    }
+    };
 
     /**
      * OR data
@@ -3291,7 +3297,7 @@ export class BiBaseStreamer {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
         return OR(this, orKey, startOffset || this.offset, endOffset || this.size, consume || false);
-    }
+    };
 
     /**
      * OR data.
@@ -3318,7 +3324,7 @@ export class BiBaseStreamer {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
         return OR(this, ORKey, this.offset, this.offset + Length, consume || false);
-    }
+    };
 
     /**
      * AND data.
@@ -3343,7 +3349,7 @@ export class BiBaseStreamer {
             throw new Error("AND must be a number, string, number array or Buffer");
         }
         return AND(this, andKey, startOffset || this.offset, endOffset || this.size, consume || false);
-    }
+    };
 
     /**
      * AND data.
@@ -3370,7 +3376,7 @@ export class BiBaseStreamer {
             throw new Error("AND must be a number, string, number array or Buffer");
         }
         return AND(this, ANDKey, this.offset, this.offset + Length, consume || false);
-    }
+    };
 
     /**
      * Add value to data.
@@ -3395,7 +3401,7 @@ export class BiBaseStreamer {
             throw new Error("Add key must be a number, string, number array or Buffer");
         }
         return ADD(this, addedKey, startOffset || this.offset, endOffset || this.size, consume || false);
-    }
+    };
 
     /**
      * Add value to data.
@@ -3421,7 +3427,7 @@ export class BiBaseStreamer {
             throw new Error("Add key must be a number, string, number array or Buffer");
         }
         return ADD(this, AddedKey, this.offset, this.offset + Length, consume || false);
-    }
+    };
 
     /**
      * Not data.
@@ -3432,7 +3438,7 @@ export class BiBaseStreamer {
      */
     not(startOffset?: number, endOffset?: number, consume?: boolean): void {
         return NOT(this, startOffset || this.offset, endOffset || this.size, consume || false);
-    }
+    };
 
     /**
      * Not data.
@@ -3442,7 +3448,7 @@ export class BiBaseStreamer {
      */
     notThis(length?: number, consume?: boolean): void {
         return NOT(this, this.offset, this.offset + (length || 1), consume || false);
-    }
+    };
 
     /**
      * Left shift data.
@@ -3467,7 +3473,7 @@ export class BiBaseStreamer {
             throw new Error("Left shift must be a number, string, number array or Buffer");
         }
         return LSHIFT(this, lShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
-    }
+    };
 
     /**
      * Left shift data.
@@ -3493,7 +3499,7 @@ export class BiBaseStreamer {
             throw new Error("Left shift must be a number, string, number array or Buffer");
         }
         return LSHIFT(this, shiftKey, this.offset, this.offset + Length, consume || false);
-    }
+    };
 
     /**
      * Right shift data.
@@ -3517,7 +3523,7 @@ export class BiBaseStreamer {
             throw new Error("Right shift must be a number, string, number array or Buffer");
         }
         return RSHIFT(this, rShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
-    }
+    };
 
     /**
      * Right shift data.
@@ -3544,7 +3550,7 @@ export class BiBaseStreamer {
             throw new Error("Right shift must be a number, string, number array or Buffer");
         }
         return RSHIFT(this, lShiftKey, this.offset, this.offset + Length, consume || false);
-    }
+    };
 
     ///////////////////////////////
     //        BIT READER         //
@@ -3563,7 +3569,7 @@ export class BiBaseStreamer {
      */
     writeBit(value: number, bits: number, unsigned?: boolean, endian?: endian): void {
         return wbit(this, value, bits, unsigned, endian);
-    }
+    };
 
     /**
      * Bit field writer.
@@ -3576,7 +3582,7 @@ export class BiBaseStreamer {
      */
     writeUBitBE(value: number, bits: number): void {
         return wbit(this, value, bits, true, "big");
-    }
+    };
 
     /**
      * Bit field writer.
@@ -3590,7 +3596,7 @@ export class BiBaseStreamer {
      */
     writeBitBE(value: number, bits: number, unsigned?: boolean): void {
         return wbit(this, value, bits, unsigned, "big");
-    }
+    };
 
     /**
      * Bit field writer.
@@ -3603,7 +3609,7 @@ export class BiBaseStreamer {
      */
     writeUBitLE(value: number, bits: number): void {
         return wbit(this, value, bits, true, "little");
-    }
+    };
 
     /**
      * Bit field writer.
@@ -3617,7 +3623,7 @@ export class BiBaseStreamer {
      */
     writeBitLE(value: number, bits: number, unsigned?: boolean): void {
         return wbit(this, value, bits, unsigned, "little");
-    }
+    };
 
     /**
      * Bit field reader.
@@ -3631,7 +3637,7 @@ export class BiBaseStreamer {
      */
     readBit(bits?: number, unsigned?: boolean, endian?: endian): number {
         return rbit(this, bits, unsigned, endian);
-    }
+    };
 
     /**
      * Bit field reader.
@@ -3643,7 +3649,7 @@ export class BiBaseStreamer {
      */
     readUBitBE(bits: number): number {
         return this.readBit(bits, true, "big");
-    }
+    };
 
     /**
      * Bit field reader.
@@ -3656,7 +3662,7 @@ export class BiBaseStreamer {
      */
     readBitBE(bits: number, unsigned?: boolean): number {
         return this.readBit(bits, unsigned, "big");
-    }
+    };
 
     /**
      * Bit field reader.
@@ -3668,7 +3674,7 @@ export class BiBaseStreamer {
      */
     readUBitLE(bits: number): number {
         return this.readBit(bits, true, "little");
-    }
+    };
 
     /**
      * Bit field reader.
@@ -3681,7 +3687,7 @@ export class BiBaseStreamer {
      */
     readBitLE(bits: number, unsigned?: boolean): number {
         return this.readBit(bits, unsigned, "little");
-    }
+    };
 
     /**
      * Read byte.
@@ -3691,7 +3697,7 @@ export class BiBaseStreamer {
      */
     readByte(unsigned?: boolean): number {
         return rbyte(this, unsigned);
-    }
+    };
 
     /**
      * Read multiple bytes.
@@ -3702,7 +3708,7 @@ export class BiBaseStreamer {
      */
     readBytes(amount: number, unsigned?: boolean): number[] {
         return Array.from({ length: amount }, () => rbyte(this, unsigned));
-    }
+    };
 
     /**
      * Write byte.
@@ -3712,7 +3718,7 @@ export class BiBaseStreamer {
      */
     writeByte(value: number, unsigned?: boolean): void {
         return wbyte(this, value, unsigned);
-    }
+    };
 
     /**
      * Write multiple bytes.
@@ -3724,7 +3730,7 @@ export class BiBaseStreamer {
         for (let i = 0; i < values.length; i++) {
             wbyte(this, values[i], unsigned);
         }
-    }
+    };
 
     /**
      * Write unsigned byte.
@@ -3733,7 +3739,7 @@ export class BiBaseStreamer {
      */
     writeUByte(value: number): void {
         return wbyte(this, value, true);
-    }
+    };
 
     /**
      * Read unsigned byte.
@@ -3742,7 +3748,7 @@ export class BiBaseStreamer {
      */
     readUByte(): number {
         return this.readByte(true);
-    }
+    };
 
     /**
      * Read short.
@@ -3753,7 +3759,7 @@ export class BiBaseStreamer {
      */
     readInt16(unsigned?: boolean, endian?: endian): number {
         return rint16(this, unsigned, endian);
-    }
+    };
 
     /**
      * Write int16.
@@ -3764,7 +3770,7 @@ export class BiBaseStreamer {
      */
     writeInt16(value: number, unsigned?: boolean, endian?: endian): void {
         return wint16(this, value, unsigned, endian);
-    }
+    };
 
     /**
      * Write unsigned int16.
@@ -3774,7 +3780,7 @@ export class BiBaseStreamer {
      */
     writeUInt16(value: number, endian?: endian): void {
         return wint16(this, value, true, endian);
-    }
+    };
 
     /**
      * Write unsigned int16.
@@ -3783,7 +3789,7 @@ export class BiBaseStreamer {
      */
     writeUInt16BE(value: number): void {
         return this.writeInt16(value, true, "big");
-    }
+    };
 
     /**
      * Write unsigned int16.
@@ -3792,7 +3798,7 @@ export class BiBaseStreamer {
      */
     writeUInt16LE(value: number): void {
         return this.writeInt16(value, true, "little");
-    }
+    };
 
     /**
      * Write signed int16.
@@ -3801,7 +3807,7 @@ export class BiBaseStreamer {
      */
     writeInt16LE(value: number): void {
         return this.writeInt16(value, false, "little");
-    }
+    };
 
     /**
      * Read unsigned short.
@@ -3812,7 +3818,7 @@ export class BiBaseStreamer {
      */
     readUInt16(endian?: endian): number {
         return this.readInt16(true, endian);
-    }
+    };
 
     /**
      * Read unsigned short in little endian.
@@ -3821,7 +3827,7 @@ export class BiBaseStreamer {
      */
     readUInt16LE(): number {
         return this.readInt16(true, "little");
-    }
+    };
 
     /**
      * Read signed short in little endian.
@@ -3830,7 +3836,7 @@ export class BiBaseStreamer {
      */
     readInt16LE(): number {
         return this.readInt16(false, "little");
-    }
+    };
 
     /**
      * Read unsigned short in big endian.
@@ -3839,7 +3845,7 @@ export class BiBaseStreamer {
      */
     readUInt16BE(): number {
         return this.readInt16(true, "big");
-    }
+    };
 
     /**
     * Read signed short in big endian.
@@ -3848,7 +3854,7 @@ export class BiBaseStreamer {
     */
     readInt16BE(): number {
         return this.readInt16(false, "big");
-    }
+    };
 
     /**
      * Read half float.
@@ -3858,7 +3864,7 @@ export class BiBaseStreamer {
      */
     readHalfFloat(endian?: endian): number {
         return rhalffloat(this, endian);
-    }
+    };
 
     /**
      * Writes half float.
@@ -3868,7 +3874,7 @@ export class BiBaseStreamer {
      */
     writeHalfFloat(value: number, endian?: endian): void {
         return whalffloat(this, value, endian);
-    }
+    };
 
     /**
      * Writes half float.
@@ -3877,7 +3883,7 @@ export class BiBaseStreamer {
      */
     writeHalfFloatBE(value: number): void {
         return this.writeHalfFloat(value, "big");
-    }
+    };
 
     /**
      * Writes half float.
@@ -3886,7 +3892,7 @@ export class BiBaseStreamer {
      */
     writeHalfFloatLE(value: number): void {
         return this.writeHalfFloat(value, "little");
-    }
+    };
 
     /**
     * Read half float.
@@ -3895,7 +3901,7 @@ export class BiBaseStreamer {
     */
     readHalfFloatBE(): number {
         return this.readHalfFloat("big");
-    }
+    };
 
     /**
      * Read half float.
@@ -3904,7 +3910,7 @@ export class BiBaseStreamer {
      */
     readHalfFloatLE(): number {
         return this.readHalfFloat("little");
-    }
+    };
 
     /**
      * Read 32 bit integer.
@@ -3915,7 +3921,7 @@ export class BiBaseStreamer {
      */
     readInt32(unsigned?: boolean, endian?: endian): number {
         return rint32(this, unsigned, endian);
-    }
+    };
 
     /**
      * Write int32.
@@ -3926,7 +3932,7 @@ export class BiBaseStreamer {
      */
     writeInt32(value: number, unsigned?: boolean, endian?: endian): void {
         return wint32(this, value, unsigned, endian);
-    }
+    };
 
     /**
      * Write unsigned int32.
@@ -3936,7 +3942,7 @@ export class BiBaseStreamer {
      */
     writeUInt32(value: number, endian?: endian): void {
         return wint32(this, value, true, endian);
-    }
+    };
 
     /**
      * Write signed int32.
@@ -3945,7 +3951,7 @@ export class BiBaseStreamer {
      */
     writeInt32LE(value: number): void {
         return this.writeInt32(value, false, "little");
-    }
+    };
 
     /**
      * Write unsigned int32.
@@ -3954,7 +3960,7 @@ export class BiBaseStreamer {
      */
     writeUInt32LE(value: number): void {
         return this.writeInt32(value, true, "little");
-    }
+    };
 
     /**
      * Write signed int32.
@@ -3963,7 +3969,7 @@ export class BiBaseStreamer {
      */
     writeInt32BE(value: number): void {
         return this.writeInt32(value, false, "big");
-    }
+    };
 
     /**
      * Read signed 32 bit integer.
@@ -3972,7 +3978,7 @@ export class BiBaseStreamer {
      */
     readInt32BE(): number {
         return this.readInt32(false, "big");
-    }
+    };
 
     /**
      * Read unsigned 32 bit integer.
@@ -3981,7 +3987,7 @@ export class BiBaseStreamer {
      */
     readUInt32BE(): number {
         return this.readInt32(true, "big");
-    }
+    };
 
     /**
      * Read signed 32 bit integer.
@@ -3990,7 +3996,7 @@ export class BiBaseStreamer {
      */
     readInt32LE(): number {
         return this.readInt32(false, "little");
-    }
+    };
 
     /**
      * Read signed 32 bit integer.
@@ -3999,7 +4005,7 @@ export class BiBaseStreamer {
      */
     readUInt32LE(): number {
         return this.readInt32(true, "little");
-    }
+    };
 
     /**
      * Read unsigned 32 bit integer.
@@ -4008,7 +4014,7 @@ export class BiBaseStreamer {
      */
     readUInt(): number {
         return this.readInt32(true);
-    }
+    };
 
     /**
      * Read float.
@@ -4018,7 +4024,7 @@ export class BiBaseStreamer {
      */
     readFloat(endian?: endian): number {
         return rfloat(this, endian);
-    }
+    };
 
     /**
      * Write float.
@@ -4028,7 +4034,7 @@ export class BiBaseStreamer {
      */
     writeFloat(value: number, endian?: endian): void {
         return wfloat(this, value, endian);
-    }
+    };
 
     /**
      * Write float.
@@ -4037,7 +4043,7 @@ export class BiBaseStreamer {
      */
     writeFloatLE(value: number): void {
         return this.writeFloat(value, "little");
-    }
+    };
 
     /**
      * Write float.
@@ -4046,7 +4052,7 @@ export class BiBaseStreamer {
      */
     writeFloatBE(value: number): void {
         return this.writeFloat(value, "big");
-    }
+    };
 
     /**
      * Read float.
@@ -4055,7 +4061,7 @@ export class BiBaseStreamer {
      */
     readFloatBE(): number {
         return this.readFloat("big");
-    }
+    };
 
     /**
      * Read float.
@@ -4064,7 +4070,7 @@ export class BiBaseStreamer {
      */
     readFloatLE(): number {
         return this.readFloat("little");
-    }
+    };
 
     /**
      * Read signed 64 bit integer.
@@ -4077,7 +4083,7 @@ export class BiBaseStreamer {
      */
     readInt64(unsigned?: boolean, endian?: endian): BigValue {
         return rint64(this, unsigned, endian);
-    }
+    };
 
     /**
      * Write 64 bit integer.
@@ -4088,7 +4094,7 @@ export class BiBaseStreamer {
      */
     writeInt64(value: BigValue, unsigned?: boolean, endian?: endian): void {
         return wint64(this, value, unsigned, endian);
-    }
+    };
 
     /**
      * Write unsigned 64 bit integer.
@@ -4098,7 +4104,7 @@ export class BiBaseStreamer {
      */
     writeUInt64(value: BigValue, endian?: endian) {
         return this.writeInt64(value, true, endian);
-    }
+    };
 
     /**
      * Write signed 64 bit integer.
@@ -4107,7 +4113,7 @@ export class BiBaseStreamer {
      */
     writeInt64LE(value: BigValue): void {
         return this.writeInt64(value, false, "little");
-    }
+    };
 
     /**
      * Write unsigned 64 bit integer.
@@ -4116,7 +4122,7 @@ export class BiBaseStreamer {
      */
     writeUInt64LE(value: BigValue): void {
         return this.writeInt64(value, true, "little");
-    }
+    };
 
     /**
      * Write signed 64 bit integer.
@@ -4125,7 +4131,7 @@ export class BiBaseStreamer {
      */
     writeInt64BE(value: BigValue): void {
         return this.writeInt64(value, false, "big");
-    }
+    };
 
     /**
      * Write unsigned 64 bit integer.
@@ -4134,7 +4140,7 @@ export class BiBaseStreamer {
      */
     writeUInt64BE(value: BigValue): void {
         return this.writeInt64(value, true, "big");
-    }
+    };
 
     /**
      * Read unsigned 64 bit integer.
@@ -4145,7 +4151,7 @@ export class BiBaseStreamer {
      */
     readUInt64(): BigValue {
         return this.readInt64(true);
-    }
+    };
 
     /**
      * Read signed 64 bit integer.
@@ -4156,7 +4162,7 @@ export class BiBaseStreamer {
      */
     readInt64BE(): BigValue {
         return this.readInt64(false, "big");
-    }
+    };
 
     /**
      * Read unsigned 64 bit integer.
@@ -4167,7 +4173,7 @@ export class BiBaseStreamer {
      */
     readUInt64BE(): BigValue {
         return this.readInt64(true, "big");
-    }
+    };
 
     /**
      * Read signed 64 bit integer.
@@ -4178,7 +4184,7 @@ export class BiBaseStreamer {
      */
     readInt64LE(): BigValue {
         return this.readInt64(false, "little");
-    }
+    };
 
     /**
      * Read unsigned 64 bit integer.
@@ -4189,7 +4195,7 @@ export class BiBaseStreamer {
      */
     readUInt64LE(): BigValue {
         return this.readInt64(true, "little");
-    }
+    };
 
     /**
      * Read double float.
@@ -4199,7 +4205,7 @@ export class BiBaseStreamer {
      */
     readDoubleFloat(endian?: endian): number {
         return rdfloat(this, endian);
-    }
+    };
 
     /**
      * Writes double float.
@@ -4209,7 +4215,7 @@ export class BiBaseStreamer {
      */
     writeDoubleFloat(value: number, endian?: endian): void {
         return wdfloat(this, value, endian);
-    }
+    };
 
     /**
      * Writes double float.
@@ -4218,7 +4224,7 @@ export class BiBaseStreamer {
      */
     writeDoubleFloatBE(value: number): void {
         return this.writeDoubleFloat(value, "big");
-    }
+    };
 
     /**
      * Writes double float.
@@ -4227,7 +4233,7 @@ export class BiBaseStreamer {
      */
     writeDoubleFloatLE(value: number): void {
         return this.writeDoubleFloat(value, "little");
-    }
+    };
 
     /**
      * Read double float.
@@ -4236,7 +4242,7 @@ export class BiBaseStreamer {
      */
     readDoubleFloatBE(): number {
         return this.readDoubleFloat("big");
-    }
+    };
 
     /**
      * Read double float.
@@ -4245,7 +4251,7 @@ export class BiBaseStreamer {
      */
     readDoubleFloatLE(): number {
         return this.readDoubleFloat("little");
-    }
+    };
 
     /**
     * Reads string, use options object for different types.
@@ -4261,7 +4267,7 @@ export class BiBaseStreamer {
     */
     readString(options?: stringOptions): string {
         return rstring(this, options);
-    }
+    };
 
     /**
     * Writes string, use options object for different types.
@@ -4277,5 +4283,5 @@ export class BiBaseStreamer {
     */
     writeString(string: string, options?: stringOptions): void {
         return wstring(this, string, options);
-    }
+    };
 };

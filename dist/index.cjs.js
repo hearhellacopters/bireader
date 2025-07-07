@@ -1,26 +1,7 @@
 'use strict';
 
 var fs = require('node:fs');
-var buff = require('node:buffer');
-
-function _interopNamespaceDefault(e) {
-    var n = Object.create(null);
-    if (e) {
-        Object.keys(e).forEach(function (k) {
-            if (k !== 'default') {
-                var d = Object.getOwnPropertyDescriptor(e, k);
-                Object.defineProperty(n, k, d.get ? d : {
-                    enumerable: true,
-                    get: function () { return e[k]; }
-                });
-            }
-        });
-    }
-    n.default = e;
-    return Object.freeze(n);
-}
-
-var buff__namespace = /*#__PURE__*/_interopNamespaceDefault(buff);
+var node_buffer = require('node:buffer');
 
 const MIN_SAFE = BigInt(Number.MIN_SAFE_INTEGER);
 const MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
@@ -1787,6 +1768,7 @@ class BiBase {
         this.maxFileSize = null;
         this.enforceBigInt = false;
     }
+    ;
     /**
      * Settings for when using .str
      *
@@ -1802,6 +1784,7 @@ class BiBase {
         this.strDefaults.stripNull = settings.stripNull;
         this.strDefaults.terminateValue = settings.terminateValue;
     }
+    ;
     /**
      * Enables expanding in reader (changes strict)
      *
@@ -1817,30 +1800,35 @@ class BiBase {
             return;
         }
     }
+    ;
     /**
      * Dummy function, not needed on Non-Stream
      */
     open() {
         return this.size;
     }
+    ;
     /**
      * Dummy function, not needed on Non-Stream
      */
     updateSize() {
         this.return;
     }
+    ;
     /**
      * removes data.
      */
     close() {
         this.data = undefined;
     }
+    ;
     /**
      * Dummy function, not needed on Non-Stream
      */
     read(start, length, consume = false) {
         return this.lift(start, start + length, consume);
     }
+    ;
     /**
      * Dummy function, not needed on Non-Stream
      */
@@ -1848,28 +1836,34 @@ class BiBase {
         this.insert(data, consume, start);
         return data.length;
     }
+    ;
     /**
      * Dummy function, not needed on Non-Stream
      */
     renameFile() {
     }
+    ;
     /**
      * Dummy function, not needed on Non-Stream
      */
     deleteFile() {
     }
+    ;
     /**
      * Dummy function, not needed on Non-Stream
      */
     commit(consume = true) {
         return consume ? 0 : 1;
     }
+    ;
     extendArray(to_padd) {
         return extendarray(this, to_padd);
     }
+    ;
     isBufferOrUint8Array(obj) {
         return arraybuffcheck(obj);
     }
+    ;
     ///////////////////////////////
     //         ENDIANNESS        //
     ///////////////////////////////
@@ -1890,42 +1884,49 @@ class BiBase {
         }
         this.endian = endian;
     }
+    ;
     /**
      * Sets endian to big.
      */
     bigEndian() {
         this.endianness("big");
     }
+    ;
     /**
      * Sets endian to big.
      */
     big() {
         this.endianness("big");
     }
+    ;
     /**
      * Sets endian to big.
      */
     be() {
         this.endianness("big");
     }
+    ;
     /**
      * Sets endian to little.
      */
     littleEndian() {
         this.endianness("little");
     }
+    ;
     /**
      * Sets endian to little.
      */
     little() {
         this.endianness("little");
     }
+    ;
     /**
      * Sets endian to little.
      */
     le() {
         this.endianness("little");
     }
+    ;
     ///////////////////////////////
     //            SIZE           //
     ///////////////////////////////
@@ -1937,6 +1938,7 @@ class BiBase {
     get length() {
         return this.size;
     }
+    ;
     /**
      * Size in bytes of the current buffer.
      *
@@ -1945,6 +1947,7 @@ class BiBase {
     get len() {
         return this.size;
     }
+    ;
     /**
      * Size in bytes of the current buffer.
      *
@@ -1953,6 +1956,7 @@ class BiBase {
     get FileSize() {
         return this.size;
     }
+    ;
     /**
      * Size in bits of the current buffer.
      *
@@ -1961,6 +1965,7 @@ class BiBase {
     get lengthB() {
         return this.sizeB;
     }
+    ;
     /**
      * Size in bits of the current buffer.
      *
@@ -1969,6 +1974,7 @@ class BiBase {
     get FileSizeB() {
         return this.sizeB;
     }
+    ;
     /**
      * Size in bits of the current buffer.
      *
@@ -1977,6 +1983,7 @@ class BiBase {
     get lenb() {
         return this.sizeB;
     }
+    ;
     ///////////////////////////////
     //         POSITION          //
     ///////////////////////////////
@@ -1988,6 +1995,7 @@ class BiBase {
     get tell() {
         return this.offset;
     }
+    ;
     /**
      * Get the current byte position.
      *
@@ -1996,6 +2004,7 @@ class BiBase {
     get FTell() {
         return this.offset;
     }
+    ;
     /**
      * Get the current byte position.
      *
@@ -2004,6 +2013,7 @@ class BiBase {
     get getOffset() {
         return this.offset;
     }
+    ;
     /**
      * Get the current byte position;
      *
@@ -2012,6 +2022,7 @@ class BiBase {
     get saveOffset() {
         return this.offset;
     }
+    ;
     /**
      * Get the current byte position;
      *
@@ -2020,6 +2031,7 @@ class BiBase {
     get off() {
         return this.offset;
     }
+    ;
     /**
      * Get the current bit position (0-7).
      *
@@ -2028,6 +2040,7 @@ class BiBase {
     get getOffsetBit() {
         return this.bitoffset;
     }
+    ;
     /**
      * Get the current bit position (0-7).
      *
@@ -2036,6 +2049,7 @@ class BiBase {
     get tellB() {
         return this.bitoffset;
     }
+    ;
     /**
      * Get the current bit position (0-7).
      *
@@ -2044,6 +2058,7 @@ class BiBase {
     get FTellB() {
         return this.bitoffset;
     }
+    ;
     /**
      * Get the current bit position (0-7).
      *
@@ -2052,6 +2067,7 @@ class BiBase {
     get offb() {
         return this.bitoffset;
     }
+    ;
     /**
      * Get the current absolute bit position (from start of data).
      *
@@ -2060,6 +2076,7 @@ class BiBase {
     get getOffsetAbsBit() {
         return (this.offset * 8) + this.bitoffset;
     }
+    ;
     /**
      * Get the current absolute bit position (from start of data).
      *
@@ -2068,6 +2085,7 @@ class BiBase {
     get saveOffsetAbsBit() {
         return (this.offset * 8) + this.bitoffset;
     }
+    ;
     /**
      * Get the current absolute bit position (from start of data).
      *
@@ -2076,6 +2094,7 @@ class BiBase {
     get tellAbsB() {
         return (this.offset * 8) + this.bitoffset;
     }
+    ;
     /**
      * Get the current absolute bit position (from start of data).
      *
@@ -2084,6 +2103,7 @@ class BiBase {
     get saveOffsetBit() {
         return (this.offset * 8) + this.bitoffset;
     }
+    ;
     /**
      * Get the current absolute bit position (from start of data).
      *
@@ -2092,6 +2112,7 @@ class BiBase {
     get offab() {
         return (this.offset * 8) + this.bitoffset;
     }
+    ;
     /**
      * Size in bytes of current read position to the end
      *
@@ -2100,6 +2121,7 @@ class BiBase {
     get remain() {
         return this.size - this.offset;
     }
+    ;
     /**
      * Size in bytes of current read position to the end
      *
@@ -2108,6 +2130,7 @@ class BiBase {
     get FEoF() {
         return this.size - this.offset;
     }
+    ;
     /**
      * Size in bits of current read position to the end
      *
@@ -2116,6 +2139,7 @@ class BiBase {
     get remainB() {
         return (this.size * 8) - this.saveOffsetAbsBit;
     }
+    ;
     /**
      * Size in bits of current read position to the end
      *
@@ -2124,6 +2148,7 @@ class BiBase {
     get FEoFB() {
         return (this.size * 8) - this.saveOffsetAbsBit;
     }
+    ;
     /**
      * Row line of the file (16 bytes per row).
      *
@@ -2132,6 +2157,7 @@ class BiBase {
     get getLine() {
         return Math.abs(Math.floor((this.offset - 1) / 16));
     }
+    ;
     /**
      * Row line of the file (16 bytes per row).
      *
@@ -2140,6 +2166,7 @@ class BiBase {
     get row() {
         return Math.abs(Math.floor((this.offset - 1) / 16));
     }
+    ;
     ///////////////////////////////
     //        FINISHING          //
     ///////////////////////////////
@@ -2158,6 +2185,7 @@ class BiBase {
         }
         return this.data;
     }
+    ;
     /**
      * Returns current data.
      *
@@ -2173,6 +2201,7 @@ class BiBase {
         }
         return this.data;
     }
+    ;
     /**
     * Creates hex dump string. Will console log or return string if set in options.
     *
@@ -2186,18 +2215,21 @@ class BiBase {
     hexdump(options = {}) {
         return hexDumpBase(this, options);
     }
+    ;
     /**
      * Turn hexdump on error off (default on).
      */
     errorDumpOff() {
         this.errorDump = false;
     }
+    ;
     /**
      * Turn hexdump on error on (default on).
      */
     errorDumpOn() {
         this.errorDump = true;
     }
+    ;
     ///////////////////////////////
     //       STRICTMODE          //
     ///////////////////////////////
@@ -2207,30 +2239,35 @@ class BiBase {
     restrict() {
         this.strict = true;
     }
+    ;
     /**
      * Allows extending data if position is outside of max size.
      */
     unrestrict() {
         this.strict = false;
     }
+    ;
     /**
      * removes data.
      */
     end() {
         this.data = undefined;
     }
+    ;
     /**
      * removes data.
      */
     done() {
         this.data = undefined;
     }
+    ;
     /**
      * removes data.
      */
     finished() {
         this.data = undefined;
     }
+    ;
     ///////////////////////////////
     //          FIND             //
     ///////////////////////////////
@@ -2246,6 +2283,7 @@ class BiBase {
     findString(string) {
         return fString$1(this, string);
     }
+    ;
     /**
      * Searches for byte value (can be signed or unsigned) position from current read position.
      *
@@ -2260,6 +2298,7 @@ class BiBase {
     findByte(value, unsigned, endian) {
         return fNumber$1(this, value, 8, unsigned == undefined ? true : unsigned, endian);
     }
+    ;
     /**
      * Searches for short value (can be signed or unsigned) position from current read position.
      *
@@ -2274,6 +2313,7 @@ class BiBase {
     findShort(value, unsigned, endian) {
         return fNumber$1(this, value, 16, unsigned == undefined ? true : unsigned, endian);
     }
+    ;
     /**
      * Searches for integer value (can be signed or unsigned) position from current read position.
      *
@@ -2288,6 +2328,7 @@ class BiBase {
     findInt(value, unsigned, endian) {
         return fNumber$1(this, value, 32, unsigned == undefined ? true : unsigned, endian);
     }
+    ;
     /**
      * Searches for 64 bit value (can be signed or unsigned) position from current read position.
      *
@@ -2302,6 +2343,7 @@ class BiBase {
     findInt64(value, unsigned, endian) {
         return fBigInt$1(this, value, unsigned == undefined ? true : unsigned, endian);
     }
+    ;
     /**
      * Searches for half float value position from current read position.
      *
@@ -2315,6 +2357,7 @@ class BiBase {
     findHalfFloat(value, endian) {
         return fHalfFloat$1(this, value, endian);
     }
+    ;
     /**
      * Searches for float value position from current read position.
      *
@@ -2328,6 +2371,7 @@ class BiBase {
     findFloat(value, endian) {
         return fFloat$1(this, value, endian);
     }
+    ;
     /**
      * Searches for double float value position from current read position.
      *
@@ -2341,6 +2385,7 @@ class BiBase {
     findDoubleFloat(value, endian) {
         return fDoubleFloat$1(this, value, endian);
     }
+    ;
     ///////////////////////////////
     //        MOVE TO            //
     ///////////////////////////////
@@ -2354,6 +2399,7 @@ class BiBase {
     align(number) {
         return align$1(this, number);
     }
+    ;
     /**
      * Reverse aligns current byte position.
      *
@@ -2364,6 +2410,7 @@ class BiBase {
     alignRev(number) {
         return alignRev$1(this, number);
     }
+    ;
     /**
      * Offset current byte or bit position.
      *
@@ -2375,6 +2422,7 @@ class BiBase {
     skip(bytes, bits) {
         return skip$1(this, bytes, bits);
     }
+    ;
     /**
     * Offset current byte or bit position.
     *
@@ -2386,6 +2434,7 @@ class BiBase {
     jump(bytes, bits) {
         this.skip(bytes, bits);
     }
+    ;
     /**
      * Change position directly to address.
      *
@@ -2397,6 +2446,7 @@ class BiBase {
     FSeek(byte, bit) {
         return goto$1(this, byte, bit);
     }
+    ;
     /**
      * Offset current byte or bit position.
      *
@@ -2408,6 +2458,7 @@ class BiBase {
     seek(bytes, bits) {
         return this.skip(bytes, bits);
     }
+    ;
     /**
      * Change position directly to address.
      *
@@ -2419,6 +2470,7 @@ class BiBase {
     goto(byte, bit) {
         return goto$1(this, byte, bit);
     }
+    ;
     /**
      * Change position directly to address.
      *
@@ -2430,6 +2482,7 @@ class BiBase {
     pointer(byte, bit) {
         return this.goto(byte, bit);
     }
+    ;
     /**
      * Change position directly to address.
      *
@@ -2441,6 +2494,7 @@ class BiBase {
     warp(byte, bit) {
         return this.goto(byte, bit);
     }
+    ;
     /**
      * Set byte and bit position to start of data.
      */
@@ -2448,12 +2502,14 @@ class BiBase {
         this.offset = 0;
         this.bitoffset = 0;
     }
+    ;
     /**
      * Set byte and bit position to start of data.
      */
     gotoStart() {
         return this.rewind();
     }
+    ;
     /**
      * Set current byte and bit position to end of data.
      */
@@ -2461,6 +2517,7 @@ class BiBase {
         this.offset = this.size;
         this.bitoffset = 0;
     }
+    ;
     /**
      * Set current byte and bit position to end of data.
      */
@@ -2468,6 +2525,7 @@ class BiBase {
         this.offset = this.size;
         this.bitoffset = 0;
     }
+    ;
     /**
      * Set byte and bit position to start of data.
      */
@@ -2475,6 +2533,7 @@ class BiBase {
         this.offset = this.size;
         this.bitoffset = 0;
     }
+    ;
     ///////////////////////////////
     //         REMOVE            //
     ///////////////////////////////
@@ -2491,6 +2550,7 @@ class BiBase {
     delete(startOffset, endOffset, consume) {
         return remove$1(this, startOffset || 0, endOffset || this.offset, consume || false, true);
     }
+    ;
     /**
      * Deletes part of data from current byte position to end, returns removed.
      *
@@ -2501,6 +2561,7 @@ class BiBase {
     clip() {
         return remove$1(this, this.offset, this.size, false, true);
     }
+    ;
     /**
      * Deletes part of data from current byte position to end, returns removed.
      *
@@ -2511,6 +2572,7 @@ class BiBase {
     trim() {
         return remove$1(this, this.offset, this.size, false, true);
     }
+    ;
     /**
      * Deletes part of data from current byte position to supplied length, returns removed.
      *
@@ -2523,6 +2585,7 @@ class BiBase {
     crop(length, consume) {
         return remove$1(this, this.offset, this.offset + (length || 0), consume || false, true);
     }
+    ;
     /**
      * Deletes part of data from current position to supplied length, returns removed.
      *
@@ -2535,6 +2598,7 @@ class BiBase {
     drop(length, consume) {
         return remove$1(this, this.offset, this.offset + (length || 0), consume || false, true);
     }
+    ;
     /**
      * Replaces data in data.
      *
@@ -2547,6 +2611,7 @@ class BiBase {
     replace(data, consume, offset) {
         return addData$1(this, data, consume || false, offset || this.offset, true);
     }
+    ;
     /**
      * Replaces data in data.
      *
@@ -2559,6 +2624,7 @@ class BiBase {
     overwrite(data, consume, offset) {
         return addData$1(this, data, consume || false, offset || this.offset, true);
     }
+    ;
     ///////////////////////////////
     //        COPY OUT           //
     ///////////////////////////////
@@ -2574,6 +2640,7 @@ class BiBase {
     lift(startOffset, endOffset, consume, fillValue) {
         return remove$1(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
     }
+    ;
     /**
      * Returns part of data from current byte position to end of data unless supplied.
      *
@@ -2586,6 +2653,7 @@ class BiBase {
     fill(startOffset, endOffset, consume, fillValue) {
         return remove$1(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
     }
+    ;
     /**
      * Extract data from current position to length supplied.
      *
@@ -2598,6 +2666,7 @@ class BiBase {
     extract(length, consume) {
         return remove$1(this, this.offset, this.offset + (length || 0), consume || false, false);
     }
+    ;
     /**
      * Extract data from current position to length supplied.
      *
@@ -2610,6 +2679,7 @@ class BiBase {
     slice(length, consume) {
         return remove$1(this, this.offset, this.offset + (length || 0), consume || false, false);
     }
+    ;
     /**
      * Extract data from current position to length supplied.
      *
@@ -2622,6 +2692,7 @@ class BiBase {
     wrap(length, consume) {
         return remove$1(this, this.offset, this.offset + (length || 0), consume || false, false);
     }
+    ;
     ///////////////////////////////
     //          INSERT           //
     ///////////////////////////////
@@ -2637,6 +2708,7 @@ class BiBase {
     insert(data, consume, offset) {
         return addData$1(this, data, consume || false, offset || this.offset, false);
     }
+    ;
     /**
      * Inserts data into data.
      *
@@ -2649,6 +2721,7 @@ class BiBase {
     place(data, consume, offset) {
         return addData$1(this, data, consume || false, offset || this.offset, false);
     }
+    ;
     /**
      * Adds data to start of supplied data.
      *
@@ -2660,6 +2733,7 @@ class BiBase {
     unshift(data, consume) {
         return addData$1(this, data, consume || false, 0, false);
     }
+    ;
     /**
      * Adds data to start of supplied data.
      *
@@ -2671,6 +2745,7 @@ class BiBase {
     prepend(data, consume) {
         return addData$1(this, data, consume || false, 0, false);
     }
+    ;
     /**
      * Adds data to end of supplied data.
      *
@@ -2682,6 +2757,7 @@ class BiBase {
     push(data, consume) {
         return addData$1(this, data, consume || false, this.size, false);
     }
+    ;
     /**
      * Adds data to end of supplied data.
      *
@@ -2693,6 +2769,7 @@ class BiBase {
     append(data, consume) {
         return addData$1(this, data, consume || false, this.size, false);
     }
+    ;
     ///////////////////////////////
     //          MATH             //
     ///////////////////////////////
@@ -2716,6 +2793,7 @@ class BiBase {
         }
         return XOR$1(this, xorKey, startOffset || this.offset, endOffset || this.size, consume || false);
     }
+    ;
     /**
      * XOR data.
      *
@@ -2742,6 +2820,7 @@ class BiBase {
         }
         return XOR$1(this, XORKey, this.offset, this.offset + Length, consume || false);
     }
+    ;
     /**
      * OR data
      *
@@ -2762,6 +2841,7 @@ class BiBase {
         }
         return OR$1(this, orKey, startOffset || this.offset, endOffset || this.size, consume || false);
     }
+    ;
     /**
      * OR data.
      *
@@ -2788,6 +2868,7 @@ class BiBase {
         }
         return OR$1(this, ORKey, this.offset, this.offset + Length, consume || false);
     }
+    ;
     /**
      * AND data.
      *
@@ -2808,6 +2889,7 @@ class BiBase {
         }
         return AND$1(this, andKey, startOffset || this.offset, endOffset || this.size, consume || false);
     }
+    ;
     /**
      * AND data.
      *
@@ -2834,6 +2916,7 @@ class BiBase {
         }
         return AND$1(this, ANDKey, this.offset, this.offset + Length, consume || false);
     }
+    ;
     /**
      * Add value to data.
      *
@@ -2854,6 +2937,7 @@ class BiBase {
         }
         return ADD$1(this, addedKey, startOffset || this.offset, endOffset || this.size, consume || false);
     }
+    ;
     /**
      * Add value to data.
      *
@@ -2880,6 +2964,7 @@ class BiBase {
         }
         return ADD$1(this, AddedKey, this.offset, this.offset + Length, consume || false);
     }
+    ;
     /**
      * Not data.
      *
@@ -2890,6 +2975,7 @@ class BiBase {
     not(startOffset, endOffset, consume) {
         return NOT$1(this, startOffset || this.offset, endOffset || this.size, consume || false);
     }
+    ;
     /**
      * Not data.
      *
@@ -2899,6 +2985,7 @@ class BiBase {
     notThis(length, consume) {
         return NOT$1(this, this.offset, this.offset + (length || 1), consume || false);
     }
+    ;
     /**
      * Left shift data.
      *
@@ -2919,6 +3006,7 @@ class BiBase {
         }
         return LSHIFT$1(this, lShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
     }
+    ;
     /**
      * Left shift data.
      *
@@ -2945,6 +3033,7 @@ class BiBase {
         }
         return LSHIFT$1(this, shiftKey, this.offset, this.offset + Length, consume || false);
     }
+    ;
     /**
      * Right shift data.
      *
@@ -2965,6 +3054,7 @@ class BiBase {
         }
         return RSHIFT$1(this, rShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
     }
+    ;
     /**
      * Right shift data.
      *
@@ -2991,6 +3081,7 @@ class BiBase {
         }
         return RSHIFT$1(this, lShiftKey, this.offset, this.offset + Length, consume || false);
     }
+    ;
     ///////////////////////////////
     //        BIT READER         //
     ///////////////////////////////
@@ -3008,6 +3099,7 @@ class BiBase {
     writeBit(value, bits, unsigned, endian) {
         return wbit$1(this, value, bits, unsigned, endian);
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -3020,6 +3112,7 @@ class BiBase {
     writeUBitBE(value, bits) {
         return wbit$1(this, value, bits, true, "big");
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -3033,6 +3126,7 @@ class BiBase {
     writeBitBE(value, bits, unsigned) {
         return wbit$1(this, value, bits, unsigned, "big");
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -3045,6 +3139,7 @@ class BiBase {
     writeUBitLE(value, bits) {
         return wbit$1(this, value, bits, true, "little");
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -3058,6 +3153,7 @@ class BiBase {
     writeBitLE(value, bits, unsigned) {
         return wbit$1(this, value, bits, unsigned, "little");
     }
+    ;
     /**
      * Bit field reader.
      *
@@ -3071,6 +3167,7 @@ class BiBase {
     readBit(bits, unsigned, endian) {
         return rbit$1(this, bits, unsigned, endian);
     }
+    ;
     /**
      * Bit field reader.
      *
@@ -3082,6 +3179,7 @@ class BiBase {
     readUBitBE(bits) {
         return this.readBit(bits, true, "big");
     }
+    ;
     /**
      * Bit field reader.
      *
@@ -3094,6 +3192,7 @@ class BiBase {
     readBitBE(bits, unsigned) {
         return this.readBit(bits, unsigned, "big");
     }
+    ;
     /**
      * Bit field reader.
      *
@@ -3105,6 +3204,7 @@ class BiBase {
     readUBitLE(bits) {
         return this.readBit(bits, true, "little");
     }
+    ;
     /**
      * Bit field reader.
      *
@@ -3117,6 +3217,7 @@ class BiBase {
     readBitLE(bits, unsigned) {
         return this.readBit(bits, unsigned, "little");
     }
+    ;
     /**
      * Read byte.
      *
@@ -3126,6 +3227,7 @@ class BiBase {
     readByte(unsigned) {
         return rbyte$1(this, unsigned);
     }
+    ;
     /**
      * Read multiple bytes.
      *
@@ -3136,6 +3238,7 @@ class BiBase {
     readBytes(amount, unsigned) {
         return Array.from({ length: amount }, () => rbyte$1(this, unsigned));
     }
+    ;
     /**
      * Write byte.
      *
@@ -3145,6 +3248,7 @@ class BiBase {
     writeByte(value, unsigned) {
         return wbyte$1(this, value, unsigned);
     }
+    ;
     /**
      * Write multiple bytes.
      *
@@ -3156,6 +3260,7 @@ class BiBase {
             wbyte$1(this, values[i], unsigned);
         }
     }
+    ;
     /**
      * Write unsigned byte.
      *
@@ -3164,6 +3269,7 @@ class BiBase {
     writeUByte(value) {
         return wbyte$1(this, value, true);
     }
+    ;
     /**
      * Read unsigned byte.
      *
@@ -3172,6 +3278,7 @@ class BiBase {
     readUByte() {
         return this.readByte(true);
     }
+    ;
     /**
      * Read short.
      *
@@ -3182,6 +3289,7 @@ class BiBase {
     readInt16(unsigned, endian) {
         return rint16$1(this, unsigned, endian);
     }
+    ;
     /**
      * Write int16.
      *
@@ -3192,6 +3300,7 @@ class BiBase {
     writeInt16(value, unsigned, endian) {
         return wint16$1(this, value, unsigned, endian);
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -3201,6 +3310,7 @@ class BiBase {
     writeUInt16(value, endian) {
         return wint16$1(this, value, true, endian);
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -3209,6 +3319,7 @@ class BiBase {
     writeUInt16BE(value) {
         return this.writeInt16(value, true, "big");
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -3217,6 +3328,7 @@ class BiBase {
     writeUInt16LE(value) {
         return this.writeInt16(value, true, "little");
     }
+    ;
     /**
      * Write signed int16.
      *
@@ -3225,6 +3337,7 @@ class BiBase {
     writeInt16LE(value) {
         return this.writeInt16(value, false, "little");
     }
+    ;
     /**
      * Read unsigned short.
      *
@@ -3235,6 +3348,7 @@ class BiBase {
     readUInt16(endian) {
         return this.readInt16(true, endian);
     }
+    ;
     /**
      * Read unsigned short in little endian.
      *
@@ -3243,6 +3357,7 @@ class BiBase {
     readUInt16LE() {
         return this.readInt16(true, "little");
     }
+    ;
     /**
      * Read signed short in little endian.
      *
@@ -3251,6 +3366,7 @@ class BiBase {
     readInt16LE() {
         return this.readInt16(false, "little");
     }
+    ;
     /**
      * Read unsigned short in big endian.
      *
@@ -3259,6 +3375,7 @@ class BiBase {
     readUInt16BE() {
         return this.readInt16(true, "big");
     }
+    ;
     /**
     * Read signed short in big endian.
     *
@@ -3267,6 +3384,7 @@ class BiBase {
     readInt16BE() {
         return this.readInt16(false, "big");
     }
+    ;
     /**
      * Read half float.
      *
@@ -3276,6 +3394,7 @@ class BiBase {
     readHalfFloat(endian) {
         return rhalffloat$1(this, endian);
     }
+    ;
     /**
      * Writes half float.
      *
@@ -3285,6 +3404,7 @@ class BiBase {
     writeHalfFloat(value, endian) {
         return whalffloat$1(this, value, endian);
     }
+    ;
     /**
      * Writes half float.
      *
@@ -3293,6 +3413,7 @@ class BiBase {
     writeHalfFloatBE(value) {
         return this.writeHalfFloat(value, "big");
     }
+    ;
     /**
      * Writes half float.
      *
@@ -3301,6 +3422,7 @@ class BiBase {
     writeHalfFloatLE(value) {
         return this.writeHalfFloat(value, "little");
     }
+    ;
     /**
     * Read half float.
     *
@@ -3309,6 +3431,7 @@ class BiBase {
     readHalfFloatBE() {
         return this.readHalfFloat("big");
     }
+    ;
     /**
      * Read half float.
      *
@@ -3317,6 +3440,7 @@ class BiBase {
     readHalfFloatLE() {
         return this.readHalfFloat("little");
     }
+    ;
     /**
      * Read 32 bit integer.
      *
@@ -3327,6 +3451,7 @@ class BiBase {
     readInt32(unsigned, endian) {
         return rint32$1(this, unsigned, endian);
     }
+    ;
     /**
      * Write int32.
      *
@@ -3337,6 +3462,7 @@ class BiBase {
     writeInt32(value, unsigned, endian) {
         return wint32$1(this, value, unsigned, endian);
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -3346,6 +3472,7 @@ class BiBase {
     writeUInt32(value, endian) {
         return wint32$1(this, value, true, endian);
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -3354,6 +3481,7 @@ class BiBase {
     writeInt32LE(value) {
         return this.writeInt32(value, false, "little");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -3362,6 +3490,7 @@ class BiBase {
     writeUInt32LE(value) {
         return this.writeInt32(value, true, "little");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -3370,6 +3499,7 @@ class BiBase {
     writeInt32BE(value) {
         return this.writeInt32(value, false, "big");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -3378,6 +3508,7 @@ class BiBase {
     readInt32BE() {
         return this.readInt32(false, "big");
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -3386,6 +3517,7 @@ class BiBase {
     readUInt32BE() {
         return this.readInt32(true, "big");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -3394,6 +3526,7 @@ class BiBase {
     readInt32LE() {
         return this.readInt32(false, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -3402,6 +3535,7 @@ class BiBase {
     readUInt32LE() {
         return this.readInt32(true, "little");
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -3410,6 +3544,7 @@ class BiBase {
     readUInt() {
         return this.readInt32(true);
     }
+    ;
     /**
      * Read float.
      *
@@ -3419,6 +3554,7 @@ class BiBase {
     readFloat(endian) {
         return rfloat$1(this, endian);
     }
+    ;
     /**
      * Write float.
      *
@@ -3428,6 +3564,7 @@ class BiBase {
     writeFloat(value, endian) {
         return wfloat$1(this, value, endian);
     }
+    ;
     /**
      * Write float.
      *
@@ -3436,6 +3573,7 @@ class BiBase {
     writeFloatLE(value) {
         return this.writeFloat(value, "little");
     }
+    ;
     /**
      * Write float.
      *
@@ -3444,6 +3582,7 @@ class BiBase {
     writeFloatBE(value) {
         return this.writeFloat(value, "big");
     }
+    ;
     /**
      * Read float.
      *
@@ -3452,6 +3591,7 @@ class BiBase {
     readFloatBE() {
         return this.readFloat("big");
     }
+    ;
     /**
      * Read float.
      *
@@ -3460,6 +3600,7 @@ class BiBase {
     readFloatLE() {
         return this.readFloat("little");
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -3472,6 +3613,7 @@ class BiBase {
     readInt64(unsigned, endian) {
         return rint64$1(this, unsigned, endian);
     }
+    ;
     /**
      * Write 64 bit integer.
      *
@@ -3482,6 +3624,7 @@ class BiBase {
     writeInt64(value, unsigned, endian) {
         return wint64$1(this, value, unsigned, endian);
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -3491,6 +3634,7 @@ class BiBase {
     writeUInt64(value, endian) {
         return this.writeInt64(value, true, endian);
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -3499,6 +3643,7 @@ class BiBase {
     writeInt64LE(value) {
         return this.writeInt64(value, false, "little");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -3507,6 +3652,7 @@ class BiBase {
     writeUInt64LE(value) {
         return this.writeInt64(value, true, "little");
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -3515,6 +3661,7 @@ class BiBase {
     writeInt64BE(value) {
         return this.writeInt64(value, false, "big");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -3523,6 +3670,7 @@ class BiBase {
     writeUInt64BE(value) {
         return this.writeInt64(value, true, "big");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -3533,6 +3681,7 @@ class BiBase {
     readUInt64() {
         return this.readInt64(true);
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -3543,6 +3692,7 @@ class BiBase {
     readInt64BE() {
         return this.readInt64(false, "big");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -3553,6 +3703,7 @@ class BiBase {
     readUInt64BE() {
         return this.readInt64(true, "big");
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -3563,6 +3714,7 @@ class BiBase {
     readInt64LE() {
         return this.readInt64(false, "little");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -3573,6 +3725,7 @@ class BiBase {
     readUInt64LE() {
         return this.readInt64(true, "little");
     }
+    ;
     /**
      * Read double float.
      *
@@ -3582,6 +3735,7 @@ class BiBase {
     readDoubleFloat(endian) {
         return rdfloat$1(this, endian);
     }
+    ;
     /**
      * Writes double float.
      *
@@ -3591,6 +3745,7 @@ class BiBase {
     writeDoubleFloat(value, endian) {
         return wdfloat$1(this, value, endian);
     }
+    ;
     /**
      * Writes double float.
      *
@@ -3599,6 +3754,7 @@ class BiBase {
     writeDoubleFloatBE(value) {
         return this.writeDoubleFloat(value, "big");
     }
+    ;
     /**
      * Writes double float.
      *
@@ -3607,6 +3763,7 @@ class BiBase {
     writeDoubleFloatLE(value) {
         return this.writeDoubleFloat(value, "little");
     }
+    ;
     /**
      * Read double float.
      *
@@ -3615,6 +3772,7 @@ class BiBase {
     readDoubleFloatBE() {
         return this.readDoubleFloat("big");
     }
+    ;
     /**
      * Read double float.
      *
@@ -3623,6 +3781,7 @@ class BiBase {
     readDoubleFloatLE() {
         return this.readDoubleFloat("little");
     }
+    ;
     /**
     * Reads string, use options object for different types.
     *
@@ -3638,6 +3797,7 @@ class BiBase {
     readString(options) {
         return rstring$1(this, options);
     }
+    ;
     /**
     * Writes string, use options object for different types.
     *
@@ -3653,6 +3813,7 @@ class BiBase {
     writeString(string, options) {
         return wstring$1(this, string, options);
     }
+    ;
 }
 
 /**
@@ -3740,6 +3901,7 @@ class BiReader extends BiBase {
             }
         }
     }
+    ;
     //
     // Bit Aliases
     //
@@ -3756,6 +3918,7 @@ class BiReader extends BiBase {
     bit(bits, unsigned, endian) {
         return this.readBit(bits, unsigned, endian);
     }
+    ;
     /**
      * Bit field reader. Unsigned read.
      *
@@ -3768,6 +3931,7 @@ class BiReader extends BiBase {
     ubit(bits, endian) {
         return this.readBit(bits, true, endian);
     }
+    ;
     /**
      * Bit field reader. Unsigned big endian read.
      *
@@ -3779,6 +3943,7 @@ class BiReader extends BiBase {
     ubitbe(bits) {
         return this.bit(bits, true, "big");
     }
+    ;
     /**
      * Bit field reader. Big endian read.
      *
@@ -3791,6 +3956,7 @@ class BiReader extends BiBase {
     bitbe(bits, unsigned) {
         return this.bit(bits, unsigned, "big");
     }
+    ;
     /**
      * Bit field reader. Unsigned little endian read.
      *
@@ -3802,6 +3968,7 @@ class BiReader extends BiBase {
     ubitle(bits) {
         return this.bit(bits, true, "little");
     }
+    ;
     /**
      * Bit field reader. Little endian read.
      *
@@ -3814,6 +3981,7 @@ class BiReader extends BiBase {
     bitle(bits, unsigned) {
         return this.bit(bits, unsigned, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 1 bit.
      *
@@ -3824,6 +3992,7 @@ class BiReader extends BiBase {
     get bit1() {
         return this.bit(1);
     }
+    ;
     /**
      * Bit field reader. Reads 1 bit.
      *
@@ -3834,6 +4003,7 @@ class BiReader extends BiBase {
     get bit1le() {
         return this.bit(1, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 1 bit.
      *
@@ -3844,6 +4014,7 @@ class BiReader extends BiBase {
     get bit1be() {
         return this.bit(1, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 1 bit.
      *
@@ -3854,6 +4025,7 @@ class BiReader extends BiBase {
     get ubit1() {
         return this.bit(1, true);
     }
+    ;
     /**
      * Bit field reader. Reads 1 bit.
      *
@@ -3864,6 +4036,7 @@ class BiReader extends BiBase {
     get ubit1le() {
         return this.bit(1, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 1 bit.
      *
@@ -3874,6 +4047,7 @@ class BiReader extends BiBase {
     get ubit1be() {
         return this.bit(1, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 2 bits.
      *
@@ -3884,6 +4058,7 @@ class BiReader extends BiBase {
     get bit2() {
         return this.bit(2);
     }
+    ;
     /**
      * Bit field reader. Reads 2 bits.
      *
@@ -3894,6 +4069,7 @@ class BiReader extends BiBase {
     get bit2le() {
         return this.bit(2, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 2 bits.
      *
@@ -3904,6 +4080,7 @@ class BiReader extends BiBase {
     get bit2be() {
         return this.bit(2, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 2 bits.
      *
@@ -3914,6 +4091,7 @@ class BiReader extends BiBase {
     get ubit2() {
         return this.bit(2, true);
     }
+    ;
     /**
      * Bit field reader. Reads 2 bits.
      *
@@ -3924,6 +4102,7 @@ class BiReader extends BiBase {
     get ubit2le() {
         return this.bit(2, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 2 bits.
      *
@@ -3934,6 +4113,7 @@ class BiReader extends BiBase {
     get ubit2be() {
         return this.bit(2, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 3 bits.
      *
@@ -3944,6 +4124,7 @@ class BiReader extends BiBase {
     get bit3() {
         return this.bit(3);
     }
+    ;
     /**
      * Bit field reader. Reads 3 bits.
      *
@@ -3954,6 +4135,7 @@ class BiReader extends BiBase {
     get bit3le() {
         return this.bit(3, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 3 bits.
      *
@@ -3964,6 +4146,7 @@ class BiReader extends BiBase {
     get bit3be() {
         return this.bit(3, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 3 bits.
      *
@@ -3974,6 +4157,7 @@ class BiReader extends BiBase {
     get ubit3() {
         return this.bit(3, true);
     }
+    ;
     /**
      * Bit field reader. Reads 3 bits.
      *
@@ -3984,6 +4168,7 @@ class BiReader extends BiBase {
     get ubit3le() {
         return this.bit(3, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 3 bits.
      *
@@ -3994,6 +4179,7 @@ class BiReader extends BiBase {
     get ubit3be() {
         return this.bit(3, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 4 bits.
      *
@@ -4004,6 +4190,7 @@ class BiReader extends BiBase {
     get bit4() {
         return this.bit(4);
     }
+    ;
     /**
      * Bit field reader. Reads 4 bits.
      *
@@ -4014,6 +4201,7 @@ class BiReader extends BiBase {
     get bit4le() {
         return this.bit(4, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 4 bits.
      *
@@ -4024,6 +4212,7 @@ class BiReader extends BiBase {
     get bit4be() {
         return this.bit(4, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 4 bits.
      *
@@ -4034,6 +4223,7 @@ class BiReader extends BiBase {
     get ubit4() {
         return this.bit(4, true);
     }
+    ;
     /**
      * Bit field reader. Reads 4 bits.
      *
@@ -4044,6 +4234,7 @@ class BiReader extends BiBase {
     get ubit4le() {
         return this.bit(4, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 4 bits.
      *
@@ -4054,6 +4245,7 @@ class BiReader extends BiBase {
     get ubit4be() {
         return this.bit(4, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 5 bits.
      *
@@ -4064,6 +4256,7 @@ class BiReader extends BiBase {
     get bit5() {
         return this.bit(5);
     }
+    ;
     /**
      * Bit field reader. Reads 5 bits.
      *
@@ -4074,6 +4267,7 @@ class BiReader extends BiBase {
     get bit5le() {
         return this.bit(5, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 5 bits.
      *
@@ -4084,6 +4278,7 @@ class BiReader extends BiBase {
     get bit5be() {
         return this.bit(5, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 5 bits.
      *
@@ -4094,6 +4289,7 @@ class BiReader extends BiBase {
     get ubit5() {
         return this.bit(5, true);
     }
+    ;
     /**
      * Bit field reader. Reads 5 bits.
      *
@@ -4104,6 +4300,7 @@ class BiReader extends BiBase {
     get ubit5le() {
         return this.bit(5, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 5 bits.
      *
@@ -4114,6 +4311,7 @@ class BiReader extends BiBase {
     get ubit5be() {
         return this.bit(5, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 6 bits.
      *
@@ -4124,6 +4322,7 @@ class BiReader extends BiBase {
     get bit6() {
         return this.bit(6);
     }
+    ;
     /**
      * Bit field reader. Reads 6 bits.
      *
@@ -4134,6 +4333,7 @@ class BiReader extends BiBase {
     get bit6le() {
         return this.bit(6, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 6 bits.
      *
@@ -4144,6 +4344,7 @@ class BiReader extends BiBase {
     get bit6be() {
         return this.bit(6, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 6 bits.
      *
@@ -4154,6 +4355,7 @@ class BiReader extends BiBase {
     get ubit6() {
         return this.bit(6, true);
     }
+    ;
     /**
      * Bit field reader. Reads 6 bits.
      *
@@ -4164,6 +4366,7 @@ class BiReader extends BiBase {
     get ubit6le() {
         return this.bit(6, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 6 bits.
      *
@@ -4174,6 +4377,7 @@ class BiReader extends BiBase {
     get ubit6be() {
         return this.bit(6, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 7 bits.
      *
@@ -4184,6 +4388,7 @@ class BiReader extends BiBase {
     get bit7() {
         return this.bit(7);
     }
+    ;
     /**
      * Bit field reader. Reads 7 bits.
      *
@@ -4194,6 +4399,7 @@ class BiReader extends BiBase {
     get bit7le() {
         return this.bit(7, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 7 bits.
      *
@@ -4204,6 +4410,7 @@ class BiReader extends BiBase {
     get bit7be() {
         return this.bit(7, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 7 bits.
      *
@@ -4214,6 +4421,7 @@ class BiReader extends BiBase {
     get ubit7() {
         return this.bit(7, true);
     }
+    ;
     /**
      * Bit field reader. Reads 7 bits.
      *
@@ -4224,6 +4432,7 @@ class BiReader extends BiBase {
     get ubit7le() {
         return this.bit(7, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 7 bits.
      *
@@ -4234,6 +4443,7 @@ class BiReader extends BiBase {
     get ubit7be() {
         return this.bit(7, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 8 bits.
      *
@@ -4244,6 +4454,7 @@ class BiReader extends BiBase {
     get bit8() {
         return this.bit(8);
     }
+    ;
     /**
      * Bit field reader. Reads 8 bits.
      *
@@ -4254,6 +4465,7 @@ class BiReader extends BiBase {
     get bit8le() {
         return this.bit(8, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 8 bits.
      *
@@ -4264,6 +4476,7 @@ class BiReader extends BiBase {
     get bit8be() {
         return this.bit(8, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 8 bits.
      *
@@ -4274,6 +4487,7 @@ class BiReader extends BiBase {
     get ubit8() {
         return this.bit(8, true);
     }
+    ;
     /**
      * Bit field reader. Reads 8 bits.
      *
@@ -4284,6 +4498,7 @@ class BiReader extends BiBase {
     get ubit8le() {
         return this.bit(8, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 8 bits.
      *
@@ -4294,6 +4509,7 @@ class BiReader extends BiBase {
     get ubit8be() {
         return this.bit(8, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 9 bits.
      *
@@ -4304,6 +4520,7 @@ class BiReader extends BiBase {
     get bit9() {
         return this.bit(9);
     }
+    ;
     /**
      * Bit field reader. Reads 9 bits.
      *
@@ -4314,6 +4531,7 @@ class BiReader extends BiBase {
     get bit9le() {
         return this.bit(9, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 9 bits.
      *
@@ -4324,6 +4542,7 @@ class BiReader extends BiBase {
     get bit9be() {
         return this.bit(9, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 9 bits.
      *
@@ -4334,6 +4553,7 @@ class BiReader extends BiBase {
     get ubit9() {
         return this.bit(9, true);
     }
+    ;
     /**
      * Bit field reader. Reads 9 bits.
      *
@@ -4344,6 +4564,7 @@ class BiReader extends BiBase {
     get ubit9le() {
         return this.bit(9, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 9 bits.
      *
@@ -4354,6 +4575,7 @@ class BiReader extends BiBase {
     get ubit9be() {
         return this.bit(9, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 10 bits.
      *
@@ -4364,6 +4586,7 @@ class BiReader extends BiBase {
     get bit10() {
         return this.bit(10);
     }
+    ;
     /**
      * Bit field reader. Reads 10 bits.
      *
@@ -4374,6 +4597,7 @@ class BiReader extends BiBase {
     get bit10le() {
         return this.bit(10, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 10 bits.
      *
@@ -4384,6 +4608,7 @@ class BiReader extends BiBase {
     get bit10be() {
         return this.bit(10, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 10 bits.
      *
@@ -4394,6 +4619,7 @@ class BiReader extends BiBase {
     get ubit10() {
         return this.bit(10, true);
     }
+    ;
     /**
      * Bit field reader. Reads 10 bits.
      *
@@ -4404,6 +4630,7 @@ class BiReader extends BiBase {
     get ubit10le() {
         return this.bit(10, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 10 bits.
      *
@@ -4414,6 +4641,7 @@ class BiReader extends BiBase {
     get ubit10be() {
         return this.bit(10, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 11 bits.
      *
@@ -4424,6 +4652,7 @@ class BiReader extends BiBase {
     get bit11() {
         return this.bit(11);
     }
+    ;
     /**
      * Bit field reader. Reads 11 bits.
      *
@@ -4434,6 +4663,7 @@ class BiReader extends BiBase {
     get bit11le() {
         return this.bit(11, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 11 bits.
      *
@@ -4444,6 +4674,7 @@ class BiReader extends BiBase {
     get bit11be() {
         return this.bit(11, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 11 bits.
      *
@@ -4454,6 +4685,7 @@ class BiReader extends BiBase {
     get ubit11() {
         return this.bit(11, true);
     }
+    ;
     /**
      * Bit field reader. Reads 11 bits.
      *
@@ -4464,6 +4696,7 @@ class BiReader extends BiBase {
     get ubit11le() {
         return this.bit(11, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 11 bits.
      *
@@ -4474,6 +4707,7 @@ class BiReader extends BiBase {
     get ubit11be() {
         return this.bit(11, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 12 bits.
      *
@@ -4484,6 +4718,7 @@ class BiReader extends BiBase {
     get bit12() {
         return this.bit(12);
     }
+    ;
     /**
      * Bit field reader. Reads 12 bits.
      *
@@ -4494,6 +4729,7 @@ class BiReader extends BiBase {
     get bit12le() {
         return this.bit(12, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 12 bits.
      *
@@ -4504,6 +4740,7 @@ class BiReader extends BiBase {
     get bit12be() {
         return this.bit(12, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 12 bits.
      *
@@ -4514,6 +4751,7 @@ class BiReader extends BiBase {
     get ubit12() {
         return this.bit(12, true);
     }
+    ;
     /**
      * Bit field reader. Reads 12 bits.
      *
@@ -4524,6 +4762,7 @@ class BiReader extends BiBase {
     get ubit12le() {
         return this.bit(12, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 12 bits.
      *
@@ -4534,6 +4773,7 @@ class BiReader extends BiBase {
     get ubit12be() {
         return this.bit(12, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 13 bits.
      *
@@ -4544,6 +4784,7 @@ class BiReader extends BiBase {
     get bit13() {
         return this.bit(13);
     }
+    ;
     /**
      * Bit field reader. Reads 13 bits.
      *
@@ -4554,6 +4795,7 @@ class BiReader extends BiBase {
     get bit13le() {
         return this.bit(13, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 13 bits.
      *
@@ -4564,6 +4806,7 @@ class BiReader extends BiBase {
     get bit13be() {
         return this.bit(13, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 13 bits.
      *
@@ -4574,6 +4817,7 @@ class BiReader extends BiBase {
     get ubit13() {
         return this.bit(13, true);
     }
+    ;
     /**
      * Bit field reader. Reads 13 bits.
      *
@@ -4584,6 +4828,7 @@ class BiReader extends BiBase {
     get ubit13le() {
         return this.bit(13, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 13 bits.
      *
@@ -4594,6 +4839,7 @@ class BiReader extends BiBase {
     get ubit13be() {
         return this.bit(13, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 14 bits.
      *
@@ -4604,6 +4850,7 @@ class BiReader extends BiBase {
     get bit14() {
         return this.bit(14);
     }
+    ;
     /**
      * Bit field reader. Reads 14 bits.
      *
@@ -4614,6 +4861,7 @@ class BiReader extends BiBase {
     get bit14le() {
         return this.bit(14, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 14 bits.
      *
@@ -4624,6 +4872,7 @@ class BiReader extends BiBase {
     get bit14be() {
         return this.bit(14, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 14 bits.
      *
@@ -4634,6 +4883,7 @@ class BiReader extends BiBase {
     get ubit14() {
         return this.bit(14, true);
     }
+    ;
     /**
      * Bit field reader. Reads 14 bits.
      *
@@ -4644,6 +4894,7 @@ class BiReader extends BiBase {
     get ubit14le() {
         return this.bit(14, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 14 bits.
      *
@@ -4654,6 +4905,7 @@ class BiReader extends BiBase {
     get ubit14be() {
         return this.bit(14, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 15 bits.
      *
@@ -4664,6 +4916,7 @@ class BiReader extends BiBase {
     get bit15() {
         return this.bit(15);
     }
+    ;
     /**
      * Bit field reader. Reads 15 bits.
      *
@@ -4674,6 +4927,7 @@ class BiReader extends BiBase {
     get bit15le() {
         return this.bit(15, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 15 bits.
      *
@@ -4684,6 +4938,7 @@ class BiReader extends BiBase {
     get bit15be() {
         return this.bit(15, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 15 bits.
      *
@@ -4694,6 +4949,7 @@ class BiReader extends BiBase {
     get ubit15() {
         return this.bit(15, true);
     }
+    ;
     /**
      * Bit field reader. Reads 15 bits.
      *
@@ -4704,6 +4960,7 @@ class BiReader extends BiBase {
     get ubit15le() {
         return this.bit(15, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 15 bits.
      *
@@ -4714,6 +4971,7 @@ class BiReader extends BiBase {
     get ubit15be() {
         return this.bit(15, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 16 bits.
      *
@@ -4724,6 +4982,7 @@ class BiReader extends BiBase {
     get bit16() {
         return this.bit(16);
     }
+    ;
     /**
      * Bit field reader. Reads 16 bits.
      *
@@ -4734,6 +4993,7 @@ class BiReader extends BiBase {
     get bit16le() {
         return this.bit(16, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 16 bits.
      *
@@ -4744,6 +5004,7 @@ class BiReader extends BiBase {
     get bit16be() {
         return this.bit(16, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 16 bits.
      *
@@ -4754,6 +5015,7 @@ class BiReader extends BiBase {
     get ubit16() {
         return this.bit(16, true);
     }
+    ;
     /**
      * Bit field reader. Reads 16 bits.
      *
@@ -4764,6 +5026,7 @@ class BiReader extends BiBase {
     get ubit16le() {
         return this.bit(16, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 16 bits.
      *
@@ -4774,6 +5037,7 @@ class BiReader extends BiBase {
     get ubit16be() {
         return this.bit(16, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 17 bits.
      *
@@ -4784,6 +5048,7 @@ class BiReader extends BiBase {
     get bit17() {
         return this.bit(17);
     }
+    ;
     /**
      * Bit field reader. Reads 17 bits.
      *
@@ -4794,6 +5059,7 @@ class BiReader extends BiBase {
     get bit17le() {
         return this.bit(17, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 17 bits.
      *
@@ -4804,6 +5070,7 @@ class BiReader extends BiBase {
     get bit17be() {
         return this.bit(17, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 17 bits.
      *
@@ -4814,6 +5081,7 @@ class BiReader extends BiBase {
     get ubit17() {
         return this.bit(17, true);
     }
+    ;
     /**
      * Bit field reader. Reads 17 bits.
      *
@@ -4824,6 +5092,7 @@ class BiReader extends BiBase {
     get ubit17le() {
         return this.bit(17, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 17 bits.
      *
@@ -4834,6 +5103,7 @@ class BiReader extends BiBase {
     get ubit17be() {
         return this.bit(17, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 18 bits.
      *
@@ -4844,6 +5114,7 @@ class BiReader extends BiBase {
     get bit18() {
         return this.bit(18);
     }
+    ;
     /**
      * Bit field reader. Reads 18 bits.
      *
@@ -4854,6 +5125,7 @@ class BiReader extends BiBase {
     get bit18le() {
         return this.bit(18, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 18 bits.
      *
@@ -4864,6 +5136,7 @@ class BiReader extends BiBase {
     get bit18be() {
         return this.bit(18, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 18 bits.
      *
@@ -4874,6 +5147,7 @@ class BiReader extends BiBase {
     get ubit18() {
         return this.bit(18, true);
     }
+    ;
     /**
      * Bit field reader. Reads 18 bits.
      *
@@ -4884,6 +5158,7 @@ class BiReader extends BiBase {
     get ubit18le() {
         return this.bit(18, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 18 bits.
      *
@@ -4894,6 +5169,7 @@ class BiReader extends BiBase {
     get ubit18be() {
         return this.bit(18, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 19 bits.
      *
@@ -4904,6 +5180,7 @@ class BiReader extends BiBase {
     get bit19() {
         return this.bit(19);
     }
+    ;
     /**
      * Bit field reader. Reads 19 bits.
      *
@@ -4914,6 +5191,7 @@ class BiReader extends BiBase {
     get bit19le() {
         return this.bit(19, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 19 bits.
      *
@@ -4924,6 +5202,7 @@ class BiReader extends BiBase {
     get bit19be() {
         return this.bit(19, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 19 bits.
      *
@@ -4934,6 +5213,7 @@ class BiReader extends BiBase {
     get ubit19() {
         return this.bit(19, true);
     }
+    ;
     /**
      * Bit field reader. Reads 19 bits.
      *
@@ -4944,6 +5224,7 @@ class BiReader extends BiBase {
     get ubit19le() {
         return this.bit(19, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 19 bits.
      *
@@ -4954,6 +5235,7 @@ class BiReader extends BiBase {
     get ubit19be() {
         return this.bit(19, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 20 bits.
      *
@@ -4964,6 +5246,7 @@ class BiReader extends BiBase {
     get bit20() {
         return this.bit(20);
     }
+    ;
     /**
      * Bit field reader. Reads 20 bits.
      *
@@ -4974,6 +5257,7 @@ class BiReader extends BiBase {
     get bit20le() {
         return this.bit(20, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 20 bits.
      *
@@ -4984,6 +5268,7 @@ class BiReader extends BiBase {
     get bit20be() {
         return this.bit(20, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 20 bits.
      *
@@ -4994,6 +5279,7 @@ class BiReader extends BiBase {
     get ubit20() {
         return this.bit(20, true);
     }
+    ;
     /**
      * Bit field reader. Reads 20 bits.
      *
@@ -5004,6 +5290,7 @@ class BiReader extends BiBase {
     get ubit20le() {
         return this.bit(20, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 20 bits.
      *
@@ -5014,6 +5301,7 @@ class BiReader extends BiBase {
     get ubit20be() {
         return this.bit(20, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 21 bits.
      *
@@ -5024,6 +5312,7 @@ class BiReader extends BiBase {
     get bit21() {
         return this.bit(21);
     }
+    ;
     /**
      * Bit field reader. Reads 21 bits.
      *
@@ -5034,6 +5323,7 @@ class BiReader extends BiBase {
     get bit21le() {
         return this.bit(21, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 21 bits.
      *
@@ -5044,6 +5334,7 @@ class BiReader extends BiBase {
     get bit21be() {
         return this.bit(21, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 21 bits.
      *
@@ -5054,6 +5345,7 @@ class BiReader extends BiBase {
     get ubit21() {
         return this.bit(21, true);
     }
+    ;
     /**
      * Bit field reader. Reads 21 bits.
      *
@@ -5064,6 +5356,7 @@ class BiReader extends BiBase {
     get ubit21le() {
         return this.bit(21, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 21 bits.
      *
@@ -5074,6 +5367,7 @@ class BiReader extends BiBase {
     get ubit21be() {
         return this.bit(21, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 22 bits.
      *
@@ -5084,6 +5378,7 @@ class BiReader extends BiBase {
     get bit22() {
         return this.bit(22);
     }
+    ;
     /**
      * Bit field reader. Reads 22 bits.
      *
@@ -5094,6 +5389,7 @@ class BiReader extends BiBase {
     get bit22le() {
         return this.bit(22, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 22 bits.
      *
@@ -5104,6 +5400,7 @@ class BiReader extends BiBase {
     get bit22be() {
         return this.bit(22, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 22 bits.
      *
@@ -5114,6 +5411,7 @@ class BiReader extends BiBase {
     get ubit22() {
         return this.bit(22, true);
     }
+    ;
     /**
      * Bit field reader. Reads 22 bits.
      *
@@ -5124,6 +5422,7 @@ class BiReader extends BiBase {
     get ubit22le() {
         return this.bit(22, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 22 bits.
      *
@@ -5134,6 +5433,7 @@ class BiReader extends BiBase {
     get ubit22be() {
         return this.bit(22, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 23 bits.
      *
@@ -5144,6 +5444,7 @@ class BiReader extends BiBase {
     get bit23() {
         return this.bit(23);
     }
+    ;
     /**
      * Bit field reader. Reads 23 bits.
      *
@@ -5154,6 +5455,7 @@ class BiReader extends BiBase {
     get bit23le() {
         return this.bit(23, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 23 bits.
      *
@@ -5164,6 +5466,7 @@ class BiReader extends BiBase {
     get bit23be() {
         return this.bit(23, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 23 bits.
      *
@@ -5174,6 +5477,7 @@ class BiReader extends BiBase {
     get ubit23() {
         return this.bit(23, true);
     }
+    ;
     /**
      * Bit field reader. Reads 23 bits.
      *
@@ -5184,6 +5488,7 @@ class BiReader extends BiBase {
     get ubit23le() {
         return this.bit(23, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 23 bits.
      *
@@ -5194,6 +5499,7 @@ class BiReader extends BiBase {
     get ubit23be() {
         return this.bit(23, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 24 bits.
      *
@@ -5204,6 +5510,7 @@ class BiReader extends BiBase {
     get bit24() {
         return this.bit(24);
     }
+    ;
     /**
      * Bit field reader. Reads 24 bits.
      *
@@ -5214,6 +5521,7 @@ class BiReader extends BiBase {
     get bit24le() {
         return this.bit(24, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 24 bits.
      *
@@ -5224,6 +5532,7 @@ class BiReader extends BiBase {
     get bit24be() {
         return this.bit(24, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 24 bits.
      *
@@ -5234,6 +5543,7 @@ class BiReader extends BiBase {
     get ubit24() {
         return this.bit(24, true);
     }
+    ;
     /**
      * Bit field reader. Reads 24 bits.
      *
@@ -5244,6 +5554,7 @@ class BiReader extends BiBase {
     get ubit24le() {
         return this.bit(24, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 24 bits.
      *
@@ -5254,6 +5565,7 @@ class BiReader extends BiBase {
     get ubit24be() {
         return this.bit(24, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 25 bits.
      *
@@ -5264,6 +5576,7 @@ class BiReader extends BiBase {
     get bit25() {
         return this.bit(25);
     }
+    ;
     /**
      * Bit field reader. Reads 25 bits.
      *
@@ -5274,6 +5587,7 @@ class BiReader extends BiBase {
     get bit25le() {
         return this.bit(25, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 25 bits.
      *
@@ -5284,6 +5598,7 @@ class BiReader extends BiBase {
     get bit25be() {
         return this.bit(25, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 25 bits.
      *
@@ -5294,6 +5609,7 @@ class BiReader extends BiBase {
     get ubit25() {
         return this.bit(25, true);
     }
+    ;
     /**
      * Bit field reader. Reads 25 bits.
      *
@@ -5304,6 +5620,7 @@ class BiReader extends BiBase {
     get ubit25le() {
         return this.bit(25, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 25 bits.
      *
@@ -5314,6 +5631,7 @@ class BiReader extends BiBase {
     get ubit25be() {
         return this.bit(25, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 26 bits.
      *
@@ -5324,6 +5642,7 @@ class BiReader extends BiBase {
     get bit26() {
         return this.bit(26);
     }
+    ;
     /**
      * Bit field reader. Reads 26 bits.
      *
@@ -5334,6 +5653,7 @@ class BiReader extends BiBase {
     get bit26le() {
         return this.bit(26, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 26 bits.
      *
@@ -5344,6 +5664,7 @@ class BiReader extends BiBase {
     get bit26be() {
         return this.bit(26, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 26 bits.
      *
@@ -5354,6 +5675,7 @@ class BiReader extends BiBase {
     get ubit26() {
         return this.bit(26, true);
     }
+    ;
     /**
      * Bit field reader. Reads 26 bits.
      *
@@ -5364,6 +5686,7 @@ class BiReader extends BiBase {
     get ubit26le() {
         return this.bit(26, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 26 bits.
      *
@@ -5374,6 +5697,7 @@ class BiReader extends BiBase {
     get ubit26be() {
         return this.bit(26, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 27 bits.
      *
@@ -5384,6 +5708,7 @@ class BiReader extends BiBase {
     get bit27() {
         return this.bit(27);
     }
+    ;
     /**
      * Bit field reader. Reads 27 bits.
      *
@@ -5394,6 +5719,7 @@ class BiReader extends BiBase {
     get bit27le() {
         return this.bit(27, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 27 bits.
      *
@@ -5404,6 +5730,7 @@ class BiReader extends BiBase {
     get bit27be() {
         return this.bit(27, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 27 bits.
      *
@@ -5414,6 +5741,7 @@ class BiReader extends BiBase {
     get ubit27() {
         return this.bit(27, true);
     }
+    ;
     /**
      * Bit field reader. Reads 27 bits.
      *
@@ -5424,6 +5752,7 @@ class BiReader extends BiBase {
     get ubit27le() {
         return this.bit(27, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 27 bits.
      *
@@ -5434,6 +5763,7 @@ class BiReader extends BiBase {
     get ubit27be() {
         return this.bit(27, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 28 bits.
      *
@@ -5444,6 +5774,7 @@ class BiReader extends BiBase {
     get bit28() {
         return this.bit(28);
     }
+    ;
     /**
      * Bit field reader. Reads 28 bits.
      *
@@ -5454,6 +5785,7 @@ class BiReader extends BiBase {
     get bit28le() {
         return this.bit(28, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 28 bits.
      *
@@ -5464,6 +5796,7 @@ class BiReader extends BiBase {
     get bit28be() {
         return this.bit(28, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 28 bits.
      *
@@ -5474,6 +5807,7 @@ class BiReader extends BiBase {
     get ubit28() {
         return this.bit(28, true);
     }
+    ;
     /**
      * Bit field reader. Reads 28 bits.
      *
@@ -5484,6 +5818,7 @@ class BiReader extends BiBase {
     get ubit28le() {
         return this.bit(28, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 28 bits.
      *
@@ -5494,6 +5829,7 @@ class BiReader extends BiBase {
     get ubit28be() {
         return this.bit(28, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 29 bits.
      *
@@ -5504,6 +5840,7 @@ class BiReader extends BiBase {
     get bit29() {
         return this.bit(29);
     }
+    ;
     /**
      * Bit field reader. Reads 29 bits.
      *
@@ -5514,6 +5851,7 @@ class BiReader extends BiBase {
     get bit29le() {
         return this.bit(29, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 29 bits.
      *
@@ -5524,6 +5862,7 @@ class BiReader extends BiBase {
     get bit29be() {
         return this.bit(29, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 29 bits.
      *
@@ -5534,6 +5873,7 @@ class BiReader extends BiBase {
     get ubit29() {
         return this.bit(29, true);
     }
+    ;
     /**
      * Bit field reader. Reads 29 bits.
      *
@@ -5544,6 +5884,7 @@ class BiReader extends BiBase {
     get ubit29le() {
         return this.bit(29, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 29 bits.
      *
@@ -5554,6 +5895,7 @@ class BiReader extends BiBase {
     get ubit29be() {
         return this.bit(29, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 30 bits.
      *
@@ -5564,6 +5906,7 @@ class BiReader extends BiBase {
     get bit30() {
         return this.bit(30);
     }
+    ;
     /**
      * Bit field reader. Reads 30 bits.
      *
@@ -5574,6 +5917,7 @@ class BiReader extends BiBase {
     get bit30le() {
         return this.bit(30, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 30 bits.
      *
@@ -5584,6 +5928,7 @@ class BiReader extends BiBase {
     get bit30be() {
         return this.bit(30, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 30 bits.
      *
@@ -5594,6 +5939,7 @@ class BiReader extends BiBase {
     get ubit30() {
         return this.bit(30, true);
     }
+    ;
     /**
      * Bit field reader. Reads 30 bits.
      *
@@ -5604,6 +5950,7 @@ class BiReader extends BiBase {
     get ubit30le() {
         return this.bit(30, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 30 bits.
      *
@@ -5614,6 +5961,7 @@ class BiReader extends BiBase {
     get ubit30be() {
         return this.bit(30, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 31 bits.
      *
@@ -5624,6 +5972,7 @@ class BiReader extends BiBase {
     get bit31() {
         return this.bit(31);
     }
+    ;
     /**
      * Bit field reader. Reads 31 bits.
      *
@@ -5634,6 +5983,7 @@ class BiReader extends BiBase {
     get bit31le() {
         return this.bit(31, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 31 bits.
      *
@@ -5644,6 +5994,7 @@ class BiReader extends BiBase {
     get bit31be() {
         return this.bit(31, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 31 bits.
      *
@@ -5654,6 +6005,7 @@ class BiReader extends BiBase {
     get ubit31() {
         return this.bit(31, true);
     }
+    ;
     /**
      * Bit field reader. Reads 31 bits.
      *
@@ -5664,6 +6016,7 @@ class BiReader extends BiBase {
     get ubit31le() {
         return this.bit(31, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 31 bits.
      *
@@ -5674,6 +6027,7 @@ class BiReader extends BiBase {
     get ubit31be() {
         return this.bit(31, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 32 bits.
      *
@@ -5684,6 +6038,7 @@ class BiReader extends BiBase {
     get bit32() {
         return this.bit(32);
     }
+    ;
     /**
      * Bit field reader. Reads 32 bits.
      *
@@ -5694,6 +6049,7 @@ class BiReader extends BiBase {
     get bit32le() {
         return this.bit(32, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 32 bits.
      *
@@ -5704,6 +6060,7 @@ class BiReader extends BiBase {
     get bit32be() {
         return this.bit(32, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 32 bits.
      *
@@ -5714,6 +6071,7 @@ class BiReader extends BiBase {
     get ubit32() {
         return this.bit(32, true);
     }
+    ;
     /**
      * Bit field reader. Reads 32 bits.
      *
@@ -5724,6 +6082,7 @@ class BiReader extends BiBase {
     get ubit32le() {
         return this.bit(32, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 32 bits.
      *
@@ -5734,6 +6093,7 @@ class BiReader extends BiBase {
     get ubit32be() {
         return this.bit(32, true, "big");
     }
+    ;
     //
     // byte read
     //
@@ -5745,6 +6105,7 @@ class BiReader extends BiBase {
     get byte() {
         return this.readByte();
     }
+    ;
     /**
      * Read byte.
      *
@@ -5753,6 +6114,7 @@ class BiReader extends BiBase {
     get int8() {
         return this.readByte();
     }
+    ;
     /**
      * Read unsigned byte.
      *
@@ -5761,6 +6123,7 @@ class BiReader extends BiBase {
     get uint8() {
         return this.readByte(true);
     }
+    ;
     /**
      * Read unsigned byte.
      *
@@ -5769,6 +6132,7 @@ class BiReader extends BiBase {
     get ubyte() {
         return this.readByte(true);
     }
+    ;
     //
     //short16 read
     //
@@ -5780,6 +6144,7 @@ class BiReader extends BiBase {
     get int16() {
         return this.readInt16();
     }
+    ;
     /**
      * Read short.
      *
@@ -5788,6 +6153,7 @@ class BiReader extends BiBase {
     get short() {
         return this.readInt16();
     }
+    ;
     /**
      * Read short.
      *
@@ -5796,6 +6162,7 @@ class BiReader extends BiBase {
     get word() {
         return this.readInt16();
     }
+    ;
     /**
      * Read unsigned short.
      *
@@ -5804,6 +6171,7 @@ class BiReader extends BiBase {
     get uint16() {
         return this.readInt16(true);
     }
+    ;
     /**
      * Read unsigned short.
      *
@@ -5812,6 +6180,7 @@ class BiReader extends BiBase {
     get ushort() {
         return this.readInt16(true);
     }
+    ;
     /**
      * Read unsigned short.
      *
@@ -5820,6 +6189,7 @@ class BiReader extends BiBase {
     get uword() {
         return this.readInt16(true);
     }
+    ;
     /**
      * Read unsigned short in little endian.
      *
@@ -5828,6 +6198,7 @@ class BiReader extends BiBase {
     get uint16le() {
         return this.readInt16(true, "little");
     }
+    ;
     /**
      * Read unsigned short in little endian.
      *
@@ -5836,6 +6207,7 @@ class BiReader extends BiBase {
     get ushortle() {
         return this.readInt16(true, "little");
     }
+    ;
     /**
      * Read unsigned short in little endian.
      *
@@ -5844,6 +6216,7 @@ class BiReader extends BiBase {
     get uwordle() {
         return this.readInt16(true, "little");
     }
+    ;
     /**
      * Read signed short in little endian.
      *
@@ -5852,6 +6225,7 @@ class BiReader extends BiBase {
     get int16le() {
         return this.readInt16(false, "little");
     }
+    ;
     /**
      * Read signed short in little endian.
      *
@@ -5860,6 +6234,7 @@ class BiReader extends BiBase {
     get shortle() {
         return this.readInt16(false, "little");
     }
+    ;
     /**
      * Read signed short in little endian.
      *
@@ -5868,6 +6243,7 @@ class BiReader extends BiBase {
     get wordle() {
         return this.readInt16(false, "little");
     }
+    ;
     /**
      * Read unsigned short in big endian.
      *
@@ -5876,6 +6252,7 @@ class BiReader extends BiBase {
     get uint16be() {
         return this.readInt16(true, "big");
     }
+    ;
     /**
      * Read unsigned short in big endian.
      *
@@ -5884,6 +6261,7 @@ class BiReader extends BiBase {
     get ushortbe() {
         return this.readInt16(true, "big");
     }
+    ;
     /**
      * Read unsigned short in big endian.
      *
@@ -5892,6 +6270,7 @@ class BiReader extends BiBase {
     get uwordbe() {
         return this.readInt16(true, "big");
     }
+    ;
     /**
      * Read signed short in big endian.
      *
@@ -5900,6 +6279,7 @@ class BiReader extends BiBase {
     get int16be() {
         return this.readInt16(false, "big");
     }
+    ;
     /**
      * Read signed short in big endian.
      *
@@ -5908,6 +6288,7 @@ class BiReader extends BiBase {
     get shortbe() {
         return this.readInt16(false, "big");
     }
+    ;
     /**
      * Read signed short in big endian.
      *
@@ -5916,6 +6297,7 @@ class BiReader extends BiBase {
     get wordbe() {
         return this.readInt16(false, "big");
     }
+    ;
     //
     //half float read
     //
@@ -5927,6 +6309,7 @@ class BiReader extends BiBase {
     get halffloat() {
         return this.readHalfFloat();
     }
+    ;
     /**
      * Read half float
      *
@@ -5935,6 +6318,7 @@ class BiReader extends BiBase {
     get half() {
         return this.readHalfFloat();
     }
+    ;
     /**
      * Read half float.
      *
@@ -5943,6 +6327,7 @@ class BiReader extends BiBase {
     get halffloatbe() {
         return this.readHalfFloat("big");
     }
+    ;
     /**
      * Read half float.
      *
@@ -5951,6 +6336,7 @@ class BiReader extends BiBase {
     get halfbe() {
         return this.readHalfFloat("big");
     }
+    ;
     /**
      * Read half float.
      *
@@ -5959,6 +6345,7 @@ class BiReader extends BiBase {
     get halffloatle() {
         return this.readHalfFloat("little");
     }
+    ;
     /**
      * Read half float.
      *
@@ -5967,6 +6354,7 @@ class BiReader extends BiBase {
     get halfle() {
         return this.readHalfFloat("little");
     }
+    ;
     //
     //int read
     //
@@ -5978,6 +6366,7 @@ class BiReader extends BiBase {
     get int() {
         return this.readInt32();
     }
+    ;
     /**
      * Read 32 bit integer.
      *
@@ -5986,6 +6375,7 @@ class BiReader extends BiBase {
     get double() {
         return this.readInt32();
     }
+    ;
     /**
      * Read 32 bit integer.
      *
@@ -5994,6 +6384,7 @@ class BiReader extends BiBase {
     get int32() {
         return this.readInt32();
     }
+    ;
     /**
      * Read 32 bit integer.
      *
@@ -6002,6 +6393,7 @@ class BiReader extends BiBase {
     get long() {
         return this.readInt32();
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -6010,6 +6402,7 @@ class BiReader extends BiBase {
     get uint() {
         return this.readInt32(true);
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -6018,6 +6411,7 @@ class BiReader extends BiBase {
     get udouble() {
         return this.readInt32(true);
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -6026,6 +6420,7 @@ class BiReader extends BiBase {
     get uint32() {
         return this.readInt32(true);
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -6034,6 +6429,7 @@ class BiReader extends BiBase {
     get ulong() {
         return this.readInt32(true);
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -6042,6 +6438,7 @@ class BiReader extends BiBase {
     get intbe() {
         return this.readInt32(false, "big");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -6050,6 +6447,7 @@ class BiReader extends BiBase {
     get doublebe() {
         return this.readInt32(false, "big");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -6058,6 +6456,7 @@ class BiReader extends BiBase {
     get int32be() {
         return this.readInt32(false, "big");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -6066,6 +6465,7 @@ class BiReader extends BiBase {
     get longbe() {
         return this.readInt32(false, "big");
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -6074,6 +6474,7 @@ class BiReader extends BiBase {
     get uintbe() {
         return this.readInt32(true, "big");
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -6082,6 +6483,7 @@ class BiReader extends BiBase {
     get udoublebe() {
         return this.readInt32(true, "big");
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -6090,6 +6492,7 @@ class BiReader extends BiBase {
     get uint32be() {
         return this.readInt32(true, "big");
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -6098,6 +6501,7 @@ class BiReader extends BiBase {
     get ulongbe() {
         return this.readInt32(true, "big");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -6106,6 +6510,7 @@ class BiReader extends BiBase {
     get intle() {
         return this.readInt32(false, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -6114,6 +6519,7 @@ class BiReader extends BiBase {
     get doublele() {
         return this.readInt32(false, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -6122,6 +6528,7 @@ class BiReader extends BiBase {
     get int32le() {
         return this.readInt32(false, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -6130,6 +6537,7 @@ class BiReader extends BiBase {
     get longle() {
         return this.readInt32(false, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -6138,6 +6546,7 @@ class BiReader extends BiBase {
     get uintle() {
         return this.readInt32(true, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -6146,6 +6555,7 @@ class BiReader extends BiBase {
     get udoublele() {
         return this.readInt32(true, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -6154,6 +6564,7 @@ class BiReader extends BiBase {
     get uint32le() {
         return this.readInt32(true, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -6162,6 +6573,7 @@ class BiReader extends BiBase {
     get ulongle() {
         return this.readInt32(true, "little");
     }
+    ;
     //
     //float read
     //
@@ -6173,6 +6585,7 @@ class BiReader extends BiBase {
     get float() {
         return this.readFloat();
     }
+    ;
     /**
      * Read float.
      *
@@ -6181,6 +6594,7 @@ class BiReader extends BiBase {
     get floatbe() {
         return this.readFloat("big");
     }
+    ;
     /**
      * Read float.
      *
@@ -6189,6 +6603,7 @@ class BiReader extends BiBase {
     get floatle() {
         return this.readFloat("little");
     }
+    ;
     //
     //int64 reader
     //
@@ -6202,6 +6617,7 @@ class BiReader extends BiBase {
     get int64() {
         return this.readInt64();
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -6212,6 +6628,7 @@ class BiReader extends BiBase {
     get bigint() {
         return this.readInt64();
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -6222,6 +6639,7 @@ class BiReader extends BiBase {
     get quad() {
         return this.readInt64();
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -6232,6 +6650,7 @@ class BiReader extends BiBase {
     get uint64() {
         return this.readInt64(true);
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -6242,6 +6661,7 @@ class BiReader extends BiBase {
     get ubigint() {
         return this.readInt64(true);
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -6252,6 +6672,7 @@ class BiReader extends BiBase {
     get uquad() {
         return this.readInt64(true);
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -6262,6 +6683,7 @@ class BiReader extends BiBase {
     get int64be() {
         return this.readInt64(false, "big");
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -6272,6 +6694,7 @@ class BiReader extends BiBase {
     get bigintbe() {
         return this.readInt64(false, "big");
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -6282,6 +6705,7 @@ class BiReader extends BiBase {
     get quadbe() {
         return this.readInt64(false, "big");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -6292,6 +6716,7 @@ class BiReader extends BiBase {
     get uint64be() {
         return this.readInt64(true, "big");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -6302,6 +6727,7 @@ class BiReader extends BiBase {
     get ubigintbe() {
         return this.readInt64(true, "big");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -6312,6 +6738,7 @@ class BiReader extends BiBase {
     get uquadbe() {
         return this.readInt64(true, "big");
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -6322,6 +6749,7 @@ class BiReader extends BiBase {
     get int64le() {
         return this.readInt64(false, "little");
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -6332,6 +6760,7 @@ class BiReader extends BiBase {
     get bigintle() {
         return this.readInt64(false, "little");
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -6342,6 +6771,7 @@ class BiReader extends BiBase {
     get quadle() {
         return this.readInt64(false, "little");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -6352,6 +6782,7 @@ class BiReader extends BiBase {
     get uint64le() {
         return this.readInt64(true, "little");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -6362,6 +6793,7 @@ class BiReader extends BiBase {
     get ubigintle() {
         return this.readInt64(true, "little");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -6372,6 +6804,7 @@ class BiReader extends BiBase {
     get uquadle() {
         return this.readInt64(true, "little");
     }
+    ;
     //
     //doublefloat reader
     //
@@ -6383,6 +6816,7 @@ class BiReader extends BiBase {
     get doublefloat() {
         return this.readDoubleFloat();
     }
+    ;
     /**
      * Read double float.
      *
@@ -6391,6 +6825,7 @@ class BiReader extends BiBase {
     get dfloat() {
         return this.readDoubleFloat();
     }
+    ;
     /**
      * Read double float.
      *
@@ -6399,6 +6834,7 @@ class BiReader extends BiBase {
     get dfloatebe() {
         return this.readDoubleFloat("big");
     }
+    ;
     /**
      * Read double float.
      *
@@ -6407,6 +6843,7 @@ class BiReader extends BiBase {
     get doublefloatbe() {
         return this.readDoubleFloat("big");
     }
+    ;
     /**
      * Read double float.
      *
@@ -6415,6 +6852,7 @@ class BiReader extends BiBase {
     get dfloatle() {
         return this.readDoubleFloat("little");
     }
+    ;
     /**
      * Read double float.
      *
@@ -6423,6 +6861,7 @@ class BiReader extends BiBase {
     get doublefloatle() {
         return this.readDoubleFloat("little");
     }
+    ;
     //
     //string reader
     //
@@ -6442,6 +6881,7 @@ class BiReader extends BiBase {
     string(options) {
         return this.readString(options);
     }
+    ;
     /**
     * Reads string using setting from .strSettings
     *
@@ -6452,6 +6892,7 @@ class BiReader extends BiBase {
     get str() {
         return this.readString(this.strSettings);
     }
+    ;
     /**
     * Reads UTF-8 (C) string.
     *
@@ -6464,6 +6905,7 @@ class BiReader extends BiBase {
     utf8string(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
     }
+    ;
     /**
     * Reads UTF-8 (C) string.
     *
@@ -6476,6 +6918,7 @@ class BiReader extends BiBase {
     cstring(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
     }
+    ;
     /**
     * Reads ANSI string.
     *
@@ -6488,6 +6931,7 @@ class BiReader extends BiBase {
     ansistring(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue, stripNull: stripNull });
     }
+    ;
     /**
     * Reads UTF-16 (Unicode) string.
     *
@@ -6501,6 +6945,7 @@ class BiReader extends BiBase {
     utf16string(length, terminateValue, stripNull, endian) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
     }
+    ;
     /**
     * Reads UTF-16 (Unicode) string.
     *
@@ -6514,6 +6959,7 @@ class BiReader extends BiBase {
     unistring(length, terminateValue, stripNull, endian) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
     }
+    ;
     /**
     * Reads UTF-16 (Unicode) string in little endian order.
     *
@@ -6526,6 +6972,7 @@ class BiReader extends BiBase {
     utf16stringle(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
     }
+    ;
     /**
     * Reads UTF-16 (Unicode) string in little endian order.
     *
@@ -6538,6 +6985,7 @@ class BiReader extends BiBase {
     unistringle(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
     }
+    ;
     /**
     * Reads UTF-16 (Unicode) string in big endian order.
     *
@@ -6550,6 +6998,7 @@ class BiReader extends BiBase {
     utf16stringbe(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
     }
+    ;
     /**
     * Reads UTF-16 (Unicode) string in big endian order.
     *
@@ -6562,6 +7011,7 @@ class BiReader extends BiBase {
     unistringbe(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
     }
+    ;
     /**
     * Reads Pascal string.
     *
@@ -6574,6 +7024,7 @@ class BiReader extends BiBase {
     pstring(lengthReadSize, stripNull, endian) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
     }
+    ;
     /**
     * Reads Pascal string 1 byte length read.
     *
@@ -6585,6 +7036,7 @@ class BiReader extends BiBase {
     pstring1(stripNull, endian) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: endian });
     }
+    ;
     /**
     * Reads Pascal string 1 byte length read in little endian order.
     *
@@ -6595,6 +7047,7 @@ class BiReader extends BiBase {
     pstring1le(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "little" });
     }
+    ;
     /**
     * Reads Pascal string 1 byte length read in big endian order.
     *
@@ -6605,6 +7058,7 @@ class BiReader extends BiBase {
     pstring1be(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "big" });
     }
+    ;
     /**
     * Reads Pascal string 2 byte length read.
     *
@@ -6616,6 +7070,7 @@ class BiReader extends BiBase {
     pstring2(stripNull, endian) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: endian });
     }
+    ;
     /**
     * Reads Pascal string 2 byte length read in little endian order.
     *
@@ -6626,6 +7081,7 @@ class BiReader extends BiBase {
     pstring2le(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "little" });
     }
+    ;
     /**
     * Reads Pascal string 2 byte length read in big endian order.
     *
@@ -6636,6 +7092,7 @@ class BiReader extends BiBase {
     pstring2be(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "big" });
     }
+    ;
     /**
     * Reads Pascal string 4 byte length read.
     *
@@ -6647,6 +7104,7 @@ class BiReader extends BiBase {
     pstring4(stripNull, endian) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: endian });
     }
+    ;
     /**
     * Reads Pascal string 4 byte length read in little endian order.
     *
@@ -6657,6 +7115,7 @@ class BiReader extends BiBase {
     pstring4le(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "little" });
     }
+    ;
     /**
     * Reads Pascal string 4 byte length read in big endian order.
     *
@@ -6667,6 +7126,7 @@ class BiReader extends BiBase {
     pstring4be(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "big" });
     }
+    ;
     /**
     * Reads Wide-Pascal string.
     *
@@ -6679,6 +7139,7 @@ class BiReader extends BiBase {
     wpstring(lengthReadSize, stripNull, endian) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: lengthReadSize, endian: endian, stripNull: stripNull });
     }
+    ;
     /**
     * Reads Wide-Pascal string 1 byte length read.
     *
@@ -6690,6 +7151,7 @@ class BiReader extends BiBase {
     wpstring1(stripNull, endian) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: endian, stripNull: stripNull });
     }
+    ;
     /**
     * Reads Wide-Pascal string 2 byte length read.
     *
@@ -6701,6 +7163,7 @@ class BiReader extends BiBase {
     wpstring2(stripNull, endian) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: endian, stripNull: stripNull });
     }
+    ;
     /**
     * Reads Wide-Pascal string 2 byte length read in little endian order.
     *
@@ -6711,6 +7174,7 @@ class BiReader extends BiBase {
     wpstring2le(stripNull) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "little", stripNull: stripNull });
     }
+    ;
     /**
     * Reads Wide-Pascal string 2 byte length read in big endian order.
     *
@@ -6721,6 +7185,7 @@ class BiReader extends BiBase {
     wpstring2be(stripNull) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "big", stripNull: stripNull });
     }
+    ;
     /**
     * Reads Wide-Pascal string 4 byte length read.
     *
@@ -6732,6 +7197,7 @@ class BiReader extends BiBase {
     wpstring4(stripNull, endian) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: endian, stripNull: stripNull });
     }
+    ;
     /**
     * Reads Wide-Pascal string 4 byte length read in big endian order.
     *
@@ -6742,6 +7208,7 @@ class BiReader extends BiBase {
     wpstring4be(stripNull) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "big", stripNull: stripNull });
     }
+    ;
     /**
     * Reads Wide-Pascal string 4 byte length read in little endian order.
     *
@@ -6752,6 +7219,7 @@ class BiReader extends BiBase {
     wpstring4le(stripNull) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "little", stripNull: stripNull });
     }
+    ;
 }
 
 /**
@@ -6844,6 +7312,7 @@ class BiWriter extends BiBase {
             }
         }
     }
+    ;
     //
     // Bit Aliases
     //
@@ -6861,6 +7330,7 @@ class BiWriter extends BiBase {
     bit(value, bits, unsigned, endian) {
         return this.writeBit(value, bits, unsigned, endian);
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -6874,6 +7344,7 @@ class BiWriter extends BiBase {
     ubit(value, bits, endian) {
         return this.writeBit(value, bits, true, endian);
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -6887,6 +7358,7 @@ class BiWriter extends BiBase {
     bitbe(value, bits, unsigned) {
         return this.bit(value, bits, unsigned, "big");
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -6899,6 +7371,7 @@ class BiWriter extends BiBase {
     ubitbe(value, bits) {
         return this.bit(value, bits, true, "big");
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -6911,6 +7384,7 @@ class BiWriter extends BiBase {
     ubitle(value, bits) {
         return this.bit(value, bits, true, "little");
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -6924,6 +7398,7 @@ class BiWriter extends BiBase {
     bitle(value, bits, unsigned) {
         return this.bit(value, bits, unsigned, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 1 bit.
      *
@@ -6934,6 +7409,7 @@ class BiWriter extends BiBase {
     set bit1(value) {
         this.bit(value, 1);
     }
+    ;
     /**
      * Bit field writer. Writes 1 bit.
      *
@@ -6944,6 +7420,7 @@ class BiWriter extends BiBase {
     set bit1le(value) {
         this.bit(value, 1, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 1 bit.
      *
@@ -6954,6 +7431,7 @@ class BiWriter extends BiBase {
     set bit1be(value) {
         this.bit(value, 1, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 1 bit.
      *
@@ -6964,6 +7442,7 @@ class BiWriter extends BiBase {
     set ubit1(value) {
         this.bit(value, 1, true);
     }
+    ;
     /**
      * Bit field writer. Writes 1 bit.
      *
@@ -6974,6 +7453,7 @@ class BiWriter extends BiBase {
     set ubit1le(value) {
         this.bit(value, 1, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 1 bit.
      *
@@ -6984,6 +7464,7 @@ class BiWriter extends BiBase {
     set ubit1be(value) {
         this.bit(value, 1, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 2 bits.
      *
@@ -6994,6 +7475,7 @@ class BiWriter extends BiBase {
     set bit2(value) {
         this.bit(value, 2);
     }
+    ;
     /**
      * Bit field writer. Writes 2 bits.
      *
@@ -7004,6 +7486,7 @@ class BiWriter extends BiBase {
     set bit2le(value) {
         this.bit(value, 2, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 2 bits.
      *
@@ -7014,6 +7497,7 @@ class BiWriter extends BiBase {
     set bit2be(value) {
         this.bit(value, 2, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 2 bits.
      *
@@ -7024,6 +7508,7 @@ class BiWriter extends BiBase {
     set ubit2(value) {
         this.bit(value, 2, true);
     }
+    ;
     /**
      * Bit field writer. Writes 2 bits.
      *
@@ -7034,6 +7519,7 @@ class BiWriter extends BiBase {
     set ubit2le(value) {
         this.bit(value, 2, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 2 bits.
      *
@@ -7044,6 +7530,7 @@ class BiWriter extends BiBase {
     set ubit2be(value) {
         this.bit(value, 2, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 3 bits.
      *
@@ -7054,6 +7541,7 @@ class BiWriter extends BiBase {
     set bit3(value) {
         this.bit(value, 3);
     }
+    ;
     /**
      * Bit field writer. Writes 3 bits.
      *
@@ -7064,6 +7552,7 @@ class BiWriter extends BiBase {
     set bit3le(value) {
         this.bit(value, 3, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 3 bits.
      *
@@ -7074,6 +7563,7 @@ class BiWriter extends BiBase {
     set bit3be(value) {
         this.bit(value, 3, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 3 bits.
      *
@@ -7084,6 +7574,7 @@ class BiWriter extends BiBase {
     set ubit3(value) {
         this.bit(value, 3, true);
     }
+    ;
     /**
      * Bit field writer. Writes 3 bits.
      *
@@ -7094,6 +7585,7 @@ class BiWriter extends BiBase {
     set ubit3le(value) {
         this.bit(value, 3, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 3 bits.
      *
@@ -7104,6 +7596,7 @@ class BiWriter extends BiBase {
     set ubit3be(value) {
         this.bit(value, 3, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 4 bits.
      *
@@ -7114,6 +7607,7 @@ class BiWriter extends BiBase {
     set bit4(value) {
         this.bit(value, 4);
     }
+    ;
     /**
      * Bit field writer. Writes 4 bits.
      *
@@ -7124,6 +7618,7 @@ class BiWriter extends BiBase {
     set bit4le(value) {
         this.bit(value, 4, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 4 bits.
      *
@@ -7134,6 +7629,7 @@ class BiWriter extends BiBase {
     set bit4be(value) {
         this.bit(value, 4, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 4 bits.
      *
@@ -7144,6 +7640,7 @@ class BiWriter extends BiBase {
     set ubit4(value) {
         this.bit(value, 4, true);
     }
+    ;
     /**
      * Bit field writer. Writes 4 bits.
      *
@@ -7154,6 +7651,7 @@ class BiWriter extends BiBase {
     set ubit4le(value) {
         this.bit(value, 4, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 4 bits.
      *
@@ -7164,6 +7662,7 @@ class BiWriter extends BiBase {
     set ubit4be(value) {
         this.bit(value, 4, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 5 bits.
      *
@@ -7174,6 +7673,7 @@ class BiWriter extends BiBase {
     set bit5(value) {
         this.bit(value, 5);
     }
+    ;
     /**
      * Bit field writer. Writes 5 bits.
      *
@@ -7184,6 +7684,7 @@ class BiWriter extends BiBase {
     set bit5le(value) {
         this.bit(value, 5, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 5 bits.
      *
@@ -7194,6 +7695,7 @@ class BiWriter extends BiBase {
     set bit5be(value) {
         this.bit(value, 5, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 5 bits.
      *
@@ -7204,6 +7706,7 @@ class BiWriter extends BiBase {
     set ubit5(value) {
         this.bit(value, 5, true);
     }
+    ;
     /**
      * Bit field writer. Writes 5 bits.
      *
@@ -7214,6 +7717,7 @@ class BiWriter extends BiBase {
     set ubit5le(value) {
         this.bit(value, 5, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 5 bits.
      *
@@ -7224,6 +7728,7 @@ class BiWriter extends BiBase {
     set ubit5be(value) {
         this.bit(value, 5, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 6 bits.
      *
@@ -7234,6 +7739,7 @@ class BiWriter extends BiBase {
     set bit6(value) {
         this.bit(value, 6);
     }
+    ;
     /**
      * Bit field writer. Writes 6 bits.
      *
@@ -7244,6 +7750,7 @@ class BiWriter extends BiBase {
     set bit6le(value) {
         this.bit(value, 6, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 6 bits.
      *
@@ -7254,6 +7761,7 @@ class BiWriter extends BiBase {
     set bit6be(value) {
         this.bit(value, 6, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 6 bits.
      *
@@ -7264,6 +7772,7 @@ class BiWriter extends BiBase {
     set ubit6(value) {
         this.bit(value, 6, true);
     }
+    ;
     /**
      * Bit field writer. Writes 6 bits.
      *
@@ -7274,6 +7783,7 @@ class BiWriter extends BiBase {
     set ubit6le(value) {
         this.bit(value, 6, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 6 bits.
      *
@@ -7284,6 +7794,7 @@ class BiWriter extends BiBase {
     set ubit6be(value) {
         this.bit(value, 6, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 7 bits.
      *
@@ -7294,6 +7805,7 @@ class BiWriter extends BiBase {
     set bit7(value) {
         this.bit(value, 7);
     }
+    ;
     /**
      * Bit field writer. Writes 7 bits.
      *
@@ -7304,6 +7816,7 @@ class BiWriter extends BiBase {
     set bit7le(value) {
         this.bit(value, 7, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 7 bits.
      *
@@ -7314,6 +7827,7 @@ class BiWriter extends BiBase {
     set bit7be(value) {
         this.bit(value, 7, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 7 bits.
      *
@@ -7324,6 +7838,7 @@ class BiWriter extends BiBase {
     set ubit7(value) {
         this.bit(value, 7, true);
     }
+    ;
     /**
      * Bit field writer. Writes 7 bits.
      *
@@ -7334,6 +7849,7 @@ class BiWriter extends BiBase {
     set ubit7le(value) {
         this.bit(value, 7, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 7 bits.
      *
@@ -7344,6 +7860,7 @@ class BiWriter extends BiBase {
     set ubit7be(value) {
         this.bit(value, 7, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 8 bits.
      *
@@ -7354,6 +7871,7 @@ class BiWriter extends BiBase {
     set bit8(value) {
         this.bit(value, 8);
     }
+    ;
     /**
      * Bit field writer. Writes 8 bits.
      *
@@ -7364,6 +7882,7 @@ class BiWriter extends BiBase {
     set bit8le(value) {
         this.bit(value, 8, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 8 bits.
      *
@@ -7374,6 +7893,7 @@ class BiWriter extends BiBase {
     set bit8be(value) {
         this.bit(value, 8, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 8 bits.
      *
@@ -7384,6 +7904,7 @@ class BiWriter extends BiBase {
     set ubit8(value) {
         this.bit(value, 8, true);
     }
+    ;
     /**
      * Bit field writer. Writes 8 bits.
      *
@@ -7394,6 +7915,7 @@ class BiWriter extends BiBase {
     set ubit8le(value) {
         this.bit(value, 8, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 8 bits.
      *
@@ -7404,6 +7926,7 @@ class BiWriter extends BiBase {
     set ubit8be(value) {
         this.bit(value, 8, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 9 bits.
      *
@@ -7414,6 +7937,7 @@ class BiWriter extends BiBase {
     set bit9(value) {
         this.bit(value, 9);
     }
+    ;
     /**
      * Bit field writer. Writes 9 bits.
      *
@@ -7424,6 +7948,7 @@ class BiWriter extends BiBase {
     set bit9le(value) {
         this.bit(value, 9, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 9 bits.
      *
@@ -7434,6 +7959,7 @@ class BiWriter extends BiBase {
     set bit9be(value) {
         this.bit(value, 9, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 9 bits.
      *
@@ -7444,6 +7970,7 @@ class BiWriter extends BiBase {
     set ubit9(value) {
         this.bit(value, 9, true);
     }
+    ;
     /**
      * Bit field writer. Writes 9 bits.
      *
@@ -7454,6 +7981,7 @@ class BiWriter extends BiBase {
     set ubit9le(value) {
         this.bit(value, 9, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 9 bits.
      *
@@ -7464,6 +7992,7 @@ class BiWriter extends BiBase {
     set ubit9be(value) {
         this.bit(value, 9, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 10 bits.
      *
@@ -7474,6 +8003,7 @@ class BiWriter extends BiBase {
     set bit10(value) {
         this.bit(value, 10);
     }
+    ;
     /**
      * Bit field writer. Writes 10 bits.
      *
@@ -7484,6 +8014,7 @@ class BiWriter extends BiBase {
     set bit10le(value) {
         this.bit(value, 10, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 10 bits.
      *
@@ -7494,6 +8025,7 @@ class BiWriter extends BiBase {
     set bit10be(value) {
         this.bit(value, 10, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 10 bits.
      *
@@ -7504,6 +8036,7 @@ class BiWriter extends BiBase {
     set ubit10(value) {
         this.bit(value, 10, true);
     }
+    ;
     /**
      * Bit field writer. Writes 10 bits.
      *
@@ -7514,6 +8047,7 @@ class BiWriter extends BiBase {
     set ubit10le(value) {
         this.bit(value, 10, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 10 bits.
      *
@@ -7524,6 +8058,7 @@ class BiWriter extends BiBase {
     set ubit10be(value) {
         this.bit(value, 10, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 11 bits.
      *
@@ -7534,6 +8069,7 @@ class BiWriter extends BiBase {
     set bit11(value) {
         this.bit(value, 11);
     }
+    ;
     /**
      * Bit field writer. Writes 11 bits.
      *
@@ -7544,6 +8080,7 @@ class BiWriter extends BiBase {
     set bit11le(value) {
         this.bit(value, 11, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 11 bits.
      *
@@ -7554,6 +8091,7 @@ class BiWriter extends BiBase {
     set bit11be(value) {
         this.bit(value, 11, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 11 bits.
      *
@@ -7564,6 +8102,7 @@ class BiWriter extends BiBase {
     set ubit11(value) {
         this.bit(value, 11, true);
     }
+    ;
     /**
      * Bit field writer. Writes 11 bits.
      *
@@ -7574,6 +8113,7 @@ class BiWriter extends BiBase {
     set ubit11le(value) {
         this.bit(value, 11, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 11 bits.
      *
@@ -7584,6 +8124,7 @@ class BiWriter extends BiBase {
     set ubit11be(value) {
         this.bit(value, 11, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 12 bits.
      *
@@ -7594,6 +8135,7 @@ class BiWriter extends BiBase {
     set bit12(value) {
         this.bit(value, 12);
     }
+    ;
     /**
      * Bit field writer. Writes 12 bits.
      *
@@ -7604,6 +8146,7 @@ class BiWriter extends BiBase {
     set bit12le(value) {
         this.bit(value, 12, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 12 bits.
      *
@@ -7614,6 +8157,7 @@ class BiWriter extends BiBase {
     set bit12be(value) {
         this.bit(value, 12, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 12 bits.
      *
@@ -7624,6 +8168,7 @@ class BiWriter extends BiBase {
     set ubit12(value) {
         this.bit(value, 12, true);
     }
+    ;
     /**
      * Bit field writer. Writes 12 bits.
      *
@@ -7634,6 +8179,7 @@ class BiWriter extends BiBase {
     set ubit12le(value) {
         this.bit(value, 12, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 12 bits.
      *
@@ -7644,6 +8190,7 @@ class BiWriter extends BiBase {
     set ubit12be(value) {
         this.bit(value, 12, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 13 bits.
      *
@@ -7654,6 +8201,7 @@ class BiWriter extends BiBase {
     set bit13(value) {
         this.bit(value, 13);
     }
+    ;
     /**
      * Bit field writer. Writes 13 bits.
      *
@@ -7664,6 +8212,7 @@ class BiWriter extends BiBase {
     set bit13le(value) {
         this.bit(value, 13, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 13 bits.
      *
@@ -7674,6 +8223,7 @@ class BiWriter extends BiBase {
     set bit13be(value) {
         this.bit(value, 13, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 13 bits.
      *
@@ -7684,6 +8234,7 @@ class BiWriter extends BiBase {
     set ubit13(value) {
         this.bit(value, 13, true);
     }
+    ;
     /**
      * Bit field writer. Writes 13 bits.
      *
@@ -7694,6 +8245,7 @@ class BiWriter extends BiBase {
     set ubit13le(value) {
         this.bit(value, 13, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 13 bits.
      *
@@ -7704,6 +8256,7 @@ class BiWriter extends BiBase {
     set ubit13be(value) {
         this.bit(value, 13, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 14 bits.
      *
@@ -7714,6 +8267,7 @@ class BiWriter extends BiBase {
     set bit14(value) {
         this.bit(value, 14);
     }
+    ;
     /**
      * Bit field writer. Writes 14 bits.
      *
@@ -7724,6 +8278,7 @@ class BiWriter extends BiBase {
     set bit14le(value) {
         this.bit(value, 14, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 14 bits.
      *
@@ -7734,6 +8289,7 @@ class BiWriter extends BiBase {
     set bit14be(value) {
         this.bit(value, 14, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 14 bits.
      *
@@ -7744,6 +8300,7 @@ class BiWriter extends BiBase {
     set ubit14(value) {
         this.bit(value, 14, true);
     }
+    ;
     /**
      * Bit field writer. Writes 14 bits.
      *
@@ -7754,6 +8311,7 @@ class BiWriter extends BiBase {
     set ubit14le(value) {
         this.bit(value, 14, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 14 bits.
      *
@@ -7764,6 +8322,7 @@ class BiWriter extends BiBase {
     set ubit14be(value) {
         this.bit(value, 14, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 15 bits.
      *
@@ -7774,6 +8333,7 @@ class BiWriter extends BiBase {
     set bit15(value) {
         this.bit(value, 15);
     }
+    ;
     /**
      * Bit field writer. Writes 15 bits.
      *
@@ -7784,6 +8344,7 @@ class BiWriter extends BiBase {
     set bit15le(value) {
         this.bit(value, 15, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 15 bits.
      *
@@ -7794,6 +8355,7 @@ class BiWriter extends BiBase {
     set bit15be(value) {
         this.bit(value, 15, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 15 bits.
      *
@@ -7804,6 +8366,7 @@ class BiWriter extends BiBase {
     set ubit15(value) {
         this.bit(value, 15, true);
     }
+    ;
     /**
      * Bit field writer. Writes 15 bits.
      *
@@ -7814,6 +8377,7 @@ class BiWriter extends BiBase {
     set ubit15le(value) {
         this.bit(value, 15, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 15 bits.
      *
@@ -7824,6 +8388,7 @@ class BiWriter extends BiBase {
     set ubit15be(value) {
         this.bit(value, 15, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 16 bits.
      *
@@ -7834,6 +8399,7 @@ class BiWriter extends BiBase {
     set bit16(value) {
         this.bit(value, 16);
     }
+    ;
     /**
      * Bit field writer. Writes 16 bits.
      *
@@ -7844,6 +8410,7 @@ class BiWriter extends BiBase {
     set bit16le(value) {
         this.bit(value, 16, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 16 bits.
      *
@@ -7854,6 +8421,7 @@ class BiWriter extends BiBase {
     set bit16be(value) {
         this.bit(value, 16, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 16 bits.
      *
@@ -7864,6 +8432,7 @@ class BiWriter extends BiBase {
     set ubit16(value) {
         this.bit(value, 16, true);
     }
+    ;
     /**
      * Bit field writer. Writes 16 bits.
      *
@@ -7874,6 +8443,7 @@ class BiWriter extends BiBase {
     set ubit16le(value) {
         this.bit(value, 16, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 16 bits.
      *
@@ -7884,6 +8454,7 @@ class BiWriter extends BiBase {
     set ubit16be(value) {
         this.bit(value, 16, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 17 bits.
      *
@@ -7894,6 +8465,7 @@ class BiWriter extends BiBase {
     set bit17(value) {
         this.bit(value, 17);
     }
+    ;
     /**
      * Bit field writer. Writes 17 bits.
      *
@@ -7904,6 +8476,7 @@ class BiWriter extends BiBase {
     set bit17le(value) {
         this.bit(value, 17, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 17 bits.
      *
@@ -7914,6 +8487,7 @@ class BiWriter extends BiBase {
     set bit17be(value) {
         this.bit(value, 17, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 17 bits.
      *
@@ -7924,6 +8498,7 @@ class BiWriter extends BiBase {
     set ubit17(value) {
         this.bit(value, 17, true);
     }
+    ;
     /**
      * Bit field writer. Writes 17 bits.
      *
@@ -7934,6 +8509,7 @@ class BiWriter extends BiBase {
     set ubit17le(value) {
         this.bit(value, 17, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 17 bits.
      *
@@ -7944,6 +8520,7 @@ class BiWriter extends BiBase {
     set ubit17be(value) {
         this.bit(value, 17, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 18 bits.
      *
@@ -7954,6 +8531,7 @@ class BiWriter extends BiBase {
     set bit18(value) {
         this.bit(value, 18);
     }
+    ;
     /**
      * Bit field writer. Writes 18 bits.
      *
@@ -7964,6 +8542,7 @@ class BiWriter extends BiBase {
     set bit18le(value) {
         this.bit(value, 18, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 18 bits.
      *
@@ -7974,6 +8553,7 @@ class BiWriter extends BiBase {
     set bit18be(value) {
         this.bit(value, 18, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 18 bits.
      *
@@ -7984,6 +8564,7 @@ class BiWriter extends BiBase {
     set ubit18(value) {
         this.bit(value, 18, true);
     }
+    ;
     /**
      * Bit field writer. Writes 18 bits.
      *
@@ -7994,6 +8575,7 @@ class BiWriter extends BiBase {
     set ubit18le(value) {
         this.bit(value, 18, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 18 bits.
      *
@@ -8004,6 +8586,7 @@ class BiWriter extends BiBase {
     set ubit18be(value) {
         this.bit(value, 18, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 19 bits.
      *
@@ -8014,6 +8597,7 @@ class BiWriter extends BiBase {
     set bit19(value) {
         this.bit(value, 19);
     }
+    ;
     /**
      * Bit field writer. Writes 19 bits.
      *
@@ -8024,6 +8608,7 @@ class BiWriter extends BiBase {
     set bit19le(value) {
         this.bit(value, 19, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 19 bits.
      *
@@ -8034,6 +8619,7 @@ class BiWriter extends BiBase {
     set bit19be(value) {
         this.bit(value, 19, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 19 bits.
      *
@@ -8044,6 +8630,7 @@ class BiWriter extends BiBase {
     set ubit19(value) {
         this.bit(value, 19, true);
     }
+    ;
     /**
      * Bit field writer. Writes 19 bits.
      *
@@ -8054,6 +8641,7 @@ class BiWriter extends BiBase {
     set ubit19le(value) {
         this.bit(value, 19, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 19 bits.
      *
@@ -8064,6 +8652,7 @@ class BiWriter extends BiBase {
     set ubit19be(value) {
         this.bit(value, 19, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 20 bits.
      *
@@ -8074,6 +8663,7 @@ class BiWriter extends BiBase {
     set bit20(value) {
         this.bit(value, 20);
     }
+    ;
     /**
      * Bit field writer. Writes 20 bits.
      *
@@ -8084,6 +8674,7 @@ class BiWriter extends BiBase {
     set bit20le(value) {
         this.bit(value, 20, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 20 bits.
      *
@@ -8094,6 +8685,7 @@ class BiWriter extends BiBase {
     set bit20be(value) {
         this.bit(value, 20, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 20 bits.
      *
@@ -8104,6 +8696,7 @@ class BiWriter extends BiBase {
     set ubit20(value) {
         this.bit(value, 20, true);
     }
+    ;
     /**
      * Bit field writer. Writes 20 bits.
      *
@@ -8114,6 +8707,7 @@ class BiWriter extends BiBase {
     set ubit20le(value) {
         this.bit(value, 20, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 20 bits.
      *
@@ -8124,6 +8718,7 @@ class BiWriter extends BiBase {
     set ubit20be(value) {
         this.bit(value, 20, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 21 bits.
      *
@@ -8134,6 +8729,7 @@ class BiWriter extends BiBase {
     set bit21(value) {
         this.bit(value, 21);
     }
+    ;
     /**
      * Bit field writer. Writes 21 bits.
      *
@@ -8144,6 +8740,7 @@ class BiWriter extends BiBase {
     set bit21le(value) {
         this.bit(value, 21, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 21 bits.
      *
@@ -8154,6 +8751,7 @@ class BiWriter extends BiBase {
     set bit21be(value) {
         this.bit(value, 21, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 21 bits.
      *
@@ -8164,6 +8762,7 @@ class BiWriter extends BiBase {
     set ubit21(value) {
         this.bit(value, 21, true);
     }
+    ;
     /**
      * Bit field writer. Writes 21 bits.
      *
@@ -8174,6 +8773,7 @@ class BiWriter extends BiBase {
     set ubit21le(value) {
         this.bit(value, 21, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 21 bits.
      *
@@ -8184,6 +8784,7 @@ class BiWriter extends BiBase {
     set ubit21be(value) {
         this.bit(value, 21, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 22 bits.
      *
@@ -8194,6 +8795,7 @@ class BiWriter extends BiBase {
     set bit22(value) {
         this.bit(value, 22);
     }
+    ;
     /**
      * Bit field writer. Writes 22 bits.
      *
@@ -8204,6 +8806,7 @@ class BiWriter extends BiBase {
     set bit22le(value) {
         this.bit(value, 22, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 22 bits.
      *
@@ -8214,6 +8817,7 @@ class BiWriter extends BiBase {
     set bit22be(value) {
         this.bit(value, 22, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 22 bits.
      *
@@ -8224,6 +8828,7 @@ class BiWriter extends BiBase {
     set ubit22(value) {
         this.bit(value, 22, true);
     }
+    ;
     /**
      * Bit field writer. Writes 22 bits.
      *
@@ -8234,6 +8839,7 @@ class BiWriter extends BiBase {
     set ubit22le(value) {
         this.bit(value, 22, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 22 bits.
      *
@@ -8244,6 +8850,7 @@ class BiWriter extends BiBase {
     set ubit22be(value) {
         this.bit(value, 22, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 23 bits.
      *
@@ -8254,6 +8861,7 @@ class BiWriter extends BiBase {
     set bit23(value) {
         this.bit(value, 23);
     }
+    ;
     /**
      * Bit field writer. Writes 23 bits.
      *
@@ -8264,6 +8872,7 @@ class BiWriter extends BiBase {
     set bit23le(value) {
         this.bit(value, 23, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 23 bits.
      *
@@ -8274,6 +8883,7 @@ class BiWriter extends BiBase {
     set bit23be(value) {
         this.bit(value, 23, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 23 bits.
      *
@@ -8284,6 +8894,7 @@ class BiWriter extends BiBase {
     set ubit23(value) {
         this.bit(value, 23, true);
     }
+    ;
     /**
      * Bit field writer. Writes 23 bits.
      *
@@ -8294,6 +8905,7 @@ class BiWriter extends BiBase {
     set ubit23le(value) {
         this.bit(value, 23, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 23 bits.
      *
@@ -8304,6 +8916,7 @@ class BiWriter extends BiBase {
     set ubit23be(value) {
         this.bit(value, 23, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 24 bits.
      *
@@ -8314,6 +8927,7 @@ class BiWriter extends BiBase {
     set bit24(value) {
         this.bit(value, 24);
     }
+    ;
     /**
      * Bit field writer. Writes 24 bits.
      *
@@ -8324,6 +8938,7 @@ class BiWriter extends BiBase {
     set bit24le(value) {
         this.bit(value, 24, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 24 bits.
      *
@@ -8334,6 +8949,7 @@ class BiWriter extends BiBase {
     set bit24be(value) {
         this.bit(value, 24, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 24 bits.
      *
@@ -8344,6 +8960,7 @@ class BiWriter extends BiBase {
     set ubit24(value) {
         this.bit(value, 24, true);
     }
+    ;
     /**
      * Bit field writer. Writes 24 bits.
      *
@@ -8354,6 +8971,7 @@ class BiWriter extends BiBase {
     set ubit24le(value) {
         this.bit(value, 24, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 24 bits.
      *
@@ -8364,6 +8982,7 @@ class BiWriter extends BiBase {
     set ubit24be(value) {
         this.bit(value, 24, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 25 bits.
      *
@@ -8374,6 +8993,7 @@ class BiWriter extends BiBase {
     set bit25(value) {
         this.bit(value, 25);
     }
+    ;
     /**
      * Bit field writer. Writes 25 bits.
      *
@@ -8384,6 +9004,7 @@ class BiWriter extends BiBase {
     set bit25le(value) {
         this.bit(value, 25, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 25 bits.
      *
@@ -8394,6 +9015,7 @@ class BiWriter extends BiBase {
     set bit25be(value) {
         this.bit(value, 25, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 25 bits.
      *
@@ -8404,6 +9026,7 @@ class BiWriter extends BiBase {
     set ubit25(value) {
         this.bit(value, 25, true);
     }
+    ;
     /**
      * Bit field writer. Writes 25 bits.
      *
@@ -8414,6 +9037,7 @@ class BiWriter extends BiBase {
     set ubit25le(value) {
         this.bit(value, 25, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 25 bits.
      *
@@ -8424,6 +9048,7 @@ class BiWriter extends BiBase {
     set ubit25be(value) {
         this.bit(value, 25, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 26 bits.
      *
@@ -8434,6 +9059,7 @@ class BiWriter extends BiBase {
     set bit26(value) {
         this.bit(value, 26);
     }
+    ;
     /**
      * Bit field writer. Writes 26 bits.
      *
@@ -8444,6 +9070,7 @@ class BiWriter extends BiBase {
     set bit26le(value) {
         this.bit(value, 26, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 26 bits.
      *
@@ -8454,6 +9081,7 @@ class BiWriter extends BiBase {
     set bit26be(value) {
         this.bit(value, 26, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 26 bits.
      *
@@ -8464,6 +9092,7 @@ class BiWriter extends BiBase {
     set ubit26(value) {
         this.bit(value, 26, true);
     }
+    ;
     /**
      * Bit field writer. Writes 26 bits.
      *
@@ -8474,6 +9103,7 @@ class BiWriter extends BiBase {
     set ubit26le(value) {
         this.bit(value, 26, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 26 bits.
      *
@@ -8484,6 +9114,7 @@ class BiWriter extends BiBase {
     set ubit26be(value) {
         this.bit(value, 26, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 27 bits.
      *
@@ -8494,6 +9125,7 @@ class BiWriter extends BiBase {
     set bit27(value) {
         this.bit(value, 27);
     }
+    ;
     /**
      * Bit field writer. Writes 27 bits.
      *
@@ -8504,6 +9136,7 @@ class BiWriter extends BiBase {
     set bit27le(value) {
         this.bit(value, 27, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 27 bits.
      *
@@ -8514,6 +9147,7 @@ class BiWriter extends BiBase {
     set bit27be(value) {
         this.bit(value, 27, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 27 bits.
      *
@@ -8524,6 +9158,7 @@ class BiWriter extends BiBase {
     set ubit27(value) {
         this.bit(value, 27, true);
     }
+    ;
     /**
      * Bit field writer. Writes 27 bits.
      *
@@ -8534,6 +9169,7 @@ class BiWriter extends BiBase {
     set ubit27le(value) {
         this.bit(value, 27, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 27 bits.
      *
@@ -8544,6 +9180,7 @@ class BiWriter extends BiBase {
     set ubit27be(value) {
         this.bit(value, 27, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 28 bits.
      *
@@ -8554,6 +9191,7 @@ class BiWriter extends BiBase {
     set bit28(value) {
         this.bit(value, 28);
     }
+    ;
     /**
      * Bit field writer. Writes 28 bits.
      *
@@ -8564,6 +9202,7 @@ class BiWriter extends BiBase {
     set bit28le(value) {
         this.bit(value, 28, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 28 bits.
      *
@@ -8574,6 +9213,7 @@ class BiWriter extends BiBase {
     set bit28be(value) {
         this.bit(value, 28, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 28 bits.
      *
@@ -8584,6 +9224,7 @@ class BiWriter extends BiBase {
     set ubit28(value) {
         this.bit(value, 28, true);
     }
+    ;
     /**
      * Bit field writer. Writes 28 bits.
      *
@@ -8594,6 +9235,7 @@ class BiWriter extends BiBase {
     set ubit28le(value) {
         this.bit(value, 28, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 28 bits.
      *
@@ -8604,6 +9246,7 @@ class BiWriter extends BiBase {
     set ubit28be(value) {
         this.bit(value, 28, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 29 bits.
      *
@@ -8614,6 +9257,7 @@ class BiWriter extends BiBase {
     set bit29(value) {
         this.bit(value, 29);
     }
+    ;
     /**
      * Bit field writer. Writes 29 bits.
      *
@@ -8624,6 +9268,7 @@ class BiWriter extends BiBase {
     set bit29le(value) {
         this.bit(value, 29, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 29 bits.
      *
@@ -8634,6 +9279,7 @@ class BiWriter extends BiBase {
     set bit29be(value) {
         this.bit(value, 29, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 29 bits.
      *
@@ -8644,6 +9290,7 @@ class BiWriter extends BiBase {
     set ubit29(value) {
         this.bit(value, 29, true);
     }
+    ;
     /**
      * Bit field writer. Writes 29 bits.
      *
@@ -8654,6 +9301,7 @@ class BiWriter extends BiBase {
     set ubit29le(value) {
         this.bit(value, 29, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 29 bits.
      *
@@ -8664,6 +9312,7 @@ class BiWriter extends BiBase {
     set ubit29be(value) {
         this.bit(value, 29, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 30 bits.
      *
@@ -8674,6 +9323,7 @@ class BiWriter extends BiBase {
     set bit30(value) {
         this.bit(value, 30);
     }
+    ;
     /**
      * Bit field writer. Writes 30 bits.
      *
@@ -8684,6 +9334,7 @@ class BiWriter extends BiBase {
     set bit30le(value) {
         this.bit(value, 30, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 30 bits.
      *
@@ -8694,6 +9345,7 @@ class BiWriter extends BiBase {
     set bit30be(value) {
         this.bit(value, 30, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 30 bits.
      *
@@ -8704,6 +9356,7 @@ class BiWriter extends BiBase {
     set ubit30(value) {
         this.bit(value, 30, true);
     }
+    ;
     /**
      * Bit field writer. Writes 30 bits.
      *
@@ -8714,6 +9367,7 @@ class BiWriter extends BiBase {
     set ubit30le(value) {
         this.bit(value, 30, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 30 bits.
      *
@@ -8724,6 +9378,7 @@ class BiWriter extends BiBase {
     set ubit30be(value) {
         this.bit(value, 30, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 31 bits.
      *
@@ -8734,6 +9389,7 @@ class BiWriter extends BiBase {
     set bit31(value) {
         this.bit(value, 31);
     }
+    ;
     /**
      * Bit field writer. Writes 31 bits.
      *
@@ -8744,6 +9400,7 @@ class BiWriter extends BiBase {
     set bit31le(value) {
         this.bit(value, 31, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 31 bits.
      *
@@ -8754,6 +9411,7 @@ class BiWriter extends BiBase {
     set bit31be(value) {
         this.bit(value, 31, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 31 bits.
      *
@@ -8764,6 +9422,7 @@ class BiWriter extends BiBase {
     set ubit31(value) {
         this.bit(value, 31, true);
     }
+    ;
     /**
      * Bit field writer. Writes 31 bits.
      *
@@ -8774,6 +9433,7 @@ class BiWriter extends BiBase {
     set ubit31le(value) {
         this.bit(value, 31, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 31 bits.
      *
@@ -8784,6 +9444,7 @@ class BiWriter extends BiBase {
     set ubit31be(value) {
         this.bit(value, 31, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 32 bits.
      *
@@ -8794,6 +9455,7 @@ class BiWriter extends BiBase {
     set bit32(value) {
         this.bit(value, 32);
     }
+    ;
     /**
      * Bit field writer. Writes 32 bits.
      *
@@ -8804,6 +9466,7 @@ class BiWriter extends BiBase {
     set bit32le(value) {
         this.bit(value, 32, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 32 bits.
      *
@@ -8814,6 +9477,7 @@ class BiWriter extends BiBase {
     set bit32be(value) {
         this.bit(value, 32, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 32 bits.
      *
@@ -8824,6 +9488,7 @@ class BiWriter extends BiBase {
     set ubit32(value) {
         this.bit(value, 32, true);
     }
+    ;
     /**
      * Bit field writer. Writes 32 bits.
      *
@@ -8834,6 +9499,7 @@ class BiWriter extends BiBase {
     set ubit32le(value) {
         this.bit(value, 32, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 32 bits.
      *
@@ -8844,6 +9510,7 @@ class BiWriter extends BiBase {
     set ubit32be(value) {
         this.bit(value, 32, true, "big");
     }
+    ;
     //
     // byte write
     //
@@ -8855,6 +9522,7 @@ class BiWriter extends BiBase {
     set byte(value) {
         this.writeByte(value);
     }
+    ;
     /**
      * Write byte.
      *
@@ -8863,6 +9531,7 @@ class BiWriter extends BiBase {
     set int8(value) {
         this.writeByte(value);
     }
+    ;
     /**
      * Write unsigned byte.
      *
@@ -8871,6 +9540,7 @@ class BiWriter extends BiBase {
     set uint8(value) {
         this.writeByte(value, true);
     }
+    ;
     /**
      * Write unsigned byte.
      *
@@ -8879,6 +9549,7 @@ class BiWriter extends BiBase {
     set ubyte(value) {
         this.writeByte(value, true);
     }
+    ;
     //
     // short writes
     //
@@ -8890,6 +9561,7 @@ class BiWriter extends BiBase {
     set int16(value) {
         this.writeInt16(value);
     }
+    ;
     /**
      * Write int16.
      *
@@ -8898,6 +9570,7 @@ class BiWriter extends BiBase {
     set short(value) {
         this.writeInt16(value);
     }
+    ;
     /**
      * Write int16.
      *
@@ -8906,6 +9579,7 @@ class BiWriter extends BiBase {
     set word(value) {
         this.writeInt16(value);
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -8914,6 +9588,7 @@ class BiWriter extends BiBase {
     set uint16(value) {
         this.writeInt16(value, true);
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -8922,6 +9597,7 @@ class BiWriter extends BiBase {
     set ushort(value) {
         this.writeInt16(value, true);
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -8930,6 +9606,7 @@ class BiWriter extends BiBase {
     set uword(value) {
         this.writeInt16(value, true);
     }
+    ;
     /**
      * Write signed int16.
      *
@@ -8938,6 +9615,7 @@ class BiWriter extends BiBase {
     set int16be(value) {
         this.writeInt16(value, false, "big");
     }
+    ;
     /**
      * Write signed int16.
      *
@@ -8946,6 +9624,7 @@ class BiWriter extends BiBase {
     set shortbe(value) {
         this.writeInt16(value, false, "big");
     }
+    ;
     /**
      * Write signed int16.
      *
@@ -8954,6 +9633,7 @@ class BiWriter extends BiBase {
     set wordbe(value) {
         this.writeInt16(value, false, "big");
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -8962,6 +9642,7 @@ class BiWriter extends BiBase {
     set uint16be(value) {
         this.writeInt16(value, true, "big");
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -8970,6 +9651,7 @@ class BiWriter extends BiBase {
     set ushortbe(value) {
         this.writeInt16(value, true, "big");
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -8978,6 +9660,7 @@ class BiWriter extends BiBase {
     set uwordbe(value) {
         this.writeInt16(value, true, "big");
     }
+    ;
     /**
      * Write signed int16.
      *
@@ -8986,6 +9669,7 @@ class BiWriter extends BiBase {
     set int16le(value) {
         this.writeInt16(value, false, "little");
     }
+    ;
     /**
      * Write signed int16.
      *
@@ -8994,6 +9678,7 @@ class BiWriter extends BiBase {
     set shortle(value) {
         this.writeInt16(value, false, "little");
     }
+    ;
     /**
      * Write signed int16.
      *
@@ -9002,6 +9687,7 @@ class BiWriter extends BiBase {
     set wordle(value) {
         this.writeInt16(value, false, "little");
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -9010,6 +9696,7 @@ class BiWriter extends BiBase {
     set uint16le(value) {
         this.writeInt16(value, true, "little");
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -9018,6 +9705,7 @@ class BiWriter extends BiBase {
     set ushortle(value) {
         this.writeInt16(value, true, "little");
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -9026,6 +9714,7 @@ class BiWriter extends BiBase {
     set uwordle(value) {
         this.writeInt16(value, true, "little");
     }
+    ;
     //
     // half float
     //
@@ -9037,6 +9726,7 @@ class BiWriter extends BiBase {
     set half(value) {
         this.writeHalfFloat(value);
     }
+    ;
     /**
      * Writes half float.
      *
@@ -9045,6 +9735,7 @@ class BiWriter extends BiBase {
     set halffloat(value) {
         this.writeHalfFloat(value);
     }
+    ;
     /**
      * Writes half float.
      *
@@ -9053,6 +9744,7 @@ class BiWriter extends BiBase {
     set halffloatbe(value) {
         this.writeHalfFloat(value, "big");
     }
+    ;
     /**
      * Writes half float.
      *
@@ -9061,6 +9753,7 @@ class BiWriter extends BiBase {
     set halfbe(value) {
         this.writeHalfFloat(value, "big");
     }
+    ;
     /**
      * Writes half float.
      *
@@ -9069,6 +9762,7 @@ class BiWriter extends BiBase {
     set halffloatle(value) {
         this.writeHalfFloat(value, "little");
     }
+    ;
     /**
      * Writes half float.
      *
@@ -9077,6 +9771,7 @@ class BiWriter extends BiBase {
     set halfle(value) {
         this.writeHalfFloat(value, "little");
     }
+    ;
     //
     // int32 write
     //
@@ -9088,6 +9783,7 @@ class BiWriter extends BiBase {
     set int(value) {
         this.writeInt32(value);
     }
+    ;
     /**
     * Write int32.
     *
@@ -9096,6 +9792,7 @@ class BiWriter extends BiBase {
     set int32(value) {
         this.writeInt32(value);
     }
+    ;
     /**
      * Write int32.
      *
@@ -9104,6 +9801,7 @@ class BiWriter extends BiBase {
     set double(value) {
         this.writeInt32(value);
     }
+    ;
     /**
      * Write int32.
      *
@@ -9112,6 +9810,7 @@ class BiWriter extends BiBase {
     set long(value) {
         this.writeInt32(value);
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -9120,6 +9819,7 @@ class BiWriter extends BiBase {
     set uint32(value) {
         this.writeInt32(value, true);
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -9128,6 +9828,7 @@ class BiWriter extends BiBase {
     set uint(value) {
         this.writeInt32(value, true);
     }
+    ;
     /**
     * Write unsigned int32.
     *
@@ -9136,6 +9837,7 @@ class BiWriter extends BiBase {
     set udouble(value) {
         this.writeInt32(value, true);
     }
+    ;
     /**
     * Write unsigned int32.
     *
@@ -9144,6 +9846,7 @@ class BiWriter extends BiBase {
     set ulong(value) {
         this.writeInt32(value, true);
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -9152,6 +9855,7 @@ class BiWriter extends BiBase {
     set int32le(value) {
         this.writeInt32(value, false, "little");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -9160,6 +9864,7 @@ class BiWriter extends BiBase {
     set intle(value) {
         this.writeInt32(value, false, "little");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -9168,6 +9873,7 @@ class BiWriter extends BiBase {
     set doublele(value) {
         this.writeInt32(value, false, "little");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -9176,6 +9882,7 @@ class BiWriter extends BiBase {
     set longle(value) {
         this.writeInt32(value, false, "little");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -9184,6 +9891,7 @@ class BiWriter extends BiBase {
     set uint32le(value) {
         this.writeInt32(value, true, "little");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -9192,6 +9900,7 @@ class BiWriter extends BiBase {
     set uintle(value) {
         this.writeInt32(value, true, "little");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -9200,6 +9909,7 @@ class BiWriter extends BiBase {
     set udoublele(value) {
         this.writeInt32(value, true, "little");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -9208,6 +9918,7 @@ class BiWriter extends BiBase {
     set ulongle(value) {
         this.writeInt32(value, true, "little");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -9216,6 +9927,7 @@ class BiWriter extends BiBase {
     set intbe(value) {
         this.writeInt32(value, false, "big");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -9224,6 +9936,7 @@ class BiWriter extends BiBase {
     set int32be(value) {
         this.writeInt32(value, false, "big");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -9232,6 +9945,7 @@ class BiWriter extends BiBase {
     set doublebe(value) {
         this.writeInt32(value, false, "big");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -9240,6 +9954,7 @@ class BiWriter extends BiBase {
     set longbe(value) {
         this.writeInt32(value, false, "big");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -9248,6 +9963,7 @@ class BiWriter extends BiBase {
     set writeUInt32BE(value) {
         this.writeInt32(value, true, "big");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -9256,6 +9972,7 @@ class BiWriter extends BiBase {
     set uint32be(value) {
         this.writeInt32(value, true, "big");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -9264,6 +9981,7 @@ class BiWriter extends BiBase {
     set uintbe(value) {
         this.writeInt32(value, true, "big");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -9272,6 +9990,7 @@ class BiWriter extends BiBase {
     set udoublebe(value) {
         this.writeInt32(value, true, "big");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -9280,6 +9999,7 @@ class BiWriter extends BiBase {
     set ulongbe(value) {
         this.writeInt32(value, true, "big");
     }
+    ;
     //
     // float write
     //
@@ -9291,6 +10011,7 @@ class BiWriter extends BiBase {
     set float(value) {
         this.writeFloat(value);
     }
+    ;
     /**
      * Write float.
      *
@@ -9299,6 +10020,7 @@ class BiWriter extends BiBase {
     set floatle(value) {
         this.writeFloat(value, "little");
     }
+    ;
     /**
     * Write float.
     *
@@ -9307,6 +10029,7 @@ class BiWriter extends BiBase {
     set floatbe(value) {
         this.writeFloat(value, "big");
     }
+    ;
     //
     // int64 write
     //
@@ -9318,6 +10041,7 @@ class BiWriter extends BiBase {
     set int64(value) {
         this.writeInt64(value);
     }
+    ;
     /**
     * Write 64 bit integer.
     *
@@ -9326,6 +10050,7 @@ class BiWriter extends BiBase {
     set quad(value) {
         this.writeInt64(value);
     }
+    ;
     /**
      * Write 64 bit integer.
      *
@@ -9334,6 +10059,7 @@ class BiWriter extends BiBase {
     set bigint(value) {
         this.writeInt64(value);
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -9342,6 +10068,7 @@ class BiWriter extends BiBase {
     set uint64(value) {
         this.writeInt64(value, true);
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -9350,6 +10077,7 @@ class BiWriter extends BiBase {
     set ubigint(value) {
         this.writeInt64(value, true);
     }
+    ;
     /**
     * Write unsigned 64 bit integer.
     *
@@ -9358,6 +10086,7 @@ class BiWriter extends BiBase {
     set uquad(value) {
         this.writeInt64(value, true);
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -9366,6 +10095,7 @@ class BiWriter extends BiBase {
     set int64le(value) {
         this.writeInt64(value, false, "little");
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -9374,6 +10104,7 @@ class BiWriter extends BiBase {
     set bigintle(value) {
         this.writeInt64(value, false, "little");
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -9382,6 +10113,7 @@ class BiWriter extends BiBase {
     set quadle(value) {
         this.writeInt64(value, false, "little");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -9390,6 +10122,7 @@ class BiWriter extends BiBase {
     set uint64le(value) {
         this.writeInt64(value, true, "little");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -9398,6 +10131,7 @@ class BiWriter extends BiBase {
     set ubigintle(value) {
         this.writeInt64(value, true, "little");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -9406,6 +10140,7 @@ class BiWriter extends BiBase {
     set uquadle(value) {
         this.writeInt64(value, true, "little");
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -9414,6 +10149,7 @@ class BiWriter extends BiBase {
     set int64be(value) {
         this.writeInt64(value, false, "big");
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -9422,6 +10158,7 @@ class BiWriter extends BiBase {
     set bigintbe(value) {
         this.writeInt64(value, false, "big");
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -9430,6 +10167,7 @@ class BiWriter extends BiBase {
     set quadbe(value) {
         this.writeInt64(value, false, "big");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -9438,6 +10176,7 @@ class BiWriter extends BiBase {
     set uint64be(value) {
         this.writeInt64(value, true, "big");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -9446,6 +10185,7 @@ class BiWriter extends BiBase {
     set ubigintbe(value) {
         this.writeInt64(value, true, "big");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -9454,6 +10194,7 @@ class BiWriter extends BiBase {
     set uquadbe(value) {
         this.writeInt64(value, true, "big");
     }
+    ;
     //
     // doublefloat
     //
@@ -9465,6 +10206,7 @@ class BiWriter extends BiBase {
     set doublefloat(value) {
         this.writeDoubleFloat(value);
     }
+    ;
     /**
      * Writes double float.
      *
@@ -9473,6 +10215,7 @@ class BiWriter extends BiBase {
     set dfloat(value) {
         this.writeDoubleFloat(value);
     }
+    ;
     /**
      * Writes double float.
      *
@@ -9481,6 +10224,7 @@ class BiWriter extends BiBase {
     set dfloatbe(value) {
         this.writeDoubleFloat(value, "big");
     }
+    ;
     /**
      * Writes double float.
      *
@@ -9489,6 +10233,7 @@ class BiWriter extends BiBase {
     set doublefloatbe(value) {
         this.writeDoubleFloat(value, "big");
     }
+    ;
     /**
      * Writes double float.
      *
@@ -9497,6 +10242,7 @@ class BiWriter extends BiBase {
     set dfloatle(value) {
         this.writeDoubleFloat(value, "little");
     }
+    ;
     /**
      * Writes double float.
      *
@@ -9505,6 +10251,7 @@ class BiWriter extends BiBase {
     set doublefloatle(value) {
         this.writeDoubleFloat(value, "little");
     }
+    ;
     //
     // string
     //
@@ -9523,6 +10270,7 @@ class BiWriter extends BiBase {
     string(string, options) {
         return this.writeString(string, options);
     }
+    ;
     /**
     * Writes string using setting from .strSettings
     *
@@ -9533,6 +10281,7 @@ class BiWriter extends BiBase {
     set str(string) {
         this.writeString(string, this.strSettings);
     }
+    ;
     /**
     * Writes UTF-8 (C) string.
     *
@@ -9543,6 +10292,7 @@ class BiWriter extends BiBase {
     utf8string(string, length, terminateValue) {
         return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
     }
+    ;
     /**
     * Writes UTF-8 (C) string.
     *
@@ -9553,6 +10303,7 @@ class BiWriter extends BiBase {
     cstring(string, length, terminateValue) {
         return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
     }
+    ;
     /**
     * Writes ANSI string.
     *
@@ -9563,6 +10314,7 @@ class BiWriter extends BiBase {
     ansistring(string, length, terminateValue) {
         return this.string(string, { stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue });
     }
+    ;
     /**
     * Writes UTF-16 (Unicode) string.
     *
@@ -9574,6 +10326,7 @@ class BiWriter extends BiBase {
     utf16string(string, length, terminateValue, endian) {
         return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
     }
+    ;
     /**
     * Writes UTF-16 (Unicode) string.
     *
@@ -9585,6 +10338,7 @@ class BiWriter extends BiBase {
     unistring(string, length, terminateValue, endian) {
         return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
     }
+    ;
     /**
     * Writes UTF-16 (Unicode) string in little endian order.
     *
@@ -9595,6 +10349,7 @@ class BiWriter extends BiBase {
     utf16stringle(string, length, terminateValue) {
         return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
     }
+    ;
     /**
     * Writes UTF-16 (Unicode) string in little endian order.
     *
@@ -9605,6 +10360,7 @@ class BiWriter extends BiBase {
     unistringle(string, length, terminateValue) {
         return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
     }
+    ;
     /**
     * Writes UTF-16 (Unicode) string in big endian order.
     *
@@ -9615,6 +10371,7 @@ class BiWriter extends BiBase {
     utf16stringbe(string, length, terminateValue) {
         return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
     }
+    ;
     /**
     * Writes UTF-16 (Unicode) string in big endian order.
     *
@@ -9625,6 +10382,7 @@ class BiWriter extends BiBase {
     unistringbe(string, length, terminateValue) {
         return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
     }
+    ;
     /**
     * Writes Pascal string.
     *
@@ -9635,6 +10393,7 @@ class BiWriter extends BiBase {
     pstring(string, lengthWriteSize, endian) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: lengthWriteSize, endian: endian });
     }
+    ;
     /**
     * Writes Pascal string 1 byte length read.
     *
@@ -9644,6 +10403,7 @@ class BiWriter extends BiBase {
     pstring1(string, endian) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: endian });
     }
+    ;
     /**
     * Writes Pascal string 1 byte length read in little endian order.
     *
@@ -9652,6 +10412,7 @@ class BiWriter extends BiBase {
     pstring1le(string) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "little" });
     }
+    ;
     /**
     * Writes Pascal string 1 byte length read in big endian order.
     *
@@ -9660,6 +10421,7 @@ class BiWriter extends BiBase {
     pstring1be(string) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "big" });
     }
+    ;
     /**
     * Writes Pascal string 2 byte length read.
     *
@@ -9669,6 +10431,7 @@ class BiWriter extends BiBase {
     pstring2(string, endian) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: endian });
     }
+    ;
     /**
     * Writes Pascal string 2 byte length read in little endian order.
     *
@@ -9677,6 +10440,7 @@ class BiWriter extends BiBase {
     pstring2le(string) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "little" });
     }
+    ;
     /**
     * Writes Pascal string 2 byte length read in big endian order.
     *
@@ -9685,6 +10449,7 @@ class BiWriter extends BiBase {
     pstring2be(string) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "big" });
     }
+    ;
     /**
     * Writes Pascal string 4 byte length read.
     *
@@ -9694,6 +10459,7 @@ class BiWriter extends BiBase {
     pstring4(string, endian) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: endian });
     }
+    ;
     /**
     * Writes Pascal string 4 byte length read in big endian order.
     *
@@ -9702,6 +10468,7 @@ class BiWriter extends BiBase {
     pstring4be(string) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "big" });
     }
+    ;
     /**
     * Writes Pascal string 4 byte length read in little endian order.
     *
@@ -9710,6 +10477,7 @@ class BiWriter extends BiBase {
     pstring4le(string) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "little" });
     }
+    ;
     /**
     * Writes Wide-Pascal string.
     *
@@ -9720,6 +10488,7 @@ class BiWriter extends BiBase {
     wpstring(string, lengthWriteSize, endian) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: endian });
     }
+    ;
     /**
     * Writes Wide-Pascal string in big endian order.
     *
@@ -9729,6 +10498,7 @@ class BiWriter extends BiBase {
     wpstringbe(string, lengthWriteSize) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "big" });
     }
+    ;
     /**
     * Writes Wide-Pascal string in little endian order.
     *
@@ -9738,6 +10508,7 @@ class BiWriter extends BiBase {
     wpstringle(string, lengthWriteSize) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "little" });
     }
+    ;
     /**
     * Writes Wide-Pascal string.
     *
@@ -9747,6 +10518,7 @@ class BiWriter extends BiBase {
     wpstring1(string, endian) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: endian });
     }
+    ;
     /**
     * Writes Wide-Pascal string 1 byte length read in big endian order.
     *
@@ -9755,6 +10527,7 @@ class BiWriter extends BiBase {
     wpstring1be(string) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "big" });
     }
+    ;
     /**
     * Writes Wide-Pascal string 1 byte length read in little endian order.
     *
@@ -9763,6 +10536,7 @@ class BiWriter extends BiBase {
     wpstring1le(string) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "little" });
     }
+    ;
     /**
     * Writes Wide-Pascal string 2 byte length read.
     *
@@ -9772,6 +10546,7 @@ class BiWriter extends BiBase {
     wpstring2(string, endian) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: endian });
     }
+    ;
     /**
     * Writes Wide-Pascal string 2 byte length read in little endian order.
     *
@@ -9780,6 +10555,7 @@ class BiWriter extends BiBase {
     wpstring2le(string) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "little" });
     }
+    ;
     /**
     * Writes Wide-Pascal string 2 byte length read in big endian order.
     *
@@ -9788,6 +10564,7 @@ class BiWriter extends BiBase {
     wpstring2be(string) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "big" });
     }
+    ;
     /**
     * Writes Wide-Pascal string 4 byte length read.
     *
@@ -9797,6 +10574,7 @@ class BiWriter extends BiBase {
     wpstring4(string, endian) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: endian });
     }
+    ;
     /**
     * Writes Wide-Pascal string 4 byte length read in little endian order.
     *
@@ -9805,6 +10583,7 @@ class BiWriter extends BiBase {
     wpstring4le(string) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "little" });
     }
+    ;
     /**
     * Writes Wide-Pascal string 4 byte length read in big endian order.
     *
@@ -9813,10 +10592,11 @@ class BiWriter extends BiBase {
     wpstring4be(string) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "big" });
     }
+    ;
 }
 
 function MAX_LENGTH() {
-    return buff__namespace.constants.MAX_LENGTH;
+    return node_buffer.constants.MAX_LENGTH;
 }
 function skip(ctx, bytes, bits) {
     var new_size = (((bytes || 0) + ctx.offset) + Math.ceil((ctx.bitoffset + (bits || 0)) / 8));
@@ -11625,10 +12405,14 @@ class BiBaseStreamer {
         this.maxFileSize = null;
         this.enforceBigInt = false;
         this.filePath = filePath;
+        if (this.maxFileSize == null) {
+            this.maxFileSize = MAX_LENGTH();
+        }
         if (readwrite) {
             this.fsMode = "w+";
         }
     }
+    ;
     /**
      * Settings for when using .str
      *
@@ -11644,6 +12428,7 @@ class BiBaseStreamer {
         this.strDefaults.stripNull = settings.stripNull;
         this.strDefaults.terminateValue = settings.terminateValue;
     }
+    ;
     /**
      * Enabling write mode in reader.
      *
@@ -11663,6 +12448,7 @@ class BiBaseStreamer {
             return;
         }
     }
+    ;
     /**
      * Opens the file. Must be run before reading or writing.
      *
@@ -11672,7 +12458,7 @@ class BiBaseStreamer {
         if (this.fd != null) {
             return this.size;
         }
-        if (buff__namespace == undefined || fs == undefined) {
+        if (node_buffer.constants == undefined || fs == undefined) {
             throw new Error("Can't use BitStream without Node.");
         }
         if (this.maxFileSize == null) {
@@ -11701,6 +12487,7 @@ class BiBaseStreamer {
         }
         return this.size;
     }
+    ;
     /**
      * Internal update size
      */
@@ -11714,6 +12501,7 @@ class BiBaseStreamer {
             this.sizeB = this.size * 8;
         }
     }
+    ;
     /**
      * Closes the file.
      *
@@ -11730,6 +12518,7 @@ class BiBaseStreamer {
         this.fd = null;
         return;
     }
+    ;
     /**
      * Internal reader
      *
@@ -11770,6 +12559,7 @@ class BiBaseStreamer {
         }
         return data;
     }
+    ;
     /**
      * Internal writer
      *
@@ -11804,6 +12594,7 @@ class BiBaseStreamer {
             this.offset += bytesWritten;
         return bytesWritten;
     }
+    ;
     /**
      * internal write commit
      *
@@ -11821,6 +12612,7 @@ class BiBaseStreamer {
         }
         return this.write(this.offset, this.data, consume);
     }
+    ;
     /**
      * Renames the file you are working on.
      *
@@ -11839,6 +12631,7 @@ class BiBaseStreamer {
         this.filePath = newFilePath;
         this.open();
     }
+    ;
     /**
      * Deletes the working file.
      *
@@ -11851,6 +12644,7 @@ class BiBaseStreamer {
         this.fd = null;
         fs.unlinkSync(this.filePath);
     }
+    ;
     /**
      * internal extend
      *
@@ -11877,9 +12671,11 @@ class BiBaseStreamer {
         fs.ftruncateSync(this.fd, this.size + length);
         this.updateSize();
     }
+    ;
     isBufferOrUint8Array(obj) {
         return arraybuffcheck(obj);
     }
+    ;
     ///////////////////////////////
     //         ENDIANNESS        //
     ///////////////////////////////
@@ -11900,42 +12696,49 @@ class BiBaseStreamer {
         }
         this.endian = endian;
     }
+    ;
     /**
      * Sets endian to big.
      */
     bigEndian() {
         this.endianness("big");
     }
+    ;
     /**
      * Sets endian to big.
      */
     big() {
         this.endianness("big");
     }
+    ;
     /**
      * Sets endian to big.
      */
     be() {
         this.endianness("big");
     }
+    ;
     /**
      * Sets endian to little.
      */
     littleEndian() {
         this.endianness("little");
     }
+    ;
     /**
      * Sets endian to little.
      */
     little() {
         this.endianness("little");
     }
+    ;
     /**
      * Sets endian to little.
      */
     le() {
         this.endianness("little");
     }
+    ;
     ///////////////////////////////
     //            SIZE           //
     ///////////////////////////////
@@ -11947,6 +12750,7 @@ class BiBaseStreamer {
     get length() {
         return this.size;
     }
+    ;
     /**
      * Size in bytes of the current buffer.
      *
@@ -11955,6 +12759,7 @@ class BiBaseStreamer {
     get len() {
         return this.size;
     }
+    ;
     /**
      * Size in bytes of the current buffer.
      *
@@ -11963,6 +12768,7 @@ class BiBaseStreamer {
     get FileSize() {
         return this.size;
     }
+    ;
     /**
      * Size in bits of the current buffer.
      *
@@ -11971,6 +12777,7 @@ class BiBaseStreamer {
     get lengthB() {
         return this.sizeB;
     }
+    ;
     /**
      * Size in bits of the current buffer.
      *
@@ -11979,6 +12786,7 @@ class BiBaseStreamer {
     get FileSizeB() {
         return this.sizeB;
     }
+    ;
     /**
      * Size in bits of the current buffer.
      *
@@ -11987,6 +12795,7 @@ class BiBaseStreamer {
     get lenb() {
         return this.sizeB;
     }
+    ;
     ///////////////////////////////
     //         POSITION          //
     ///////////////////////////////
@@ -11998,6 +12807,7 @@ class BiBaseStreamer {
     get tell() {
         return this.offset;
     }
+    ;
     /**
      * Get the current byte position.
      *
@@ -12006,6 +12816,7 @@ class BiBaseStreamer {
     get FTell() {
         return this.offset;
     }
+    ;
     /**
      * Get the current byte position.
      *
@@ -12014,6 +12825,7 @@ class BiBaseStreamer {
     get getOffset() {
         return this.offset;
     }
+    ;
     /**
      * Get the current byte position;
      *
@@ -12022,6 +12834,7 @@ class BiBaseStreamer {
     get saveOffset() {
         return this.offset;
     }
+    ;
     /**
      * Get the current byte position;
      *
@@ -12030,6 +12843,7 @@ class BiBaseStreamer {
     get off() {
         return this.offset;
     }
+    ;
     /**
      * Get the current bit position (0-7).
      *
@@ -12038,6 +12852,7 @@ class BiBaseStreamer {
     get getOffsetBit() {
         return this.bitoffset;
     }
+    ;
     /**
      * Get the current bit position (0-7).
      *
@@ -12046,6 +12861,7 @@ class BiBaseStreamer {
     get tellB() {
         return this.bitoffset;
     }
+    ;
     /**
      * Get the current bit position (0-7).
      *
@@ -12054,6 +12870,7 @@ class BiBaseStreamer {
     get FTellB() {
         return this.bitoffset;
     }
+    ;
     /**
      * Get the current bit position (0-7).
      *
@@ -12062,6 +12879,7 @@ class BiBaseStreamer {
     get offb() {
         return this.bitoffset;
     }
+    ;
     /**
      * Get the current absolute bit position (from start of data).
      *
@@ -12070,6 +12888,7 @@ class BiBaseStreamer {
     get getOffsetAbsBit() {
         return (this.offset * 8) + this.bitoffset;
     }
+    ;
     /**
      * Get the current absolute bit position (from start of data).
      *
@@ -12078,6 +12897,7 @@ class BiBaseStreamer {
     get saveOffsetAbsBit() {
         return (this.offset * 8) + this.bitoffset;
     }
+    ;
     /**
      * Get the current absolute bit position (from start of data).
      *
@@ -12086,6 +12906,7 @@ class BiBaseStreamer {
     get tellAbsB() {
         return (this.offset * 8) + this.bitoffset;
     }
+    ;
     /**
      * Get the current absolute bit position (from start of data).
      *
@@ -12094,6 +12915,7 @@ class BiBaseStreamer {
     get saveOffsetBit() {
         return (this.offset * 8) + this.bitoffset;
     }
+    ;
     /**
      * Get the current absolute bit position (from start of data).
      *
@@ -12102,6 +12924,7 @@ class BiBaseStreamer {
     get offab() {
         return (this.offset * 8) + this.bitoffset;
     }
+    ;
     /**
      * Size in bytes of current read position to the end
      *
@@ -12110,6 +12933,7 @@ class BiBaseStreamer {
     get remain() {
         return this.size - this.offset;
     }
+    ;
     /**
      * Size in bytes of current read position to the end
      *
@@ -12118,6 +12942,7 @@ class BiBaseStreamer {
     get FEoF() {
         return this.size - this.offset;
     }
+    ;
     /**
      * Size in bits of current read position to the end
      *
@@ -12126,6 +12951,7 @@ class BiBaseStreamer {
     get remainB() {
         return (this.size * 8) - this.saveOffsetAbsBit;
     }
+    ;
     /**
      * Size in bits of current read position to the end
      *
@@ -12134,6 +12960,7 @@ class BiBaseStreamer {
     get FEoFB() {
         return (this.size * 8) - this.saveOffsetAbsBit;
     }
+    ;
     /**
      * Row line of the file (16 bytes per row).
      *
@@ -12142,6 +12969,7 @@ class BiBaseStreamer {
     get getLine() {
         return Math.abs(Math.floor((this.offset - 1) / 16));
     }
+    ;
     /**
      * Row line of the file (16 bytes per row).
      *
@@ -12150,6 +12978,7 @@ class BiBaseStreamer {
     get row() {
         return Math.abs(Math.floor((this.offset - 1) / 16));
     }
+    ;
     ///////////////////////////////
     //        FINISHING          //
     ///////////////////////////////
@@ -12168,6 +12997,7 @@ class BiBaseStreamer {
         }
         return this.data || Buffer.alloc(0);
     }
+    ;
     /**
      * Returns current data.
      *
@@ -12183,6 +13013,7 @@ class BiBaseStreamer {
         }
         return this.data || Buffer.alloc(0);
     }
+    ;
     /**
      * Creates hex dump string. Will console log or return string if set in options.
      *
@@ -12196,18 +13027,21 @@ class BiBaseStreamer {
     hexdump(options = {}) {
         return hexDump(this, options);
     }
+    ;
     /**
      * Turn hexdump on error off (default on).
      */
     errorDumpOff() {
         this.errorDump = false;
     }
+    ;
     /**
      * Turn hexdump on error on (default on).
      */
     errorDumpOn() {
         this.errorDump = true;
     }
+    ;
     ///////////////////////////////
     //       STRICTMODE          //
     ///////////////////////////////
@@ -12217,30 +13051,35 @@ class BiBaseStreamer {
     restrict() {
         this.strict = true;
     }
+    ;
     /**
      * Allows extending data if position is outside of max size.
      */
     unrestrict() {
         this.strict = false;
     }
+    ;
     /**
      * removes data.
      */
     end() {
         this.data = null;
     }
+    ;
     /**
      * removes data.
      */
     done() {
         this.data = null;
     }
+    ;
     /**
      * removes data.
      */
     finished() {
         this.data = null;
     }
+    ;
     ///////////////////////////////
     //          FIND             //
     ///////////////////////////////
@@ -12256,6 +13095,7 @@ class BiBaseStreamer {
     findString(string) {
         return fString(this, string);
     }
+    ;
     /**
      * Searches for byte value (can be signed or unsigned) position from current read position.
      *
@@ -12270,6 +13110,7 @@ class BiBaseStreamer {
     findByte(value, unsigned, endian) {
         return fNumber(this, value, 8, unsigned == undefined ? true : unsigned, endian);
     }
+    ;
     /**
      * Searches for short value (can be signed or unsigned) position from current read position.
      *
@@ -12284,6 +13125,7 @@ class BiBaseStreamer {
     findShort(value, unsigned, endian) {
         return fNumber(this, value, 16, unsigned == undefined ? true : unsigned, endian);
     }
+    ;
     /**
      * Searches for integer value (can be signed or unsigned) position from current read position.
      *
@@ -12298,6 +13140,7 @@ class BiBaseStreamer {
     findInt(value, unsigned, endian) {
         return fNumber(this, value, 32, unsigned == undefined ? true : unsigned, endian);
     }
+    ;
     /**
      * Searches for 64 bit value (can be signed or unsigned) position from current read position.
      *
@@ -12312,6 +13155,7 @@ class BiBaseStreamer {
     findInt64(value, unsigned, endian) {
         return fBigInt(this, value, unsigned == undefined ? true : unsigned, endian);
     }
+    ;
     /**
      * Searches for half float value position from current read position.
      *
@@ -12325,6 +13169,7 @@ class BiBaseStreamer {
     findHalfFloat(value, endian) {
         return fHalfFloat(this, value, endian);
     }
+    ;
     /**
      * Searches for float value position from current read position.
      *
@@ -12338,6 +13183,7 @@ class BiBaseStreamer {
     findFloat(value, endian) {
         return fFloat(this, value, endian);
     }
+    ;
     /**
      * Searches for double float value position from current read position.
      *
@@ -12351,6 +13197,7 @@ class BiBaseStreamer {
     findDoubleFloat(value, endian) {
         return fDoubleFloat(this, value, endian);
     }
+    ;
     ///////////////////////////////
     //        MOVE TO            //
     ///////////////////////////////
@@ -12364,6 +13211,7 @@ class BiBaseStreamer {
     align(number) {
         return align(this, number);
     }
+    ;
     /**
      * Reverse aligns current byte position.
      *
@@ -12374,6 +13222,7 @@ class BiBaseStreamer {
     alignRev(number) {
         return alignRev(this, number);
     }
+    ;
     /**
      * Offset current byte or bit position.
      *
@@ -12385,6 +13234,7 @@ class BiBaseStreamer {
     skip(bytes, bits) {
         return skip(this, bytes, bits);
     }
+    ;
     /**
     * Offset current byte or bit position.
     *
@@ -12396,6 +13246,7 @@ class BiBaseStreamer {
     jump(bytes, bits) {
         this.skip(bytes, bits);
     }
+    ;
     /**
      * Change position directly to address.
      *
@@ -12407,6 +13258,7 @@ class BiBaseStreamer {
     FSeek(byte, bit) {
         return goto(this, byte, bit);
     }
+    ;
     /**
      * Offset current byte or bit position.
      *
@@ -12418,6 +13270,7 @@ class BiBaseStreamer {
     seek(bytes, bits) {
         return this.skip(bytes, bits);
     }
+    ;
     /**
      * Change position directly to address.
      *
@@ -12429,6 +13282,7 @@ class BiBaseStreamer {
     goto(byte, bit) {
         return goto(this, byte, bit);
     }
+    ;
     /**
      * Change position directly to address.
      *
@@ -12440,6 +13294,7 @@ class BiBaseStreamer {
     pointer(byte, bit) {
         return this.goto(byte, bit);
     }
+    ;
     /**
      * Change position directly to address.
      *
@@ -12451,6 +13306,7 @@ class BiBaseStreamer {
     warp(byte, bit) {
         return this.goto(byte, bit);
     }
+    ;
     /**
      * Set byte and bit position to start of data.
      */
@@ -12458,12 +13314,14 @@ class BiBaseStreamer {
         this.offset = 0;
         this.bitoffset = 0;
     }
+    ;
     /**
      * Set byte and bit position to start of data.
      */
     gotoStart() {
         return this.rewind();
     }
+    ;
     /**
      * Set current byte and bit position to end of data.
      */
@@ -12471,6 +13329,7 @@ class BiBaseStreamer {
         this.offset = this.size;
         this.bitoffset = 0;
     }
+    ;
     /**
      * Set current byte and bit position to end of data.
      */
@@ -12478,6 +13337,7 @@ class BiBaseStreamer {
         this.offset = this.size;
         this.bitoffset = 0;
     }
+    ;
     /**
      * Set byte and bit position to start of data.
      */
@@ -12485,6 +13345,7 @@ class BiBaseStreamer {
         this.offset = this.size;
         this.bitoffset = 0;
     }
+    ;
     ///////////////////////////////
     //         REMOVE            //
     ///////////////////////////////
@@ -12501,6 +13362,7 @@ class BiBaseStreamer {
     delete(startOffset, endOffset, consume) {
         return remove(this, startOffset || 0, endOffset || this.offset, consume || false, true);
     }
+    ;
     /**
      * Deletes part of data from current byte position to end, returns removed.
      *
@@ -12511,6 +13373,7 @@ class BiBaseStreamer {
     clip() {
         return remove(this, this.offset, this.size, false, true);
     }
+    ;
     /**
      * Deletes part of data from current byte position to end, returns removed.
      *
@@ -12521,6 +13384,7 @@ class BiBaseStreamer {
     trim() {
         return remove(this, this.offset, this.size, false, true);
     }
+    ;
     /**
      * Deletes part of data from current byte position to supplied length, returns removed.
      *
@@ -12533,6 +13397,7 @@ class BiBaseStreamer {
     crop(length, consume) {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, true);
     }
+    ;
     /**
      * Deletes part of data from current position to supplied length, returns removed.
      *
@@ -12545,6 +13410,7 @@ class BiBaseStreamer {
     drop(length, consume) {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, true);
     }
+    ;
     /**
      * Replaces data in data.
      *
@@ -12557,6 +13423,7 @@ class BiBaseStreamer {
     replace(data, consume, offset) {
         return addData(this, data, consume || false, offset || this.offset, true);
     }
+    ;
     /**
      * Replaces data in data.
      *
@@ -12569,6 +13436,7 @@ class BiBaseStreamer {
     overwrite(data, consume, offset) {
         return addData(this, data, consume || false, offset || this.offset, true);
     }
+    ;
     ///////////////////////////////
     //        COPY OUT           //
     ///////////////////////////////
@@ -12584,6 +13452,7 @@ class BiBaseStreamer {
     lift(startOffset, endOffset, consume, fillValue) {
         return remove(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
     }
+    ;
     /**
      * Returns part of data from current byte position to end of data unless supplied.
      *
@@ -12596,6 +13465,7 @@ class BiBaseStreamer {
     fill(startOffset, endOffset, consume, fillValue) {
         return remove(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
     }
+    ;
     /**
      * Extract data from current position to length supplied.
      *
@@ -12608,6 +13478,7 @@ class BiBaseStreamer {
     extract(length, consume) {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, false);
     }
+    ;
     /**
      * Extract data from current position to length supplied.
      *
@@ -12620,6 +13491,7 @@ class BiBaseStreamer {
     slice(length, consume) {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, false);
     }
+    ;
     /**
      * Extract data from current position to length supplied.
      *
@@ -12632,6 +13504,7 @@ class BiBaseStreamer {
     wrap(length, consume) {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, false);
     }
+    ;
     ///////////////////////////////
     //          INSERT           //
     ///////////////////////////////
@@ -12647,6 +13520,7 @@ class BiBaseStreamer {
     insert(data, consume, offset) {
         return addData(this, data, consume || false, offset || this.offset, false);
     }
+    ;
     /**
      * Inserts data into data.
      *
@@ -12659,6 +13533,7 @@ class BiBaseStreamer {
     place(data, consume, offset) {
         return addData(this, data, consume || false, offset || this.offset, false);
     }
+    ;
     /**
      * Adds data to start of supplied data.
      *
@@ -12670,6 +13545,7 @@ class BiBaseStreamer {
     unshift(data, consume) {
         return addData(this, data, consume || false, 0, false);
     }
+    ;
     /**
      * Adds data to start of supplied data.
      *
@@ -12681,6 +13557,7 @@ class BiBaseStreamer {
     prepend(data, consume) {
         return addData(this, data, consume || false, 0, false);
     }
+    ;
     /**
      * Adds data to end of supplied data.
      *
@@ -12692,6 +13569,7 @@ class BiBaseStreamer {
     push(data, consume) {
         return addData(this, data, consume || false, this.size, false);
     }
+    ;
     /**
      * Adds data to end of supplied data.
      *
@@ -12703,6 +13581,7 @@ class BiBaseStreamer {
     append(data, consume) {
         return addData(this, data, consume || false, this.size, false);
     }
+    ;
     ///////////////////////////////
     //          MATH             //
     ///////////////////////////////
@@ -12726,6 +13605,7 @@ class BiBaseStreamer {
         }
         return XOR(this, xorKey, startOffset || this.offset, endOffset || this.size, consume || false);
     }
+    ;
     /**
      * XOR data.
      *
@@ -12752,6 +13632,7 @@ class BiBaseStreamer {
         }
         return XOR(this, XORKey, this.offset, this.offset + Length, consume || false);
     }
+    ;
     /**
      * OR data
      *
@@ -12772,6 +13653,7 @@ class BiBaseStreamer {
         }
         return OR(this, orKey, startOffset || this.offset, endOffset || this.size, consume || false);
     }
+    ;
     /**
      * OR data.
      *
@@ -12798,6 +13680,7 @@ class BiBaseStreamer {
         }
         return OR(this, ORKey, this.offset, this.offset + Length, consume || false);
     }
+    ;
     /**
      * AND data.
      *
@@ -12818,6 +13701,7 @@ class BiBaseStreamer {
         }
         return AND(this, andKey, startOffset || this.offset, endOffset || this.size, consume || false);
     }
+    ;
     /**
      * AND data.
      *
@@ -12844,6 +13728,7 @@ class BiBaseStreamer {
         }
         return AND(this, ANDKey, this.offset, this.offset + Length, consume || false);
     }
+    ;
     /**
      * Add value to data.
      *
@@ -12864,6 +13749,7 @@ class BiBaseStreamer {
         }
         return ADD(this, addedKey, startOffset || this.offset, endOffset || this.size, consume || false);
     }
+    ;
     /**
      * Add value to data.
      *
@@ -12890,6 +13776,7 @@ class BiBaseStreamer {
         }
         return ADD(this, AddedKey, this.offset, this.offset + Length, consume || false);
     }
+    ;
     /**
      * Not data.
      *
@@ -12900,6 +13787,7 @@ class BiBaseStreamer {
     not(startOffset, endOffset, consume) {
         return NOT(this, startOffset || this.offset, endOffset || this.size, consume || false);
     }
+    ;
     /**
      * Not data.
      *
@@ -12909,6 +13797,7 @@ class BiBaseStreamer {
     notThis(length, consume) {
         return NOT(this, this.offset, this.offset + (length || 1), consume || false);
     }
+    ;
     /**
      * Left shift data.
      *
@@ -12929,6 +13818,7 @@ class BiBaseStreamer {
         }
         return LSHIFT(this, lShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
     }
+    ;
     /**
      * Left shift data.
      *
@@ -12955,6 +13845,7 @@ class BiBaseStreamer {
         }
         return LSHIFT(this, shiftKey, this.offset, this.offset + Length, consume || false);
     }
+    ;
     /**
      * Right shift data.
      *
@@ -12975,6 +13866,7 @@ class BiBaseStreamer {
         }
         return RSHIFT(this, rShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
     }
+    ;
     /**
      * Right shift data.
      *
@@ -13001,6 +13893,7 @@ class BiBaseStreamer {
         }
         return RSHIFT(this, lShiftKey, this.offset, this.offset + Length, consume || false);
     }
+    ;
     ///////////////////////////////
     //        BIT READER         //
     ///////////////////////////////
@@ -13018,6 +13911,7 @@ class BiBaseStreamer {
     writeBit(value, bits, unsigned, endian) {
         return wbit(this, value, bits, unsigned, endian);
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -13030,6 +13924,7 @@ class BiBaseStreamer {
     writeUBitBE(value, bits) {
         return wbit(this, value, bits, true, "big");
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -13043,6 +13938,7 @@ class BiBaseStreamer {
     writeBitBE(value, bits, unsigned) {
         return wbit(this, value, bits, unsigned, "big");
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -13055,6 +13951,7 @@ class BiBaseStreamer {
     writeUBitLE(value, bits) {
         return wbit(this, value, bits, true, "little");
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -13068,6 +13965,7 @@ class BiBaseStreamer {
     writeBitLE(value, bits, unsigned) {
         return wbit(this, value, bits, unsigned, "little");
     }
+    ;
     /**
      * Bit field reader.
      *
@@ -13081,6 +13979,7 @@ class BiBaseStreamer {
     readBit(bits, unsigned, endian) {
         return rbit(this, bits, unsigned, endian);
     }
+    ;
     /**
      * Bit field reader.
      *
@@ -13092,6 +13991,7 @@ class BiBaseStreamer {
     readUBitBE(bits) {
         return this.readBit(bits, true, "big");
     }
+    ;
     /**
      * Bit field reader.
      *
@@ -13104,6 +14004,7 @@ class BiBaseStreamer {
     readBitBE(bits, unsigned) {
         return this.readBit(bits, unsigned, "big");
     }
+    ;
     /**
      * Bit field reader.
      *
@@ -13115,6 +14016,7 @@ class BiBaseStreamer {
     readUBitLE(bits) {
         return this.readBit(bits, true, "little");
     }
+    ;
     /**
      * Bit field reader.
      *
@@ -13127,6 +14029,7 @@ class BiBaseStreamer {
     readBitLE(bits, unsigned) {
         return this.readBit(bits, unsigned, "little");
     }
+    ;
     /**
      * Read byte.
      *
@@ -13136,6 +14039,7 @@ class BiBaseStreamer {
     readByte(unsigned) {
         return rbyte(this, unsigned);
     }
+    ;
     /**
      * Read multiple bytes.
      *
@@ -13146,6 +14050,7 @@ class BiBaseStreamer {
     readBytes(amount, unsigned) {
         return Array.from({ length: amount }, () => rbyte(this, unsigned));
     }
+    ;
     /**
      * Write byte.
      *
@@ -13155,6 +14060,7 @@ class BiBaseStreamer {
     writeByte(value, unsigned) {
         return wbyte(this, value, unsigned);
     }
+    ;
     /**
      * Write multiple bytes.
      *
@@ -13166,6 +14072,7 @@ class BiBaseStreamer {
             wbyte(this, values[i], unsigned);
         }
     }
+    ;
     /**
      * Write unsigned byte.
      *
@@ -13174,6 +14081,7 @@ class BiBaseStreamer {
     writeUByte(value) {
         return wbyte(this, value, true);
     }
+    ;
     /**
      * Read unsigned byte.
      *
@@ -13182,6 +14090,7 @@ class BiBaseStreamer {
     readUByte() {
         return this.readByte(true);
     }
+    ;
     /**
      * Read short.
      *
@@ -13192,6 +14101,7 @@ class BiBaseStreamer {
     readInt16(unsigned, endian) {
         return rint16(this, unsigned, endian);
     }
+    ;
     /**
      * Write int16.
      *
@@ -13202,6 +14112,7 @@ class BiBaseStreamer {
     writeInt16(value, unsigned, endian) {
         return wint16(this, value, unsigned, endian);
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -13211,6 +14122,7 @@ class BiBaseStreamer {
     writeUInt16(value, endian) {
         return wint16(this, value, true, endian);
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -13219,6 +14131,7 @@ class BiBaseStreamer {
     writeUInt16BE(value) {
         return this.writeInt16(value, true, "big");
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -13227,6 +14140,7 @@ class BiBaseStreamer {
     writeUInt16LE(value) {
         return this.writeInt16(value, true, "little");
     }
+    ;
     /**
      * Write signed int16.
      *
@@ -13235,6 +14149,7 @@ class BiBaseStreamer {
     writeInt16LE(value) {
         return this.writeInt16(value, false, "little");
     }
+    ;
     /**
      * Read unsigned short.
      *
@@ -13245,6 +14160,7 @@ class BiBaseStreamer {
     readUInt16(endian) {
         return this.readInt16(true, endian);
     }
+    ;
     /**
      * Read unsigned short in little endian.
      *
@@ -13253,6 +14169,7 @@ class BiBaseStreamer {
     readUInt16LE() {
         return this.readInt16(true, "little");
     }
+    ;
     /**
      * Read signed short in little endian.
      *
@@ -13261,6 +14178,7 @@ class BiBaseStreamer {
     readInt16LE() {
         return this.readInt16(false, "little");
     }
+    ;
     /**
      * Read unsigned short in big endian.
      *
@@ -13269,6 +14187,7 @@ class BiBaseStreamer {
     readUInt16BE() {
         return this.readInt16(true, "big");
     }
+    ;
     /**
     * Read signed short in big endian.
     *
@@ -13277,6 +14196,7 @@ class BiBaseStreamer {
     readInt16BE() {
         return this.readInt16(false, "big");
     }
+    ;
     /**
      * Read half float.
      *
@@ -13286,6 +14206,7 @@ class BiBaseStreamer {
     readHalfFloat(endian) {
         return rhalffloat(this, endian);
     }
+    ;
     /**
      * Writes half float.
      *
@@ -13295,6 +14216,7 @@ class BiBaseStreamer {
     writeHalfFloat(value, endian) {
         return whalffloat(this, value, endian);
     }
+    ;
     /**
      * Writes half float.
      *
@@ -13303,6 +14225,7 @@ class BiBaseStreamer {
     writeHalfFloatBE(value) {
         return this.writeHalfFloat(value, "big");
     }
+    ;
     /**
      * Writes half float.
      *
@@ -13311,6 +14234,7 @@ class BiBaseStreamer {
     writeHalfFloatLE(value) {
         return this.writeHalfFloat(value, "little");
     }
+    ;
     /**
     * Read half float.
     *
@@ -13319,6 +14243,7 @@ class BiBaseStreamer {
     readHalfFloatBE() {
         return this.readHalfFloat("big");
     }
+    ;
     /**
      * Read half float.
      *
@@ -13327,6 +14252,7 @@ class BiBaseStreamer {
     readHalfFloatLE() {
         return this.readHalfFloat("little");
     }
+    ;
     /**
      * Read 32 bit integer.
      *
@@ -13337,6 +14263,7 @@ class BiBaseStreamer {
     readInt32(unsigned, endian) {
         return rint32(this, unsigned, endian);
     }
+    ;
     /**
      * Write int32.
      *
@@ -13347,6 +14274,7 @@ class BiBaseStreamer {
     writeInt32(value, unsigned, endian) {
         return wint32(this, value, unsigned, endian);
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -13356,6 +14284,7 @@ class BiBaseStreamer {
     writeUInt32(value, endian) {
         return wint32(this, value, true, endian);
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -13364,6 +14293,7 @@ class BiBaseStreamer {
     writeInt32LE(value) {
         return this.writeInt32(value, false, "little");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -13372,6 +14302,7 @@ class BiBaseStreamer {
     writeUInt32LE(value) {
         return this.writeInt32(value, true, "little");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -13380,6 +14311,7 @@ class BiBaseStreamer {
     writeInt32BE(value) {
         return this.writeInt32(value, false, "big");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -13388,6 +14320,7 @@ class BiBaseStreamer {
     readInt32BE() {
         return this.readInt32(false, "big");
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -13396,6 +14329,7 @@ class BiBaseStreamer {
     readUInt32BE() {
         return this.readInt32(true, "big");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -13404,6 +14338,7 @@ class BiBaseStreamer {
     readInt32LE() {
         return this.readInt32(false, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -13412,6 +14347,7 @@ class BiBaseStreamer {
     readUInt32LE() {
         return this.readInt32(true, "little");
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -13420,6 +14356,7 @@ class BiBaseStreamer {
     readUInt() {
         return this.readInt32(true);
     }
+    ;
     /**
      * Read float.
      *
@@ -13429,6 +14366,7 @@ class BiBaseStreamer {
     readFloat(endian) {
         return rfloat(this, endian);
     }
+    ;
     /**
      * Write float.
      *
@@ -13438,6 +14376,7 @@ class BiBaseStreamer {
     writeFloat(value, endian) {
         return wfloat(this, value, endian);
     }
+    ;
     /**
      * Write float.
      *
@@ -13446,6 +14385,7 @@ class BiBaseStreamer {
     writeFloatLE(value) {
         return this.writeFloat(value, "little");
     }
+    ;
     /**
      * Write float.
      *
@@ -13454,6 +14394,7 @@ class BiBaseStreamer {
     writeFloatBE(value) {
         return this.writeFloat(value, "big");
     }
+    ;
     /**
      * Read float.
      *
@@ -13462,6 +14403,7 @@ class BiBaseStreamer {
     readFloatBE() {
         return this.readFloat("big");
     }
+    ;
     /**
      * Read float.
      *
@@ -13470,6 +14412,7 @@ class BiBaseStreamer {
     readFloatLE() {
         return this.readFloat("little");
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -13482,6 +14425,7 @@ class BiBaseStreamer {
     readInt64(unsigned, endian) {
         return rint64(this, unsigned, endian);
     }
+    ;
     /**
      * Write 64 bit integer.
      *
@@ -13492,6 +14436,7 @@ class BiBaseStreamer {
     writeInt64(value, unsigned, endian) {
         return wint64(this, value, unsigned, endian);
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -13501,6 +14446,7 @@ class BiBaseStreamer {
     writeUInt64(value, endian) {
         return this.writeInt64(value, true, endian);
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -13509,6 +14455,7 @@ class BiBaseStreamer {
     writeInt64LE(value) {
         return this.writeInt64(value, false, "little");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -13517,6 +14464,7 @@ class BiBaseStreamer {
     writeUInt64LE(value) {
         return this.writeInt64(value, true, "little");
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -13525,6 +14473,7 @@ class BiBaseStreamer {
     writeInt64BE(value) {
         return this.writeInt64(value, false, "big");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -13533,6 +14482,7 @@ class BiBaseStreamer {
     writeUInt64BE(value) {
         return this.writeInt64(value, true, "big");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -13543,6 +14493,7 @@ class BiBaseStreamer {
     readUInt64() {
         return this.readInt64(true);
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -13553,6 +14504,7 @@ class BiBaseStreamer {
     readInt64BE() {
         return this.readInt64(false, "big");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -13563,6 +14515,7 @@ class BiBaseStreamer {
     readUInt64BE() {
         return this.readInt64(true, "big");
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -13573,6 +14526,7 @@ class BiBaseStreamer {
     readInt64LE() {
         return this.readInt64(false, "little");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -13583,6 +14537,7 @@ class BiBaseStreamer {
     readUInt64LE() {
         return this.readInt64(true, "little");
     }
+    ;
     /**
      * Read double float.
      *
@@ -13592,6 +14547,7 @@ class BiBaseStreamer {
     readDoubleFloat(endian) {
         return rdfloat(this, endian);
     }
+    ;
     /**
      * Writes double float.
      *
@@ -13601,6 +14557,7 @@ class BiBaseStreamer {
     writeDoubleFloat(value, endian) {
         return wdfloat(this, value, endian);
     }
+    ;
     /**
      * Writes double float.
      *
@@ -13609,6 +14566,7 @@ class BiBaseStreamer {
     writeDoubleFloatBE(value) {
         return this.writeDoubleFloat(value, "big");
     }
+    ;
     /**
      * Writes double float.
      *
@@ -13617,6 +14575,7 @@ class BiBaseStreamer {
     writeDoubleFloatLE(value) {
         return this.writeDoubleFloat(value, "little");
     }
+    ;
     /**
      * Read double float.
      *
@@ -13625,6 +14584,7 @@ class BiBaseStreamer {
     readDoubleFloatBE() {
         return this.readDoubleFloat("big");
     }
+    ;
     /**
      * Read double float.
      *
@@ -13633,6 +14593,7 @@ class BiBaseStreamer {
     readDoubleFloatLE() {
         return this.readDoubleFloat("little");
     }
+    ;
     /**
     * Reads string, use options object for different types.
     *
@@ -13648,6 +14609,7 @@ class BiBaseStreamer {
     readString(options) {
         return rstring(this, options);
     }
+    ;
     /**
     * Writes string, use options object for different types.
     *
@@ -13663,6 +14625,7 @@ class BiBaseStreamer {
     writeString(string, options) {
         return wstring(this, string, options);
     }
+    ;
 }
 
 /**
@@ -13719,6 +14682,7 @@ class BiReaderStream extends BiBaseStreamer {
         this.offset = options.byteOffset ?? 0;
         this.bitoffset = options.bitOffset ?? 0;
     }
+    ;
     //
     // Bit Aliases
     //
@@ -13735,6 +14699,7 @@ class BiReaderStream extends BiBaseStreamer {
     bit(bits, unsigned, endian) {
         return this.readBit(bits, unsigned, endian);
     }
+    ;
     /**
      * Bit field reader. Unsigned read.
      *
@@ -13747,6 +14712,7 @@ class BiReaderStream extends BiBaseStreamer {
     ubit(bits, endian) {
         return this.readBit(bits, true, endian);
     }
+    ;
     /**
      * Bit field reader. Unsigned big endian read.
      *
@@ -13758,6 +14724,7 @@ class BiReaderStream extends BiBaseStreamer {
     ubitbe(bits) {
         return this.bit(bits, true, "big");
     }
+    ;
     /**
      * Bit field reader. Big endian read.
      *
@@ -13770,6 +14737,7 @@ class BiReaderStream extends BiBaseStreamer {
     bitbe(bits, unsigned) {
         return this.bit(bits, unsigned, "big");
     }
+    ;
     /**
      * Bit field reader. Unsigned little endian read.
      *
@@ -13781,6 +14749,7 @@ class BiReaderStream extends BiBaseStreamer {
     ubitle(bits) {
         return this.bit(bits, true, "little");
     }
+    ;
     /**
      * Bit field reader. Little endian read.
      *
@@ -13793,6 +14762,7 @@ class BiReaderStream extends BiBaseStreamer {
     bitle(bits, unsigned) {
         return this.bit(bits, unsigned, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 1 bit.
      *
@@ -13803,6 +14773,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit1() {
         return this.bit(1);
     }
+    ;
     /**
      * Bit field reader. Reads 1 bit.
      *
@@ -13813,6 +14784,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit1le() {
         return this.bit(1, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 1 bit.
      *
@@ -13823,6 +14795,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit1be() {
         return this.bit(1, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 1 bit.
      *
@@ -13833,6 +14806,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit1() {
         return this.bit(1, true);
     }
+    ;
     /**
      * Bit field reader. Reads 1 bit.
      *
@@ -13843,6 +14817,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit1le() {
         return this.bit(1, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 1 bit.
      *
@@ -13853,6 +14828,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit1be() {
         return this.bit(1, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 2 bits.
      *
@@ -13863,6 +14839,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit2() {
         return this.bit(2);
     }
+    ;
     /**
      * Bit field reader. Reads 2 bits.
      *
@@ -13873,6 +14850,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit2le() {
         return this.bit(2, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 2 bits.
      *
@@ -13883,6 +14861,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit2be() {
         return this.bit(2, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 2 bits.
      *
@@ -13893,6 +14872,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit2() {
         return this.bit(2, true);
     }
+    ;
     /**
      * Bit field reader. Reads 2 bits.
      *
@@ -13903,6 +14883,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit2le() {
         return this.bit(2, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 2 bits.
      *
@@ -13913,6 +14894,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit2be() {
         return this.bit(2, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 3 bits.
      *
@@ -13923,6 +14905,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit3() {
         return this.bit(3);
     }
+    ;
     /**
      * Bit field reader. Reads 3 bits.
      *
@@ -13933,6 +14916,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit3le() {
         return this.bit(3, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 3 bits.
      *
@@ -13943,6 +14927,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit3be() {
         return this.bit(3, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 3 bits.
      *
@@ -13953,6 +14938,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit3() {
         return this.bit(3, true);
     }
+    ;
     /**
      * Bit field reader. Reads 3 bits.
      *
@@ -13963,6 +14949,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit3le() {
         return this.bit(3, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 3 bits.
      *
@@ -13973,6 +14960,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit3be() {
         return this.bit(3, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 4 bits.
      *
@@ -13983,6 +14971,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit4() {
         return this.bit(4);
     }
+    ;
     /**
      * Bit field reader. Reads 4 bits.
      *
@@ -13993,6 +14982,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit4le() {
         return this.bit(4, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 4 bits.
      *
@@ -14003,6 +14993,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit4be() {
         return this.bit(4, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 4 bits.
      *
@@ -14013,6 +15004,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit4() {
         return this.bit(4, true);
     }
+    ;
     /**
      * Bit field reader. Reads 4 bits.
      *
@@ -14023,6 +15015,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit4le() {
         return this.bit(4, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 4 bits.
      *
@@ -14033,6 +15026,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit4be() {
         return this.bit(4, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 5 bits.
      *
@@ -14043,6 +15037,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit5() {
         return this.bit(5);
     }
+    ;
     /**
      * Bit field reader. Reads 5 bits.
      *
@@ -14053,6 +15048,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit5le() {
         return this.bit(5, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 5 bits.
      *
@@ -14063,6 +15059,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit5be() {
         return this.bit(5, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 5 bits.
      *
@@ -14073,6 +15070,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit5() {
         return this.bit(5, true);
     }
+    ;
     /**
      * Bit field reader. Reads 5 bits.
      *
@@ -14083,6 +15081,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit5le() {
         return this.bit(5, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 5 bits.
      *
@@ -14093,6 +15092,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit5be() {
         return this.bit(5, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 6 bits.
      *
@@ -14103,6 +15103,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit6() {
         return this.bit(6);
     }
+    ;
     /**
      * Bit field reader. Reads 6 bits.
      *
@@ -14113,6 +15114,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit6le() {
         return this.bit(6, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 6 bits.
      *
@@ -14123,6 +15125,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit6be() {
         return this.bit(6, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 6 bits.
      *
@@ -14133,6 +15136,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit6() {
         return this.bit(6, true);
     }
+    ;
     /**
      * Bit field reader. Reads 6 bits.
      *
@@ -14143,6 +15147,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit6le() {
         return this.bit(6, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 6 bits.
      *
@@ -14153,6 +15158,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit6be() {
         return this.bit(6, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 7 bits.
      *
@@ -14163,6 +15169,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit7() {
         return this.bit(7);
     }
+    ;
     /**
      * Bit field reader. Reads 7 bits.
      *
@@ -14173,6 +15180,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit7le() {
         return this.bit(7, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 7 bits.
      *
@@ -14183,6 +15191,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit7be() {
         return this.bit(7, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 7 bits.
      *
@@ -14193,6 +15202,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit7() {
         return this.bit(7, true);
     }
+    ;
     /**
      * Bit field reader. Reads 7 bits.
      *
@@ -14203,6 +15213,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit7le() {
         return this.bit(7, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 7 bits.
      *
@@ -14213,6 +15224,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit7be() {
         return this.bit(7, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 8 bits.
      *
@@ -14223,6 +15235,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit8() {
         return this.bit(8);
     }
+    ;
     /**
      * Bit field reader. Reads 8 bits.
      *
@@ -14233,6 +15246,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit8le() {
         return this.bit(8, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 8 bits.
      *
@@ -14243,6 +15257,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit8be() {
         return this.bit(8, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 8 bits.
      *
@@ -14253,6 +15268,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit8() {
         return this.bit(8, true);
     }
+    ;
     /**
      * Bit field reader. Reads 8 bits.
      *
@@ -14263,6 +15279,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit8le() {
         return this.bit(8, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 8 bits.
      *
@@ -14273,6 +15290,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit8be() {
         return this.bit(8, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 9 bits.
      *
@@ -14283,6 +15301,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit9() {
         return this.bit(9);
     }
+    ;
     /**
      * Bit field reader. Reads 9 bits.
      *
@@ -14293,6 +15312,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit9le() {
         return this.bit(9, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 9 bits.
      *
@@ -14303,6 +15323,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit9be() {
         return this.bit(9, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 9 bits.
      *
@@ -14313,6 +15334,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit9() {
         return this.bit(9, true);
     }
+    ;
     /**
      * Bit field reader. Reads 9 bits.
      *
@@ -14323,6 +15345,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit9le() {
         return this.bit(9, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 9 bits.
      *
@@ -14333,6 +15356,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit9be() {
         return this.bit(9, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 10 bits.
      *
@@ -14343,6 +15367,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit10() {
         return this.bit(10);
     }
+    ;
     /**
      * Bit field reader. Reads 10 bits.
      *
@@ -14353,6 +15378,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit10le() {
         return this.bit(10, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 10 bits.
      *
@@ -14363,6 +15389,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit10be() {
         return this.bit(10, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 10 bits.
      *
@@ -14373,6 +15400,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit10() {
         return this.bit(10, true);
     }
+    ;
     /**
      * Bit field reader. Reads 10 bits.
      *
@@ -14383,6 +15411,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit10le() {
         return this.bit(10, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 10 bits.
      *
@@ -14393,6 +15422,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit10be() {
         return this.bit(10, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 11 bits.
      *
@@ -14403,6 +15433,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit11() {
         return this.bit(11);
     }
+    ;
     /**
      * Bit field reader. Reads 11 bits.
      *
@@ -14413,6 +15444,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit11le() {
         return this.bit(11, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 11 bits.
      *
@@ -14423,6 +15455,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit11be() {
         return this.bit(11, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 11 bits.
      *
@@ -14433,6 +15466,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit11() {
         return this.bit(11, true);
     }
+    ;
     /**
      * Bit field reader. Reads 11 bits.
      *
@@ -14443,6 +15477,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit11le() {
         return this.bit(11, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 11 bits.
      *
@@ -14453,6 +15488,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit11be() {
         return this.bit(11, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 12 bits.
      *
@@ -14463,6 +15499,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit12() {
         return this.bit(12);
     }
+    ;
     /**
      * Bit field reader. Reads 12 bits.
      *
@@ -14473,6 +15510,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit12le() {
         return this.bit(12, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 12 bits.
      *
@@ -14483,6 +15521,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit12be() {
         return this.bit(12, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 12 bits.
      *
@@ -14493,6 +15532,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit12() {
         return this.bit(12, true);
     }
+    ;
     /**
      * Bit field reader. Reads 12 bits.
      *
@@ -14503,6 +15543,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit12le() {
         return this.bit(12, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 12 bits.
      *
@@ -14513,6 +15554,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit12be() {
         return this.bit(12, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 13 bits.
      *
@@ -14523,6 +15565,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit13() {
         return this.bit(13);
     }
+    ;
     /**
      * Bit field reader. Reads 13 bits.
      *
@@ -14533,6 +15576,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit13le() {
         return this.bit(13, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 13 bits.
      *
@@ -14543,6 +15587,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit13be() {
         return this.bit(13, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 13 bits.
      *
@@ -14553,6 +15598,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit13() {
         return this.bit(13, true);
     }
+    ;
     /**
      * Bit field reader. Reads 13 bits.
      *
@@ -14563,6 +15609,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit13le() {
         return this.bit(13, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 13 bits.
      *
@@ -14573,6 +15620,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit13be() {
         return this.bit(13, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 14 bits.
      *
@@ -14583,6 +15631,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit14() {
         return this.bit(14);
     }
+    ;
     /**
      * Bit field reader. Reads 14 bits.
      *
@@ -14593,6 +15642,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit14le() {
         return this.bit(14, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 14 bits.
      *
@@ -14603,6 +15653,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit14be() {
         return this.bit(14, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 14 bits.
      *
@@ -14613,6 +15664,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit14() {
         return this.bit(14, true);
     }
+    ;
     /**
      * Bit field reader. Reads 14 bits.
      *
@@ -14623,6 +15675,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit14le() {
         return this.bit(14, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 14 bits.
      *
@@ -14633,6 +15686,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit14be() {
         return this.bit(14, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 15 bits.
      *
@@ -14643,6 +15697,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit15() {
         return this.bit(15);
     }
+    ;
     /**
      * Bit field reader. Reads 15 bits.
      *
@@ -14653,6 +15708,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit15le() {
         return this.bit(15, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 15 bits.
      *
@@ -14663,6 +15719,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit15be() {
         return this.bit(15, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 15 bits.
      *
@@ -14673,6 +15730,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit15() {
         return this.bit(15, true);
     }
+    ;
     /**
      * Bit field reader. Reads 15 bits.
      *
@@ -14683,6 +15741,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit15le() {
         return this.bit(15, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 15 bits.
      *
@@ -14693,6 +15752,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit15be() {
         return this.bit(15, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 16 bits.
      *
@@ -14703,6 +15763,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit16() {
         return this.bit(16);
     }
+    ;
     /**
      * Bit field reader. Reads 16 bits.
      *
@@ -14713,6 +15774,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit16le() {
         return this.bit(16, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 16 bits.
      *
@@ -14723,6 +15785,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit16be() {
         return this.bit(16, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 16 bits.
      *
@@ -14733,6 +15796,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit16() {
         return this.bit(16, true);
     }
+    ;
     /**
      * Bit field reader. Reads 16 bits.
      *
@@ -14743,6 +15807,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit16le() {
         return this.bit(16, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 16 bits.
      *
@@ -14753,6 +15818,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit16be() {
         return this.bit(16, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 17 bits.
      *
@@ -14763,6 +15829,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit17() {
         return this.bit(17);
     }
+    ;
     /**
      * Bit field reader. Reads 17 bits.
      *
@@ -14773,6 +15840,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit17le() {
         return this.bit(17, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 17 bits.
      *
@@ -14783,6 +15851,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit17be() {
         return this.bit(17, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 17 bits.
      *
@@ -14793,6 +15862,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit17() {
         return this.bit(17, true);
     }
+    ;
     /**
      * Bit field reader. Reads 17 bits.
      *
@@ -14803,6 +15873,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit17le() {
         return this.bit(17, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 17 bits.
      *
@@ -14813,6 +15884,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit17be() {
         return this.bit(17, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 18 bits.
      *
@@ -14823,6 +15895,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit18() {
         return this.bit(18);
     }
+    ;
     /**
      * Bit field reader. Reads 18 bits.
      *
@@ -14833,6 +15906,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit18le() {
         return this.bit(18, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 18 bits.
      *
@@ -14843,6 +15917,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit18be() {
         return this.bit(18, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 18 bits.
      *
@@ -14853,6 +15928,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit18() {
         return this.bit(18, true);
     }
+    ;
     /**
      * Bit field reader. Reads 18 bits.
      *
@@ -14863,6 +15939,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit18le() {
         return this.bit(18, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 18 bits.
      *
@@ -14873,6 +15950,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit18be() {
         return this.bit(18, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 19 bits.
      *
@@ -14883,6 +15961,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit19() {
         return this.bit(19);
     }
+    ;
     /**
      * Bit field reader. Reads 19 bits.
      *
@@ -14893,6 +15972,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit19le() {
         return this.bit(19, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 19 bits.
      *
@@ -14903,6 +15983,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit19be() {
         return this.bit(19, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 19 bits.
      *
@@ -14913,6 +15994,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit19() {
         return this.bit(19, true);
     }
+    ;
     /**
      * Bit field reader. Reads 19 bits.
      *
@@ -14923,6 +16005,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit19le() {
         return this.bit(19, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 19 bits.
      *
@@ -14933,6 +16016,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit19be() {
         return this.bit(19, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 20 bits.
      *
@@ -14943,6 +16027,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit20() {
         return this.bit(20);
     }
+    ;
     /**
      * Bit field reader. Reads 20 bits.
      *
@@ -14953,6 +16038,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit20le() {
         return this.bit(20, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 20 bits.
      *
@@ -14963,6 +16049,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit20be() {
         return this.bit(20, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 20 bits.
      *
@@ -14973,6 +16060,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit20() {
         return this.bit(20, true);
     }
+    ;
     /**
      * Bit field reader. Reads 20 bits.
      *
@@ -14983,6 +16071,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit20le() {
         return this.bit(20, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 20 bits.
      *
@@ -14993,6 +16082,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit20be() {
         return this.bit(20, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 21 bits.
      *
@@ -15003,6 +16093,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit21() {
         return this.bit(21);
     }
+    ;
     /**
      * Bit field reader. Reads 21 bits.
      *
@@ -15013,6 +16104,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit21le() {
         return this.bit(21, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 21 bits.
      *
@@ -15023,6 +16115,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit21be() {
         return this.bit(21, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 21 bits.
      *
@@ -15033,6 +16126,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit21() {
         return this.bit(21, true);
     }
+    ;
     /**
      * Bit field reader. Reads 21 bits.
      *
@@ -15043,6 +16137,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit21le() {
         return this.bit(21, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 21 bits.
      *
@@ -15053,6 +16148,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit21be() {
         return this.bit(21, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 22 bits.
      *
@@ -15063,6 +16159,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit22() {
         return this.bit(22);
     }
+    ;
     /**
      * Bit field reader. Reads 22 bits.
      *
@@ -15073,6 +16170,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit22le() {
         return this.bit(22, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 22 bits.
      *
@@ -15083,6 +16181,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit22be() {
         return this.bit(22, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 22 bits.
      *
@@ -15093,6 +16192,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit22() {
         return this.bit(22, true);
     }
+    ;
     /**
      * Bit field reader. Reads 22 bits.
      *
@@ -15103,6 +16203,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit22le() {
         return this.bit(22, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 22 bits.
      *
@@ -15113,6 +16214,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit22be() {
         return this.bit(22, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 23 bits.
      *
@@ -15123,6 +16225,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit23() {
         return this.bit(23);
     }
+    ;
     /**
      * Bit field reader. Reads 23 bits.
      *
@@ -15133,6 +16236,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit23le() {
         return this.bit(23, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 23 bits.
      *
@@ -15143,6 +16247,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit23be() {
         return this.bit(23, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 23 bits.
      *
@@ -15153,6 +16258,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit23() {
         return this.bit(23, true);
     }
+    ;
     /**
      * Bit field reader. Reads 23 bits.
      *
@@ -15163,6 +16269,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit23le() {
         return this.bit(23, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 23 bits.
      *
@@ -15173,6 +16280,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit23be() {
         return this.bit(23, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 24 bits.
      *
@@ -15183,6 +16291,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit24() {
         return this.bit(24);
     }
+    ;
     /**
      * Bit field reader. Reads 24 bits.
      *
@@ -15193,6 +16302,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit24le() {
         return this.bit(24, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 24 bits.
      *
@@ -15203,6 +16313,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit24be() {
         return this.bit(24, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 24 bits.
      *
@@ -15213,6 +16324,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit24() {
         return this.bit(24, true);
     }
+    ;
     /**
      * Bit field reader. Reads 24 bits.
      *
@@ -15223,6 +16335,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit24le() {
         return this.bit(24, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 24 bits.
      *
@@ -15233,6 +16346,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit24be() {
         return this.bit(24, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 25 bits.
      *
@@ -15243,6 +16357,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit25() {
         return this.bit(25);
     }
+    ;
     /**
      * Bit field reader. Reads 25 bits.
      *
@@ -15253,6 +16368,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit25le() {
         return this.bit(25, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 25 bits.
      *
@@ -15263,6 +16379,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit25be() {
         return this.bit(25, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 25 bits.
      *
@@ -15273,6 +16390,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit25() {
         return this.bit(25, true);
     }
+    ;
     /**
      * Bit field reader. Reads 25 bits.
      *
@@ -15283,6 +16401,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit25le() {
         return this.bit(25, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 25 bits.
      *
@@ -15293,6 +16412,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit25be() {
         return this.bit(25, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 26 bits.
      *
@@ -15303,6 +16423,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit26() {
         return this.bit(26);
     }
+    ;
     /**
      * Bit field reader. Reads 26 bits.
      *
@@ -15313,6 +16434,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit26le() {
         return this.bit(26, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 26 bits.
      *
@@ -15323,6 +16445,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit26be() {
         return this.bit(26, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 26 bits.
      *
@@ -15333,6 +16456,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit26() {
         return this.bit(26, true);
     }
+    ;
     /**
      * Bit field reader. Reads 26 bits.
      *
@@ -15343,6 +16467,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit26le() {
         return this.bit(26, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 26 bits.
      *
@@ -15353,6 +16478,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit26be() {
         return this.bit(26, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 27 bits.
      *
@@ -15363,6 +16489,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit27() {
         return this.bit(27);
     }
+    ;
     /**
      * Bit field reader. Reads 27 bits.
      *
@@ -15373,6 +16500,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit27le() {
         return this.bit(27, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 27 bits.
      *
@@ -15383,6 +16511,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit27be() {
         return this.bit(27, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 27 bits.
      *
@@ -15393,6 +16522,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit27() {
         return this.bit(27, true);
     }
+    ;
     /**
      * Bit field reader. Reads 27 bits.
      *
@@ -15403,6 +16533,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit27le() {
         return this.bit(27, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 27 bits.
      *
@@ -15413,6 +16544,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit27be() {
         return this.bit(27, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 28 bits.
      *
@@ -15423,6 +16555,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit28() {
         return this.bit(28);
     }
+    ;
     /**
      * Bit field reader. Reads 28 bits.
      *
@@ -15433,6 +16566,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit28le() {
         return this.bit(28, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 28 bits.
      *
@@ -15443,6 +16577,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit28be() {
         return this.bit(28, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 28 bits.
      *
@@ -15453,6 +16588,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit28() {
         return this.bit(28, true);
     }
+    ;
     /**
      * Bit field reader. Reads 28 bits.
      *
@@ -15463,6 +16599,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit28le() {
         return this.bit(28, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 28 bits.
      *
@@ -15473,6 +16610,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit28be() {
         return this.bit(28, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 29 bits.
      *
@@ -15483,6 +16621,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit29() {
         return this.bit(29);
     }
+    ;
     /**
      * Bit field reader. Reads 29 bits.
      *
@@ -15493,6 +16632,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit29le() {
         return this.bit(29, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 29 bits.
      *
@@ -15503,6 +16643,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit29be() {
         return this.bit(29, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 29 bits.
      *
@@ -15513,6 +16654,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit29() {
         return this.bit(29, true);
     }
+    ;
     /**
      * Bit field reader. Reads 29 bits.
      *
@@ -15523,6 +16665,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit29le() {
         return this.bit(29, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 29 bits.
      *
@@ -15533,6 +16676,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit29be() {
         return this.bit(29, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 30 bits.
      *
@@ -15543,6 +16687,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit30() {
         return this.bit(30);
     }
+    ;
     /**
      * Bit field reader. Reads 30 bits.
      *
@@ -15553,6 +16698,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit30le() {
         return this.bit(30, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 30 bits.
      *
@@ -15563,6 +16709,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit30be() {
         return this.bit(30, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 30 bits.
      *
@@ -15573,6 +16720,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit30() {
         return this.bit(30, true);
     }
+    ;
     /**
      * Bit field reader. Reads 30 bits.
      *
@@ -15583,6 +16731,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit30le() {
         return this.bit(30, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 30 bits.
      *
@@ -15593,6 +16742,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit30be() {
         return this.bit(30, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 31 bits.
      *
@@ -15603,6 +16753,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit31() {
         return this.bit(31);
     }
+    ;
     /**
      * Bit field reader. Reads 31 bits.
      *
@@ -15613,6 +16764,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit31le() {
         return this.bit(31, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 31 bits.
      *
@@ -15623,6 +16775,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit31be() {
         return this.bit(31, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 31 bits.
      *
@@ -15633,6 +16786,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit31() {
         return this.bit(31, true);
     }
+    ;
     /**
      * Bit field reader. Reads 31 bits.
      *
@@ -15643,6 +16797,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit31le() {
         return this.bit(31, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 31 bits.
      *
@@ -15653,6 +16808,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit31be() {
         return this.bit(31, true, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 32 bits.
      *
@@ -15663,6 +16819,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit32() {
         return this.bit(32);
     }
+    ;
     /**
      * Bit field reader. Reads 32 bits.
      *
@@ -15673,6 +16830,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit32le() {
         return this.bit(32, undefined, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 32 bits.
      *
@@ -15683,6 +16841,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bit32be() {
         return this.bit(32, undefined, "big");
     }
+    ;
     /**
      * Bit field reader. Reads 32 bits.
      *
@@ -15693,6 +16852,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit32() {
         return this.bit(32, true);
     }
+    ;
     /**
      * Bit field reader. Reads 32 bits.
      *
@@ -15703,6 +16863,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit32le() {
         return this.bit(32, true, "little");
     }
+    ;
     /**
      * Bit field reader. Reads 32 bits.
      *
@@ -15713,6 +16874,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubit32be() {
         return this.bit(32, true, "big");
     }
+    ;
     //
     // byte read
     //
@@ -15724,6 +16886,7 @@ class BiReaderStream extends BiBaseStreamer {
     get byte() {
         return this.readByte();
     }
+    ;
     /**
      * Read byte.
      *
@@ -15732,6 +16895,7 @@ class BiReaderStream extends BiBaseStreamer {
     get int8() {
         return this.readByte();
     }
+    ;
     /**
      * Read unsigned byte.
      *
@@ -15740,6 +16904,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uint8() {
         return this.readByte(true);
     }
+    ;
     /**
      * Read unsigned byte.
      *
@@ -15748,6 +16913,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubyte() {
         return this.readByte(true);
     }
+    ;
     //
     //short16 read
     //
@@ -15759,6 +16925,7 @@ class BiReaderStream extends BiBaseStreamer {
     get int16() {
         return this.readInt16();
     }
+    ;
     /**
      * Read short.
      *
@@ -15767,6 +16934,7 @@ class BiReaderStream extends BiBaseStreamer {
     get short() {
         return this.readInt16();
     }
+    ;
     /**
      * Read short.
      *
@@ -15775,6 +16943,7 @@ class BiReaderStream extends BiBaseStreamer {
     get word() {
         return this.readInt16();
     }
+    ;
     /**
      * Read unsigned short.
      *
@@ -15783,6 +16952,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uint16() {
         return this.readInt16(true);
     }
+    ;
     /**
      * Read unsigned short.
      *
@@ -15791,6 +16961,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ushort() {
         return this.readInt16(true);
     }
+    ;
     /**
      * Read unsigned short.
      *
@@ -15799,6 +16970,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uword() {
         return this.readInt16(true);
     }
+    ;
     /**
      * Read unsigned short in little endian.
      *
@@ -15807,6 +16979,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uint16le() {
         return this.readInt16(true, "little");
     }
+    ;
     /**
      * Read unsigned short in little endian.
      *
@@ -15815,6 +16988,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ushortle() {
         return this.readInt16(true, "little");
     }
+    ;
     /**
      * Read unsigned short in little endian.
      *
@@ -15823,6 +16997,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uwordle() {
         return this.readInt16(true, "little");
     }
+    ;
     /**
      * Read signed short in little endian.
      *
@@ -15831,6 +17006,7 @@ class BiReaderStream extends BiBaseStreamer {
     get int16le() {
         return this.readInt16(false, "little");
     }
+    ;
     /**
      * Read signed short in little endian.
      *
@@ -15839,6 +17015,7 @@ class BiReaderStream extends BiBaseStreamer {
     get shortle() {
         return this.readInt16(false, "little");
     }
+    ;
     /**
      * Read signed short in little endian.
      *
@@ -15847,6 +17024,7 @@ class BiReaderStream extends BiBaseStreamer {
     get wordle() {
         return this.readInt16(false, "little");
     }
+    ;
     /**
      * Read unsigned short in big endian.
      *
@@ -15855,6 +17033,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uint16be() {
         return this.readInt16(true, "big");
     }
+    ;
     /**
      * Read unsigned short in big endian.
      *
@@ -15863,6 +17042,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ushortbe() {
         return this.readInt16(true, "big");
     }
+    ;
     /**
      * Read unsigned short in big endian.
      *
@@ -15871,6 +17051,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uwordbe() {
         return this.readInt16(true, "big");
     }
+    ;
     /**
      * Read signed short in big endian.
      *
@@ -15879,6 +17060,7 @@ class BiReaderStream extends BiBaseStreamer {
     get int16be() {
         return this.readInt16(false, "big");
     }
+    ;
     /**
      * Read signed short in big endian.
      *
@@ -15887,6 +17069,7 @@ class BiReaderStream extends BiBaseStreamer {
     get shortbe() {
         return this.readInt16(false, "big");
     }
+    ;
     /**
      * Read signed short in big endian.
      *
@@ -15895,6 +17078,7 @@ class BiReaderStream extends BiBaseStreamer {
     get wordbe() {
         return this.readInt16(false, "big");
     }
+    ;
     //
     //half float read
     //
@@ -15906,6 +17090,7 @@ class BiReaderStream extends BiBaseStreamer {
     get halffloat() {
         return this.readHalfFloat();
     }
+    ;
     /**
      * Read half float
      *
@@ -15914,6 +17099,7 @@ class BiReaderStream extends BiBaseStreamer {
     get half() {
         return this.readHalfFloat();
     }
+    ;
     /**
      * Read half float.
      *
@@ -15922,6 +17108,7 @@ class BiReaderStream extends BiBaseStreamer {
     get halffloatbe() {
         return this.readHalfFloat("big");
     }
+    ;
     /**
      * Read half float.
      *
@@ -15930,6 +17117,7 @@ class BiReaderStream extends BiBaseStreamer {
     get halfbe() {
         return this.readHalfFloat("big");
     }
+    ;
     /**
      * Read half float.
      *
@@ -15938,6 +17126,7 @@ class BiReaderStream extends BiBaseStreamer {
     get halffloatle() {
         return this.readHalfFloat("little");
     }
+    ;
     /**
      * Read half float.
      *
@@ -15946,6 +17135,7 @@ class BiReaderStream extends BiBaseStreamer {
     get halfle() {
         return this.readHalfFloat("little");
     }
+    ;
     //
     //int read
     //
@@ -15957,6 +17147,7 @@ class BiReaderStream extends BiBaseStreamer {
     get int() {
         return this.readInt32();
     }
+    ;
     /**
      * Read 32 bit integer.
      *
@@ -15965,6 +17156,7 @@ class BiReaderStream extends BiBaseStreamer {
     get double() {
         return this.readInt32();
     }
+    ;
     /**
      * Read 32 bit integer.
      *
@@ -15973,6 +17165,7 @@ class BiReaderStream extends BiBaseStreamer {
     get int32() {
         return this.readInt32();
     }
+    ;
     /**
      * Read 32 bit integer.
      *
@@ -15981,6 +17174,7 @@ class BiReaderStream extends BiBaseStreamer {
     get long() {
         return this.readInt32();
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -15989,6 +17183,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uint() {
         return this.readInt32(true);
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -15997,6 +17192,7 @@ class BiReaderStream extends BiBaseStreamer {
     get udouble() {
         return this.readInt32(true);
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -16005,6 +17201,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uint32() {
         return this.readInt32(true);
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -16013,6 +17210,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ulong() {
         return this.readInt32(true);
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -16021,6 +17219,7 @@ class BiReaderStream extends BiBaseStreamer {
     get intbe() {
         return this.readInt32(false, "big");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -16029,6 +17228,7 @@ class BiReaderStream extends BiBaseStreamer {
     get doublebe() {
         return this.readInt32(false, "big");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -16037,6 +17237,7 @@ class BiReaderStream extends BiBaseStreamer {
     get int32be() {
         return this.readInt32(false, "big");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -16045,6 +17246,7 @@ class BiReaderStream extends BiBaseStreamer {
     get longbe() {
         return this.readInt32(false, "big");
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -16053,6 +17255,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uintbe() {
         return this.readInt32(true, "big");
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -16061,6 +17264,7 @@ class BiReaderStream extends BiBaseStreamer {
     get udoublebe() {
         return this.readInt32(true, "big");
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -16069,6 +17273,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uint32be() {
         return this.readInt32(true, "big");
     }
+    ;
     /**
      * Read unsigned 32 bit integer.
      *
@@ -16077,6 +17282,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ulongbe() {
         return this.readInt32(true, "big");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -16085,6 +17291,7 @@ class BiReaderStream extends BiBaseStreamer {
     get intle() {
         return this.readInt32(false, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -16093,6 +17300,7 @@ class BiReaderStream extends BiBaseStreamer {
     get doublele() {
         return this.readInt32(false, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -16101,6 +17309,7 @@ class BiReaderStream extends BiBaseStreamer {
     get int32le() {
         return this.readInt32(false, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -16109,6 +17318,7 @@ class BiReaderStream extends BiBaseStreamer {
     get longle() {
         return this.readInt32(false, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -16117,6 +17327,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uintle() {
         return this.readInt32(true, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -16125,6 +17336,7 @@ class BiReaderStream extends BiBaseStreamer {
     get udoublele() {
         return this.readInt32(true, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -16133,6 +17345,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uint32le() {
         return this.readInt32(true, "little");
     }
+    ;
     /**
      * Read signed 32 bit integer.
      *
@@ -16141,6 +17354,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ulongle() {
         return this.readInt32(true, "little");
     }
+    ;
     //
     //float read
     //
@@ -16152,6 +17366,7 @@ class BiReaderStream extends BiBaseStreamer {
     get float() {
         return this.readFloat();
     }
+    ;
     /**
      * Read float.
      *
@@ -16160,6 +17375,7 @@ class BiReaderStream extends BiBaseStreamer {
     get floatbe() {
         return this.readFloat("big");
     }
+    ;
     /**
      * Read float.
      *
@@ -16168,6 +17384,7 @@ class BiReaderStream extends BiBaseStreamer {
     get floatle() {
         return this.readFloat("little");
     }
+    ;
     //
     //int64 reader
     //
@@ -16181,6 +17398,7 @@ class BiReaderStream extends BiBaseStreamer {
     get int64() {
         return this.readInt64();
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -16191,6 +17409,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bigint() {
         return this.readInt64();
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -16201,6 +17420,7 @@ class BiReaderStream extends BiBaseStreamer {
     get quad() {
         return this.readInt64();
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -16211,6 +17431,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uint64() {
         return this.readInt64(true);
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -16221,6 +17442,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubigint() {
         return this.readInt64(true);
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -16231,6 +17453,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uquad() {
         return this.readInt64(true);
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -16241,6 +17464,7 @@ class BiReaderStream extends BiBaseStreamer {
     get int64be() {
         return this.readInt64(false, "big");
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -16251,6 +17475,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bigintbe() {
         return this.readInt64(false, "big");
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -16261,6 +17486,7 @@ class BiReaderStream extends BiBaseStreamer {
     get quadbe() {
         return this.readInt64(false, "big");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -16271,6 +17497,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uint64be() {
         return this.readInt64(true, "big");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -16281,6 +17508,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubigintbe() {
         return this.readInt64(true, "big");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -16291,6 +17519,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uquadbe() {
         return this.readInt64(true, "big");
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -16301,6 +17530,7 @@ class BiReaderStream extends BiBaseStreamer {
     get int64le() {
         return this.readInt64(false, "little");
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -16311,6 +17541,7 @@ class BiReaderStream extends BiBaseStreamer {
     get bigintle() {
         return this.readInt64(false, "little");
     }
+    ;
     /**
      * Read signed 64 bit integer.
      *
@@ -16321,6 +17552,7 @@ class BiReaderStream extends BiBaseStreamer {
     get quadle() {
         return this.readInt64(false, "little");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -16331,6 +17563,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uint64le() {
         return this.readInt64(true, "little");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -16341,6 +17574,7 @@ class BiReaderStream extends BiBaseStreamer {
     get ubigintle() {
         return this.readInt64(true, "little");
     }
+    ;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -16351,6 +17585,7 @@ class BiReaderStream extends BiBaseStreamer {
     get uquadle() {
         return this.readInt64(true, "little");
     }
+    ;
     //
     //doublefloat reader
     //
@@ -16362,6 +17597,7 @@ class BiReaderStream extends BiBaseStreamer {
     get doublefloat() {
         return this.readDoubleFloat();
     }
+    ;
     /**
      * Read double float.
      *
@@ -16370,6 +17606,7 @@ class BiReaderStream extends BiBaseStreamer {
     get dfloat() {
         return this.readDoubleFloat();
     }
+    ;
     /**
      * Read double float.
      *
@@ -16378,6 +17615,7 @@ class BiReaderStream extends BiBaseStreamer {
     get dfloatebe() {
         return this.readDoubleFloat("big");
     }
+    ;
     /**
      * Read double float.
      *
@@ -16386,6 +17624,7 @@ class BiReaderStream extends BiBaseStreamer {
     get doublefloatbe() {
         return this.readDoubleFloat("big");
     }
+    ;
     /**
      * Read double float.
      *
@@ -16394,6 +17633,7 @@ class BiReaderStream extends BiBaseStreamer {
     get dfloatle() {
         return this.readDoubleFloat("little");
     }
+    ;
     /**
      * Read double float.
      *
@@ -16402,6 +17642,7 @@ class BiReaderStream extends BiBaseStreamer {
     get doublefloatle() {
         return this.readDoubleFloat("little");
     }
+    ;
     //
     //string reader
     //
@@ -16421,6 +17662,7 @@ class BiReaderStream extends BiBaseStreamer {
     string(options) {
         return this.readString(options);
     }
+    ;
     /**
     * Reads string using setting from .strSettings
     *
@@ -16431,6 +17673,7 @@ class BiReaderStream extends BiBaseStreamer {
     get str() {
         return this.readString(this.strSettings);
     }
+    ;
     /**
     * Reads UTF-8 (C) string.
     *
@@ -16443,6 +17686,7 @@ class BiReaderStream extends BiBaseStreamer {
     utf8string(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
     }
+    ;
     /**
     * Reads UTF-8 (C) string.
     *
@@ -16455,6 +17699,7 @@ class BiReaderStream extends BiBaseStreamer {
     cstring(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
     }
+    ;
     /**
     * Reads ANSI string.
     *
@@ -16467,6 +17712,7 @@ class BiReaderStream extends BiBaseStreamer {
     ansistring(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue, stripNull: stripNull });
     }
+    ;
     /**
     * Reads UTF-16 (Unicode) string.
     *
@@ -16480,6 +17726,7 @@ class BiReaderStream extends BiBaseStreamer {
     utf16string(length, terminateValue, stripNull, endian) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
     }
+    ;
     /**
     * Reads UTF-16 (Unicode) string.
     *
@@ -16493,6 +17740,7 @@ class BiReaderStream extends BiBaseStreamer {
     unistring(length, terminateValue, stripNull, endian) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
     }
+    ;
     /**
     * Reads UTF-16 (Unicode) string in little endian order.
     *
@@ -16505,6 +17753,7 @@ class BiReaderStream extends BiBaseStreamer {
     utf16stringle(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
     }
+    ;
     /**
     * Reads UTF-16 (Unicode) string in little endian order.
     *
@@ -16517,6 +17766,7 @@ class BiReaderStream extends BiBaseStreamer {
     unistringle(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
     }
+    ;
     /**
     * Reads UTF-16 (Unicode) string in big endian order.
     *
@@ -16529,6 +17779,7 @@ class BiReaderStream extends BiBaseStreamer {
     utf16stringbe(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
     }
+    ;
     /**
     * Reads UTF-16 (Unicode) string in big endian order.
     *
@@ -16541,6 +17792,7 @@ class BiReaderStream extends BiBaseStreamer {
     unistringbe(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
     }
+    ;
     /**
     * Reads Pascal string.
     *
@@ -16553,6 +17805,7 @@ class BiReaderStream extends BiBaseStreamer {
     pstring(lengthReadSize, stripNull, endian) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
     }
+    ;
     /**
     * Reads Pascal string 1 byte length read.
     *
@@ -16564,6 +17817,7 @@ class BiReaderStream extends BiBaseStreamer {
     pstring1(stripNull, endian) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: endian });
     }
+    ;
     /**
     * Reads Pascal string 1 byte length read in little endian order.
     *
@@ -16574,6 +17828,7 @@ class BiReaderStream extends BiBaseStreamer {
     pstring1le(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "little" });
     }
+    ;
     /**
     * Reads Pascal string 1 byte length read in big endian order.
     *
@@ -16584,6 +17839,7 @@ class BiReaderStream extends BiBaseStreamer {
     pstring1be(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "big" });
     }
+    ;
     /**
     * Reads Pascal string 2 byte length read.
     *
@@ -16595,6 +17851,7 @@ class BiReaderStream extends BiBaseStreamer {
     pstring2(stripNull, endian) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: endian });
     }
+    ;
     /**
     * Reads Pascal string 2 byte length read in little endian order.
     *
@@ -16605,6 +17862,7 @@ class BiReaderStream extends BiBaseStreamer {
     pstring2le(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "little" });
     }
+    ;
     /**
     * Reads Pascal string 2 byte length read in big endian order.
     *
@@ -16615,6 +17873,7 @@ class BiReaderStream extends BiBaseStreamer {
     pstring2be(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "big" });
     }
+    ;
     /**
     * Reads Pascal string 4 byte length read.
     *
@@ -16626,6 +17885,7 @@ class BiReaderStream extends BiBaseStreamer {
     pstring4(stripNull, endian) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: endian });
     }
+    ;
     /**
     * Reads Pascal string 4 byte length read in little endian order.
     *
@@ -16636,6 +17896,7 @@ class BiReaderStream extends BiBaseStreamer {
     pstring4le(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "little" });
     }
+    ;
     /**
     * Reads Pascal string 4 byte length read in big endian order.
     *
@@ -16646,6 +17907,7 @@ class BiReaderStream extends BiBaseStreamer {
     pstring4be(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "big" });
     }
+    ;
     /**
     * Reads Wide-Pascal string.
     *
@@ -16658,6 +17920,7 @@ class BiReaderStream extends BiBaseStreamer {
     wpstring(lengthReadSize, stripNull, endian) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: lengthReadSize, endian: endian, stripNull: stripNull });
     }
+    ;
     /**
     * Reads Wide-Pascal string 1 byte length read.
     *
@@ -16669,6 +17932,7 @@ class BiReaderStream extends BiBaseStreamer {
     wpstring1(stripNull, endian) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: endian, stripNull: stripNull });
     }
+    ;
     /**
     * Reads Wide-Pascal string 2 byte length read.
     *
@@ -16680,6 +17944,7 @@ class BiReaderStream extends BiBaseStreamer {
     wpstring2(stripNull, endian) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: endian, stripNull: stripNull });
     }
+    ;
     /**
     * Reads Wide-Pascal string 2 byte length read in little endian order.
     *
@@ -16690,6 +17955,7 @@ class BiReaderStream extends BiBaseStreamer {
     wpstring2le(stripNull) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "little", stripNull: stripNull });
     }
+    ;
     /**
     * Reads Wide-Pascal string 2 byte length read in big endian order.
     *
@@ -16700,6 +17966,7 @@ class BiReaderStream extends BiBaseStreamer {
     wpstring2be(stripNull) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "big", stripNull: stripNull });
     }
+    ;
     /**
     * Reads Wide-Pascal string 4 byte length read.
     *
@@ -16711,6 +17978,7 @@ class BiReaderStream extends BiBaseStreamer {
     wpstring4(stripNull, endian) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: endian, stripNull: stripNull });
     }
+    ;
     /**
     * Reads Wide-Pascal string 4 byte length read in big endian order.
     *
@@ -16721,6 +17989,7 @@ class BiReaderStream extends BiBaseStreamer {
     wpstring4be(stripNull) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "big", stripNull: stripNull });
     }
+    ;
     /**
     * Reads Wide-Pascal string 4 byte length read in little endian order.
     *
@@ -16731,6 +18000,7 @@ class BiReaderStream extends BiBaseStreamer {
     wpstring4le(stripNull) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "little", stripNull: stripNull });
     }
+    ;
 }
 
 /**
@@ -16789,6 +18059,7 @@ class BiWriterStream extends BiBaseStreamer {
         this.offset = options.byteOffset ?? 0;
         this.bitoffset = options.bitOffset ?? 0;
     }
+    ;
     //
     // Bit Aliases
     //
@@ -16806,6 +18077,7 @@ class BiWriterStream extends BiBaseStreamer {
     bit(value, bits, unsigned, endian) {
         return this.writeBit(value, bits, unsigned, endian);
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -16819,6 +18091,7 @@ class BiWriterStream extends BiBaseStreamer {
     ubit(value, bits, endian) {
         return this.writeBit(value, bits, true, endian);
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -16832,6 +18105,7 @@ class BiWriterStream extends BiBaseStreamer {
     bitbe(value, bits, unsigned) {
         return this.bit(value, bits, unsigned, "big");
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -16844,6 +18118,7 @@ class BiWriterStream extends BiBaseStreamer {
     ubitbe(value, bits) {
         return this.bit(value, bits, true, "big");
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -16856,6 +18131,7 @@ class BiWriterStream extends BiBaseStreamer {
     ubitle(value, bits) {
         return this.bit(value, bits, true, "little");
     }
+    ;
     /**
      * Bit field writer.
      *
@@ -16869,6 +18145,7 @@ class BiWriterStream extends BiBaseStreamer {
     bitle(value, bits, unsigned) {
         return this.bit(value, bits, unsigned, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 1 bit.
      *
@@ -16879,6 +18156,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit1(value) {
         this.bit(value, 1);
     }
+    ;
     /**
      * Bit field writer. Writes 1 bit.
      *
@@ -16889,6 +18167,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit1le(value) {
         this.bit(value, 1, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 1 bit.
      *
@@ -16899,6 +18178,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit1be(value) {
         this.bit(value, 1, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 1 bit.
      *
@@ -16909,6 +18189,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit1(value) {
         this.bit(value, 1, true);
     }
+    ;
     /**
      * Bit field writer. Writes 1 bit.
      *
@@ -16919,6 +18200,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit1le(value) {
         this.bit(value, 1, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 1 bit.
      *
@@ -16929,6 +18211,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit1be(value) {
         this.bit(value, 1, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 2 bits.
      *
@@ -16939,6 +18222,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit2(value) {
         this.bit(value, 2);
     }
+    ;
     /**
      * Bit field writer. Writes 2 bits.
      *
@@ -16949,6 +18233,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit2le(value) {
         this.bit(value, 2, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 2 bits.
      *
@@ -16959,6 +18244,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit2be(value) {
         this.bit(value, 2, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 2 bits.
      *
@@ -16969,6 +18255,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit2(value) {
         this.bit(value, 2, true);
     }
+    ;
     /**
      * Bit field writer. Writes 2 bits.
      *
@@ -16979,6 +18266,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit2le(value) {
         this.bit(value, 2, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 2 bits.
      *
@@ -16989,6 +18277,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit2be(value) {
         this.bit(value, 2, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 3 bits.
      *
@@ -16999,6 +18288,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit3(value) {
         this.bit(value, 3);
     }
+    ;
     /**
      * Bit field writer. Writes 3 bits.
      *
@@ -17009,6 +18299,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit3le(value) {
         this.bit(value, 3, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 3 bits.
      *
@@ -17019,6 +18310,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit3be(value) {
         this.bit(value, 3, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 3 bits.
      *
@@ -17029,6 +18321,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit3(value) {
         this.bit(value, 3, true);
     }
+    ;
     /**
      * Bit field writer. Writes 3 bits.
      *
@@ -17039,6 +18332,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit3le(value) {
         this.bit(value, 3, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 3 bits.
      *
@@ -17049,6 +18343,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit3be(value) {
         this.bit(value, 3, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 4 bits.
      *
@@ -17059,6 +18354,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit4(value) {
         this.bit(value, 4);
     }
+    ;
     /**
      * Bit field writer. Writes 4 bits.
      *
@@ -17069,6 +18365,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit4le(value) {
         this.bit(value, 4, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 4 bits.
      *
@@ -17079,6 +18376,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit4be(value) {
         this.bit(value, 4, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 4 bits.
      *
@@ -17089,6 +18387,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit4(value) {
         this.bit(value, 4, true);
     }
+    ;
     /**
      * Bit field writer. Writes 4 bits.
      *
@@ -17099,6 +18398,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit4le(value) {
         this.bit(value, 4, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 4 bits.
      *
@@ -17109,6 +18409,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit4be(value) {
         this.bit(value, 4, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 5 bits.
      *
@@ -17119,6 +18420,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit5(value) {
         this.bit(value, 5);
     }
+    ;
     /**
      * Bit field writer. Writes 5 bits.
      *
@@ -17129,6 +18431,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit5le(value) {
         this.bit(value, 5, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 5 bits.
      *
@@ -17139,6 +18442,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit5be(value) {
         this.bit(value, 5, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 5 bits.
      *
@@ -17149,6 +18453,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit5(value) {
         this.bit(value, 5, true);
     }
+    ;
     /**
      * Bit field writer. Writes 5 bits.
      *
@@ -17159,6 +18464,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit5le(value) {
         this.bit(value, 5, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 5 bits.
      *
@@ -17169,6 +18475,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit5be(value) {
         this.bit(value, 5, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 6 bits.
      *
@@ -17179,6 +18486,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit6(value) {
         this.bit(value, 6);
     }
+    ;
     /**
      * Bit field writer. Writes 6 bits.
      *
@@ -17189,6 +18497,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit6le(value) {
         this.bit(value, 6, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 6 bits.
      *
@@ -17199,6 +18508,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit6be(value) {
         this.bit(value, 6, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 6 bits.
      *
@@ -17209,6 +18519,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit6(value) {
         this.bit(value, 6, true);
     }
+    ;
     /**
      * Bit field writer. Writes 6 bits.
      *
@@ -17219,6 +18530,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit6le(value) {
         this.bit(value, 6, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 6 bits.
      *
@@ -17229,6 +18541,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit6be(value) {
         this.bit(value, 6, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 7 bits.
      *
@@ -17239,6 +18552,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit7(value) {
         this.bit(value, 7);
     }
+    ;
     /**
      * Bit field writer. Writes 7 bits.
      *
@@ -17249,6 +18563,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit7le(value) {
         this.bit(value, 7, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 7 bits.
      *
@@ -17259,6 +18574,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit7be(value) {
         this.bit(value, 7, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 7 bits.
      *
@@ -17269,6 +18585,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit7(value) {
         this.bit(value, 7, true);
     }
+    ;
     /**
      * Bit field writer. Writes 7 bits.
      *
@@ -17279,6 +18596,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit7le(value) {
         this.bit(value, 7, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 7 bits.
      *
@@ -17289,6 +18607,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit7be(value) {
         this.bit(value, 7, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 8 bits.
      *
@@ -17299,6 +18618,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit8(value) {
         this.bit(value, 8);
     }
+    ;
     /**
      * Bit field writer. Writes 8 bits.
      *
@@ -17309,6 +18629,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit8le(value) {
         this.bit(value, 8, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 8 bits.
      *
@@ -17319,6 +18640,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit8be(value) {
         this.bit(value, 8, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 8 bits.
      *
@@ -17329,6 +18651,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit8(value) {
         this.bit(value, 8, true);
     }
+    ;
     /**
      * Bit field writer. Writes 8 bits.
      *
@@ -17339,6 +18662,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit8le(value) {
         this.bit(value, 8, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 8 bits.
      *
@@ -17349,6 +18673,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit8be(value) {
         this.bit(value, 8, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 9 bits.
      *
@@ -17359,6 +18684,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit9(value) {
         this.bit(value, 9);
     }
+    ;
     /**
      * Bit field writer. Writes 9 bits.
      *
@@ -17369,6 +18695,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit9le(value) {
         this.bit(value, 9, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 9 bits.
      *
@@ -17379,6 +18706,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit9be(value) {
         this.bit(value, 9, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 9 bits.
      *
@@ -17389,6 +18717,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit9(value) {
         this.bit(value, 9, true);
     }
+    ;
     /**
      * Bit field writer. Writes 9 bits.
      *
@@ -17399,6 +18728,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit9le(value) {
         this.bit(value, 9, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 9 bits.
      *
@@ -17409,6 +18739,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit9be(value) {
         this.bit(value, 9, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 10 bits.
      *
@@ -17419,6 +18750,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit10(value) {
         this.bit(value, 10);
     }
+    ;
     /**
      * Bit field writer. Writes 10 bits.
      *
@@ -17429,6 +18761,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit10le(value) {
         this.bit(value, 10, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 10 bits.
      *
@@ -17439,6 +18772,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit10be(value) {
         this.bit(value, 10, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 10 bits.
      *
@@ -17449,6 +18783,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit10(value) {
         this.bit(value, 10, true);
     }
+    ;
     /**
      * Bit field writer. Writes 10 bits.
      *
@@ -17459,6 +18794,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit10le(value) {
         this.bit(value, 10, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 10 bits.
      *
@@ -17469,6 +18805,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit10be(value) {
         this.bit(value, 10, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 11 bits.
      *
@@ -17479,6 +18816,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit11(value) {
         this.bit(value, 11);
     }
+    ;
     /**
      * Bit field writer. Writes 11 bits.
      *
@@ -17489,6 +18827,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit11le(value) {
         this.bit(value, 11, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 11 bits.
      *
@@ -17499,6 +18838,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit11be(value) {
         this.bit(value, 11, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 11 bits.
      *
@@ -17509,6 +18849,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit11(value) {
         this.bit(value, 11, true);
     }
+    ;
     /**
      * Bit field writer. Writes 11 bits.
      *
@@ -17519,6 +18860,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit11le(value) {
         this.bit(value, 11, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 11 bits.
      *
@@ -17529,6 +18871,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit11be(value) {
         this.bit(value, 11, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 12 bits.
      *
@@ -17539,6 +18882,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit12(value) {
         this.bit(value, 12);
     }
+    ;
     /**
      * Bit field writer. Writes 12 bits.
      *
@@ -17549,6 +18893,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit12le(value) {
         this.bit(value, 12, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 12 bits.
      *
@@ -17559,6 +18904,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit12be(value) {
         this.bit(value, 12, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 12 bits.
      *
@@ -17569,6 +18915,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit12(value) {
         this.bit(value, 12, true);
     }
+    ;
     /**
      * Bit field writer. Writes 12 bits.
      *
@@ -17579,6 +18926,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit12le(value) {
         this.bit(value, 12, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 12 bits.
      *
@@ -17589,6 +18937,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit12be(value) {
         this.bit(value, 12, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 13 bits.
      *
@@ -17599,6 +18948,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit13(value) {
         this.bit(value, 13);
     }
+    ;
     /**
      * Bit field writer. Writes 13 bits.
      *
@@ -17609,6 +18959,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit13le(value) {
         this.bit(value, 13, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 13 bits.
      *
@@ -17619,6 +18970,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit13be(value) {
         this.bit(value, 13, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 13 bits.
      *
@@ -17629,6 +18981,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit13(value) {
         this.bit(value, 13, true);
     }
+    ;
     /**
      * Bit field writer. Writes 13 bits.
      *
@@ -17639,6 +18992,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit13le(value) {
         this.bit(value, 13, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 13 bits.
      *
@@ -17649,6 +19003,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit13be(value) {
         this.bit(value, 13, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 14 bits.
      *
@@ -17659,6 +19014,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit14(value) {
         this.bit(value, 14);
     }
+    ;
     /**
      * Bit field writer. Writes 14 bits.
      *
@@ -17669,6 +19025,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit14le(value) {
         this.bit(value, 14, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 14 bits.
      *
@@ -17679,6 +19036,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit14be(value) {
         this.bit(value, 14, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 14 bits.
      *
@@ -17689,6 +19047,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit14(value) {
         this.bit(value, 14, true);
     }
+    ;
     /**
      * Bit field writer. Writes 14 bits.
      *
@@ -17699,6 +19058,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit14le(value) {
         this.bit(value, 14, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 14 bits.
      *
@@ -17709,6 +19069,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit14be(value) {
         this.bit(value, 14, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 15 bits.
      *
@@ -17719,6 +19080,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit15(value) {
         this.bit(value, 15);
     }
+    ;
     /**
      * Bit field writer. Writes 15 bits.
      *
@@ -17729,6 +19091,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit15le(value) {
         this.bit(value, 15, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 15 bits.
      *
@@ -17739,6 +19102,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit15be(value) {
         this.bit(value, 15, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 15 bits.
      *
@@ -17749,6 +19113,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit15(value) {
         this.bit(value, 15, true);
     }
+    ;
     /**
      * Bit field writer. Writes 15 bits.
      *
@@ -17759,6 +19124,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit15le(value) {
         this.bit(value, 15, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 15 bits.
      *
@@ -17769,6 +19135,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit15be(value) {
         this.bit(value, 15, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 16 bits.
      *
@@ -17779,6 +19146,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit16(value) {
         this.bit(value, 16);
     }
+    ;
     /**
      * Bit field writer. Writes 16 bits.
      *
@@ -17789,6 +19157,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit16le(value) {
         this.bit(value, 16, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 16 bits.
      *
@@ -17799,6 +19168,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit16be(value) {
         this.bit(value, 16, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 16 bits.
      *
@@ -17809,6 +19179,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit16(value) {
         this.bit(value, 16, true);
     }
+    ;
     /**
      * Bit field writer. Writes 16 bits.
      *
@@ -17819,6 +19190,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit16le(value) {
         this.bit(value, 16, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 16 bits.
      *
@@ -17829,6 +19201,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit16be(value) {
         this.bit(value, 16, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 17 bits.
      *
@@ -17839,6 +19212,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit17(value) {
         this.bit(value, 17);
     }
+    ;
     /**
      * Bit field writer. Writes 17 bits.
      *
@@ -17849,6 +19223,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit17le(value) {
         this.bit(value, 17, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 17 bits.
      *
@@ -17859,6 +19234,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit17be(value) {
         this.bit(value, 17, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 17 bits.
      *
@@ -17869,6 +19245,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit17(value) {
         this.bit(value, 17, true);
     }
+    ;
     /**
      * Bit field writer. Writes 17 bits.
      *
@@ -17879,6 +19256,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit17le(value) {
         this.bit(value, 17, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 17 bits.
      *
@@ -17889,6 +19267,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit17be(value) {
         this.bit(value, 17, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 18 bits.
      *
@@ -17899,6 +19278,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit18(value) {
         this.bit(value, 18);
     }
+    ;
     /**
      * Bit field writer. Writes 18 bits.
      *
@@ -17909,6 +19289,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit18le(value) {
         this.bit(value, 18, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 18 bits.
      *
@@ -17919,6 +19300,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit18be(value) {
         this.bit(value, 18, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 18 bits.
      *
@@ -17929,6 +19311,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit18(value) {
         this.bit(value, 18, true);
     }
+    ;
     /**
      * Bit field writer. Writes 18 bits.
      *
@@ -17939,6 +19322,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit18le(value) {
         this.bit(value, 18, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 18 bits.
      *
@@ -17949,6 +19333,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit18be(value) {
         this.bit(value, 18, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 19 bits.
      *
@@ -17959,6 +19344,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit19(value) {
         this.bit(value, 19);
     }
+    ;
     /**
      * Bit field writer. Writes 19 bits.
      *
@@ -17969,6 +19355,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit19le(value) {
         this.bit(value, 19, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 19 bits.
      *
@@ -17979,6 +19366,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit19be(value) {
         this.bit(value, 19, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 19 bits.
      *
@@ -17989,6 +19377,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit19(value) {
         this.bit(value, 19, true);
     }
+    ;
     /**
      * Bit field writer. Writes 19 bits.
      *
@@ -17999,6 +19388,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit19le(value) {
         this.bit(value, 19, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 19 bits.
      *
@@ -18009,6 +19399,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit19be(value) {
         this.bit(value, 19, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 20 bits.
      *
@@ -18019,6 +19410,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit20(value) {
         this.bit(value, 20);
     }
+    ;
     /**
      * Bit field writer. Writes 20 bits.
      *
@@ -18029,6 +19421,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit20le(value) {
         this.bit(value, 20, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 20 bits.
      *
@@ -18039,6 +19432,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit20be(value) {
         this.bit(value, 20, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 20 bits.
      *
@@ -18049,6 +19443,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit20(value) {
         this.bit(value, 20, true);
     }
+    ;
     /**
      * Bit field writer. Writes 20 bits.
      *
@@ -18059,6 +19454,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit20le(value) {
         this.bit(value, 20, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 20 bits.
      *
@@ -18069,6 +19465,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit20be(value) {
         this.bit(value, 20, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 21 bits.
      *
@@ -18079,6 +19476,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit21(value) {
         this.bit(value, 21);
     }
+    ;
     /**
      * Bit field writer. Writes 21 bits.
      *
@@ -18089,6 +19487,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit21le(value) {
         this.bit(value, 21, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 21 bits.
      *
@@ -18099,6 +19498,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit21be(value) {
         this.bit(value, 21, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 21 bits.
      *
@@ -18109,6 +19509,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit21(value) {
         this.bit(value, 21, true);
     }
+    ;
     /**
      * Bit field writer. Writes 21 bits.
      *
@@ -18119,6 +19520,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit21le(value) {
         this.bit(value, 21, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 21 bits.
      *
@@ -18129,6 +19531,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit21be(value) {
         this.bit(value, 21, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 22 bits.
      *
@@ -18139,6 +19542,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit22(value) {
         this.bit(value, 22);
     }
+    ;
     /**
      * Bit field writer. Writes 22 bits.
      *
@@ -18149,6 +19553,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit22le(value) {
         this.bit(value, 22, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 22 bits.
      *
@@ -18159,6 +19564,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit22be(value) {
         this.bit(value, 22, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 22 bits.
      *
@@ -18169,6 +19575,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit22(value) {
         this.bit(value, 22, true);
     }
+    ;
     /**
      * Bit field writer. Writes 22 bits.
      *
@@ -18179,6 +19586,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit22le(value) {
         this.bit(value, 22, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 22 bits.
      *
@@ -18189,6 +19597,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit22be(value) {
         this.bit(value, 22, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 23 bits.
      *
@@ -18199,6 +19608,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit23(value) {
         this.bit(value, 23);
     }
+    ;
     /**
      * Bit field writer. Writes 23 bits.
      *
@@ -18209,6 +19619,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit23le(value) {
         this.bit(value, 23, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 23 bits.
      *
@@ -18219,6 +19630,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit23be(value) {
         this.bit(value, 23, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 23 bits.
      *
@@ -18229,6 +19641,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit23(value) {
         this.bit(value, 23, true);
     }
+    ;
     /**
      * Bit field writer. Writes 23 bits.
      *
@@ -18239,6 +19652,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit23le(value) {
         this.bit(value, 23, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 23 bits.
      *
@@ -18249,6 +19663,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit23be(value) {
         this.bit(value, 23, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 24 bits.
      *
@@ -18259,6 +19674,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit24(value) {
         this.bit(value, 24);
     }
+    ;
     /**
      * Bit field writer. Writes 24 bits.
      *
@@ -18269,6 +19685,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit24le(value) {
         this.bit(value, 24, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 24 bits.
      *
@@ -18279,6 +19696,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit24be(value) {
         this.bit(value, 24, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 24 bits.
      *
@@ -18289,6 +19707,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit24(value) {
         this.bit(value, 24, true);
     }
+    ;
     /**
      * Bit field writer. Writes 24 bits.
      *
@@ -18299,6 +19718,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit24le(value) {
         this.bit(value, 24, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 24 bits.
      *
@@ -18309,6 +19729,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit24be(value) {
         this.bit(value, 24, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 25 bits.
      *
@@ -18319,6 +19740,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit25(value) {
         this.bit(value, 25);
     }
+    ;
     /**
      * Bit field writer. Writes 25 bits.
      *
@@ -18329,6 +19751,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit25le(value) {
         this.bit(value, 25, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 25 bits.
      *
@@ -18339,6 +19762,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit25be(value) {
         this.bit(value, 25, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 25 bits.
      *
@@ -18349,6 +19773,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit25(value) {
         this.bit(value, 25, true);
     }
+    ;
     /**
      * Bit field writer. Writes 25 bits.
      *
@@ -18359,6 +19784,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit25le(value) {
         this.bit(value, 25, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 25 bits.
      *
@@ -18369,6 +19795,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit25be(value) {
         this.bit(value, 25, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 26 bits.
      *
@@ -18379,6 +19806,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit26(value) {
         this.bit(value, 26);
     }
+    ;
     /**
      * Bit field writer. Writes 26 bits.
      *
@@ -18389,6 +19817,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit26le(value) {
         this.bit(value, 26, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 26 bits.
      *
@@ -18399,6 +19828,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit26be(value) {
         this.bit(value, 26, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 26 bits.
      *
@@ -18409,6 +19839,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit26(value) {
         this.bit(value, 26, true);
     }
+    ;
     /**
      * Bit field writer. Writes 26 bits.
      *
@@ -18419,6 +19850,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit26le(value) {
         this.bit(value, 26, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 26 bits.
      *
@@ -18429,6 +19861,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit26be(value) {
         this.bit(value, 26, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 27 bits.
      *
@@ -18439,6 +19872,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit27(value) {
         this.bit(value, 27);
     }
+    ;
     /**
      * Bit field writer. Writes 27 bits.
      *
@@ -18449,6 +19883,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit27le(value) {
         this.bit(value, 27, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 27 bits.
      *
@@ -18459,6 +19894,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit27be(value) {
         this.bit(value, 27, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 27 bits.
      *
@@ -18469,6 +19905,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit27(value) {
         this.bit(value, 27, true);
     }
+    ;
     /**
      * Bit field writer. Writes 27 bits.
      *
@@ -18479,6 +19916,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit27le(value) {
         this.bit(value, 27, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 27 bits.
      *
@@ -18489,6 +19927,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit27be(value) {
         this.bit(value, 27, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 28 bits.
      *
@@ -18499,6 +19938,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit28(value) {
         this.bit(value, 28);
     }
+    ;
     /**
      * Bit field writer. Writes 28 bits.
      *
@@ -18509,6 +19949,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit28le(value) {
         this.bit(value, 28, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 28 bits.
      *
@@ -18519,6 +19960,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit28be(value) {
         this.bit(value, 28, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 28 bits.
      *
@@ -18529,6 +19971,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit28(value) {
         this.bit(value, 28, true);
     }
+    ;
     /**
      * Bit field writer. Writes 28 bits.
      *
@@ -18539,6 +19982,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit28le(value) {
         this.bit(value, 28, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 28 bits.
      *
@@ -18549,6 +19993,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit28be(value) {
         this.bit(value, 28, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 29 bits.
      *
@@ -18559,6 +20004,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit29(value) {
         this.bit(value, 29);
     }
+    ;
     /**
      * Bit field writer. Writes 29 bits.
      *
@@ -18569,6 +20015,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit29le(value) {
         this.bit(value, 29, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 29 bits.
      *
@@ -18579,6 +20026,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit29be(value) {
         this.bit(value, 29, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 29 bits.
      *
@@ -18589,6 +20037,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit29(value) {
         this.bit(value, 29, true);
     }
+    ;
     /**
      * Bit field writer. Writes 29 bits.
      *
@@ -18599,6 +20048,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit29le(value) {
         this.bit(value, 29, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 29 bits.
      *
@@ -18609,6 +20059,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit29be(value) {
         this.bit(value, 29, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 30 bits.
      *
@@ -18619,6 +20070,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit30(value) {
         this.bit(value, 30);
     }
+    ;
     /**
      * Bit field writer. Writes 30 bits.
      *
@@ -18629,6 +20081,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit30le(value) {
         this.bit(value, 30, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 30 bits.
      *
@@ -18639,6 +20092,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit30be(value) {
         this.bit(value, 30, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 30 bits.
      *
@@ -18649,6 +20103,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit30(value) {
         this.bit(value, 30, true);
     }
+    ;
     /**
      * Bit field writer. Writes 30 bits.
      *
@@ -18659,6 +20114,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit30le(value) {
         this.bit(value, 30, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 30 bits.
      *
@@ -18669,6 +20125,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit30be(value) {
         this.bit(value, 30, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 31 bits.
      *
@@ -18679,6 +20136,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit31(value) {
         this.bit(value, 31);
     }
+    ;
     /**
      * Bit field writer. Writes 31 bits.
      *
@@ -18689,6 +20147,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit31le(value) {
         this.bit(value, 31, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 31 bits.
      *
@@ -18699,6 +20158,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit31be(value) {
         this.bit(value, 31, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 31 bits.
      *
@@ -18709,6 +20169,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit31(value) {
         this.bit(value, 31, true);
     }
+    ;
     /**
      * Bit field writer. Writes 31 bits.
      *
@@ -18719,6 +20180,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit31le(value) {
         this.bit(value, 31, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 31 bits.
      *
@@ -18729,6 +20191,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit31be(value) {
         this.bit(value, 31, true, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 32 bits.
      *
@@ -18739,6 +20202,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit32(value) {
         this.bit(value, 32);
     }
+    ;
     /**
      * Bit field writer. Writes 32 bits.
      *
@@ -18749,6 +20213,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit32le(value) {
         this.bit(value, 32, undefined, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 32 bits.
      *
@@ -18759,6 +20224,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bit32be(value) {
         this.bit(value, 32, undefined, "big");
     }
+    ;
     /**
      * Bit field writer. Writes 32 bits.
      *
@@ -18769,6 +20235,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit32(value) {
         this.bit(value, 32, true);
     }
+    ;
     /**
      * Bit field writer. Writes 32 bits.
      *
@@ -18779,6 +20246,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit32le(value) {
         this.bit(value, 32, true, "little");
     }
+    ;
     /**
      * Bit field writer. Writes 32 bits.
      *
@@ -18789,6 +20257,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubit32be(value) {
         this.bit(value, 32, true, "big");
     }
+    ;
     //
     // byte write
     //
@@ -18800,6 +20269,7 @@ class BiWriterStream extends BiBaseStreamer {
     set byte(value) {
         this.writeByte(value);
     }
+    ;
     /**
      * Write byte.
      *
@@ -18808,6 +20278,7 @@ class BiWriterStream extends BiBaseStreamer {
     set int8(value) {
         this.writeByte(value);
     }
+    ;
     /**
      * Write unsigned byte.
      *
@@ -18816,6 +20287,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uint8(value) {
         this.writeByte(value, true);
     }
+    ;
     /**
      * Write unsigned byte.
      *
@@ -18824,6 +20296,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubyte(value) {
         this.writeByte(value, true);
     }
+    ;
     //
     // short writes
     //
@@ -18835,6 +20308,7 @@ class BiWriterStream extends BiBaseStreamer {
     set int16(value) {
         this.writeInt16(value);
     }
+    ;
     /**
      * Write int16.
      *
@@ -18843,6 +20317,7 @@ class BiWriterStream extends BiBaseStreamer {
     set short(value) {
         this.writeInt16(value);
     }
+    ;
     /**
      * Write int16.
      *
@@ -18851,6 +20326,7 @@ class BiWriterStream extends BiBaseStreamer {
     set word(value) {
         this.writeInt16(value);
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -18859,6 +20335,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uint16(value) {
         this.writeInt16(value, true);
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -18867,6 +20344,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ushort(value) {
         this.writeInt16(value, true);
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -18875,6 +20353,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uword(value) {
         this.writeInt16(value, true);
     }
+    ;
     /**
      * Write signed int16.
      *
@@ -18883,6 +20362,7 @@ class BiWriterStream extends BiBaseStreamer {
     set int16be(value) {
         this.writeInt16(value, false, "big");
     }
+    ;
     /**
      * Write signed int16.
      *
@@ -18891,6 +20371,7 @@ class BiWriterStream extends BiBaseStreamer {
     set shortbe(value) {
         this.writeInt16(value, false, "big");
     }
+    ;
     /**
      * Write signed int16.
      *
@@ -18899,6 +20380,7 @@ class BiWriterStream extends BiBaseStreamer {
     set wordbe(value) {
         this.writeInt16(value, false, "big");
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -18907,6 +20389,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uint16be(value) {
         this.writeInt16(value, true, "big");
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -18915,6 +20398,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ushortbe(value) {
         this.writeInt16(value, true, "big");
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -18923,6 +20407,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uwordbe(value) {
         this.writeInt16(value, true, "big");
     }
+    ;
     /**
      * Write signed int16.
      *
@@ -18931,6 +20416,7 @@ class BiWriterStream extends BiBaseStreamer {
     set int16le(value) {
         this.writeInt16(value, false, "little");
     }
+    ;
     /**
      * Write signed int16.
      *
@@ -18939,6 +20425,7 @@ class BiWriterStream extends BiBaseStreamer {
     set shortle(value) {
         this.writeInt16(value, false, "little");
     }
+    ;
     /**
      * Write signed int16.
      *
@@ -18947,6 +20434,7 @@ class BiWriterStream extends BiBaseStreamer {
     set wordle(value) {
         this.writeInt16(value, false, "little");
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -18955,6 +20443,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uint16le(value) {
         this.writeInt16(value, true, "little");
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -18963,6 +20452,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ushortle(value) {
         this.writeInt16(value, true, "little");
     }
+    ;
     /**
      * Write unsigned int16.
      *
@@ -18971,6 +20461,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uwordle(value) {
         this.writeInt16(value, true, "little");
     }
+    ;
     //
     // half float
     //
@@ -18982,6 +20473,7 @@ class BiWriterStream extends BiBaseStreamer {
     set half(value) {
         this.writeHalfFloat(value);
     }
+    ;
     /**
      * Writes half float.
      *
@@ -18990,6 +20482,7 @@ class BiWriterStream extends BiBaseStreamer {
     set halffloat(value) {
         this.writeHalfFloat(value);
     }
+    ;
     /**
      * Writes half float.
      *
@@ -18998,6 +20491,7 @@ class BiWriterStream extends BiBaseStreamer {
     set halffloatbe(value) {
         this.writeHalfFloat(value, "big");
     }
+    ;
     /**
      * Writes half float.
      *
@@ -19006,6 +20500,7 @@ class BiWriterStream extends BiBaseStreamer {
     set halfbe(value) {
         this.writeHalfFloat(value, "big");
     }
+    ;
     /**
      * Writes half float.
      *
@@ -19014,6 +20509,7 @@ class BiWriterStream extends BiBaseStreamer {
     set halffloatle(value) {
         this.writeHalfFloat(value, "little");
     }
+    ;
     /**
      * Writes half float.
      *
@@ -19022,6 +20518,7 @@ class BiWriterStream extends BiBaseStreamer {
     set halfle(value) {
         this.writeHalfFloat(value, "little");
     }
+    ;
     //
     // int32 write
     //
@@ -19033,6 +20530,7 @@ class BiWriterStream extends BiBaseStreamer {
     set int(value) {
         this.writeInt32(value);
     }
+    ;
     /**
     * Write int32.
     *
@@ -19041,6 +20539,7 @@ class BiWriterStream extends BiBaseStreamer {
     set int32(value) {
         this.writeInt32(value);
     }
+    ;
     /**
      * Write int32.
      *
@@ -19049,6 +20548,7 @@ class BiWriterStream extends BiBaseStreamer {
     set double(value) {
         this.writeInt32(value);
     }
+    ;
     /**
      * Write int32.
      *
@@ -19057,6 +20557,7 @@ class BiWriterStream extends BiBaseStreamer {
     set long(value) {
         this.writeInt32(value);
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -19065,6 +20566,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uint32(value) {
         this.writeInt32(value, true);
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -19073,6 +20575,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uint(value) {
         this.writeInt32(value, true);
     }
+    ;
     /**
     * Write unsigned int32.
     *
@@ -19081,6 +20584,7 @@ class BiWriterStream extends BiBaseStreamer {
     set udouble(value) {
         this.writeInt32(value, true);
     }
+    ;
     /**
     * Write unsigned int32.
     *
@@ -19089,6 +20593,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ulong(value) {
         this.writeInt32(value, true);
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -19097,6 +20602,7 @@ class BiWriterStream extends BiBaseStreamer {
     set int32le(value) {
         this.writeInt32(value, false, "little");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -19105,6 +20611,7 @@ class BiWriterStream extends BiBaseStreamer {
     set intle(value) {
         this.writeInt32(value, false, "little");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -19113,6 +20620,7 @@ class BiWriterStream extends BiBaseStreamer {
     set doublele(value) {
         this.writeInt32(value, false, "little");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -19121,6 +20629,7 @@ class BiWriterStream extends BiBaseStreamer {
     set longle(value) {
         this.writeInt32(value, false, "little");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -19129,6 +20638,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uint32le(value) {
         this.writeInt32(value, true, "little");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -19137,6 +20647,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uintle(value) {
         this.writeInt32(value, true, "little");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -19145,6 +20656,7 @@ class BiWriterStream extends BiBaseStreamer {
     set udoublele(value) {
         this.writeInt32(value, true, "little");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -19153,6 +20665,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ulongle(value) {
         this.writeInt32(value, true, "little");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -19161,6 +20674,7 @@ class BiWriterStream extends BiBaseStreamer {
     set intbe(value) {
         this.writeInt32(value, false, "big");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -19169,6 +20683,7 @@ class BiWriterStream extends BiBaseStreamer {
     set int32be(value) {
         this.writeInt32(value, false, "big");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -19177,6 +20692,7 @@ class BiWriterStream extends BiBaseStreamer {
     set doublebe(value) {
         this.writeInt32(value, false, "big");
     }
+    ;
     /**
      * Write signed int32.
      *
@@ -19185,6 +20701,7 @@ class BiWriterStream extends BiBaseStreamer {
     set longbe(value) {
         this.writeInt32(value, false, "big");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -19193,6 +20710,7 @@ class BiWriterStream extends BiBaseStreamer {
     set writeUInt32BE(value) {
         this.writeInt32(value, true, "big");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -19201,6 +20719,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uint32be(value) {
         this.writeInt32(value, true, "big");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -19209,6 +20728,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uintbe(value) {
         this.writeInt32(value, true, "big");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -19217,6 +20737,7 @@ class BiWriterStream extends BiBaseStreamer {
     set udoublebe(value) {
         this.writeInt32(value, true, "big");
     }
+    ;
     /**
      * Write unsigned int32.
      *
@@ -19225,6 +20746,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ulongbe(value) {
         this.writeInt32(value, true, "big");
     }
+    ;
     //
     // float write
     //
@@ -19236,6 +20758,7 @@ class BiWriterStream extends BiBaseStreamer {
     set float(value) {
         this.writeFloat(value);
     }
+    ;
     /**
      * Write float.
      *
@@ -19244,6 +20767,7 @@ class BiWriterStream extends BiBaseStreamer {
     set floatle(value) {
         this.writeFloat(value, "little");
     }
+    ;
     /**
     * Write float.
     *
@@ -19252,6 +20776,7 @@ class BiWriterStream extends BiBaseStreamer {
     set floatbe(value) {
         this.writeFloat(value, "big");
     }
+    ;
     //
     // int64 write
     //
@@ -19263,6 +20788,7 @@ class BiWriterStream extends BiBaseStreamer {
     set int64(value) {
         this.writeInt64(value);
     }
+    ;
     /**
     * Write 64 bit integer.
     *
@@ -19271,6 +20797,7 @@ class BiWriterStream extends BiBaseStreamer {
     set quad(value) {
         this.writeInt64(value);
     }
+    ;
     /**
      * Write 64 bit integer.
      *
@@ -19279,6 +20806,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bigint(value) {
         this.writeInt64(value);
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -19287,6 +20815,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uint64(value) {
         this.writeInt64(value, true);
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -19295,6 +20824,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubigint(value) {
         this.writeInt64(value, true);
     }
+    ;
     /**
     * Write unsigned 64 bit integer.
     *
@@ -19303,6 +20833,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uquad(value) {
         this.writeInt64(value, true);
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -19311,6 +20842,7 @@ class BiWriterStream extends BiBaseStreamer {
     set int64le(value) {
         this.writeInt64(value, false, "little");
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -19319,6 +20851,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bigintle(value) {
         this.writeInt64(value, false, "little");
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -19327,6 +20860,7 @@ class BiWriterStream extends BiBaseStreamer {
     set quadle(value) {
         this.writeInt64(value, false, "little");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -19335,6 +20869,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uint64le(value) {
         this.writeInt64(value, true, "little");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -19343,6 +20878,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubigintle(value) {
         this.writeInt64(value, true, "little");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -19351,6 +20887,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uquadle(value) {
         this.writeInt64(value, true, "little");
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -19359,6 +20896,7 @@ class BiWriterStream extends BiBaseStreamer {
     set int64be(value) {
         this.writeInt64(value, false, "big");
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -19367,6 +20905,7 @@ class BiWriterStream extends BiBaseStreamer {
     set bigintbe(value) {
         this.writeInt64(value, false, "big");
     }
+    ;
     /**
      * Write signed 64 bit integer.
      *
@@ -19375,6 +20914,7 @@ class BiWriterStream extends BiBaseStreamer {
     set quadbe(value) {
         this.writeInt64(value, false, "big");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -19383,6 +20923,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uint64be(value) {
         this.writeInt64(value, true, "big");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -19391,6 +20932,7 @@ class BiWriterStream extends BiBaseStreamer {
     set ubigintbe(value) {
         this.writeInt64(value, true, "big");
     }
+    ;
     /**
      * Write unsigned 64 bit integer.
      *
@@ -19399,6 +20941,7 @@ class BiWriterStream extends BiBaseStreamer {
     set uquadbe(value) {
         this.writeInt64(value, true, "big");
     }
+    ;
     //
     // doublefloat
     //
@@ -19410,6 +20953,7 @@ class BiWriterStream extends BiBaseStreamer {
     set doublefloat(value) {
         this.writeDoubleFloat(value);
     }
+    ;
     /**
      * Writes double float.
      *
@@ -19418,6 +20962,7 @@ class BiWriterStream extends BiBaseStreamer {
     set dfloat(value) {
         this.writeDoubleFloat(value);
     }
+    ;
     /**
      * Writes double float.
      *
@@ -19426,6 +20971,7 @@ class BiWriterStream extends BiBaseStreamer {
     set dfloatbe(value) {
         this.writeDoubleFloat(value, "big");
     }
+    ;
     /**
      * Writes double float.
      *
@@ -19434,6 +20980,7 @@ class BiWriterStream extends BiBaseStreamer {
     set doublefloatbe(value) {
         this.writeDoubleFloat(value, "big");
     }
+    ;
     /**
      * Writes double float.
      *
@@ -19442,6 +20989,7 @@ class BiWriterStream extends BiBaseStreamer {
     set dfloatle(value) {
         this.writeDoubleFloat(value, "little");
     }
+    ;
     /**
      * Writes double float.
      *
@@ -19450,6 +20998,7 @@ class BiWriterStream extends BiBaseStreamer {
     set doublefloatle(value) {
         this.writeDoubleFloat(value, "little");
     }
+    ;
     //
     // string
     //
@@ -19468,6 +21017,7 @@ class BiWriterStream extends BiBaseStreamer {
     string(string, options) {
         return this.writeString(string, options);
     }
+    ;
     /**
     * Writes string using setting from .strSettings
     *
@@ -19478,6 +21028,7 @@ class BiWriterStream extends BiBaseStreamer {
     set str(string) {
         this.writeString(string, this.strSettings);
     }
+    ;
     /**
     * Writes UTF-8 (C) string.
     *
@@ -19488,6 +21039,7 @@ class BiWriterStream extends BiBaseStreamer {
     utf8string(string, length, terminateValue) {
         return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
     }
+    ;
     /**
     * Writes UTF-8 (C) string.
     *
@@ -19498,6 +21050,7 @@ class BiWriterStream extends BiBaseStreamer {
     cstring(string, length, terminateValue) {
         return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
     }
+    ;
     /**
     * Writes ANSI string.
     *
@@ -19508,6 +21061,7 @@ class BiWriterStream extends BiBaseStreamer {
     ansistring(string, length, terminateValue) {
         return this.string(string, { stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue });
     }
+    ;
     /**
     * Writes UTF-16 (Unicode) string.
     *
@@ -19519,6 +21073,7 @@ class BiWriterStream extends BiBaseStreamer {
     utf16string(string, length, terminateValue, endian) {
         return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
     }
+    ;
     /**
     * Writes UTF-16 (Unicode) string.
     *
@@ -19530,6 +21085,7 @@ class BiWriterStream extends BiBaseStreamer {
     unistring(string, length, terminateValue, endian) {
         return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
     }
+    ;
     /**
     * Writes UTF-16 (Unicode) string in little endian order.
     *
@@ -19540,6 +21096,7 @@ class BiWriterStream extends BiBaseStreamer {
     utf16stringle(string, length, terminateValue) {
         return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
     }
+    ;
     /**
     * Writes UTF-16 (Unicode) string in little endian order.
     *
@@ -19550,6 +21107,7 @@ class BiWriterStream extends BiBaseStreamer {
     unistringle(string, length, terminateValue) {
         return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
     }
+    ;
     /**
     * Writes UTF-16 (Unicode) string in big endian order.
     *
@@ -19560,6 +21118,7 @@ class BiWriterStream extends BiBaseStreamer {
     utf16stringbe(string, length, terminateValue) {
         return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
     }
+    ;
     /**
     * Writes UTF-16 (Unicode) string in big endian order.
     *
@@ -19570,6 +21129,7 @@ class BiWriterStream extends BiBaseStreamer {
     unistringbe(string, length, terminateValue) {
         return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
     }
+    ;
     /**
     * Writes Pascal string.
     *
@@ -19580,6 +21140,7 @@ class BiWriterStream extends BiBaseStreamer {
     pstring(string, lengthWriteSize, endian) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: lengthWriteSize, endian: endian });
     }
+    ;
     /**
     * Writes Pascal string 1 byte length read.
     *
@@ -19589,6 +21150,7 @@ class BiWriterStream extends BiBaseStreamer {
     pstring1(string, endian) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: endian });
     }
+    ;
     /**
     * Writes Pascal string 1 byte length read in little endian order.
     *
@@ -19597,6 +21159,7 @@ class BiWriterStream extends BiBaseStreamer {
     pstring1le(string) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "little" });
     }
+    ;
     /**
     * Writes Pascal string 1 byte length read in big endian order.
     *
@@ -19605,6 +21168,7 @@ class BiWriterStream extends BiBaseStreamer {
     pstring1be(string) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "big" });
     }
+    ;
     /**
     * Writes Pascal string 2 byte length read.
     *
@@ -19614,6 +21178,7 @@ class BiWriterStream extends BiBaseStreamer {
     pstring2(string, endian) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: endian });
     }
+    ;
     /**
     * Writes Pascal string 2 byte length read in little endian order.
     *
@@ -19622,6 +21187,7 @@ class BiWriterStream extends BiBaseStreamer {
     pstring2le(string) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "little" });
     }
+    ;
     /**
     * Writes Pascal string 2 byte length read in big endian order.
     *
@@ -19630,6 +21196,7 @@ class BiWriterStream extends BiBaseStreamer {
     pstring2be(string) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "big" });
     }
+    ;
     /**
     * Writes Pascal string 4 byte length read.
     *
@@ -19639,6 +21206,7 @@ class BiWriterStream extends BiBaseStreamer {
     pstring4(string, endian) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: endian });
     }
+    ;
     /**
     * Writes Pascal string 4 byte length read in big endian order.
     *
@@ -19647,6 +21215,7 @@ class BiWriterStream extends BiBaseStreamer {
     pstring4be(string) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "big" });
     }
+    ;
     /**
     * Writes Pascal string 4 byte length read in little endian order.
     *
@@ -19655,6 +21224,7 @@ class BiWriterStream extends BiBaseStreamer {
     pstring4le(string) {
         return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "little" });
     }
+    ;
     /**
     * Writes Wide-Pascal string.
     *
@@ -19665,6 +21235,7 @@ class BiWriterStream extends BiBaseStreamer {
     wpstring(string, lengthWriteSize, endian) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: endian });
     }
+    ;
     /**
     * Writes Wide-Pascal string in big endian order.
     *
@@ -19674,6 +21245,7 @@ class BiWriterStream extends BiBaseStreamer {
     wpstringbe(string, lengthWriteSize) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "big" });
     }
+    ;
     /**
     * Writes Wide-Pascal string in little endian order.
     *
@@ -19683,6 +21255,7 @@ class BiWriterStream extends BiBaseStreamer {
     wpstringle(string, lengthWriteSize) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "little" });
     }
+    ;
     /**
     * Writes Wide-Pascal string.
     *
@@ -19692,6 +21265,7 @@ class BiWriterStream extends BiBaseStreamer {
     wpstring1(string, endian) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: endian });
     }
+    ;
     /**
     * Writes Wide-Pascal string 1 byte length read in big endian order.
     *
@@ -19700,6 +21274,7 @@ class BiWriterStream extends BiBaseStreamer {
     wpstring1be(string) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "big" });
     }
+    ;
     /**
     * Writes Wide-Pascal string 1 byte length read in little endian order.
     *
@@ -19708,6 +21283,7 @@ class BiWriterStream extends BiBaseStreamer {
     wpstring1le(string) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "little" });
     }
+    ;
     /**
     * Writes Wide-Pascal string 2 byte length read.
     *
@@ -19717,6 +21293,7 @@ class BiWriterStream extends BiBaseStreamer {
     wpstring2(string, endian) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: endian });
     }
+    ;
     /**
     * Writes Wide-Pascal string 2 byte length read in little endian order.
     *
@@ -19725,6 +21302,7 @@ class BiWriterStream extends BiBaseStreamer {
     wpstring2le(string) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "little" });
     }
+    ;
     /**
     * Writes Wide-Pascal string 2 byte length read in big endian order.
     *
@@ -19733,6 +21311,7 @@ class BiWriterStream extends BiBaseStreamer {
     wpstring2be(string) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "big" });
     }
+    ;
     /**
     * Writes Wide-Pascal string 4 byte length read.
     *
@@ -19742,6 +21321,7 @@ class BiWriterStream extends BiBaseStreamer {
     wpstring4(string, endian) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: endian });
     }
+    ;
     /**
     * Writes Wide-Pascal string 4 byte length read in little endian order.
     *
@@ -19750,6 +21330,7 @@ class BiWriterStream extends BiBaseStreamer {
     wpstring4le(string) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "little" });
     }
+    ;
     /**
     * Writes Wide-Pascal string 4 byte length read in big endian order.
     *
@@ -19758,6 +21339,7 @@ class BiWriterStream extends BiBaseStreamer {
     wpstring4be(string) {
         return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "big" });
     }
+    ;
 }
 
 /**

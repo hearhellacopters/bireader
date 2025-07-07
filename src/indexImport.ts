@@ -13,7 +13,7 @@ export class bireader {
     constructor() {
         throw new Error("bireader is deprecated. Use BiReader instead.");
     }
-}
+};
 
 /**
  * Not in use anymore.
@@ -24,4 +24,4 @@ export class biwriter {
     constructor() {
         throw new Error("biwriter is deprecated. Use BiWriter instead.");
     }
-}
+};

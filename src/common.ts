@@ -37,19 +37,19 @@ const MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
 
 export function isSafeInt64(big: bigint): boolean {
   return big >= MIN_SAFE && big <= MAX_SAFE;
-}
+};
 
 export function isBuffer(obj: Buffer | Uint8Array): boolean {
     return buffcheck(obj);
-}
+};
 
 function buffcheck(obj: Buffer | Uint8Array): boolean {
     return (typeof Buffer !== 'undefined' && obj instanceof Buffer);
-}
+};
 
 export function arraybuffcheck(obj: Buffer | Uint8Array): boolean {
     return obj instanceof Uint8Array || isBuffer(obj);
-}
+};
 
 export type hexdumpOptions = {
     /**
@@ -68,7 +68,7 @@ export type hexdumpOptions = {
      * Returns the hex dump string instead of logging it.
      */
     returnString?: boolean
-}
+};
 
 /**
  * Creates hex dump string. Will console log or return string if set in options.
@@ -108,7 +108,7 @@ export function hexdump(src: Uint8Array | Buffer, options: hexdumpOptions = {}):
     const data = ctx.data;
 
     return _hexDump(data, options, start, end);
-}
+};
 
 export function _hexDump(data: Buffer | Uint8Array, options: hexdumpOptions = {}, start: number, end: number): string {
     function hex_check(byte: number, bits: number,): number {
@@ -287,7 +287,7 @@ export function _hexDump(data: Buffer | Uint8Array, options: hexdumpOptions = {}
         console.log(retVal);
         return retVal;
     }
-}
+};
 
 export type stringOptions = {
     /**
