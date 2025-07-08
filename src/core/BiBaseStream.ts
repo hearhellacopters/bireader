@@ -378,7 +378,7 @@ function hexDump(ctx: BiBaseStreamer, options: hexdumpOptions = {}): string {
     if (start + (length || 0) > ctx.size) {
         throw new Error("Hexdump amount is outside of data size: " + (start + (length || 0)) + " of " + end);
     }
-    const data = ctx.read(startByte, length, false);
+    const data = ctx.read(start, end - start, false);
 
     return _hexDump(data, options, start, end);
 };
@@ -2144,7 +2144,7 @@ export class BiBaseStreamer {
         }
 
         if (end > this.size) {
-            if (this.strict) {
+            if (this.strict == false) {
                 this.extendArray(length);
             }
             else {

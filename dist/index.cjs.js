@@ -10922,7 +10922,7 @@ function hexDump(ctx, options = {}) {
     if (start + (length || 0) > ctx.size) {
         throw new Error("Hexdump amount is outside of data size: " + (start + (length || 0)) + " of " + end);
     }
-    const data = ctx.read(startByte, length, false);
+    const data = ctx.read(start, end - start, false);
     return _hexDump(data, options, start, end);
 }
 function AND(ctx, and_key, start, end, consume) {
@@ -12543,7 +12543,7 @@ class BiBaseStreamer {
             throw new Error('File read is greater than Node\'s max buffer size.');
         }
         if (end > this.size) {
-            if (this.strict) {
+            if (this.strict == false) {
                 this.extendArray(length);
             }
             else {
