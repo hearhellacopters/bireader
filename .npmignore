@@ -6,3 +6,4 @@ src/
 dist/*
 !dist/index.*
 test*
+rollup.config.js

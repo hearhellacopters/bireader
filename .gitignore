@@ -2,13 +2,4 @@ node_modules/
 package-lock.json
 test*
 dist/*
-!dist/index.d.ts
-!dist/index.browser.js
-!dist/index.browser.js.map
-!dist/index.browser.d.ts
-!dist/index.cjs.js
-!dist/index.cjs.js.map
-!dist/index.cjs.d.ts
-!dist/index.esm.js
-!dist/index.esm.js.map
-!dist/index.esm.d.ts
+!dist/index.*
