@@ -342,6 +342,7 @@ function checkSize(ctx, write_bytes, write_bit, offset) {
 function extendarray(ctx, to_padd) {
     if ((typeof Buffer !== 'undefined' && ctx.data instanceof Buffer)) {
         var paddbuffer = Buffer.alloc(to_padd);
+        // @ts-ignore
         ctx.data = Buffer.concat([ctx.data, paddbuffer]);
     }
     else {
@@ -377,6 +378,7 @@ function remove(ctx, startOffset, endOffset, consume, remove, fillValue) {
         const part1 = ctx.data.subarray(0, new_start);
         const part2 = ctx.data.subarray(new_offset, ctx.size);
         if (isBuffer(ctx.data)) {
+            // @ts-ignore
             ctx.data = Buffer.concat([part1, part2]);
         }
         else {
@@ -391,6 +393,7 @@ function remove(ctx, startOffset, endOffset, consume, remove, fillValue) {
         const replacement = new Array(data_removed.length).fill(fillValue & 0xff);
         if (isBuffer(ctx.data)) {
             const buff_placement = Buffer.from(replacement);
+            // @ts-ignore
             ctx.data = Buffer.concat([part1, buff_placement, part2]);
         }
         else {
@@ -417,6 +420,7 @@ function addData(ctx, data, consume, offset, replace) {
         throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Can not insert data in strict mode. Use unrestrict() to enable.`);
     }
     if (typeof Buffer !== 'undefined' && data instanceof Buffer && !(ctx.data instanceof Buffer)) {
+        // @ts-ignore
         data = Buffer.from(data);
     }
     if (data instanceof Uint8Array && !(ctx.data instanceof Uint8Array)) {
@@ -428,6 +432,7 @@ function addData(ctx, data, consume, offset, replace) {
         const part1 = ctx.data.subarray(0, needed_size - data.length);
         const part2 = ctx.data.subarray(needed_size, ctx.size);
         if (isBuffer(ctx.data)) {
+            // @ts-ignore
             ctx.data = Buffer.concat([part1, data, part2]);
         }
         else {
@@ -440,6 +445,7 @@ function addData(ctx, data, consume, offset, replace) {
         const part1 = ctx.data.subarray(0, needed_size);
         const part2 = ctx.data.subarray(needed_size, ctx.size);
         if (isBuffer(ctx.data)) {
+            // @ts-ignore
             ctx.data = Buffer.concat([part1, data, part2]);
         }
         else {
@@ -1403,16 +1409,16 @@ function wint64(ctx, value, unsigned, endian) {
         }
         else {
             if (unsigned == undefined || unsigned == false) {
-                ctx.data[ctx.offset + (1 - i) * 4 + 0] = int32Array[i];
-                ctx.data[ctx.offset + (1 - i) * 4 + 1] = (int32Array[i] >> 8);
-                ctx.data[ctx.offset + (1 - i) * 4 + 2] = (int32Array[i] >> 16);
-                ctx.data[ctx.offset + (1 - i) * 4 + 3] = (int32Array[i] >> 24);
+                ctx.data[ctx.offset + (1 - i) * 4 + 3] = int32Array[i];
+                ctx.data[ctx.offset + (1 - i) * 4 + 2] = (int32Array[i] >> 8);
+                ctx.data[ctx.offset + (1 - i) * 4 + 1] = (int32Array[i] >> 16);
+                ctx.data[ctx.offset + (1 - i) * 4 + 0] = (int32Array[i] >> 24);
             }
             else {
-                ctx.data[ctx.offset + (1 - i) * 4 + 0] = int32Array[i] & 0xFF;
-                ctx.data[ctx.offset + (1 - i) * 4 + 1] = (int32Array[i] >> 8) & 0xFF;
-                ctx.data[ctx.offset + (1 - i) * 4 + 2] = (int32Array[i] >> 16) & 0xFF;
-                ctx.data[ctx.offset + (1 - i) * 4 + 3] = (int32Array[i] >> 24) & 0xFF;
+                ctx.data[ctx.offset + (1 - i) * 4 + 3] = int32Array[i] & 0xFF;
+                ctx.data[ctx.offset + (1 - i) * 4 + 2] = (int32Array[i] >> 8) & 0xFF;
+                ctx.data[ctx.offset + (1 - i) * 4 + 1] = (int32Array[i] >> 16) & 0xFF;
+                ctx.data[ctx.offset + (1 - i) * 4 + 0] = (int32Array[i] >> 24) & 0xFF;
             }
         }
     }

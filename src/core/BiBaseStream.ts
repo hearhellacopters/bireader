@@ -10,6 +10,18 @@ import {
 import fs from 'node:fs';
 import { constants as bufferConstants } from "node:buffer";
 
+// browser hack
+if(Buffer == undefined){
+    Buffer = {
+        // @ts-ignore
+        isBuffer: (any)=>{false},
+        // @ts-ignore
+        from: (array:any[])=>{new Uint8Array(array)},
+        // @ts-ignore
+        alloc: (num)=>{new Uint8Array(num)}
+    };
+}
+
 /**
  * For file system in Node
  */
@@ -148,7 +160,7 @@ function remove(ctx: BiBaseStreamer, startOffset?: number, endOffset?: number, c
             var readStart = new_start;
             var amount = removedLength;
             const chunkSize = 64 * 1024; // 64 KB
-            const chunk = Buffer.alloc(chunkSize, fillValue & 0xff);
+            const chunk = new Uint8Array(chunkSize).fill(fillValue & 0xff);
             while (amount) {
                 const toWrite = Math.min(chunkSize, amount);
                 const bytesWritten = fs.readSync(ctx.fd, chunk, 0, toWrite, readStart);
@@ -167,7 +179,7 @@ function remove(ctx: BiBaseStreamer, startOffset?: number, endOffset?: number, c
             var readOffset = new_start;
             var writeOffset = 0;
             var amount = removedLength;
-            const chunk = Buffer.alloc(CHUNK_SIZE);
+            const chunk = new Uint8Array(CHUNK_SIZE);
             const tempFd = fs.openSync(removeData, 'w+');
             while (amount) {
                 const toRead = Math.min(CHUNK_SIZE, amount);
@@ -202,7 +214,7 @@ function remove(ctx: BiBaseStreamer, startOffset?: number, endOffset?: number, c
             const removeData = ctx.filePath + +"_" + startOffset + "_" + removedLength + ".removed";
             console.warn(`File size for extract is larger than the max Buffer Node can handle, creating new file ${removeData}`);
             const CHUNK_SIZE = 64 * 1024;
-            const chunk = Buffer.alloc(CHUNK_SIZE);
+            const chunk = new Uint8Array(CHUNK_SIZE);
             // Copy removed to new file
             var readOffset = new_start;
             var writeOffset = 0;
@@ -238,7 +250,7 @@ function remove(ctx: BiBaseStreamer, startOffset?: number, endOffset?: number, c
 
             const end = new_start + removedLength;
             const chunkSize = 64 * 1024;
-            const buffer = Buffer.alloc(chunkSize);
+            const buffer = new Uint8Array(chunkSize);
             let remaining = ctx.size - end;
             let readPos = end;
 
@@ -267,7 +279,7 @@ function remove(ctx: BiBaseStreamer, startOffset?: number, endOffset?: number, c
         }
         else {
             if (fillValue != undefined) {
-                const removedBuffer = Buffer.alloc(removedLength);
+                const removedBuffer = new Uint8Array(removedLength);
                 removedBuffer.fill(fillValue & 0xff);
                 fs.writeSync(ctx.fd, removedBuffer, 0, removedBuffer.length, new_start);
 
@@ -276,9 +288,9 @@ function remove(ctx: BiBaseStreamer, startOffset?: number, endOffset?: number, c
                     ctx.bitoffset = 0;
                 }
 
-                ctx.data = removedBuffer;
+                ctx.data = Buffer.from(removedBuffer);
 
-                return removedBuffer;
+                return ctx.data;
             }
             else {
                 // just copying and returning data
@@ -325,19 +337,17 @@ function addData(ctx: BiBaseStreamer, data: Buffer | Uint8Array, consume?: boole
     if (!arraybuffcheck(data)) {
         throw new Error('Data must be a Uint8Array or Buffer');
     }
-    var buffer = data;
-    if (data instanceof Uint8Array) {
-        buffer = Buffer.from(data);
+    if (Buffer.isBuffer(data)) {
+        data = new Uint8Array(data);
     }
     if (replace) {
         // overwrite
-        fs.writeSync(ctx.fd, buffer, 0, buffer.length, offset);
+        fs.writeSync(ctx.fd, data, 0, data.length, offset);
         ctx.updateSize();
-    }
-    else {
+    } else {
         // insert
         const chunkSize = 64 * 1024; // 64KB
-        const buffer = Buffer.alloc(chunkSize);
+        const buffer = new Uint8Array(chunkSize);
 
         let remaining = originalSize - offset;
         let readPos = originalSize - chunkSize;
@@ -738,7 +748,7 @@ function ADD(ctx: BiBaseStreamer, add_key: any, start?: number, end?: number, co
 function fString(ctx: BiBaseStreamer, searchString: string): number {
     ctx.open();
     const chunkSize = 0x2000; // 8192 bytes
-    let lastChunk = Buffer.alloc(0);
+    let lastChunk = new Uint8Array(0);
     const searchStringBuffer = new TextEncoder().encode(searchString);
     var start = ctx.offset;
     const strict_saver = ctx.strict;
@@ -749,7 +759,7 @@ function fString(ctx: BiBaseStreamer, searchString: string): number {
         if (currentChunk.length === 0) break; // No more data to read
 
         // Concatenate the last part of the previous chunk with the current chunk
-        const combinedBuffer = Buffer.concat([lastChunk, currentChunk]);
+        const combinedBuffer = Buffer.concat([lastChunk, new Uint8Array(currentChunk)]);
 
         // Search for the string in the combined buffer
         let offset = 0;
@@ -764,7 +774,7 @@ function fString(ctx: BiBaseStreamer, searchString: string): number {
         }
 
         // Update the last chunk for the next iteration
-        lastChunk = currentChunk.subarray(-searchStringBuffer.length + 1);
+        lastChunk = new Uint8Array(currentChunk.subarray(-searchStringBuffer.length + 1));
         start += currentChunk.length;
     }
 
@@ -775,7 +785,7 @@ function fString(ctx: BiBaseStreamer, searchString: string): number {
 function fNumber(ctx: BiBaseStreamer, targetNumber: number, bits: number, unsigned: boolean, endian?: string): number {
     ctx.open();
     const chunkSize = 0x2000; // 8192 bytes
-    let lastChunk = Buffer.alloc(0);
+    let lastChunk = new Uint8Array(0);
     const totalBits = Math.floor(bits / 8);
     var start = ctx.offset;
 
@@ -784,7 +794,7 @@ function fNumber(ctx: BiBaseStreamer, targetNumber: number, bits: number, unsign
         if (currentChunk.length === 0) break; // No more data to read
 
         // Concatenate the last part of the previous chunk with the current chunk
-        const combinedBuffer = Buffer.concat([lastChunk, currentChunk]);
+        const combinedBuffer = Buffer.concat([lastChunk, new Uint8Array(currentChunk)]);
 
         // Process the combined buffer to find the target number
         for (let z = 0; z <= combinedBuffer.length - totalBits; z++) {
@@ -829,7 +839,7 @@ function fNumber(ctx: BiBaseStreamer, targetNumber: number, bits: number, unsign
         }
 
         // Update the last chunk for the next iteration
-        lastChunk = combinedBuffer.subarray(-totalBits + 1);
+        lastChunk = new Uint8Array(combinedBuffer.subarray(-totalBits + 1));
         start += currentChunk.length;
     }
 
@@ -941,7 +951,7 @@ function fFloat(ctx: BiBaseStreamer, targetNumber: number, endian?: string): num
 function fBigInt(ctx: BiBaseStreamer, targetNumber: BigValue, unsigned: boolean, endian?: string): number {
     ctx.open();
     const chunkSize = 0x2000; // 8192 bytes
-    let lastChunk = Buffer.alloc(0);
+    let lastChunk = new Uint8Array(0);
     const targetBigInt = BigInt(targetNumber);
 
     while (ctx.offset < ctx.size) {
@@ -949,7 +959,7 @@ function fBigInt(ctx: BiBaseStreamer, targetNumber: BigValue, unsigned: boolean,
         if (currentChunk.length === 0) break; // No more data to read
 
         // Concatenate the last part of the previous chunk with the current chunk
-        const combinedBuffer = Buffer.concat([lastChunk, currentChunk]);
+        const combinedBuffer = Buffer.concat([lastChunk, new Uint8Array(currentChunk)]);
 
         // Process the combined buffer to find the target BigInt
         for (let z = 0; z <= combinedBuffer.length - 8; z++) {
@@ -977,7 +987,7 @@ function fBigInt(ctx: BiBaseStreamer, targetNumber: BigValue, unsigned: boolean,
         }
 
         // Update the last chunk for the next iteration
-        lastChunk = combinedBuffer.subarray(-8 + 1);
+        lastChunk = new Uint8Array(combinedBuffer.subarray(-8 + 1));
         ctx.offset += currentChunk.length;
     }
 
@@ -1568,15 +1578,15 @@ function wint64(ctx: BiBaseStreamer, value: BigValue, unsigned?: boolean, endian
             }
         } else {
             if (unsigned == undefined || unsigned == false) {
-                data[(1 - i) * 4 + 0] = int32Array[i];
-                data[(1 - i) * 4 + 1] = (int32Array[i] >> 8);
-                data[(1 - i) * 4 + 2] = (int32Array[i] >> 16);
-                data[(1 - i) * 4 + 3] = (int32Array[i] >> 24);
+                data[(1 - i) * 4 + 3] = int32Array[i];
+                data[(1 - i) * 4 + 2] = (int32Array[i] >> 8);
+                data[(1 - i) * 4 + 1] = (int32Array[i] >> 16);
+                data[(1 - i) * 4 + 0] = (int32Array[i] >> 24);
             } else {
-                data[(1 - i) * 4 + 0] = int32Array[i] & 0xFF;
-                data[(1 - i) * 4 + 1] = (int32Array[i] >> 8) & 0xFF;
-                data[(1 - i) * 4 + 2] = (int32Array[i] >> 16) & 0xFF;
-                data[(1 - i) * 4 + 3] = (int32Array[i] >> 24) & 0xFF;
+                data[(1 - i) * 4 + 3] = int32Array[i] & 0xFF;
+                data[(1 - i) * 4 + 2] = (int32Array[i] >> 8) & 0xFF;
+                data[(1 - i) * 4 + 1] = (int32Array[i] >> 16) & 0xFF;
+                data[(1 - i) * 4 + 0] = (int32Array[i] >> 24) & 0xFF;
             }
         }
     }
@@ -2152,17 +2162,17 @@ export class BiBaseStreamer {
             }
         }
 
-        var data = Buffer.alloc(length);
+        var data = new Uint8Array(length);
 
         fs.readSync(this.fd, data, 0, data.length, start);
 
-        this.data = data;
+        this.data = Buffer.from(data);
 
         if (consume) {
             this.offset = start + data.length;
             this.bitoffset = 0;
         }
-        return data;
+        return this.data;
     };
 
     /**
@@ -2199,7 +2209,7 @@ export class BiBaseStreamer {
             }
         }
 
-        const bytesWritten = fs.writeSync(this.fd, data, 0, data.length, start);
+        const bytesWritten = fs.writeSync(this.fd, new Uint8Array(data), 0, data.length, start);
 
         this.updateSize();
 
@@ -2217,11 +2227,10 @@ export class BiBaseStreamer {
     commit(consume: boolean = true): number {
         this.open();
 
-        if (this.data instanceof Uint8Array) {
+        if (!Buffer.isBuffer(this.data)) {
             var data = Buffer.from(this.data);
             return this.write(this.offset, data, consume);
-        }
-        else if (this.data === null) {
+        } else if (this.data === null) {
             throw new Error("No data to write.");
         }
         return this.write(this.offset, this.data, consume);
