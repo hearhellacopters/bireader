@@ -16,7 +16,8 @@ export default [
     ],
     plugins: [
       typescript({ tsconfig: './tsconfig.json' })
-    ]
+    ],
+    external: ['node:fs', 'node:buffer']
   },
   {
     input: './src/indexImport.ts',
@@ -47,7 +48,8 @@ export default [
       file: './dist/index.esm.d.ts',
       format: 'es'
     },
-    plugins: [dts()]
+    plugins: [dts()],
+    external: ['node:fs', 'node:buffer']
   },
   {
     input: './dist/indexImport.d.ts',
@@ -55,7 +57,8 @@ export default [
       file: './dist/index.d.ts',
       format: 'es'
     },
-    plugins: [dts()]
+    plugins: [dts()],
+    external: ['node:fs', 'node:buffer']
   },
   {
     input: './dist/indexBrowser.d.ts',
@@ -63,7 +66,8 @@ export default [
       file: './dist/index.browser.d.ts',
       format: 'es'
     },
-    plugins: [dts()]
+    plugins: [dts()],
+    external: ['node:fs', 'node:buffer']
   },
   {
     input: './dist/indexImport.d.ts',
@@ -71,6 +75,7 @@ export default [
       file: './dist/index.cjs.d.ts',
       format: 'cjs'
     },
-    plugins: [dts()]
+    plugins: [dts()],
+    external: ['node:fs', 'node:buffer']
   }
 ];

@@ -1,10 +1,16 @@
-import { BigValue, BiOptions, endian, stringOptions } from "./common.js";
-import { BiBaseStreamer } from './core/BiBaseStream.js';
+import {
+    BiOptions,
+    hasBigInt,
+    endian,
+    stringOptions,
+    normalizeBitOffset
+} from "./common.js";
+import { BiBaseAsync } from './core/BiBaseAsync.js';
 
 /**
- * Binary reader, includes bitfields and strings.
+ * Async Binary reader, includes bitfields and strings.
  *
- * @param {string} filePath - Path to file
+ * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
  * @param {BiOptions?} options - Any options to set at start
  * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
  * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
@@ -12,17 +18,16 @@ import { BiBaseStreamer } from './core/BiBaseStream.js';
  * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
  * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
  * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+ * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
  * 
- * @since 3.1
+ * @since 4.0
  */
-export class BiReaderStream extends BiBaseStreamer {
+export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt extends boolean> extends BiBaseAsync<DataType, hasBigInt> {
 
     /**
-     * Binary reader, includes bitfields and strings.
-     * 
-     * Note: Must start with .open() before reading.
+     * Async Binary reader, includes bitfields and strings.
      *
-     * @param {string} filePath - Path to file
+     * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
      * @param {BiOptions?} options - Any options to set at start
      * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
      * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
@@ -30,23 +35,33 @@ export class BiReaderStream extends BiBaseStreamer {
      * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
      * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
      * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
      */
-    constructor(filePath: string, options: BiOptions = {}) {
-        super(filePath, false);
+    constructor(input: string | DataType, options: BiOptions = {}) {
+        super(input, options.writeable ?? false);
+
+        if (input == undefined) {
+            throw new Error("Can not start BiReader without data.");
+        }
+
         this.strict = true;
 
-        if (options.extendBufferSize != undefined && options.extendBufferSize != 0) {
+        this.enforceBigInt = (options?.enforceBigInt) as hasBigInt ?? hasBigInt as hasBigInt;
+
+        if (options.extendBufferSize != undefined &&
+            options.extendBufferSize != 0) {
             this.extendBufferSize = options.extendBufferSize;
         }
 
-        if (options.endianness != undefined && typeof options.endianness != "string") {
+        if (options.endianness != undefined &&
+            typeof options.endianness != "string") {
             throw new Error("Endian must be big or little");
         }
-        if (options.endianness != undefined && !(options.endianness == "big" || options.endianness == "little")) {
+
+        if (options.endianness != undefined &&
+            !(options.endianness == "big" || options.endianness == "little")) {
             throw new Error("Byte order must be big or little");
         }
-
-        this.enforceBigInt = options?.enforceBigInt ?? false;
 
         this.endian = options.endianness || "little";
 
@@ -54,16 +69,86 @@ export class BiReaderStream extends BiBaseStreamer {
             this.strict = options.strict;
         } else {
             if (options.strict != undefined) {
-                throw new Error("Strict mode must be true of false");
+                throw new Error("Strict mode must be true or false");
             }
         }
 
-        this.offset = options.byteOffset ?? 0;
-        this.bitoffset = options.bitOffset ?? 0;
+        if (input == undefined) {
+            throw new Error("Data or file path required");
+        } else {
+            if (typeof input == "string") {
+                this.filePath = input;
+
+                this.mode = "file";
+
+                this.offset = options.byteOffset ?? 0;
+
+                this.bitoffset = options.bitOffset ?? 0;
+            } else if (this.isBufferOrUint8Array(input)) {
+                this.data = input as DataType;
+
+                this.mode = "memory";
+
+                this.size = this.data.length;
+
+                this.sizeB = this.data.length * 8;
+            } else {
+                throw new Error("Write data must be Uint8Array or Buffer");
+            }
+        }
+
+        if (options.byteOffset != undefined || options.bitOffset != undefined) {
+            this.offset = ((Math.abs(options.byteOffset || 0)) + Math.ceil((Math.abs(options.bitOffset || 0)) / 8));
+            // Adjust byte offset based on bit overflow
+            this.offset += Math.floor((Math.abs(options.bitOffset || 0)) / 8);
+            // Adjust bit offset
+            this.bitoffset = Math.abs(normalizeBitOffset(options.bitOffset)) % 8;
+            // Ensure bit offset stays between 0-7
+            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
+            // Ensure offset doesn't go negative
+            this.offset = Math.max(this.offset, 0);
+
+            if (this.offset > this.size) {
+                if (this.strict == false) {
+                    if (this.extendBufferSize != 0) {
+                        this.extendArray(this.extendBufferSize);
+                    } else {
+                        this.extendArray(this.offset - this.size);
+                    }
+                } else {
+                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
+                }
+            }
+        }
+    };
+
+    /**
+     * Creates and opens a new `BiReaderAsync`
+     * 
+     * Includes bitfields and strings.
+     *
+     * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+     * @param {BiOptions?} options - Any options to set at start
+     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
+     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+     * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
+     * 
+     * @returns {Promise<BiReaderAsync<DataType, hasBigInt>>}
+     */
+    static async create<DataType extends Buffer | Uint8Array, hasBigInt extends boolean>(input: string | DataType, options: BiOptions = {}): Promise<BiReaderAsync<DataType, hasBigInt>>{
+        const instance = new BiReaderAsync<DataType, hasBigInt>(input, options);
+
+        await instance.open();
+
+        return instance;
     };
 
     //
-    // Bit Aliases
+    // #region Bit Aliases
     //
 
     /**
@@ -74,10 +159,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * @param {number} bits - bits to read
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    bit(bits: number, unsigned?: boolean, endian?: endian): number {
-        return this.readBit(bits, unsigned, endian);
+    async bit(bits: number, unsigned?: boolean, endian?: endian): Promise<number> {
+        return await this.readBit(bits, unsigned, endian);
     };
 
     /**
@@ -87,10 +172,10 @@ export class BiReaderStream extends BiBaseStreamer {
      *
      * @param {number} bits - bits to read
      * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    ubit(bits: number, endian?: endian): number {
-        return this.readBit(bits, true, endian);
+    async ubit(bits: number, endian?: endian): Promise<number> {
+        return await this.readBit(bits, true, endian);
     };
 
     /**
@@ -99,10 +184,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * Note: When returning to a byte read, remaining bits are dropped.
      *
      * @param {number} bits - bits to read
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    ubitbe(bits: number): number {
-        return this.bit(bits, true, "big");
+    async ubitbe(bits: number): Promise<number> {
+        return await this.bit(bits, true, "big");
     };
 
     /**
@@ -112,10 +197,10 @@ export class BiReaderStream extends BiBaseStreamer {
      *
      * @param {number} bits - bits to read
      * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    bitbe(bits: number, unsigned?: boolean): number {
-        return this.bit(bits, unsigned, "big");
+    async bitbe(bits: number, unsigned?: boolean): Promise<number> {
+        return await this.bit(bits, unsigned, "big");
     };
 
     /**
@@ -124,10 +209,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * Note: When returning to a byte read, remaining bits are dropped.
      *
      * @param {number} bits - bits to read
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    ubitle(bits: number): number {
-        return this.bit(bits, true, "little");
+    async ubitle(bits: number): Promise<number> {
+        return await this.bit(bits, true, "little");
     };
 
     /**
@@ -137,10 +222,10 @@ export class BiReaderStream extends BiBaseStreamer {
      *
      * @param {number} bits - bits to read
      * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    bitle(bits: number, unsigned?: boolean): number {
-        return this.bit(bits, unsigned, "little");
+    async bitle(bits: number, unsigned?: boolean): Promise<number> {
+        return await this.bit(bits, unsigned, "little");
     };
 
     /**
@@ -148,10 +233,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit1(): number {
-        return this.bit(1);
+    async bit1(): Promise<number> {
+        return await this.bit(1);
     };
 
     /**
@@ -159,10 +244,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit1le(): number {
-        return this.bit(1, undefined, "little");
+    async bit1le(): Promise<number> {
+        return await this.bit(1, undefined, "little");
     };
 
     /**
@@ -170,10 +255,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit1be(): number {
-        return this.bit(1, undefined, "big");
+    async bit1be(): Promise<number> {
+        return await this.bit(1, undefined, "big");
     };
 
     /**
@@ -181,10 +266,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit1(): number {
-        return this.bit(1, true);
+    async ubit1(): Promise<number> {
+        return await this.bit(1, true);
     };
 
     /**
@@ -192,10 +277,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit1le(): number {
-        return this.bit(1, true, "little");
+    async ubit1le(): Promise<number> {
+        return await this.bit(1, true, "little");
     };
 
     /**
@@ -203,10 +288,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit1be(): number {
-        return this.bit(1, true, "big");
+    async ubit1be(): Promise<number> {
+        return await this.bit(1, true, "big");
     };
 
     /**
@@ -214,10 +299,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit2(): number {
-        return this.bit(2);
+    async bit2(): Promise<number> {
+        return await this.bit(2);
     };
 
     /**
@@ -225,10 +310,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit2le(): number {
-        return this.bit(2, undefined, "little");
+    async bit2le(): Promise<number> {
+        return await this.bit(2, undefined, "little");
     };
 
     /**
@@ -236,10 +321,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit2be(): number {
-        return this.bit(2, undefined, "big");
+    async bit2be(): Promise<number> {
+        return await this.bit(2, undefined, "big");
     };
 
     /**
@@ -247,10 +332,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit2(): number {
-        return this.bit(2, true);
+    async ubit2(): Promise<number> {
+        return await this.bit(2, true);
     };
 
     /**
@@ -258,10 +343,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit2le(): number {
-        return this.bit(2, true, "little");
+    async ubit2le(): Promise<number> {
+        return await this.bit(2, true, "little");
     };
 
     /**
@@ -269,10 +354,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit2be(): number {
-        return this.bit(2, true, "big");
+    async ubit2be(): Promise<number> {
+        return await this.bit(2, true, "big");
     };
 
     /**
@@ -280,10 +365,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit3(): number {
-        return this.bit(3);
+    async bit3(): Promise<number> {
+        return await this.bit(3);
     };
 
     /**
@@ -291,10 +376,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit3le(): number {
-        return this.bit(3, undefined, "little");
+    async bit3le(): Promise<number> {
+        return await this.bit(3, undefined, "little");
     };
 
     /**
@@ -302,10 +387,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit3be(): number {
-        return this.bit(3, undefined, "big");
+    async bit3be(): Promise<number> {
+        return await this.bit(3, undefined, "big");
     };
 
     /**
@@ -313,10 +398,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit3(): number {
-        return this.bit(3, true);
+    async ubit3(): Promise<number> {
+        return await this.bit(3, true);
     };
 
     /**
@@ -324,10 +409,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit3le(): number {
-        return this.bit(3, true, "little");
+    async ubit3le(): Promise<number> {
+        return await this.bit(3, true, "little");
     };
 
     /**
@@ -335,10 +420,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit3be(): number {
-        return this.bit(3, true, "big");
+    async ubit3be(): Promise<number> {
+        return await this.bit(3, true, "big");
     };
 
     /**
@@ -346,10 +431,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit4(): number {
-        return this.bit(4);
+    async bit4(): Promise<number> {
+        return await this.bit(4);
     };
 
     /**
@@ -357,10 +442,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit4le(): number {
-        return this.bit(4, undefined, "little");
+    async bit4le(): Promise<number> {
+        return await this.bit(4, undefined, "little");
     };
 
     /**
@@ -368,10 +453,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit4be(): number {
-        return this.bit(4, undefined, "big");
+    async bit4be(): Promise<number> {
+        return await this.bit(4, undefined, "big");
     };
 
     /**
@@ -379,10 +464,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit4(): number {
-        return this.bit(4, true);
+    async ubit4(): Promise<number> {
+        return await this.bit(4, true);
     };
 
     /**
@@ -390,10 +475,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit4le(): number {
-        return this.bit(4, true, "little");
+    async ubit4le(): Promise<number> {
+        return await this.bit(4, true, "little");
     };
 
     /**
@@ -401,10 +486,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit4be(): number {
-        return this.bit(4, true, "big");
+    async ubit4be(): Promise<number> {
+        return await this.bit(4, true, "big");
     };
 
     /**
@@ -412,10 +497,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit5(): number {
-        return this.bit(5);
+    async bit5(): Promise<number> {
+        return await this.bit(5);
     };
 
     /**
@@ -423,10 +508,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit5le(): number {
-        return this.bit(5, undefined, "little");
+    async bit5le(): Promise<number> {
+        return await this.bit(5, undefined, "little");
     };
 
     /**
@@ -434,10 +519,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit5be(): number {
-        return this.bit(5, undefined, "big");
+    async bit5be(): Promise<number> {
+        return await this.bit(5, undefined, "big");
     };
 
     /**
@@ -445,10 +530,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit5(): number {
-        return this.bit(5, true);
+    async ubit5(): Promise<number> {
+        return await this.bit(5, true);
     };
 
     /**
@@ -456,10 +541,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit5le(): number {
-        return this.bit(5, true, "little");
+    async ubit5le(): Promise<number> {
+        return await this.bit(5, true, "little");
     };
 
     /**
@@ -467,10 +552,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit5be(): number {
-        return this.bit(5, true, "big");
+    async ubit5be(): Promise<number> {
+        return await this.bit(5, true, "big");
     };
 
     /**
@@ -478,10 +563,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit6(): number {
-        return this.bit(6);
+    async bit6(): Promise<number> {
+        return await this.bit(6);
     };
 
     /**
@@ -489,10 +574,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit6le(): number {
-        return this.bit(6, undefined, "little");
+    async bit6le(): Promise<number> {
+        return await this.bit(6, undefined, "little");
     };
 
     /**
@@ -500,10 +585,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit6be(): number {
-        return this.bit(6, undefined, "big");
+    async bit6be(): Promise<number> {
+        return await this.bit(6, undefined, "big");
     };
 
     /**
@@ -511,10 +596,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit6(): number {
-        return this.bit(6, true);
+    async ubit6(): Promise<number> {
+        return await this.bit(6, true);
     };
 
     /**
@@ -522,10 +607,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit6le(): number {
-        return this.bit(6, true, "little");
+    async ubit6le(): Promise<number> {
+        return await this.bit(6, true, "little");
     };
 
     /**
@@ -533,10 +618,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit6be(): number {
-        return this.bit(6, true, "big");
+    async ubit6be(): Promise<number> {
+        return await this.bit(6, true, "big");
     };
 
     /**
@@ -544,10 +629,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit7(): number {
-        return this.bit(7);
+    async bit7(): Promise<number> {
+        return await this.bit(7);
     };
 
     /**
@@ -555,10 +640,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit7le(): number {
-        return this.bit(7, undefined, "little");
+    async bit7le(): Promise<number> {
+        return await this.bit(7, undefined, "little");
     };
 
     /**
@@ -566,10 +651,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit7be(): number {
-        return this.bit(7, undefined, "big");
+    async bit7be(): Promise<number> {
+        return await this.bit(7, undefined, "big");
     };
 
     /**
@@ -577,10 +662,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit7(): number {
-        return this.bit(7, true);
+    async ubit7(): Promise<number> {
+        return await this.bit(7, true);
     };
 
     /**
@@ -588,10 +673,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit7le(): number {
-        return this.bit(7, true, "little");
+    async ubit7le(): Promise<number> {
+        return await this.bit(7, true, "little");
     };
 
     /**
@@ -599,10 +684,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit7be(): number {
-        return this.bit(7, true, "big");
+    async ubit7be(): Promise<number> {
+        return await this.bit(7, true, "big");
     };
 
     /**
@@ -610,10 +695,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit8(): number {
-        return this.bit(8);
+    async bit8(): Promise<number> {
+        return await this.bit(8);
     };
 
     /**
@@ -621,10 +706,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit8le(): number {
-        return this.bit(8, undefined, "little");
+    async bit8le(): Promise<number> {
+        return await this.bit(8, undefined, "little");
     };
 
     /**
@@ -632,10 +717,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit8be(): number {
-        return this.bit(8, undefined, "big");
+    async bit8be(): Promise<number> {
+        return await this.bit(8, undefined, "big");
     };
 
     /**
@@ -643,10 +728,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit8(): number {
-        return this.bit(8, true);
+    async ubit8(): Promise<number> {
+        return await this.bit(8, true);
     };
 
     /**
@@ -654,10 +739,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit8le(): number {
-        return this.bit(8, true, "little");
+    async ubit8le(): Promise<number> {
+        return await this.bit(8, true, "little");
     };
 
     /**
@@ -665,10 +750,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit8be(): number {
-        return this.bit(8, true, "big");
+    async ubit8be(): Promise<number> {
+        return await this.bit(8, true, "big");
     };
 
     /**
@@ -676,10 +761,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit9(): number {
-        return this.bit(9);
+    async bit9(): Promise<number> {
+        return await this.bit(9);
     };
 
     /**
@@ -687,10 +772,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit9le(): number {
-        return this.bit(9, undefined, "little");
+    async bit9le(): Promise<number> {
+        return await this.bit(9, undefined, "little");
     };
 
     /**
@@ -698,10 +783,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit9be(): number {
-        return this.bit(9, undefined, "big");
+    async bit9be(): Promise<number> {
+        return await this.bit(9, undefined, "big");
     };
 
     /**
@@ -709,10 +794,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit9(): number {
-        return this.bit(9, true);
+    async ubit9(): Promise<number> {
+        return await this.bit(9, true);
     };
 
     /**
@@ -720,10 +805,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit9le(): number {
-        return this.bit(9, true, "little");
+    async ubit9le(): Promise<number> {
+        return await this.bit(9, true, "little");
     };
 
     /**
@@ -731,10 +816,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit9be(): number {
-        return this.bit(9, true, "big");
+    async ubit9be(): Promise<number> {
+        return await this.bit(9, true, "big");
     };
 
     /**
@@ -742,10 +827,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit10(): number {
-        return this.bit(10);
+    async bit10(): Promise<number> {
+        return await this.bit(10);
     };
 
     /**
@@ -753,10 +838,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit10le(): number {
-        return this.bit(10, undefined, "little");
+    async bit10le(): Promise<number> {
+        return await this.bit(10, undefined, "little");
     };
 
     /**
@@ -764,10 +849,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit10be(): number {
-        return this.bit(10, undefined, "big");
+    async bit10be(): Promise<number> {
+        return await this.bit(10, undefined, "big");
     };
 
     /**
@@ -775,10 +860,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit10(): number {
-        return this.bit(10, true);
+    async ubit10(): Promise<number> {
+        return await this.bit(10, true);
     };
 
     /**
@@ -786,10 +871,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit10le(): number {
-        return this.bit(10, true, "little");
+    async ubit10le(): Promise<number> {
+        return await this.bit(10, true, "little");
     };
 
     /**
@@ -797,10 +882,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit10be(): number {
-        return this.bit(10, true, "big");
+    async ubit10be(): Promise<number> {
+        return await this.bit(10, true, "big");
     };
 
     /**
@@ -808,10 +893,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit11(): number {
-        return this.bit(11);
+    async bit11(): Promise<number> {
+        return await this.bit(11);
     };
 
     /**
@@ -819,10 +904,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit11le(): number {
-        return this.bit(11, undefined, "little");
+    async bit11le(): Promise<number> {
+        return await this.bit(11, undefined, "little");
     };
 
     /**
@@ -830,10 +915,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit11be(): number {
-        return this.bit(11, undefined, "big");
+    async bit11be(): Promise<number> {
+        return await this.bit(11, undefined, "big");
     };
 
     /**
@@ -841,10 +926,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit11(): number {
-        return this.bit(11, true);
+    async ubit11(): Promise<number> {
+        return await this.bit(11, true);
     };
 
     /**
@@ -852,10 +937,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit11le(): number {
-        return this.bit(11, true, "little");
+    async ubit11le(): Promise<number> {
+        return await this.bit(11, true, "little");
     };
 
     /**
@@ -863,10 +948,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit11be(): number {
-        return this.bit(11, true, "big");
+    async ubit11be(): Promise<number> {
+        return await this.bit(11, true, "big");
     };
 
     /**
@@ -874,10 +959,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit12(): number {
-        return this.bit(12);
+    async bit12(): Promise<number> {
+        return await this.bit(12);
     };
 
     /**
@@ -885,10 +970,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit12le(): number {
-        return this.bit(12, undefined, "little");
+    async bit12le(): Promise<number> {
+        return await this.bit(12, undefined, "little");
     };
 
     /**
@@ -896,10 +981,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit12be(): number {
-        return this.bit(12, undefined, "big");
+    async bit12be(): Promise<number> {
+        return await this.bit(12, undefined, "big");
     };
 
     /**
@@ -907,10 +992,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit12(): number {
-        return this.bit(12, true);
+    async ubit12(): Promise<number> {
+        return await this.bit(12, true);
     };
 
     /**
@@ -918,10 +1003,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit12le(): number {
-        return this.bit(12, true, "little");
+    async ubit12le(): Promise<number> {
+        return await this.bit(12, true, "little");
     };
 
     /**
@@ -929,10 +1014,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit12be(): number {
-        return this.bit(12, true, "big");
+    async ubit12be(): Promise<number> {
+        return await this.bit(12, true, "big");
     };
 
     /**
@@ -940,10 +1025,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit13(): number {
-        return this.bit(13);
+    async bit13(): Promise<number> {
+        return await this.bit(13);
     };
 
     /**
@@ -951,10 +1036,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit13le(): number {
-        return this.bit(13, undefined, "little");
+    async bit13le(): Promise<number> {
+        return await this.bit(13, undefined, "little");
     };
 
     /**
@@ -962,10 +1047,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit13be(): number {
-        return this.bit(13, undefined, "big");
+    async bit13be(): Promise<number> {
+        return await this.bit(13, undefined, "big");
     };
 
     /**
@@ -973,10 +1058,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit13(): number {
-        return this.bit(13, true);
+    async ubit13(): Promise<number> {
+        return await this.bit(13, true);
     };
 
     /**
@@ -984,10 +1069,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit13le(): number {
-        return this.bit(13, true, "little");
+    async ubit13le(): Promise<number> {
+        return await this.bit(13, true, "little");
     };
 
     /**
@@ -995,10 +1080,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit13be(): number {
-        return this.bit(13, true, "big");
+    async ubit13be(): Promise<number> {
+        return await this.bit(13, true, "big");
     };
 
     /**
@@ -1006,10 +1091,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit14(): number {
-        return this.bit(14);
+    async bit14(): Promise<number> {
+        return await this.bit(14);
     };
 
     /**
@@ -1017,10 +1102,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit14le(): number {
-        return this.bit(14, undefined, "little");
+    async bit14le(): Promise<number> {
+        return await this.bit(14, undefined, "little");
     };
 
     /**
@@ -1028,10 +1113,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit14be(): number {
-        return this.bit(14, undefined, "big");
+    async bit14be(): Promise<number> {
+        return await this.bit(14, undefined, "big");
     };
 
     /**
@@ -1039,10 +1124,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit14(): number {
-        return this.bit(14, true);
+    async ubit14(): Promise<number> {
+        return await this.bit(14, true);
     };
 
     /**
@@ -1050,10 +1135,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit14le(): number {
-        return this.bit(14, true, "little");
+    async ubit14le(): Promise<number> {
+        return await this.bit(14, true, "little");
     };
 
     /**
@@ -1061,10 +1146,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit14be(): number {
-        return this.bit(14, true, "big");
+    async ubit14be(): Promise<number> {
+        return await this.bit(14, true, "big");
     };
 
     /**
@@ -1072,10 +1157,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit15(): number {
-        return this.bit(15);
+    async bit15(): Promise<number> {
+        return await this.bit(15);
     };
 
     /**
@@ -1083,10 +1168,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {promise<number>}
      */
-    get bit15le(): number {
-        return this.bit(15, undefined, "little");
+    async bit15le(): Promise<number> {
+        return await this.bit(15, undefined, "little");
     };
 
     /**
@@ -1094,10 +1179,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {promise<number>}
      */
-    get bit15be(): number {
-        return this.bit(15, undefined, "big");
+    async bit15be(): Promise<number> {
+        return await this.bit(15, undefined, "big");
     };
 
     /**
@@ -1105,10 +1190,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit15(): number {
-        return this.bit(15, true);
+    async ubit15(): Promise<number> {
+        return await this.bit(15, true);
     };
 
     /**
@@ -1116,10 +1201,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit15le(): number {
-        return this.bit(15, true, "little");
+    async ubit15le(): Promise<number> {
+        return await this.bit(15, true, "little");
     };
 
     /**
@@ -1127,10 +1212,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit15be(): number {
-        return this.bit(15, true, "big");
+    async ubit15be(): Promise<number> {
+        return await this.bit(15, true, "big");
     };
 
     /**
@@ -1138,10 +1223,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit16(): number {
-        return this.bit(16);
+    async bit16(): Promise<number> {
+        return await this.bit(16);
     };
 
     /**
@@ -1149,10 +1234,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit16le(): number {
-        return this.bit(16, undefined, "little");
+    async bit16le(): Promise<number> {
+        return await this.bit(16, undefined, "little");
     };
 
     /**
@@ -1160,10 +1245,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit16be(): number {
-        return this.bit(16, undefined, "big");
+    async bit16be(): Promise<number> {
+        return await this.bit(16, undefined, "big");
     };
 
     /**
@@ -1171,10 +1256,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit16(): number {
-        return this.bit(16, true);
+    async ubit16(): Promise<number> {
+        return await this.bit(16, true);
     };
 
     /**
@@ -1182,10 +1267,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit16le(): number {
-        return this.bit(16, true, "little");
+    async ubit16le(): Promise<number> {
+        return await this.bit(16, true, "little");
     };
 
     /**
@@ -1193,10 +1278,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit16be(): number {
-        return this.bit(16, true, "big");
+    async ubit16be(): Promise<number> {
+        return await this.bit(16, true, "big");
     };
 
     /**
@@ -1204,10 +1289,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit17(): number {
-        return this.bit(17);
+    async bit17(): Promise<number> {
+        return await this.bit(17);
     };
 
     /**
@@ -1215,10 +1300,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit17le(): number {
-        return this.bit(17, undefined, "little");
+    async bit17le(): Promise<number> {
+        return await this.bit(17, undefined, "little");
     };
 
     /**
@@ -1226,10 +1311,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit17be(): number {
-        return this.bit(17, undefined, "big");
+    async bit17be(): Promise<number> {
+        return await this.bit(17, undefined, "big");
     };
 
     /**
@@ -1237,10 +1322,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit17(): number {
-        return this.bit(17, true);
+    async ubit17(): Promise<number> {
+        return await this.bit(17, true);
     };
 
     /**
@@ -1248,10 +1333,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit17le(): number {
-        return this.bit(17, true, "little");
+    async ubit17le(): Promise<number> {
+        return await this.bit(17, true, "little");
     };
 
     /**
@@ -1259,10 +1344,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit17be(): number {
-        return this.bit(17, true, "big");
+    async ubit17be(): Promise<number> {
+        return await this.bit(17, true, "big");
     };
 
     /**
@@ -1270,10 +1355,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit18(): number {
-        return this.bit(18);
+    async bit18(): Promise<number> {
+        return await this.bit(18);
     };
 
     /**
@@ -1281,10 +1366,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit18le(): number {
-        return this.bit(18, undefined, "little");
+    async bit18le(): Promise<number> {
+        return await this.bit(18, undefined, "little");
     };
 
     /**
@@ -1292,10 +1377,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit18be(): number {
-        return this.bit(18, undefined, "big");
+    async bit18be(): Promise<number> {
+        return await this.bit(18, undefined, "big");
     };
 
     /**
@@ -1303,10 +1388,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit18(): number {
-        return this.bit(18, true);
+    async ubit18(): Promise<number> {
+        return await this.bit(18, true);
     };
 
     /**
@@ -1314,10 +1399,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit18le(): number {
-        return this.bit(18, true, "little");
+    async ubit18le(): Promise<number> {
+        return await this.bit(18, true, "little");
     };
 
     /**
@@ -1325,10 +1410,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit18be(): number {
-        return this.bit(18, true, "big");
+    async ubit18be(): Promise<number> {
+        return await this.bit(18, true, "big");
     };
 
     /**
@@ -1336,10 +1421,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit19(): number {
-        return this.bit(19);
+    async bit19(): Promise<number> {
+        return await this.bit(19);
     };
 
     /**
@@ -1347,10 +1432,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit19le(): number {
-        return this.bit(19, undefined, "little");
+    async bit19le(): Promise<number> {
+        return await this.bit(19, undefined, "little");
     };
 
     /**
@@ -1358,10 +1443,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit19be(): number {
-        return this.bit(19, undefined, "big");
+    async bit19be(): Promise<number> {
+        return await this.bit(19, undefined, "big");
     };
 
     /**
@@ -1369,10 +1454,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit19(): number {
-        return this.bit(19, true);
+    async ubit19(): Promise<number> {
+        return await this.bit(19, true);
     };
 
     /**
@@ -1380,10 +1465,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit19le(): number {
-        return this.bit(19, true, "little");
+    async ubit19le(): Promise<number> {
+        return await this.bit(19, true, "little");
     };
 
     /**
@@ -1391,10 +1476,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit19be(): number {
-        return this.bit(19, true, "big");
+    async ubit19be(): Promise<number> {
+        return await this.bit(19, true, "big");
     };
 
     /**
@@ -1402,10 +1487,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit20(): number {
-        return this.bit(20);
+    async bit20(): Promise<number> {
+        return await this.bit(20);
     };
 
     /**
@@ -1413,10 +1498,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit20le(): number {
-        return this.bit(20, undefined, "little");
+    async bit20le(): Promise<number> {
+        return await this.bit(20, undefined, "little");
     };
 
     /**
@@ -1424,10 +1509,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit20be(): number {
-        return this.bit(20, undefined, "big");
+    async bit20be(): Promise<number> {
+        return await this.bit(20, undefined, "big");
     };
 
     /**
@@ -1435,10 +1520,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit20(): number {
-        return this.bit(20, true);
+    async ubit20(): Promise<number> {
+        return await this.bit(20, true);
     };
 
     /**
@@ -1446,10 +1531,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit20le(): number {
-        return this.bit(20, true, "little");
+    async ubit20le(): Promise<number> {
+        return await this.bit(20, true, "little");
     };
 
     /**
@@ -1457,10 +1542,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit20be(): number {
-        return this.bit(20, true, "big");
+    async ubit20be(): Promise<number> {
+        return await this.bit(20, true, "big");
     };
 
     /**
@@ -1468,10 +1553,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit21(): number {
-        return this.bit(21);
+    async bit21(): Promise<number> {
+        return await this.bit(21);
     };
 
     /**
@@ -1479,10 +1564,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit21le(): number {
-        return this.bit(21, undefined, "little");
+    async bit21le(): Promise<number> {
+        return await this.bit(21, undefined, "little");
     };
 
     /**
@@ -1490,10 +1575,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit21be(): number {
-        return this.bit(21, undefined, "big");
+    async bit21be(): Promise<number> {
+        return await this.bit(21, undefined, "big");
     };
 
     /**
@@ -1501,10 +1586,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit21(): number {
-        return this.bit(21, true);
+    async ubit21(): Promise<number> {
+        return await this.bit(21, true);
     };
 
     /**
@@ -1512,10 +1597,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit21le(): number {
-        return this.bit(21, true, "little");
+    async ubit21le(): Promise<number> {
+        return await this.bit(21, true, "little");
     };
 
     /**
@@ -1523,10 +1608,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit21be(): number {
-        return this.bit(21, true, "big");
+    async ubit21be(): Promise<number> {
+        return await this.bit(21, true, "big");
     };
 
     /**
@@ -1534,10 +1619,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit22(): number {
-        return this.bit(22);
+    async bit22(): Promise<number> {
+        return await this.bit(22);
     };
 
     /**
@@ -1545,10 +1630,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit22le(): number {
-        return this.bit(22, undefined, "little");
+    async bit22le(): Promise<number> {
+        return await this.bit(22, undefined, "little");
     };
 
     /**
@@ -1556,10 +1641,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit22be(): number {
-        return this.bit(22, undefined, "big");
+    async bit22be(): Promise<number> {
+        return await this.bit(22, undefined, "big");
     };
 
     /**
@@ -1567,10 +1652,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit22(): number {
-        return this.bit(22, true);
+    async ubit22(): Promise<number> {
+        return await this.bit(22, true);
     };
 
     /**
@@ -1578,10 +1663,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit22le(): number {
-        return this.bit(22, true, "little");
+    async ubit22le(): Promise<number> {
+        return await this.bit(22, true, "little");
     };
 
     /**
@@ -1589,10 +1674,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit22be(): number {
-        return this.bit(22, true, "big");
+    async ubit22be(): Promise<number> {
+        return await this.bit(22, true, "big");
     };
 
     /**
@@ -1600,10 +1685,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit23(): number {
-        return this.bit(23);
+    async bit23(): Promise<number> {
+        return await this.bit(23);
     };
 
     /**
@@ -1611,10 +1696,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit23le(): number {
-        return this.bit(23, undefined, "little");
+    async bit23le(): Promise<number> {
+        return await this.bit(23, undefined, "little");
     };
 
     /**
@@ -1622,10 +1707,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit23be(): number {
-        return this.bit(23, undefined, "big");
+    async bit23be(): Promise<number> {
+        return await this.bit(23, undefined, "big");
     };
 
     /**
@@ -1633,10 +1718,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit23(): number {
-        return this.bit(23, true);
+    async ubit23(): Promise<number> {
+        return await this.bit(23, true);
     };
 
     /**
@@ -1644,10 +1729,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit23le(): number {
-        return this.bit(23, true, "little");
+    async ubit23le(): Promise<number> {
+        return await this.bit(23, true, "little");
     };
 
     /**
@@ -1655,10 +1740,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit23be(): number {
-        return this.bit(23, true, "big");
+    async ubit23be(): Promise<number> {
+        return await this.bit(23, true, "big");
     };
 
     /**
@@ -1666,10 +1751,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit24(): number {
-        return this.bit(24);
+    async bit24(): Promise<number> {
+        return await this.bit(24);
     };
 
     /**
@@ -1677,10 +1762,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit24le(): number {
-        return this.bit(24, undefined, "little");
+    async bit24le(): Promise<number> {
+        return await this.bit(24, undefined, "little");
     };
 
     /**
@@ -1688,10 +1773,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit24be(): number {
-        return this.bit(24, undefined, "big");
+    async bit24be(): Promise<number> {
+        return await this.bit(24, undefined, "big");
     };
 
     /**
@@ -1699,10 +1784,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit24(): number {
-        return this.bit(24, true);
+    async ubit24(): Promise<number> {
+        return await this.bit(24, true);
     };
 
     /**
@@ -1710,10 +1795,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit24le(): number {
-        return this.bit(24, true, "little");
+    async ubit24le(): Promise<number> {
+        return await this.bit(24, true, "little");
     };
 
     /**
@@ -1721,10 +1806,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit24be(): number {
-        return this.bit(24, true, "big");
+    async ubit24be(): Promise<number> {
+        return await this.bit(24, true, "big");
     };
 
     /**
@@ -1732,10 +1817,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit25(): number {
-        return this.bit(25);
+    async bit25(): Promise<number> {
+        return await this.bit(25);
     };
 
     /**
@@ -1743,10 +1828,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit25le(): number {
-        return this.bit(25, undefined, "little");
+    async bit25le(): Promise<number> {
+        return await this.bit(25, undefined, "little");
     };
 
     /**
@@ -1754,10 +1839,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit25be(): number {
-        return this.bit(25, undefined, "big");
+    async bit25be(): Promise<number> {
+        return await this.bit(25, undefined, "big");
     };
 
     /**
@@ -1765,10 +1850,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit25(): number {
-        return this.bit(25, true);
+    async ubit25(): Promise<number> {
+        return await this.bit(25, true);
     };
 
     /**
@@ -1776,10 +1861,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit25le(): number {
-        return this.bit(25, true, "little");
+    async ubit25le(): Promise<number> {
+        return await this.bit(25, true, "little");
     };
 
     /**
@@ -1787,10 +1872,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit25be(): number {
-        return this.bit(25, true, "big");
+    async ubit25be(): Promise<number> {
+        return await this.bit(25, true, "big");
     };
 
     /**
@@ -1798,10 +1883,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit26(): number {
-        return this.bit(26);
+    async bit26(): Promise<number> {
+        return await this.bit(26);
     };
 
     /**
@@ -1809,10 +1894,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit26le(): number {
-        return this.bit(26, undefined, "little");
+    async bit26le(): Promise<number> {
+        return await this.bit(26, undefined, "little");
     };
 
     /**
@@ -1820,10 +1905,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit26be(): number {
-        return this.bit(26, undefined, "big");
+    async bit26be(): Promise<number> {
+        return await this.bit(26, undefined, "big");
     };
 
     /**
@@ -1831,10 +1916,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit26(): number {
-        return this.bit(26, true);
+    async ubit26(): Promise<number> {
+        return await this.bit(26, true);
     };
 
     /**
@@ -1842,10 +1927,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit26le(): number {
-        return this.bit(26, true, "little");
+    async ubit26le(): Promise<number> {
+        return await this.bit(26, true, "little");
     };
 
     /**
@@ -1853,10 +1938,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit26be(): number {
-        return this.bit(26, true, "big");
+    async ubit26be(): Promise<number> {
+        return await this.bit(26, true, "big");
     };
 
     /**
@@ -1864,10 +1949,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit27(): number {
-        return this.bit(27);
+    async bit27(): Promise<number> {
+        return await this.bit(27);
     };
 
     /**
@@ -1875,10 +1960,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit27le(): number {
-        return this.bit(27, undefined, "little");
+    async bit27le(): Promise<number> {
+        return await this.bit(27, undefined, "little");
     };
 
     /**
@@ -1886,10 +1971,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit27be(): number {
-        return this.bit(27, undefined, "big");
+    async bit27be(): Promise<number> {
+        return await this.bit(27, undefined, "big");
     };
 
     /**
@@ -1897,10 +1982,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit27(): number {
-        return this.bit(27, true);
+    async ubit27(): Promise<number> {
+        return await this.bit(27, true);
     };
 
     /**
@@ -1908,10 +1993,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit27le(): number {
-        return this.bit(27, true, "little");
+    async ubit27le(): Promise<number> {
+        return await this.bit(27, true, "little");
     };
 
     /**
@@ -1919,10 +2004,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit27be(): number {
-        return this.bit(27, true, "big");
+    async ubit27be(): Promise<number> {
+        return await this.bit(27, true, "big");
     };
 
     /**
@@ -1930,10 +2015,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit28(): number {
-        return this.bit(28);
+    async bit28(): Promise<number> {
+        return await this.bit(28);
     };
 
     /**
@@ -1941,10 +2026,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit28le(): number {
-        return this.bit(28, undefined, "little");
+    async bit28le(): Promise<number> {
+        return await this.bit(28, undefined, "little");
     };
 
     /**
@@ -1952,10 +2037,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit28be(): number {
-        return this.bit(28, undefined, "big");
+    async bit28be(): Promise<number> {
+        return await this.bit(28, undefined, "big");
     };
 
     /**
@@ -1963,10 +2048,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit28(): number {
-        return this.bit(28, true);
+    async ubit28(): Promise<number> {
+        return await this.bit(28, true);
     };
 
     /**
@@ -1974,10 +2059,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit28le(): number {
-        return this.bit(28, true, "little");
+    async ubit28le(): Promise<number> {
+        return await this.bit(28, true, "little");
     };
 
     /**
@@ -1985,10 +2070,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit28be(): number {
-        return this.bit(28, true, "big");
+    async ubit28be(): Promise<number> {
+        return await this.bit(28, true, "big");
     };
 
     /**
@@ -1996,10 +2081,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit29(): number {
-        return this.bit(29);
+    async bit29(): Promise<number> {
+        return await this.bit(29);
     };
 
     /**
@@ -2007,10 +2092,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit29le(): number {
-        return this.bit(29, undefined, "little");
+    async bit29le(): Promise<number> {
+        return await this.bit(29, undefined, "little");
     };
 
     /**
@@ -2018,10 +2103,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit29be(): number {
-        return this.bit(29, undefined, "big");
+    async bit29be(): Promise<number> {
+        return await this.bit(29, undefined, "big");
     };
 
     /**
@@ -2029,10 +2114,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit29(): number {
-        return this.bit(29, true);
+    async ubit29(): Promise<number> {
+        return await this.bit(29, true);
     };
 
     /**
@@ -2040,10 +2125,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit29le(): number {
-        return this.bit(29, true, "little");
+    async ubit29le(): Promise<number> {
+        return await this.bit(29, true, "little");
     };
 
     /**
@@ -2051,10 +2136,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit29be(): number {
-        return this.bit(29, true, "big");
+    async ubit29be(): Promise<number> {
+        return await this.bit(29, true, "big");
     };
 
     /**
@@ -2062,10 +2147,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit30(): number {
-        return this.bit(30);
+    async bit30(): Promise<number> {
+        return await this.bit(30);
     };
 
     /**
@@ -2073,10 +2158,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit30le(): number {
-        return this.bit(30, undefined, "little");
+    async bit30le(): Promise<number> {
+        return await this.bit(30, undefined, "little");
     };
 
     /**
@@ -2084,10 +2169,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit30be(): number {
-        return this.bit(30, undefined, "big");
+    async bit30be(): Promise<number> {
+        return await this.bit(30, undefined, "big");
     };
 
     /**
@@ -2095,10 +2180,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit30(): number {
-        return this.bit(30, true);
+    async ubit30(): Promise<number> {
+        return await this.bit(30, true);
     };
 
     /**
@@ -2106,10 +2191,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit30le(): number {
-        return this.bit(30, true, "little");
+    async ubit30le(): Promise<number> {
+        return await this.bit(30, true, "little");
     };
 
     /**
@@ -2117,10 +2202,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit30be(): number {
-        return this.bit(30, true, "big");
+    async ubit30be(): Promise<number> {
+        return await this.bit(30, true, "big");
     };
 
     /**
@@ -2128,10 +2213,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit31(): number {
-        return this.bit(31);
+    async bit31(): Promise<number> {
+        return await this.bit(31);
     };
 
     /**
@@ -2139,10 +2224,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit31le(): number {
-        return this.bit(31, undefined, "little");
+    async bit31le(): Promise<number> {
+        return await this.bit(31, undefined, "little");
     };
 
     /**
@@ -2150,10 +2235,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit31be(): number {
-        return this.bit(31, undefined, "big");
+    async bit31be(): Promise<number> {
+        return await this.bit(31, undefined, "big");
     };
 
     /**
@@ -2161,10 +2246,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit31(): number {
-        return this.bit(31, true);
+    async ubit31(): Promise<number> {
+        return await this.bit(31, true);
     };
 
     /**
@@ -2172,10 +2257,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit31le(): number {
-        return this.bit(31, true, "little");
+    async ubit31le(): Promise<number> {
+        return await this.bit(31, true, "little");
     };
 
     /**
@@ -2183,10 +2268,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit31be(): number {
-        return this.bit(31, true, "big");
+    async ubit31be(): Promise<number> {
+        return await this.bit(31, true, "big");
     };
 
     /**
@@ -2194,10 +2279,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit32(): number {
-        return this.bit(32);
+    async bit32(): Promise<number> {
+        return await this.bit(32);
     };
 
     /**
@@ -2205,10 +2290,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit32le(): number {
-        return this.bit(32, undefined, "little");
+    async bit32le(): Promise<number> {
+        return await this.bit(32, undefined, "little");
     };
 
     /**
@@ -2216,10 +2301,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get bit32be(): number {
-        return this.bit(32, undefined, "big");
+    async bit32be(): Promise<number> {
+        return await this.bit(32, undefined, "big");
     };
 
     /**
@@ -2227,10 +2312,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit32(): number {
-        return this.bit(32, true);
+    async ubit32(): Promise<number> {
+        return await this.bit(32, true);
     };
 
     /**
@@ -2238,10 +2323,10 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit32le(): number {
-        return this.bit(32, true, "little");
+    async ubit32le(): Promise<number> {
+        return await this.bit(32, true, "little");
     };
 
     /**
@@ -2249,789 +2334,753 @@ export class BiReaderStream extends BiBaseStreamer {
      * 
      * Note: When returning to a byte read, remaining bits are dropped.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubit32be(): number {
-        return this.bit(32, true, "big");
+    async ubit32be(): Promise<number> {
+        return await this.bit(32, true, "big");
     };
 
     //
-    // byte read
+    // #region byte read
     //
 
     /**
      * Read byte.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get byte(): number {
-        return this.readByte();
+    async byte(): Promise<number> {
+        return await this.readByte();
     };
 
     /**
      * Read byte.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get int8(): number {
-        return this.readByte();
+    async int8(): Promise<number> {
+        return await this.readByte();
     };
 
     /**
      * Read unsigned byte.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get uint8(): number {
-        return this.readByte(true);
+    async uint8(): Promise<number> {
+        return await this.readByte(true);
     };
 
     /**
      * Read unsigned byte.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ubyte(): number {
-        return this.readByte(true);
+    async ubyte(): Promise<number> {
+        return await this.readByte(true);
     };
 
     //
-    //short16 read
+    // #region short16 read
     //
 
     /**
      * Read short.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get int16(): number {
-        return this.readInt16();
+    async int16(): Promise<number> {
+        return await this.readInt16();
     };
 
     /**
      * Read short.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get short(): number {
-        return this.readInt16();
+    async short(): Promise<number> {
+        return await this.readInt16();
     };
 
     /**
      * Read short.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get word(): number {
-        return this.readInt16();
+    async word(): Promise<number> {
+        return await this.readInt16();
     };
 
     /**
      * Read unsigned short.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get uint16(): number {
+    async uint16(): Promise<number> {
+        return await this.readInt16(true);
+    };
+
+    /**
+     * Read unsigned short.
+     * 
+     * @returns {Promise<number>}
+     */
+    async ushort(): Promise<number> {
         return this.readInt16(true);
     };
 
     /**
      * Read unsigned short.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ushort(): number {
-        return this.readInt16(true);
-    };
-
-    /**
-     * Read unsigned short.
-     * 
-     * @returns {number}
-     */
-    get uword(): number {
-        return this.readInt16(true);
+    async uword(): Promise<number> {
+        return await this.readInt16(true);
     };
 
     /**
      * Read unsigned short in little endian.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get uint16le(): number {
-        return this.readInt16(true, "little");
+    async uint16le(): Promise<number> {
+        return await this.readInt16(true, "little");
     };
 
     /**
      * Read unsigned short in little endian.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ushortle(): number {
-        return this.readInt16(true, "little");
+    async ushortle(): Promise<number> {
+        return await this.readInt16(true, "little");
     };
 
     /**
      * Read unsigned short in little endian.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get uwordle(): number {
-        return this.readInt16(true, "little");
+    async uwordle(): Promise<number> {
+        return await this.readInt16(true, "little");
     };
 
     /**
      * Read signed short in little endian.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get int16le(): number {
-        return this.readInt16(false, "little");
+    async int16le(): Promise<number> {
+        return await this.readInt16(false, "little");
     };
 
     /**
      * Read signed short in little endian.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get shortle(): number {
-        return this.readInt16(false, "little");
+    async shortle(): Promise<number> {
+        return await this.readInt16(false, "little");
     };
 
     /**
      * Read signed short in little endian.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get wordle(): number {
-        return this.readInt16(false, "little");
+    async wordle(): Promise<number> {
+        return await this.readInt16(false, "little");
     };
 
     /**
      * Read unsigned short in big endian.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get uint16be(): number {
-        return this.readInt16(true, "big");
+    async uint16be(): Promise<number> {
+        return await this.readInt16(true, "big");
     };
 
     /**
      * Read unsigned short in big endian.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ushortbe(): number {
-        return this.readInt16(true, "big");
+    async ushortbe(): Promise<number> {
+        return await this.readInt16(true, "big");
     };
 
     /**
      * Read unsigned short in big endian.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get uwordbe(): number {
-        return this.readInt16(true, "big");
+    async uwordbe(): Promise<number> {
+        return await this.readInt16(true, "big");
     };
 
     /**
      * Read signed short in big endian.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get int16be(): number {
-        return this.readInt16(false, "big");
+    async int16be(): Promise<number> {
+        return await this.readInt16(false, "big");
     };
 
     /**
      * Read signed short in big endian.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get shortbe(): number {
-        return this.readInt16(false, "big");
+    async shortbe(): Promise<number> {
+        return await this.readInt16(false, "big");
     };
 
     /**
      * Read signed short in big endian.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get wordbe(): number {
-        return this.readInt16(false, "big");
+    async wordbe(): Promise<number> {
+        return await this.readInt16(false, "big");
     };
 
     //
-    //half float read
+    // #region half float read
     //
 
     /**
      * Read half float.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get halffloat(): number {
-        return this.readHalfFloat();
+    async halffloat(): Promise<number> {
+        return await this.readHalfFloat();
     };
 
     /**
      * Read half float
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get half(): number {
-        return this.readHalfFloat();
+    async half(): Promise<number> {
+        return await this.readHalfFloat();
     };
 
     /**
      * Read half float.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get halffloatbe(): number {
-        return this.readHalfFloat("big");
+    async halffloatbe(): Promise<number> {
+        return await this.readHalfFloat("big");
     };
 
     /**
      * Read half float.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get halfbe(): number {
-        return this.readHalfFloat("big");
+    async halfbe(): Promise<number> {
+        return await this.readHalfFloat("big");
     };
 
     /**
      * Read half float.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get halffloatle(): number {
-        return this.readHalfFloat("little");
+    async halffloatle(): Promise<number> {
+        return await this.readHalfFloat("little");
     };
 
     /**
      * Read half float.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get halfle(): number {
-        return this.readHalfFloat("little");
+    async halfle(): Promise<number> {
+        return await this.readHalfFloat("little");
     };
 
     //
-    //int read
+    // #region int read
     //
 
     /**
      * Read 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get int(): number {
-        return this.readInt32();
+    async int(): Promise<number> {
+        return await this.readInt32();
     };
 
     /**
      * Read 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get double(): number {
-        return this.readInt32();
+    async double(): Promise<number> {
+        return await this.readInt32();
     };
 
     /**
      * Read 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get int32(): number {
-        return this.readInt32();
+    async int32(): Promise<number> {
+        return await this.readInt32();
     };
 
     /**
      * Read 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get long(): number {
-        return this.readInt32();
+    async long(): Promise<number> {
+        return await this.readInt32();
     };
 
     /**
      * Read unsigned 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get uint(): number {
-        return this.readInt32(true);
+    async uint(): Promise<number> {
+        return await this.readInt32(true);
     };
 
     /**
      * Read unsigned 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get udouble(): number {
-        return this.readInt32(true);
+    async udouble(): Promise<number> {
+        return await this.readInt32(true);
     };
 
     /**
      * Read unsigned 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get uint32(): number {
-        return this.readInt32(true);
+    async uint32(): Promise<number> {
+        return await this.readInt32(true);
     };
 
     /**
      * Read unsigned 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ulong(): number {
-        return this.readInt32(true);
+    async ulong(): Promise<number> {
+        return await this.readInt32(true);
     };
 
     /**
      * Read signed 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get intbe(): number {
-        return this.readInt32(false, "big");
+    async intbe(): Promise<number> {
+        return await this.readInt32(false, "big");
     };
 
     /**
      * Read signed 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get doublebe(): number {
-        return this.readInt32(false, "big");
+    async doublebe(): Promise<number> {
+        return await this.readInt32(false, "big");
     };
 
     /**
      * Read signed 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get int32be(): number {
-        return this.readInt32(false, "big");
+    async int32be(): Promise<number> {
+        return await this.readInt32(false, "big");
     };
 
     /**
      * Read signed 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get longbe(): number {
-        return this.readInt32(false, "big");
+    async longbe(): Promise<number> {
+        return await this.readInt32(false, "big");
     };
 
     /**
      * Read unsigned 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get uintbe(): number {
-        return this.readInt32(true, "big");
+    async uintbe(): Promise<number> {
+        return await this.readInt32(true, "big");
     };
 
     /**
      * Read unsigned 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get udoublebe(): number {
-        return this.readInt32(true, "big");
+    async udoublebe(): Promise<number> {
+        return await this.readInt32(true, "big");
     };
 
     /**
      * Read unsigned 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get uint32be(): number {
-        return this.readInt32(true, "big");
+    async uint32be(): Promise<number> {
+        return await this.readInt32(true, "big");
     };
 
     /**
      * Read unsigned 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ulongbe(): number {
-        return this.readInt32(true, "big");
+    async ulongbe(): Promise<number> {
+        return await this.readInt32(true, "big");
     };
 
     /**
      * Read signed 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get intle(): number {
-        return this.readInt32(false, "little");
+    async intle(): Promise<number> {
+        return await this.readInt32(false, "little");
     };
 
     /**
      * Read signed 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get doublele(): number {
-        return this.readInt32(false, "little");
+    async doublele(): Promise<number> {
+        return await this.readInt32(false, "little");
     };
 
     /**
      * Read signed 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get int32le(): number {
-        return this.readInt32(false, "little");
+    async int32le(): Promise<number> {
+        return await this.readInt32(false, "little");
     };
 
     /**
      * Read signed 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get longle(): number {
-        return this.readInt32(false, "little");
+    async longle(): Promise<number> {
+        return await this.readInt32(false, "little");
     };
 
     /**
      * Read signed 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get uintle(): number {
-        return this.readInt32(true, "little");
+    async uintle(): Promise<number> {
+        return await this.readInt32(true, "little");
     };
 
     /**
      * Read signed 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get udoublele(): number {
-        return this.readInt32(true, "little");
+    async udoublele(): Promise<number> {
+        return await this.readInt32(true, "little");
     };
 
     /**
      * Read signed 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get uint32le(): number {
-        return this.readInt32(true, "little");
+    async uint32le(): Promise<number> {
+        return await this.readInt32(true, "little");
     };
 
     /**
      * Read signed 32 bit integer.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get ulongle(): number {
-        return this.readInt32(true, "little");
+    async ulongle(): Promise<number> {
+        return await this.readInt32(true, "little");
     };
 
     //
-    //float read
+    // #region float read
     //
 
     /**
      * Read float.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get float(): number {
-        return this.readFloat();
+    async float(): Promise<number> {
+        return await this.readFloat();
     };
 
     /**
      * Read float.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get floatbe(): number {
-        return this.readFloat("big");
+    async floatbe(): Promise<number> {
+        return await this.readFloat("big");
     };
 
     /**
      * Read float.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get floatle(): number {
-        return this.readFloat("little");
+    async floatle(): Promise<number> {
+        return await this.readFloat("little");
     };
 
     //
-    //int64 reader
+    // #region int64 reader
     //
 
     /**
      * Read signed 64 bit integer
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get int64(): BigValue {
-        return this.readInt64();
+    async int64(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64();
     };
 
     /**
      * Read signed 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get bigint(): BigValue {
-        return this.readInt64();
+    async bigint(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64();
     };
 
     /**
      * Read signed 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get quad(): BigValue {
-        return this.readInt64();
+    async quad(): Promise<hasBigInt extends true ? bigint : number>{
+        return await this.readInt64();
     };
 
     /**
      * Read unsigned 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get uint64(): BigValue {
-        return this.readInt64(true);
+    async uint64(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64(true);
     };
 
     /**
      * Read unsigned 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get ubigint(): BigValue {
-        return this.readInt64(true);
+    async ubigint(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64(true);
     };
 
     /**
      * Read unsigned 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get uquad(): BigValue {
-        return this.readInt64(true);
+    async uquad(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64(true);
     };
 
     /**
      * Read signed 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get int64be(): BigValue {
-        return this.readInt64(false, "big");
+    async int64be(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64(false, "big");
     };
 
     /**
      * Read signed 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get bigintbe(): BigValue {
-        return this.readInt64(false, "big");
+    async bigintbe(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64(false, "big");
     };
 
     /**
      * Read signed 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get quadbe(): BigValue {
-        return this.readInt64(false, "big");
+    async quadbe(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64(false, "big");
     };
 
     /**
      * Read unsigned 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get uint64be(): BigValue {
-        return this.readInt64(true, "big");
+    async uint64be(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64(true, "big");
     };
 
     /**
      * Read unsigned 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get ubigintbe(): BigValue {
-        return this.readInt64(true, "big");
+    async ubigintbe(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64(true, "big");
     };
 
     /**
      * Read unsigned 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get uquadbe(): BigValue {
-        return this.readInt64(true, "big");
+    async uquadbe(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64(true, "big");
     };
 
     /**
      * Read signed 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get int64le(): BigValue {
-        return this.readInt64(false, "little");
+    async int64le(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64(false, "little");
     };
 
     /**
      * Read signed 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get bigintle(): BigValue {
-        return this.readInt64(false, "little");
+    async bigintle(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64(false, "little");
     };
 
     /**
      * Read signed 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get quadle(): BigValue {
-        return this.readInt64(false, "little");
+    async quadle(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64(false, "little");
     };
 
     /**
      * Read unsigned 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get uint64le(): BigValue {
-        return this.readInt64(true, "little");
+    async uint64le(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64(true, "little");
     };
 
     /**
      * Read unsigned 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get ubigintle(): BigValue {
-        return this.readInt64(true, "little");
+    async ubigintle(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64(true, "little");
     };
 
     /**
      * Read unsigned 64 bit integer.
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
      */
-    get uquadle(): BigValue {
-        return this.readInt64(true, "little");
+    async uquadle(): Promise<hasBigInt extends true ? bigint : number> {
+        return await this.readInt64(true, "little");
     };
 
     //
-    //doublefloat reader
+    // #region doublefloat reader
     //
 
     /**
      * Read double float.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get doublefloat(): number {
-        return this.readDoubleFloat();
+    async doublefloat(): Promise<number> {
+        return await this.readDoubleFloat();
     };
 
     /**
      * Read double float.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get dfloat(): number {
-        return this.readDoubleFloat();
+    async dfloat(): Promise<number> {
+        return await this.readDoubleFloat();
     };
 
     /**
      * Read double float.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get dfloatbe(): number {
-        return this.readDoubleFloat("big");
+    async dfloatbe(): Promise<number> {
+        return await this.readDoubleFloat("big");
     };
 
     /**
      * Read double float.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get doublefloatbe(): number {
-        return this.readDoubleFloat("big");
+    async doublefloatbe(): Promise<number> {
+        return await this.readDoubleFloat("big");
     };
 
     /**
      * Read double float.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get dfloatle(): number {
-        return this.readDoubleFloat("little");
+    async dfloatle(): Promise<number> {
+        return await this.readDoubleFloat("little");
     };
 
     /**
      * Read double float.
      * 
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    get doublefloatle(): number {
-        return this.readDoubleFloat("little");
+    async doublefloatle(): Promise<number> {
+        return await this.readDoubleFloat("little");
     };
 
     //
-    //string reader
+    // #region string reader
     //
 
     /**
@@ -3045,10 +3094,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types 
     * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
-    * @return {string}
+    * @returns {string}
     */
-    string(options?: stringOptions): string {
-        return this.readString(options);
+    async string(options?: stringOptions): Promise<string> {
+        return await this.readString(options);
     };
 
     /**
@@ -3056,10 +3105,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * 
     * Default is ``utf-8``
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    get str(): string {
-        return this.readString(this.strSettings);
+    async str(): Promise<string> {
+        return await this.readString(this.strSettings);
     };
 
     /**
@@ -3069,10 +3118,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    utf8string(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
+    async utf8string(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
     };
 
     /**
@@ -3082,10 +3131,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    cstring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
+    async cstring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
     };
 
     /**
@@ -3095,10 +3144,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    ansistring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue, stripNull: stripNull });
+    async ansistring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue, stripNull: stripNull });
     };
 
     /**
@@ -3109,10 +3158,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    utf16string(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
+    async utf16string(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
+        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
     };
 
     /**
@@ -3123,10 +3172,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    unistring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
+    async unistring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
+        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
     };
 
     /**
@@ -3136,10 +3185,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    utf16stringle(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
+    async utf16stringle(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
     };
 
     /**
@@ -3149,10 +3198,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    unistringle(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
+    async unistringle(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
     };
 
     /**
@@ -3162,10 +3211,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    utf16stringbe(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
+    async utf16stringbe(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
     };
 
     /**
@@ -3175,10 +3224,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    unistringbe(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
+    async unistringbe(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
     };
 
     /**
@@ -3188,10 +3237,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    pstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
+    async pstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
     };
 
     /**
@@ -3200,10 +3249,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    pstring1(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: endian });
+    async pstring1(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: endian });
     };
 
     /**
@@ -3211,10 +3260,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    pstring1le(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "little" });
+    async pstring1le(stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "little" });
     };
 
     /**
@@ -3222,10 +3271,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    pstring1be(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "big" });
+    async pstring1be(stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "big" });
     };
 
     /**
@@ -3234,10 +3283,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    pstring2(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: endian });
+    async pstring2(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: endian });
     };
 
     /**
@@ -3245,10 +3294,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    pstring2le(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "little" });
+    async pstring2le(stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "little" });
     };
 
     /**
@@ -3256,10 +3305,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    pstring2be(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "big" });
+    async pstring2be(stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "big" });
     };
 
     /**
@@ -3268,10 +3317,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    pstring4(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: endian });
+    async pstring4(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: endian });
     };
 
     /**
@@ -3279,10 +3328,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    pstring4le(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "little" });
+    async pstring4le(stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "little" });
     };
 
     /**
@@ -3290,10 +3339,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    pstring4be(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "big" });
+    async pstring4be(stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "big" });
     };
 
     /**
@@ -3303,10 +3352,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    wpstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: lengthReadSize, endian: endian, stripNull: stripNull });
+    async wpstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: lengthReadSize, endian: endian, stripNull: stripNull });
     };
 
     /**
@@ -3315,10 +3364,32 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    wpstring1(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: endian, stripNull: stripNull });
+    async wpstring1(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: endian, stripNull: stripNull });
+    };
+
+    /**
+    * Reads Wide-Pascal string 1 byte length read in little endian order.
+    * 
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {Promise<string>}
+    */
+    async wpstring1le(stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "little", stripNull: stripNull });
+    };
+
+    /**
+    * Reads Wide-Pascal string 1 byte length read in big endian order.
+    * 
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {Promise<string>}
+    */
+    async wpstring1be(stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "big", stripNull: stripNull });
     };
 
     /**
@@ -3327,10 +3398,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    wpstring2(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: endian, stripNull: stripNull });
+    async wpstring2(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: endian, stripNull: stripNull });
     };
 
     /**
@@ -3338,10 +3409,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    wpstring2le(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "little", stripNull: stripNull });
+    async wpstring2le(stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "little", stripNull: stripNull });
     };
 
     /**
@@ -3349,10 +3420,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    wpstring2be(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "big", stripNull: stripNull });
+    async wpstring2be(stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "big", stripNull: stripNull });
     };
 
     /**
@@ -3361,10 +3432,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    wpstring4(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: endian, stripNull: stripNull });
+    async wpstring4(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: endian, stripNull: stripNull });
     };
 
     /**
@@ -3372,10 +3443,10 @@ export class BiReaderStream extends BiBaseStreamer {
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    wpstring4be(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "big", stripNull: stripNull });
+    async wpstring4be(stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "big", stripNull: stripNull });
     };
 
     /**
@@ -3383,9 +3454,9 @@ export class BiReaderStream extends BiBaseStreamer {
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
-    * @return {string}
+    * @returns {Promise<string>}
     */
-    wpstring4le(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "little", stripNull: stripNull });
+    async wpstring4le(stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "little", stripNull: stripNull });
     };
 };

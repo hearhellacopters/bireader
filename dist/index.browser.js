@@ -1,16 +1,24 @@
+const canInt8 = "getUint8" in DataView.prototype && "getInt8" in DataView.prototype && "setUint8" in DataView.prototype && "setInt8" in DataView.prototype;
+const canInt16 = "getUint16" in DataView.prototype && "getInt16" in DataView.prototype && "setUint16" in DataView.prototype && "setInt16" in DataView.prototype;
+const canFloat16 = 'getFloat16' in DataView.prototype && 'setFloat16' in DataView.prototype;
+const canInt32 = 'getInt32' in DataView.prototype && 'getUint32' in DataView.prototype && 'setInt32' in DataView.prototype && 'setUint32' in DataView.prototype;
+const canFloat32 = "getFloat32" in DataView.prototype && "setFloat32" in DataView.prototype;
+const canBigInt64 = "getBigUint64" in DataView.prototype && "getBigInt64" in DataView.prototype && "setBigUint64" in DataView.prototype && "setBigInt64" in DataView.prototype;
+const canFloat64 = "getFloat64" in DataView.prototype && "setFloat64" in DataView.prototype;
+const hasBigInt = typeof BigInt === 'function';
 const MIN_SAFE = BigInt(Number.MIN_SAFE_INTEGER);
 const MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
 function isSafeInt64(big) {
     return big >= MIN_SAFE && big <= MAX_SAFE;
 }
 function isBuffer(obj) {
-    return buffcheck(obj);
+    return (typeof Buffer !== 'undefined' && Buffer.isBuffer(obj));
 }
-function buffcheck(obj) {
-    return (typeof Buffer !== 'undefined' && obj instanceof Buffer);
-}
-function arraybuffcheck(obj) {
+function arrayBufferCheck(obj) {
     return obj instanceof Uint8Array || isBuffer(obj);
+}
+function normalizeBitOffset(bit) {
+    return ((bit % 8) + 8) % 8;
 }
 /**
  * Creates hex dump string. Will console log or return string if set in options.
@@ -47,13 +55,12 @@ function _hexDump(data, options = {}, start, end) {
     function hex_check(byte, bits) {
         var value = 0;
         for (var i = 0; i < bits;) {
-            var remaining = bits - i;
-            var bitOffset = 0;
-            var currentByte = byte;
-            var read = Math.min(remaining, 8 - bitOffset);
-            var mask, readBits;
-            mask = ~(0xFF << read);
-            readBits = (currentByte >> (8 - read - bitOffset)) & mask;
+            const remaining = bits - i;
+            const bitOffset = 0;
+            const currentByte = byte;
+            const read = Math.min(remaining, 8 - bitOffset);
+            const mask = ~(0xFF << read);
+            const readBits = (currentByte >> (8 - read - bitOffset)) & mask;
             value <<= read;
             value |= readBits;
             i += read;
@@ -61,10 +68,10 @@ function _hexDump(data, options = {}, start, end) {
         value = value >>> 0;
         return value;
     }
-    var suppressUnicode = options && options.suppressUnicode || false;
+    const suppressUnicode = options && options.suppressUnicode || false;
     const rows = [];
     var header = "   0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  ";
-    var ending = "0123456789ABCDEF";
+    const ending = "0123456789ABCDEF";
     var addr = "";
     for (let i = start; i < end; i += 16) {
         addr = i.toString(16).padStart(5, '0');
@@ -221,22 +228,87 @@ function _hexDump(data, options = {}, start, end) {
     }
 }
 
+/******************************************************************************
+Copyright (c) Microsoft Corporation.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+***************************************************************************** */
+/* global Reflect, Promise, SuppressedError, Symbol, Iterator */
+
+
+function __classPrivateFieldGet(receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+}
+
+function __classPrivateFieldSet(receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
+}
+
+typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
+    var e = new Error(message);
+    return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
+};
+
+var _BiBase_data;
+const bufferConstants = { MAX_LENGTH: 2147483647 }; // 2 gigs
+var fs;
+(async function () {
+    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+        // We are in Node.js
+        try {
+            if (typeof require !== 'undefined') {
+                fs = require('fs');
+                const buffer = require("buffer");
+                bufferConstants.MAX_LENGTH = buffer.constants.MAX_LENGTH;
+            }
+            else {
+                fs = await import('fs');
+                const buffer = await import('buffer');
+                bufferConstants.MAX_LENGTH = buffer.constants.MAX_LENGTH;
+            }
+        }
+        catch (error) {
+            console.error('Failed to load fs and buffer module:', error);
+        }
+    }
+})();
+function MAX_LENGTH() {
+    return bufferConstants.MAX_LENGTH;
+}
 function hexDumpBase(ctx, options = {}) {
     var length = options && options.length;
     var startByte = options && options.startByte;
     if ((startByte || 0) > ctx.size) {
-        ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
+        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
         throw new Error("Hexdump start is outside of data size: " + startByte + " of " + ctx.size);
     }
     const start = startByte || ctx.offset;
     const end = Math.min(start + (length || 192), ctx.size);
     if (start + (length || 0) > ctx.size) {
-        ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
+        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
         throw new Error("Hexdump amount is outside of data size: " + (start + (length || 0)) + " of " + end);
     }
-    const data = ctx.data;
+    var data = ctx.data;
+    if (ctx.mode == "file") {
+        data = ctx.lift(start, start + length, false);
+    }
     return _hexDump(data, options, start, end);
 }
+// #region Movement
 function skip(ctx, bytes, bits) {
     var new_size = (((bytes || 0) + ctx.offset) + Math.ceil((ctx.bitoffset + (bits || 0)) / 8));
     if (bits && bits < 0) {
@@ -252,29 +324,30 @@ function skip(ctx, bytes, bits) {
             }
         }
         else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: Seek of range of data: seek " + new_size + " of " + ctx.size);
         }
     }
     // Adjust byte offset based on bit overflow
     ctx.offset += Math.floor((ctx.bitoffset + (bits || 0)) / 8);
     // Adjust bit offset
-    ctx.bitoffset = (ctx.bitoffset + (bits || 0) + 64) % 8;
+    ctx.bitoffset = (ctx.bitoffset + normalizeBitOffset(bits)) % 8;
     // Adjust byte offset based on byte overflow
     ctx.offset += bytes;
     // Ensure bit offset stays between 0-7
     ctx.bitoffset = Math.min(Math.max(ctx.bitoffset, 0), 7);
     // Ensure offset doesn't go negative
     ctx.offset = Math.max(ctx.offset, 0);
+    return;
 }
 function align(ctx, n) {
-    var a = ctx.offset % n;
+    const a = ctx.offset % n;
     if (a) {
         ctx.skip(n - a);
     }
 }
 function alignRev(ctx, n) {
-    var a = ctx.offset % n;
+    const a = ctx.offset % n;
     if (a) {
         ctx.skip(a * -1);
     }
@@ -294,32 +367,31 @@ function goto(ctx, bytes, bits) {
             }
         }
         else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: Goto utside of range of data: goto " + new_size + " of " + ctx.size);
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: Goto outside of range of data: goto " + new_size + " of " + ctx.size);
         }
     }
     ctx.offset = bytes;
     // Adjust byte offset based on bit overflow
     ctx.offset += Math.floor(((bits || 0)) / 8);
     // Adjust bit offset
-    ctx.bitoffset = ((bits || 0) + 64) % 8;
+    ctx.bitoffset = normalizeBitOffset(bits) % 8;
     // Ensure bit offset stays between 0-7
     ctx.bitoffset = Math.min(Math.max(ctx.bitoffset, 0), 7);
     // Ensure offset doesn't go negative
     ctx.offset = Math.max(ctx.offset, 0);
+    return;
 }
+// #region Manipulation
 function check_size(ctx, write_bytes, write_bit, offset) {
-    return checkSize(ctx, write_bytes || 0, write_bit || 0, ctx.offset);
-}
-function checkSize(ctx, write_bytes, write_bit, offset) {
     const bits = (write_bit || 0) + ctx.bitoffset;
-    var new_off = (offset || ctx.offset);
+    var new_off = (ctx.offset);
     var writesize = write_bytes || 0;
     if (bits != 0) {
         //add bits
         writesize += Math.ceil(bits / 8);
     }
-    //if biger extend
+    //if bigger extend
     const needed_size = new_off + writesize;
     if (needed_size > ctx.size) {
         const dif = needed_size - ctx.size;
@@ -332,27 +404,51 @@ function checkSize(ctx, write_bytes, write_bit, offset) {
             }
         }
         else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: writing to ` + needed_size + " at " + ctx.offset + " of " + ctx.size);
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
+            throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: ` + needed_size + " at " + ctx.offset + " of " + ctx.size);
         }
     }
     //start read location
     return new_off;
 }
 function extendarray(ctx, to_padd) {
-    if ((typeof Buffer !== 'undefined' && ctx.data instanceof Buffer)) {
+    ctx.open();
+    if (ctx.strict) {
+        throw new Error('File position is outside of file size while in strict mode.');
+    }
+    if (ctx.size + to_padd > ctx.maxFileSize) {
+        throw new Error("buffer extend outside of max: " + (ctx.size + to_padd) + " to " + ctx.maxFileSize);
+    }
+    if (ctx.mode == "file") {
+        if (ctx.extendBufferSize != 0) {
+            if (ctx.extendBufferSize > to_padd) {
+                to_padd = ctx.extendBufferSize;
+            }
+        }
+        try {
+            fs.ftruncateSync(ctx.fd, ctx.size + to_padd);
+        }
+        catch (error) {
+            throw new Error(error);
+        }
+        ctx.updateSize();
+        return;
+    }
+    if (isBuffer(ctx.data)) {
         var paddbuffer = Buffer.alloc(to_padd);
-        // @ts-ignore
         ctx.data = Buffer.concat([ctx.data, paddbuffer]);
     }
     else {
-        const addArray = new Array(to_padd);
-        ctx.data = new Uint8Array([...ctx.data, ...addArray]);
+        const newBuf = new Uint8Array(ctx.size + to_padd);
+        newBuf.set(ctx.data);
+        ctx.data = newBuf;
     }
     ctx.size = ctx.data.length;
     ctx.sizeB = ctx.data.length * 8;
+    return;
 }
 function remove(ctx, startOffset, endOffset, consume, remove, fillValue) {
+    ctx.open();
     const new_start = Math.abs(startOffset || 0);
     const new_offset = (endOffset || ctx.offset);
     if (new_offset > ctx.size) {
@@ -365,12 +461,12 @@ function remove(ctx, startOffset, endOffset, consume, remove, fillValue) {
             }
         }
         else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + endOffset + " of " + ctx.size);
         }
     }
     if (ctx.strict == true && remove == true) {
-        ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
+        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
         throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + ctx.size);
     }
     const data_removed = ctx.data.subarray(new_start, new_offset);
@@ -378,11 +474,13 @@ function remove(ctx, startOffset, endOffset, consume, remove, fillValue) {
         const part1 = ctx.data.subarray(0, new_start);
         const part2 = ctx.data.subarray(new_offset, ctx.size);
         if (isBuffer(ctx.data)) {
-            // @ts-ignore
             ctx.data = Buffer.concat([part1, part2]);
         }
         else {
-            ctx.data = new Uint8Array([...part1, ...part2]);
+            const newBuf = new Uint8Array(part1.byteLength + part2.byteLength);
+            newBuf.set(part1, 0);
+            newBuf.set(part2, part1.byteLength);
+            ctx.data = newBuf;
         }
         ctx.size = ctx.data.length;
         ctx.sizeB = ctx.data.length * 8;
@@ -393,11 +491,14 @@ function remove(ctx, startOffset, endOffset, consume, remove, fillValue) {
         const replacement = new Array(data_removed.length).fill(fillValue & 0xff);
         if (isBuffer(ctx.data)) {
             const buff_placement = Buffer.from(replacement);
-            // @ts-ignore
             ctx.data = Buffer.concat([part1, buff_placement, part2]);
         }
         else {
-            ctx.data = new Uint8Array([...part1, ...replacement, ...part2]);
+            const newBuf = new Uint8Array(part1.byteLength + replacement.length + part2.byteLength);
+            newBuf.set(part1, 0);
+            newBuf.set(replacement, part1.byteLength);
+            newBuf.set(part2, part1.byteLength + replacement.length);
+            ctx.data = newBuf;
         }
         ctx.size = ctx.data.length;
         ctx.sizeB = ctx.data.length * 8;
@@ -416,11 +517,11 @@ function remove(ctx, startOffset, endOffset, consume, remove, fillValue) {
 }
 function addData(ctx, data, consume, offset, replace) {
     if (ctx.strict == true) {
-        ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
+        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
         throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Can not insert data in strict mode. Use unrestrict() to enable.`);
     }
-    if (typeof Buffer !== 'undefined' && data instanceof Buffer && !(ctx.data instanceof Buffer)) {
-        // @ts-ignore
+    ctx.open();
+    if (isBuffer(data) && !isBuffer(ctx.data)) {
         data = Buffer.from(data);
     }
     if (data instanceof Uint8Array && !(ctx.data instanceof Uint8Array)) {
@@ -432,11 +533,14 @@ function addData(ctx, data, consume, offset, replace) {
         const part1 = ctx.data.subarray(0, needed_size - data.length);
         const part2 = ctx.data.subarray(needed_size, ctx.size);
         if (isBuffer(ctx.data)) {
-            // @ts-ignore
             ctx.data = Buffer.concat([part1, data, part2]);
         }
         else {
-            ctx.data = new Uint8Array([...part1, ...data, ...part2]);
+            const newBuf = new Uint8Array(part1.byteLength + data.byteLength + part2.byteLength);
+            newBuf.set(part1, 0);
+            newBuf.set(data, part1.byteLength);
+            newBuf.set(part2, part1.byteLength + data.byteLength);
+            ctx.data = newBuf;
         }
         ctx.size = ctx.data.length;
         ctx.sizeB = ctx.data.length * 8;
@@ -445,11 +549,14 @@ function addData(ctx, data, consume, offset, replace) {
         const part1 = ctx.data.subarray(0, needed_size);
         const part2 = ctx.data.subarray(needed_size, ctx.size);
         if (isBuffer(ctx.data)) {
-            // @ts-ignore
             ctx.data = Buffer.concat([part1, data, part2]);
         }
         else {
-            ctx.data = new Uint8Array([...part1, ...data, ...part2]);
+            const newBuf = new Uint8Array(part1.byteLength + data.byteLength + part2.byteLength);
+            newBuf.set(part1, 0);
+            newBuf.set(data, part1.byteLength);
+            newBuf.set(part2, part1.byteLength + data.byteLength);
+            ctx.data = newBuf;
         }
         ctx.size = ctx.data.length;
         ctx.sizeB = ctx.data.length * 8;
@@ -459,8 +566,8 @@ function addData(ctx, data, consume, offset, replace) {
         ctx.bitoffset = 0;
     }
 }
+// #region Math
 function AND(ctx, and_key, start, end, consume) {
-    const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
             if (ctx.extendBufferSize != 0) {
@@ -471,13 +578,14 @@ function AND(ctx, and_key, start, end, consume) {
             }
         }
         else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
         }
     }
+    ctx.open();
     if (typeof and_key == "number") {
         for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            input[i] = input[i] & (and_key & 0xff);
+            ctx.data[i] = ctx.data[i] & (and_key & 0xff);
             if (consume) {
                 ctx.offset = i;
                 ctx.bitoffset = 0;
@@ -485,8 +593,11 @@ function AND(ctx, and_key, start, end, consume) {
         }
     }
     else {
-        if (arraybuffcheck(and_key)) {
-            let number = -1;
+        if (typeof and_key == "string") {
+            and_key = Uint8Array.from(Array.from(and_key).map(letter => letter.charCodeAt(0)));
+        }
+        if (arrayBufferCheck(and_key)) {
+            var number = -1;
             for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
                 if (number != and_key.length - 1) {
                     number = number + 1;
@@ -494,7 +605,7 @@ function AND(ctx, and_key, start, end, consume) {
                 else {
                     number = 0;
                 }
-                input[i] = input[i] & and_key[number];
+                ctx.data[i] = ctx.data[i] & and_key[number];
                 if (consume) {
                     ctx.offset = i;
                     ctx.bitoffset = 0;
@@ -507,7 +618,6 @@ function AND(ctx, and_key, start, end, consume) {
     }
 }
 function OR(ctx, or_key, start, end, consume) {
-    const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
             if (ctx.extendBufferSize != 0) {
@@ -518,13 +628,14 @@ function OR(ctx, or_key, start, end, consume) {
             }
         }
         else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
         }
     }
+    ctx.open();
     if (typeof or_key == "number") {
         for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            input[i] = input[i] | (or_key & 0xff);
+            ctx.data[i] = ctx.data[i] | (or_key & 0xff);
             if (consume) {
                 ctx.offset = i;
                 ctx.bitoffset = 0;
@@ -532,8 +643,11 @@ function OR(ctx, or_key, start, end, consume) {
         }
     }
     else {
-        if (arraybuffcheck(or_key)) {
-            let number = -1;
+        if (typeof or_key == "string") {
+            or_key = Uint8Array.from(Array.from(or_key).map(letter => letter.charCodeAt(0)));
+        }
+        if (arrayBufferCheck(or_key)) {
+            var number = -1;
             for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
                 if (number != or_key.length - 1) {
                     number = number + 1;
@@ -541,7 +655,7 @@ function OR(ctx, or_key, start, end, consume) {
                 else {
                     number = 0;
                 }
-                input[i] = input[i] | or_key[number];
+                ctx.data[i] = ctx.data[i] | or_key[number];
                 if (consume) {
                     ctx.offset = i;
                     ctx.bitoffset = 0;
@@ -554,7 +668,6 @@ function OR(ctx, or_key, start, end, consume) {
     }
 }
 function XOR(ctx, xor_key, start, end, consume) {
-    const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
             if (ctx.extendBufferSize != 0) {
@@ -565,13 +678,14 @@ function XOR(ctx, xor_key, start, end, consume) {
             }
         }
         else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
         }
     }
+    ctx.open();
     if (typeof xor_key == "number") {
         for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            input[i] = input[i] ^ (xor_key & 0xff);
+            ctx.data[i] = ctx.data[i] ^ (xor_key & 0xff);
             if (consume) {
                 ctx.offset = i;
                 ctx.bitoffset = 0;
@@ -579,7 +693,10 @@ function XOR(ctx, xor_key, start, end, consume) {
         }
     }
     else {
-        if (arraybuffcheck(xor_key)) {
+        if (typeof xor_key == "string") {
+            xor_key = Uint8Array.from(Array.from(xor_key).map(letter => letter.charCodeAt(0)));
+        }
+        if (arrayBufferCheck(xor_key)) {
             let number = -1;
             for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
                 if (number != xor_key.length - 1) {
@@ -588,7 +705,7 @@ function XOR(ctx, xor_key, start, end, consume) {
                 else {
                     number = 0;
                 }
-                input[i] = input[i] ^ xor_key[number];
+                ctx.data[i] = ctx.data[i] ^ xor_key[number];
                 if (consume) {
                     ctx.offset = i;
                     ctx.bitoffset = 0;
@@ -611,10 +728,11 @@ function NOT(ctx, start, end, consume) {
             }
         }
         else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
         }
     }
+    ctx.open();
     for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
         ctx.data[i] = ~ctx.data[i];
         if (consume) {
@@ -624,7 +742,6 @@ function NOT(ctx, start, end, consume) {
     }
 }
 function LSHIFT(ctx, shift_key, start, end, consume) {
-    const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
             if (ctx.extendBufferSize != 0) {
@@ -635,13 +752,14 @@ function LSHIFT(ctx, shift_key, start, end, consume) {
             }
         }
         else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
         }
     }
+    ctx.open();
     if (typeof shift_key == "number") {
         for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            input[i] = input[i] << shift_key;
+            ctx.data[i] = ctx.data[i] << shift_key;
             if (consume) {
                 ctx.offset = i;
                 ctx.bitoffset = 0;
@@ -649,8 +767,11 @@ function LSHIFT(ctx, shift_key, start, end, consume) {
         }
     }
     else {
-        if (arraybuffcheck(shift_key)) {
-            let number = -1;
+        if (typeof shift_key == "string") {
+            shift_key = Uint8Array.from(Array.from(shift_key).map(letter => letter.charCodeAt(0)));
+        }
+        if (arrayBufferCheck(shift_key)) {
+            var number = -1;
             for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
                 if (number != shift_key.length - 1) {
                     number = number + 1;
@@ -658,7 +779,7 @@ function LSHIFT(ctx, shift_key, start, end, consume) {
                 else {
                     number = 0;
                 }
-                input[i] = input[i] << shift_key[number];
+                ctx.data[i] = ctx.data[i] << shift_key[number];
                 if (consume) {
                     ctx.offset = i;
                     ctx.bitoffset = 0;
@@ -671,7 +792,6 @@ function LSHIFT(ctx, shift_key, start, end, consume) {
     }
 }
 function RSHIFT(ctx, shift_key, start, end, consume) {
-    const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
             if (ctx.extendBufferSize != 0) {
@@ -682,13 +802,14 @@ function RSHIFT(ctx, shift_key, start, end, consume) {
             }
         }
         else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
         }
     }
+    ctx.open();
     if (typeof shift_key == "number") {
         for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            input[i] = input[i] >> shift_key;
+            ctx.data[i] = ctx.data[i] >> shift_key;
             if (consume) {
                 ctx.offset = i;
                 ctx.bitoffset = 0;
@@ -696,8 +817,11 @@ function RSHIFT(ctx, shift_key, start, end, consume) {
         }
     }
     else {
-        if (arraybuffcheck(shift_key)) {
-            let number = -1;
+        if (typeof shift_key == "string") {
+            shift_key = Uint8Array.from(Array.from(shift_key).map(letter => letter.charCodeAt(0)));
+        }
+        if (arrayBufferCheck(shift_key)) {
+            var number = -1;
             for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
                 if (number != shift_key.length - 1) {
                     number = number + 1;
@@ -705,7 +829,7 @@ function RSHIFT(ctx, shift_key, start, end, consume) {
                 else {
                     number = 0;
                 }
-                input[i] = input[i] >> shift_key[number];
+                ctx.data[i] = ctx.data[i] >> shift_key[number];
                 if (consume) {
                     ctx.offset = i;
                     ctx.bitoffset = 0;
@@ -718,7 +842,6 @@ function RSHIFT(ctx, shift_key, start, end, consume) {
     }
 }
 function ADD(ctx, add_key, start, end, consume) {
-    const input = ctx.data;
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
             if (ctx.extendBufferSize != 0) {
@@ -729,13 +852,14 @@ function ADD(ctx, add_key, start, end, consume) {
             }
         }
         else {
-            ctx.errorDump ? console.log("[Error], hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
         }
     }
+    ctx.open();
     if (typeof add_key == "number") {
         for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            input[i] = input[i] + add_key;
+            ctx.data[i] = ctx.data[i] + add_key;
             if (consume) {
                 ctx.offset = i;
                 ctx.bitoffset = 0;
@@ -743,8 +867,11 @@ function ADD(ctx, add_key, start, end, consume) {
         }
     }
     else {
-        if (arraybuffcheck(add_key)) {
-            let number = -1;
+        if (typeof add_key == "string") {
+            add_key = Uint8Array.from(Array.from(add_key).map(letter => letter.charCodeAt(0)));
+        }
+        if (arrayBufferCheck(add_key)) {
+            var number = -1;
             for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
                 if (number != add_key.length - 1) {
                     number = number + 1;
@@ -752,7 +879,7 @@ function ADD(ctx, add_key, start, end, consume) {
                 else {
                     number = 0;
                 }
-                input[i] = input[i] + add_key[number];
+                ctx.data[i] = ctx.data[i] + add_key[number];
                 if (consume) {
                     ctx.offset = i;
                     ctx.bitoffset = 0;
@@ -764,11 +891,13 @@ function ADD(ctx, add_key, start, end, consume) {
         }
     }
 }
+// #region Search
 function fString(ctx, searchString) {
+    ctx.open();
     // Convert the searchString to Uint8Array
     const searchArray = new TextEncoder().encode(searchString);
     for (let i = ctx.offset; i <= ctx.size - searchArray.length; i++) {
-        let match = true;
+        var match = true;
         for (let j = 0; j < searchArray.length; j++) {
             if (ctx.data[i + j] !== searchArray[j]) {
                 match = false;
@@ -782,25 +911,25 @@ function fString(ctx, searchString) {
     return -1; // String not found
 }
 function fNumber(ctx, targetNumber, bits, unsigned, endian) {
+    ctx.open();
     check_size(ctx, Math.floor(bits / 8), 0);
     for (let z = ctx.offset; z <= (ctx.size - (bits / 8)); z++) {
         var off_in_bits = 0;
         var value = 0;
         for (var i = 0; i < bits;) {
-            var remaining = bits - i;
-            var bitOffset = off_in_bits & 7;
-            var currentByte = ctx.data[z + (off_in_bits >> 3)];
-            var read = Math.min(remaining, 8 - bitOffset);
-            var mask, readBits;
+            const remaining = bits - i;
+            const bitOffset = off_in_bits & 7;
+            const currentByte = ctx.data[z + (off_in_bits >> 3)];
+            const read = Math.min(remaining, 8 - bitOffset);
             if ((endian != undefined ? endian : ctx.endian) == "big") {
-                mask = ~(0xFF << read);
-                readBits = (currentByte >> (8 - read - bitOffset)) & mask;
+                let mask = ~(0xFF << read);
+                let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
                 value <<= read;
                 value |= readBits;
             }
             else {
-                mask = ~(0xFF << read);
-                readBits = (currentByte >> bitOffset) & mask;
+                let mask = ~(0xFF << read);
+                let readBits = (currentByte >> bitOffset) & mask;
                 value |= readBits << i;
             }
             off_in_bits += read;
@@ -821,19 +950,20 @@ function fNumber(ctx, targetNumber, bits, unsigned, endian) {
     return -1; // number not found
 }
 function fHalfFloat(ctx, targetNumber, endian) {
+    ctx.open();
     check_size(ctx, 2, 0);
     for (let z = ctx.offset; z <= (ctx.size - 2); z++) {
         var value = 0;
         if ((endian != undefined ? endian : ctx.endian) == "little") {
-            value = (ctx.data[z + 1] << 8) | ctx.data[z];
+            value = ((ctx.data[z + 1] & 0xFFFF) << 8) | (ctx.data[z] & 0xFFFF);
         }
         else {
-            value = (ctx.data[z] << 8) | ctx.data[z + 1];
+            value = ((ctx.data[z] & 0xFFFF) << 8) | (ctx.data[z + 1] & 0xFFFF);
         }
         const sign = (value & 0x8000) >> 15;
         const exponent = (value & 0x7C00) >> 10;
         const fraction = value & 0x03FF;
-        let floatValue;
+        var floatValue;
         if (exponent === 0) {
             if (fraction === 0) {
                 floatValue = (sign === 0) ? 0 : -0; // +/-0
@@ -862,21 +992,28 @@ function fHalfFloat(ctx, targetNumber, endian) {
     return -1; // number not found
 }
 function fFloat(ctx, targetNumber, endian) {
+    ctx.open();
     check_size(ctx, 4, 0);
     for (let z = ctx.offset; z <= (ctx.size - 4); z++) {
         var value = 0;
         if ((endian != undefined ? endian : ctx.endian) == "little") {
-            value = ((ctx.data[z + 3] << 24) | (ctx.data[z + 2] << 16) | (ctx.data[z + 1] << 8) | ctx.data[z]);
+            value = ((ctx.data[z + 3] & 0xFF) << 24) |
+                ((ctx.data[z + 2] & 0xFF) << 16) |
+                ((ctx.data[z + 1] & 0xFF) << 8) |
+                (ctx.data[z] & 0xFF);
         }
         else {
-            value = (ctx.data[z] << 24) | (ctx.data[z + 1] << 16) | (ctx.data[z + 2] << 8) | ctx.data[z + 3];
+            value = ((ctx.data[z] & 0xFF) << 24) |
+                ((ctx.data[z + 1] & 0xFF) << 16) |
+                ((ctx.data[z + 2] & 0xFF) << 8) |
+                (ctx.data[z + 3] & 0xFF);
         }
         const isNegative = (value & 0x80000000) !== 0 ? 1 : 0;
         // Extract the exponent and fraction parts
         const exponent = (value >> 23) & 0xFF;
         const fraction = value & 0x7FFFFF;
         // Calculate the float value
-        let floatValue;
+        var floatValue;
         if (exponent === 0) {
             // Denormalized number (exponent is 0)
             floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
@@ -896,12 +1033,16 @@ function fFloat(ctx, targetNumber, endian) {
     return -1; // number not found
 }
 function fBigInt(ctx, targetNumber, unsigned, endian) {
+    if (!hasBigInt) {
+        throw new Error("System doesn't support BigInt values.");
+    }
+    ctx.open();
     check_size(ctx, 8, 0);
     for (let z = ctx.offset; z <= (ctx.size - 8); z++) {
-        let value = BigInt(0);
+        var value = BigInt(0);
         if ((endian == undefined ? ctx.endian : endian) == "little") {
             for (let i = 0; i < 8; i++) {
-                value = value | BigInt(ctx.data[z + i]) << BigInt(8 * i);
+                value = value | BigInt((ctx.data[z + i] & 0xFF)) << BigInt(8 * i);
             }
             if (unsigned == undefined || unsigned == false) {
                 if (value & (BigInt(1) << BigInt(63))) {
@@ -911,7 +1052,7 @@ function fBigInt(ctx, targetNumber, unsigned, endian) {
         }
         else {
             for (let i = 0; i < 8; i++) {
-                value = (value << BigInt(8)) | BigInt(ctx.data[z + i]);
+                value = (value << BigInt(8)) | BigInt((ctx.data[z + i] & 0xFF));
             }
             if (unsigned == undefined || unsigned == false) {
                 if (value & (BigInt(1) << BigInt(63))) {
@@ -926,35 +1067,39 @@ function fBigInt(ctx, targetNumber, unsigned, endian) {
     return -1; // number not found
 }
 function fDoubleFloat(ctx, targetNumber, endian) {
+    if (!hasBigInt) {
+        throw new Error("System doesn't support BigInt values.");
+    }
+    ctx.open();
     check_size(ctx, 8, 0);
     for (let z = ctx.offset; z <= (ctx.size - 8); z++) {
-        let value = BigInt(0);
+        var value = BigInt(0);
         if ((endian == undefined ? ctx.endian : endian) == "little") {
             for (let i = 0; i < 8; i++) {
-                value = value | BigInt(ctx.data[z + i]) << BigInt(8 * i);
+                value = value | BigInt((ctx.data[z + i] & 0xFF)) << BigInt(8 * i);
             }
         }
         else {
             for (let i = 0; i < 8; i++) {
-                value = (value << BigInt(8)) | BigInt(ctx.data[z + i]);
+                value = (value << BigInt(8)) | BigInt((ctx.data[z + i] & 0xFF));
             }
         }
-        const sign = (value & 0x8000000000000000n) >> 63n;
-        const exponent = Number((value & 0x7ff0000000000000n) >> 52n) - 1023;
-        const fraction = Number(value & 0x000fffffffffffffn) / Math.pow(2, 52);
+        const sign = (value & BigInt("9223372036854775808")) >> BigInt(63);
+        const exponent = Number((value & BigInt("9218868437227405312")) >> BigInt(52)) - 1023;
+        const fraction = Number(value & BigInt("4503599627370495")) / Math.pow(2, 52);
         var floatValue;
         if (exponent == -1023) {
             if (fraction == 0) {
-                floatValue = (sign == 0n) ? 0 : -0; // +/-0
+                floatValue = (sign == BigInt(0)) ? 0 : -0; // +/-0
             }
             else {
                 // Denormalized number
-                floatValue = (sign == 0n ? 1 : -1) * Math.pow(2, -1022) * fraction;
+                floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, -1022) * fraction;
             }
         }
         else if (exponent == 1024) {
             if (fraction == 0) {
-                floatValue = (sign == 0n) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+                floatValue = (sign == BigInt(0)) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
             }
             else {
                 floatValue = Number.NaN;
@@ -962,7 +1107,7 @@ function fDoubleFloat(ctx, targetNumber, endian) {
         }
         else {
             // Normalized number
-            floatValue = (sign == 0n ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
+            floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
         }
         if (floatValue == targetNumber) {
             return z;
@@ -970,7 +1115,9 @@ function fDoubleFloat(ctx, targetNumber, endian) {
     }
     return -1; // number not found
 }
+// #region Write / Read Bits
 function wbit(ctx, value, bits, unsigned, endian) {
+    ctx.open();
     if (value == undefined) {
         throw new Error('Must supply value.');
     }
@@ -985,7 +1132,7 @@ function wbit(ctx, value, bits, unsigned, endian) {
     }
     if (unsigned == true || bits == 1) {
         if (value < 0 || value > Math.pow(2, bits)) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error(`Value is out of range for the specified ${bits}bit length.` + " min: " + 0 + " max: " + Math.pow(2, bits) + " value: " + value);
         }
     }
@@ -993,7 +1140,7 @@ function wbit(ctx, value, bits, unsigned, endian) {
         const maxValue = Math.pow(2, bits - 1) - 1;
         const minValue = -maxValue - 1;
         if (value < minValue || value > maxValue) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error(`Value is out of range for the specified ${bits}bit length.` + " min: " + minValue + " max: " + maxValue + " value: " + value);
         }
     }
@@ -1013,23 +1160,22 @@ function wbit(ctx, value, bits, unsigned, endian) {
     }
     var off_in_bits = (ctx.offset * 8) + ctx.bitoffset;
     for (var i = 0; i < bits;) {
-        var remaining = bits - i;
-        var bitOffset = off_in_bits & 7;
-        var byteOffset = off_in_bits >> 3;
-        var written = Math.min(remaining, 8 - bitOffset);
-        var mask, writeBits, destMask;
+        const remaining = bits - i;
+        const bitOffset = off_in_bits & 7;
+        const byteOffset = off_in_bits >> 3;
+        const written = Math.min(remaining, 8 - bitOffset);
         if ((endian != undefined ? endian : ctx.endian) == "big") {
-            mask = ~(-1 << written);
-            writeBits = (value >> (bits - i - written)) & mask;
+            let mask = ~(-1 << written);
+            let writeBits = (value >> (bits - i - written)) & mask;
             var destShift = 8 - bitOffset - written;
-            destMask = ~(mask << destShift);
+            let destMask = ~(mask << destShift);
             ctx.data[byteOffset] = (ctx.data[byteOffset] & destMask) | (writeBits << destShift);
         }
         else {
-            mask = ~(0xFF << written);
-            writeBits = value & mask;
+            let mask = ~(0xFF << written);
+            let writeBits = value & mask;
             value >>= written;
-            destMask = ~(mask << bitOffset);
+            let destMask = ~(mask << bitOffset);
             ctx.data[byteOffset] = (ctx.data[byteOffset] & destMask) | (writeBits << bitOffset);
         }
         off_in_bits += written;
@@ -1039,6 +1185,7 @@ function wbit(ctx, value, bits, unsigned, endian) {
     ctx.bitoffset = ((bits) + ctx.bitoffset) % 8;
 }
 function rbit(ctx, bits, unsigned, endian) {
+    ctx.open();
     if (bits == undefined || typeof bits != "number") {
         throw new Error("Enter number of bits to read");
     }
@@ -1050,26 +1197,25 @@ function rbit(ctx, bits, unsigned, endian) {
     }
     const size_needed = ((((bits - 1) + ctx.bitoffset) / 8) + ctx.offset);
     if (bits <= 0 || size_needed > ctx.size) {
-        ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
         throw new Error("Invalid number of bits to read: " + size_needed + " of " + ctx.size);
     }
     var off_in_bits = (ctx.offset * 8) + ctx.bitoffset;
     var value = 0;
     for (var i = 0; i < bits;) {
-        var remaining = bits - i;
-        var bitOffset = off_in_bits & 7;
-        var currentByte = ctx.data[off_in_bits >> 3];
-        var read = Math.min(remaining, 8 - bitOffset);
-        var mask, readBits;
+        const remaining = bits - i;
+        const bitOffset = off_in_bits & 7;
+        const currentByte = ctx.data[off_in_bits >> 3];
+        const read = Math.min(remaining, 8 - bitOffset);
         if ((endian != undefined ? endian : ctx.endian) == "big") {
-            mask = ~(0xFF << read);
-            readBits = (currentByte >> (8 - read - bitOffset)) & mask;
+            let mask = ~(0xFF << read);
+            let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
             value <<= read;
             value |= readBits;
         }
         else {
-            mask = ~(0xFF << read);
-            readBits = (currentByte >> bitOffset) & mask;
+            let mask = ~(0xFF << read);
+            let readBits = (currentByte >> bitOffset) & mask;
             value |= readBits << i;
         }
         off_in_bits += read;
@@ -1085,11 +1231,13 @@ function rbit(ctx, bits, unsigned, endian) {
     }
     return value;
 }
+// #region Write / Read Bytes
 function wbyte(ctx, value, unsigned) {
+    ctx.open();
     check_size(ctx, 1, 0);
     if (unsigned == true) {
         if (value < 0 || value > 255) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error('Value is out of range for the specified 8bit length.' + " min: " + 0 + " max: " + 255 + " value: " + value);
         }
     }
@@ -1097,17 +1245,40 @@ function wbyte(ctx, value, unsigned) {
         const maxValue = Math.pow(2, 8 - 1) - 1;
         const minValue = -maxValue - 1;
         if (value < minValue || value > maxValue) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error('Value is out of range for the specified 8bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
         }
     }
-    ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
+    if (canInt8) {
+        if ((unsigned == undefined || unsigned == false)) {
+            ctx.view.setInt8(ctx.offset, value);
+        }
+        else {
+            ctx.view.setUint8(ctx.offset, value);
+        }
+    }
+    else {
+        ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
+    }
     ctx.offset += 1;
     ctx.bitoffset = 0;
 }
 function rbyte(ctx, unsigned) {
+    ctx.open();
     check_size(ctx, 1);
-    const read = ctx.data[ctx.offset];
+    var read;
+    if (canInt8) {
+        if ((unsigned == undefined || unsigned == false)) {
+            read = ctx.view.getInt8(ctx.offset);
+        }
+        else {
+            read = ctx.view.getUint8(ctx.offset);
+        }
+        ctx.offset += 1;
+        ctx.bitoffset = 0;
+        return read;
+    }
+    read = ctx.data[ctx.offset];
     ctx.offset += 1;
     ctx.bitoffset = 0;
     if (unsigned == true) {
@@ -1117,11 +1288,13 @@ function rbyte(ctx, unsigned) {
         return read > 127 ? read - 256 : read;
     }
 }
+// #region Write / Read Int16
 function wint16(ctx, value, unsigned, endian) {
+    ctx.open();
     check_size(ctx, 2, 0);
     if (unsigned == true) {
         if (value < 0 || value > 65535) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error('Value is out of range for the specified 16bit length.' + " min: " + 0 + " max: " + 65535 + " value: " + value);
         }
     }
@@ -1129,29 +1302,53 @@ function wint16(ctx, value, unsigned, endian) {
         const maxValue = Math.pow(2, 16 - 1) - 1;
         const minValue = -maxValue - 1;
         if (value < minValue || value > maxValue) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error('Value is out of range for the specified 16bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
         }
     }
-    if ((endian != undefined ? endian : ctx.endian) == "little") {
-        ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xff;
-        ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff;
+    if (canInt16) {
+        if ((unsigned == undefined || unsigned == false)) {
+            ctx.view.setInt16(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
+        }
+        else {
+            ctx.view.setUint16(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
+        }
     }
     else {
-        ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff;
-        ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? value : value & 0xff;
+        if ((endian != undefined ? endian : ctx.endian) == "little") {
+            ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xff;
+            ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff;
+        }
+        else {
+            ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff;
+            ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? value : value & 0xff;
+        }
     }
     ctx.offset += 2;
     ctx.bitoffset = 0;
 }
 function rint16(ctx, unsigned, endian) {
+    ctx.open();
     check_size(ctx, 2);
     var read;
-    if ((endian != undefined ? endian : ctx.endian) == "little") {
-        read = (ctx.data[ctx.offset + 1] << 8) | ctx.data[ctx.offset];
+    if (canInt16) {
+        if (unsigned == undefined || unsigned == false) {
+            read = ctx.view.getInt16(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
+        }
+        else {
+            read = ctx.view.getUint16(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
+        }
+        ctx.offset += 2;
+        ctx.bitoffset = 0;
+        return read;
     }
     else {
-        read = (ctx.data[ctx.offset] << 8) | ctx.data[ctx.offset + 1];
+        if ((endian != undefined ? endian : ctx.endian) == "little") {
+            read = ((ctx.data[ctx.offset + 1] & 0xFFFF) << 8) | (ctx.data[ctx.offset] & 0xFFFF);
+        }
+        else {
+            read = ((ctx.data[ctx.offset] & 0xFFFF) << 8) | (ctx.data[ctx.offset + 1] & 0xFFFF);
+        }
     }
     ctx.offset += 2;
     ctx.bitoffset = 0;
@@ -1162,12 +1359,21 @@ function rint16(ctx, unsigned, endian) {
         return read & 0xFFFF;
     }
 }
+// #region Write / Read Float16
 function rhalffloat(ctx, endian) {
+    if (canFloat16) {
+        ctx.open();
+        check_size(ctx, 2);
+        const float16Value = ctx.view.getFloat16(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
+        ctx.offset += 2;
+        ctx.bitoffset = 0;
+        return float16Value;
+    }
     var uint16Value = ctx.readInt16(true, (endian != undefined ? endian : ctx.endian));
     const sign = (uint16Value & 0x8000) >> 15;
     const exponent = (uint16Value & 0x7C00) >> 10;
     const fraction = uint16Value & 0x03FF;
-    let floatValue;
+    var floatValue;
     if (exponent === 0) {
         if (fraction === 0) {
             floatValue = (sign === 0) ? 0 : -0; // +/-0
@@ -1192,36 +1398,54 @@ function rhalffloat(ctx, endian) {
     return floatValue;
 }
 function whalffloat(ctx, value, endian) {
+    ctx.open();
     check_size(ctx, 2, 0);
     const maxValue = 65504;
     const minValue = 5.96e-08;
     if (value < minValue || value > maxValue) {
-        ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
         throw new Error('Value is out of range for the specified half float length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
     }
-    const signMask = 0x8000;
-    const exponentMask = 0x7C00;
-    const fractionMask = 0x03FF;
-    // Determine sign, exponent, and fraction bits
-    let signBit = (value & signMask) >> 15;
-    let exponentBits = (value & exponentMask) >> 10;
-    let fractionBits = value & fractionMask;
-    // Special cases for NaN and Infinity
-    if (exponentBits === 0x1F) {
-        // NaN or Infinity, copy exponent and fraction
-        exponentBits = 0xFF;
+    if (canFloat16) {
+        ctx.view.setFloat16(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
+        ctx.offset += 2;
+        ctx.bitoffset = 0;
+        return;
     }
-    else if (exponentBits === 0x00) {
-        // Denormalized numbers, exponent is 0, adjust exponent bits
-        exponentBits = 0x00;
-        fractionBits = 0x00; // Clear fraction for denormals
+    const floatView = new Float32Array(1);
+    const intView = new Uint32Array(floatView.buffer);
+    floatView[0] = value;
+    const x = intView[0];
+    const sign = (x >> 31) & 0x1;
+    var exponent = (x >> 23) & 0xff;
+    var mantissa = x & 0x7fffff;
+    var halfFloatBits;
+    if (exponent === 0xff) {
+        // NaN or Infinity
+        halfFloatBits = (sign << 15) | (0x1f << 10) | (mantissa ? 0x200 : 0);
+    }
+    else if (exponent > 142) {
+        // Overflow → Infinity
+        halfFloatBits = (sign << 15) | (0x1f << 10);
+    }
+    else if (exponent < 113) {
+        // Subnormal or zero
+        if (exponent < 103) {
+            halfFloatBits = sign << 15;
+        }
+        else {
+            mantissa |= 0x800000;
+            const shift = 125 - exponent;
+            mantissa = mantissa >> shift;
+            halfFloatBits = (sign << 15) | (mantissa >> 13);
+        }
     }
     else {
-        // Normalized number, subtract exponent bias
-        exponentBits -= 15;
+        // Normalized
+        exponent = exponent - 112;
+        mantissa = mantissa >> 13;
+        halfFloatBits = (sign << 15) | (exponent << 10) | mantissa;
     }
-    // Combine sign, exponent, and fraction bits into half float format
-    let halfFloatBits = (signBit << 15) | (exponentBits << 10) | fractionBits;
     // Write bytes based on endianness
     if ((endian == undefined ? ctx.endian : endian) == "little") {
         ctx.data[ctx.offset] = halfFloatBits & 0xFF;
@@ -1234,11 +1458,13 @@ function whalffloat(ctx, value, endian) {
     ctx.offset += 2;
     ctx.bitoffset = 0;
 }
+// #region Write / Read Int32
 function wint32(ctx, value, unsigned, endian) {
+    ctx.open();
     check_size(ctx, 4, 0);
     if (unsigned == true) {
         if (value < 0 || value > 4294967295) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error('Value is out of range for the specified 32bit length.' + " min: " + 0 + " max: " + 4294967295 + " value: " + value);
         }
     }
@@ -1246,33 +1472,61 @@ function wint32(ctx, value, unsigned, endian) {
         const maxValue = Math.pow(2, 32 - 1) - 1;
         const minValue = -maxValue - 1;
         if (value < minValue || value > maxValue) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error('Value is out of range for the specified 32bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
         }
     }
-    if ((endian == undefined ? ctx.endian : endian) == "little") {
-        ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-        ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
-        ctx.data[ctx.offset + 2] = (unsigned == undefined || unsigned == false) ? (value >> 16) : (value >> 16) & 0xFF;
-        ctx.data[ctx.offset + 3] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
+    if (canInt32) {
+        if ((unsigned == undefined || unsigned == false)) {
+            ctx.view.setInt32(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
+        }
+        else {
+            ctx.view.setUint32(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
+        }
     }
     else {
-        ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
-        ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 16) : (value >> 16) & 0xFF;
-        ctx.data[ctx.offset + 2] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
-        ctx.data[ctx.offset + 3] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
+        if ((endian == undefined ? ctx.endian : endian) == "little") {
+            ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
+            ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
+            ctx.data[ctx.offset + 2] = (unsigned == undefined || unsigned == false) ? (value >> 16) : (value >> 16) & 0xFF;
+            ctx.data[ctx.offset + 3] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
+        }
+        else {
+            ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
+            ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 16) : (value >> 16) & 0xFF;
+            ctx.data[ctx.offset + 2] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
+            ctx.data[ctx.offset + 3] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
+        }
     }
     ctx.offset += 4;
     ctx.bitoffset = 0;
 }
 function rint32(ctx, unsigned, endian) {
+    ctx.open();
     check_size(ctx, 4);
     var read;
+    if (canInt32) {
+        if ((unsigned == undefined || unsigned == false)) {
+            read = ctx.view.getInt32(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
+        }
+        else {
+            read = ctx.view.getUint32(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
+        }
+        ctx.offset += 4;
+        ctx.bitoffset = 0;
+        return read;
+    }
     if ((endian != undefined ? endian : ctx.endian) == "little") {
-        read = ((ctx.data[ctx.offset + 3] << 24) | (ctx.data[ctx.offset + 2] << 16) | (ctx.data[ctx.offset + 1] << 8) | ctx.data[ctx.offset]);
+        read = ((ctx.data[ctx.offset + 3] & 0xFF) << 24) |
+            ((ctx.data[ctx.offset + 2] & 0xFF) << 16) |
+            ((ctx.data[ctx.offset + 1] & 0xFF) << 8) |
+            (ctx.data[ctx.offset] & 0xFF);
     }
     else {
-        read = (ctx.data[ctx.offset] << 24) | (ctx.data[ctx.offset + 1] << 16) | (ctx.data[ctx.offset + 2] << 8) | ctx.data[ctx.offset + 3];
+        read = ((ctx.data[ctx.offset] & 0xFF) << 24) |
+            ((ctx.data[ctx.offset + 1] & 0xFF) << 16) |
+            ((ctx.data[ctx.offset + 2] & 0xFF) << 8) |
+            (ctx.data[ctx.offset + 3] & 0xFF);
     }
     ctx.offset += 4;
     ctx.bitoffset = 0;
@@ -1283,15 +1537,24 @@ function rint32(ctx, unsigned, endian) {
         return read >>> 0;
     }
 }
+// #region Write / Read Float32
 function rfloat(ctx, endian) {
-    var uint32Value = ctx.readInt32(true, (endian == undefined ? ctx.endian : endian));
+    if (canFloat32) {
+        ctx.open();
+        check_size(ctx, 4);
+        const float32Value = ctx.view.getFloat32(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
+        ctx.offset += 4;
+        ctx.bitoffset = 0;
+        return float32Value;
+    }
+    const uint32Value = ctx.readInt32(true, (endian == undefined ? ctx.endian : endian));
     // Check if the value is negative (i.e., the most significant bit is set)
     const isNegative = (uint32Value & 0x80000000) !== 0 ? 1 : 0;
     // Extract the exponent and fraction parts
     const exponent = (uint32Value >> 23) & 0xFF;
     const fraction = uint32Value & 0x7FFFFF;
     // Calculate the float value
-    let floatValue;
+    var floatValue;
     if (exponent === 0) {
         // Denormalized number (exponent is 0)
         floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
@@ -1307,6 +1570,7 @@ function rfloat(ctx, endian) {
     return floatValue;
 }
 function wfloat(ctx, value, endian) {
+    ctx.open();
     check_size(ctx, 4, 0);
     const MIN_POSITIVE_FLOAT32 = Number.MIN_VALUE;
     const MAX_POSITIVE_FLOAT32 = 3.4028235e+38;
@@ -1315,67 +1579,94 @@ function wfloat(ctx, value, endian) {
     if (!((value === 0) ||
         (value >= MIN_POSITIVE_FLOAT32 && value <= MAX_POSITIVE_FLOAT32) ||
         (value >= MIN_NEGATIVE_FLOAT32 && value <= MAX_NEGATIVE_FLOAT32))) {
-        ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
         throw new Error('Value is out of range for the specified float length.' + " min: " + MIN_NEGATIVE_FLOAT32 + " max: " + MAX_POSITIVE_FLOAT32 + " value: " + value);
     }
-    const dataView = new DataView(new Uint8Array(4).buffer);
-    dataView.setFloat32(0, value, true);
-    let intValue = dataView.getInt32(0, true);
-    let shift = 0;
-    for (let i = 0; i < 4; i++) {
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            ctx.data[ctx.offset + i] = (intValue >> shift) & 0xFF;
+    if (canFloat32) {
+        ctx.view.setFloat32(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
+    }
+    else {
+        const arrayFloat = new Float32Array(1);
+        arrayFloat[0] = value;
+        if (endian != undefined ? endian == "little" : ctx.endian == "little") {
+            ctx.data[ctx.offset] = arrayFloat.buffer[0];
+            ctx.data[ctx.offset + 1] = arrayFloat.buffer[1];
+            ctx.data[ctx.offset + 2] = arrayFloat.buffer[2];
+            ctx.data[ctx.offset + 3] = arrayFloat.buffer[3];
         }
         else {
-            ctx.data[ctx.offset + (3 - i)] = (intValue >> shift) & 0xFF;
+            ctx.data[ctx.offset] = arrayFloat.buffer[3];
+            ctx.data[ctx.offset + 1] = arrayFloat.buffer[2];
+            ctx.data[ctx.offset + 2] = arrayFloat.buffer[1];
+            ctx.data[ctx.offset + 3] = arrayFloat.buffer[0];
         }
-        shift += 8;
     }
     ctx.offset += 4;
     ctx.bitoffset = 0;
 }
+// #region Write / Read Int64
 function rint64(ctx, unsigned, endian) {
+    if (!hasBigInt) {
+        throw new Error("System doesn't support BigInt values.");
+    }
+    ctx.open();
     check_size(ctx, 8);
-    // Convert the byte array to a BigInt
-    let value = BigInt(0);
-    if ((endian == undefined ? ctx.endian : endian) == "little") {
-        for (let i = 0; i < 8; i++) {
-            value = value | BigInt(ctx.data[ctx.offset]) << BigInt(8 * i);
-            ctx.offset += 1;
-        }
+    var value = BigInt(0);
+    if (canBigInt64) {
         if (unsigned == undefined || unsigned == false) {
-            if (value & (BigInt(1) << BigInt(63))) {
-                value -= BigInt(1) << BigInt(64);
-            }
+            value = ctx.view.getBigInt64(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
         }
+        else {
+            value = ctx.view.getBigUint64(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
+        }
+        ctx.offset += 8;
     }
     else {
-        for (let i = 0; i < 8; i++) {
-            value = (value << BigInt(8)) | BigInt(ctx.data[ctx.offset]);
-            ctx.offset += 1;
+        if ((endian == undefined ? ctx.endian : endian) == "little") {
+            for (let i = 0; i < 8; i++) {
+                value = value | BigInt((ctx.data[ctx.offset] & 0xFF)) << BigInt(8 * i);
+                ctx.offset += 1;
+            }
+            if (unsigned == undefined || unsigned == false) {
+                if (value & (BigInt(1) << BigInt(63))) {
+                    value -= BigInt(1) << BigInt(64);
+                }
+            }
         }
-        if (unsigned == undefined || unsigned == false) {
-            if (value & (BigInt(1) << BigInt(63))) {
-                value -= BigInt(1) << BigInt(64);
+        else {
+            for (let i = 0; i < 8; i++) {
+                value = (value << BigInt(8)) | BigInt((ctx.data[ctx.offset] & 0xFF));
+                ctx.offset += 1;
+            }
+            if (unsigned == undefined || unsigned == false) {
+                if (value & (BigInt(1) << BigInt(63))) {
+                    value -= BigInt(1) << BigInt(64);
+                }
             }
         }
     }
     ctx.bitoffset = 0;
-    if (ctx.enforceBigInt) {
+    if (ctx.enforceBigInt == true) {
         return value;
     }
     else {
         if (isSafeInt64(value)) {
             return Number(value);
         }
+        else {
+            throw new Error("Value is outside of number range and enforceBigInt is set to false. " + value);
+        }
     }
-    return value;
 }
 function wint64(ctx, value, unsigned, endian) {
+    if (!hasBigInt) {
+        throw new Error("System doesn't support BigInt values.");
+    }
+    ctx.open();
     check_size(ctx, 8, 0);
     if (unsigned == true) {
         if (value < 0 || value > Math.pow(2, 64) - 1) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error('Value is out of range for the specified 64bit length.' + " min: " + 0 + " max: " + (Math.pow(2, 64) - 1) + " value: " + value);
         }
     }
@@ -1383,49 +1674,61 @@ function wint64(ctx, value, unsigned, endian) {
         const maxValue = Math.pow(2, 63) - 1;
         const minValue = -Math.pow(2, 63);
         if (value < minValue || value > maxValue) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error('Value is out of range for the specified 64bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
         }
     }
-    // Convert the BigInt to a 64-bit signed integer
-    const bigIntArray = new BigInt64Array(1);
-    bigIntArray[0] = BigInt(value);
-    // Use two 32-bit views to write the Int64
-    const int32Array = new Int32Array(bigIntArray.buffer);
-    for (let i = 0; i < 2; i++) {
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            if (unsigned == undefined || unsigned == false) {
-                ctx.data[ctx.offset + i * 4 + 0] = int32Array[i];
-                ctx.data[ctx.offset + i * 4 + 1] = (int32Array[i] >> 8);
-                ctx.data[ctx.offset + i * 4 + 2] = (int32Array[i] >> 16);
-                ctx.data[ctx.offset + i * 4 + 3] = (int32Array[i] >> 24);
-            }
-            else {
-                ctx.data[ctx.offset + i * 4 + 0] = int32Array[i] & 0xFF;
-                ctx.data[ctx.offset + i * 4 + 1] = (int32Array[i] >> 8) & 0xFF;
-                ctx.data[ctx.offset + i * 4 + 2] = (int32Array[i] >> 16) & 0xFF;
-                ctx.data[ctx.offset + i * 4 + 3] = (int32Array[i] >> 24) & 0xFF;
-            }
+    if (canBigInt64) {
+        if (unsigned == undefined || unsigned == false) {
+            ctx.view.setBigInt64(ctx.offset, BigInt(value), endian != undefined ? endian == "little" : ctx.endian == "little");
         }
         else {
-            if (unsigned == undefined || unsigned == false) {
-                ctx.data[ctx.offset + (1 - i) * 4 + 3] = int32Array[i];
-                ctx.data[ctx.offset + (1 - i) * 4 + 2] = (int32Array[i] >> 8);
-                ctx.data[ctx.offset + (1 - i) * 4 + 1] = (int32Array[i] >> 16);
-                ctx.data[ctx.offset + (1 - i) * 4 + 0] = (int32Array[i] >> 24);
+            ctx.view.setBigUint64(ctx.offset, BigInt(value), endian != undefined ? endian == "little" : ctx.endian == "little");
+        }
+    }
+    else {
+        // Convert the BigInt to a 64-bit signed integer
+        const bigIntArray = new BigInt64Array(1);
+        bigIntArray[0] = BigInt(value);
+        // Use two 32-bit views to write the Int64
+        const int32Array = new Int32Array(bigIntArray.buffer);
+        for (let i = 0; i < 2; i++) {
+            if ((endian == undefined ? ctx.endian : endian) == "little") {
+                if (unsigned == undefined || unsigned == false) {
+                    ctx.data[ctx.offset + i * 4 + 0] = int32Array[i];
+                    ctx.data[ctx.offset + i * 4 + 1] = (int32Array[i] >> 8);
+                    ctx.data[ctx.offset + i * 4 + 2] = (int32Array[i] >> 16);
+                    ctx.data[ctx.offset + i * 4 + 3] = (int32Array[i] >> 24);
+                }
+                else {
+                    ctx.data[ctx.offset + i * 4 + 0] = int32Array[i] & 0xFF;
+                    ctx.data[ctx.offset + i * 4 + 1] = (int32Array[i] >> 8) & 0xFF;
+                    ctx.data[ctx.offset + i * 4 + 2] = (int32Array[i] >> 16) & 0xFF;
+                    ctx.data[ctx.offset + i * 4 + 3] = (int32Array[i] >> 24) & 0xFF;
+                }
             }
             else {
-                ctx.data[ctx.offset + (1 - i) * 4 + 3] = int32Array[i] & 0xFF;
-                ctx.data[ctx.offset + (1 - i) * 4 + 2] = (int32Array[i] >> 8) & 0xFF;
-                ctx.data[ctx.offset + (1 - i) * 4 + 1] = (int32Array[i] >> 16) & 0xFF;
-                ctx.data[ctx.offset + (1 - i) * 4 + 0] = (int32Array[i] >> 24) & 0xFF;
+                if (unsigned == undefined || unsigned == false) {
+                    ctx.data[ctx.offset + (1 - i) * 4 + 3] = int32Array[i];
+                    ctx.data[ctx.offset + (1 - i) * 4 + 2] = (int32Array[i] >> 8);
+                    ctx.data[ctx.offset + (1 - i) * 4 + 1] = (int32Array[i] >> 16);
+                    ctx.data[ctx.offset + (1 - i) * 4 + 0] = (int32Array[i] >> 24);
+                }
+                else {
+                    ctx.data[ctx.offset + (1 - i) * 4 + 3] = int32Array[i] & 0xFF;
+                    ctx.data[ctx.offset + (1 - i) * 4 + 2] = (int32Array[i] >> 8) & 0xFF;
+                    ctx.data[ctx.offset + (1 - i) * 4 + 1] = (int32Array[i] >> 16) & 0xFF;
+                    ctx.data[ctx.offset + (1 - i) * 4 + 0] = (int32Array[i] >> 24) & 0xFF;
+                }
             }
         }
     }
     ctx.offset += 8;
     ctx.bitoffset = 0;
 }
+// #region Write / Read Float64
 function wdfloat(ctx, value, endian) {
+    ctx.open();
     check_size(ctx, 8, 0);
     const MIN_POSITIVE_FLOAT64 = 2.2250738585072014e-308;
     const MAX_POSITIVE_FLOAT64 = Number.MAX_VALUE;
@@ -1434,43 +1737,56 @@ function wdfloat(ctx, value, endian) {
     if (!((value === 0) ||
         (value >= MIN_POSITIVE_FLOAT64 && value <= MAX_POSITIVE_FLOAT64) ||
         (value >= MIN_NEGATIVE_FLOAT64 && value <= MAX_NEGATIVE_FLOAT64))) {
-        ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
         throw new Error('Value is out of range for the specified 64bit length.' + " min: " + MIN_NEGATIVE_FLOAT64 + " max: " + MAX_POSITIVE_FLOAT64 + " value: " + value);
     }
-    const intArray = new Int32Array(2);
-    const floatArray = new Float64Array(intArray.buffer);
-    floatArray[0] = value;
-    const bytes = new Uint8Array(intArray.buffer);
-    for (let i = 0; i < 8; i++) {
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            ctx.data[ctx.offset + i] = bytes[i];
-        }
-        else {
-            ctx.data[ctx.offset + (7 - i)] = bytes[i];
+    if (canFloat64) {
+        ctx.view.setFloat64(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
+    }
+    else {
+        const intArray = new Int32Array(2);
+        const floatArray = new Float64Array(intArray.buffer);
+        floatArray[0] = value;
+        const bytes = new Uint8Array(intArray.buffer);
+        for (let i = 0; i < 8; i++) {
+            if ((endian == undefined ? ctx.endian : endian) == "little") {
+                ctx.data[ctx.offset + i] = bytes[i];
+            }
+            else {
+                ctx.data[ctx.offset + (7 - i)] = bytes[i];
+            }
         }
     }
     ctx.offset += 8;
     ctx.bitoffset = 0;
 }
 function rdfloat(ctx, endian) {
+    if (canFloat64) {
+        ctx.open();
+        check_size(ctx, 8, 0);
+        const floatValue = ctx.view.getFloat64(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
+        ctx.offset += 8;
+        ctx.bitoffset = 0;
+        return floatValue;
+    }
     endian = (endian == undefined ? ctx.endian : endian);
     var uint64Value = ctx.readInt64(true, endian);
-    const sign = (BigInt(uint64Value) & 0x8000000000000000n) >> 63n;
-    const exponent = Number((BigInt(uint64Value) & 0x7ff0000000000000n) >> 52n) - 1023;
-    const fraction = Number(BigInt(uint64Value) & 0x000fffffffffffffn) / Math.pow(2, 52);
+    const sign = (BigInt(uint64Value) & BigInt("9223372036854775808")) >> BigInt(63);
+    const exponent = Number((BigInt(uint64Value) & BigInt("9218868437227405312")) >> BigInt(52)) - 1023;
+    const fraction = Number(BigInt(uint64Value) & BigInt("4503599627370495")) / Math.pow(2, 52);
     var floatValue;
     if (exponent == -1023) {
         if (fraction == 0) {
-            floatValue = (sign == 0n) ? 0 : -0; // +/-0
+            floatValue = (sign == BigInt(0)) ? 0 : -0; // +/-0
         }
         else {
             // Denormalized number
-            floatValue = (sign == 0n ? 1 : -1) * Math.pow(2, -1022) * fraction;
+            floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, -1022) * fraction;
         }
     }
     else if (exponent == 1024) {
         if (fraction == 0) {
-            floatValue = (sign == 0n) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+            floatValue = (sign == BigInt(0)) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
         }
         else {
             floatValue = Number.NaN;
@@ -1478,11 +1794,13 @@ function rdfloat(ctx, endian) {
     }
     else {
         // Normalized number
-        floatValue = (sign == 0n ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
+        floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
     }
     return floatValue;
 }
+// #region Write / Read Strings
 function rstring(ctx, options) {
+    ctx.open();
     var length = options && options.length;
     var stringType = options && options.stringType || 'utf-8';
     var terminateValue = options && options.terminateValue;
@@ -1572,7 +1890,7 @@ function rstring(ctx, options) {
             maxBytes = ctx.readInt32(true, endian);
         }
         else {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("Invalid length read size: " + lengthReadSize);
         }
         // Read the string as Pascal or Delphi encoded
@@ -1580,6 +1898,7 @@ function rstring(ctx, options) {
         for (let i = 0; i < maxBytes; i++) {
             if (stringType == 'wide-pascal') {
                 const read = ctx.readInt16(true, endian);
+                i++;
                 if (!(stripNull == true && read == 0)) {
                     encodedBytes.push(read);
                 }
@@ -1593,10 +1912,12 @@ function rstring(ctx, options) {
         }
         var str_return;
         if (stringType == 'wide-pascal') {
-            str_return = new TextDecoder(encoding).decode(new Uint16Array(encodedBytes));
+            const strBuffer = new Uint16Array(encodedBytes);
+            str_return = new TextDecoder().decode(strBuffer.buffer);
         }
         else {
-            str_return = new TextDecoder(encoding).decode(new Uint8Array(encodedBytes));
+            const strBuffer = new Uint8Array(encodedBytes);
+            str_return = new TextDecoder(encoding).decode(strBuffer);
         }
         return str_return;
     }
@@ -1605,6 +1926,7 @@ function rstring(ctx, options) {
     }
 }
 function wstring(ctx, string, options) {
+    ctx.open();
     var length = options && options.length;
     var stringType = options && options.stringType || 'utf-8';
     var terminateValue = options && options.terminateValue;
@@ -1617,9 +1939,9 @@ function wstring(ctx, string, options) {
         if (length == undefined && terminateValue == undefined) {
             terminateValue = 0;
         }
-        var totalLength = (length || encodedString.length) + (terminateValue != undefined ? 1 : 0);
+        var totalLength = (length || encodedString.byteLength) + (terminateValue != undefined ? 1 : 0);
         if (stringType == 'utf-16') {
-            totalLength = (length || (encodedString.length * 2)) + (terminateValue != undefined ? 2 : 0);
+            totalLength = (length || encodedString.byteLength) + (terminateValue != undefined ? 2 : 0);
         }
         check_size(ctx, totalLength, 0);
         // Write the string bytes to the Uint8Array
@@ -1666,41 +1988,38 @@ function wstring(ctx, string, options) {
             maxLength = 4294967295;
         }
         else {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("Invalid length write size: " + lengthWriteSize);
         }
         if (string.length > maxLength || (length || 0) > maxLength) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
+            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
             throw new Error("String outsize of max write length: " + maxLength);
         }
-        var maxBytes = Math.min(string.length, maxLength);
+        const maxBytes = Math.min(string.length, maxLength);
         const encodedString = encoder.encode(string.substring(0, maxBytes));
-        var totalLength = (length || encodedString.length);
-        if (stringType == 'wide-pascal') {
-            totalLength = (length || (encodedString.length * 2));
-        }
+        var totalLength = (length || encodedString.byteLength);
         if (lengthWriteSize == 1) {
-            ctx.writeUByte(maxBytes);
+            ctx.writeUByte(totalLength);
         }
         else if (lengthWriteSize == 2) {
-            ctx.writeUInt16(maxBytes, endian);
+            ctx.writeUInt16(totalLength, endian);
         }
         else if (lengthWriteSize == 4) {
-            ctx.writeUInt32(maxBytes, endian);
+            ctx.writeUInt32(totalLength, endian);
         }
         check_size(ctx, totalLength, 0);
         // Write the string bytes to the Uint8Array
-        for (let i = 0; i < encodedString.length; i++) {
+        for (let i = 0; i < totalLength; i++) {
             if (stringType == 'wide-pascal') {
-                const charCode = encodedString[i];
                 if (endian == "little") {
-                    ctx.data[ctx.offset + i * 2] = charCode & 0xFF;
-                    ctx.data[ctx.offset + i * 2 + 1] = (charCode >> 8) & 0xFF;
+                    ctx.data[ctx.offset + i] = encodedString[i];
+                    ctx.data[ctx.offset + i + 1] = encodedString[i + 1];
                 }
                 else {
-                    ctx.data[ctx.offset + i * 2 + 1] = charCode & 0xFF;
-                    ctx.data[ctx.offset + i * 2] = (charCode >> 8) & 0xFF;
+                    ctx.data[ctx.offset + i + 1] = encodedString[i];
+                    ctx.data[ctx.offset + i] = encodedString[i + 1];
                 }
+                i++;
             }
             else {
                 ctx.data[ctx.offset + i] = encodedString[i];
@@ -1713,8 +2032,33 @@ function wstring(ctx, string, options) {
         throw new Error('Unsupported string type: ' + stringType);
     }
 }
+// #region Class
+/**
+ * Base class for BiReader and BiWriter
+ */
 class BiBase {
-    constructor() {
+    /**
+     * Get the current buffer data.
+     *
+     * @type {DataType}
+     */
+    get data() {
+        return __classPrivateFieldGet(this, _BiBase_data, "f");
+    }
+    ;
+    /**
+     * Set the current buffer data.
+     *
+     * @param {DataType} data
+     */
+    set data(data) {
+        if (this.isBufferOrUint8Array(data)) {
+            __classPrivateFieldSet(this, _BiBase_data, data, "f");
+            this.updateView();
+        }
+    }
+    ;
+    constructor(input, writeable) {
         /**
          * Endianness of default read.
          * @type {endian}
@@ -1743,12 +2087,8 @@ class BiBase {
         /**
          * Console log a hexdump on error.
          */
-        this.errorDump = true;
-        /**
-         * Current buffer data.
-         * @type {Buffer|Uint8Array|null}
-         */
-        this.data = null;
+        this.errorDump = false;
+        _BiBase_data.set(this, null);
         /**
          * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
          *
@@ -1760,14 +2100,39 @@ class BiBase {
          */
         this.extendBufferSize = 0;
         this.fd = null;
-        this.filePath = "";
-        this.fsMode = "";
+        this.filePath = null;
+        this.fsMode = "r";
         /**
          * The settings that used when using the .str getter / setter
          */
         this.strDefaults = { stringType: "utf-8", terminateValue: 0x0 };
+        /**
+         * Window size of the file data (largest amount it can read)
+         */
         this.maxFileSize = null;
-        this.enforceBigInt = false;
+        this.enforceBigInt = null;
+        this.mode = 'memory';
+        if (typeof input == "string") {
+            if (typeof Buffer === 'undefined' || typeof fs == "undefined") {
+                throw new Error("Need node to read or write files.");
+            }
+            this.filePath = input;
+            this.mode = "file";
+        }
+        else {
+            this.mode = "memory";
+        }
+        if (this.maxFileSize == null) {
+            this.maxFileSize = MAX_LENGTH() || 0x80000000;
+        }
+        if (writeable != undefined) {
+            if (writeable == true) {
+                this.fsMode = "w+";
+            }
+            else {
+                this.fsMode = "r";
+            }
+        }
     }
     ;
     /**
@@ -1794,67 +2159,227 @@ class BiBase {
     writeMode(mode) {
         if (mode) {
             this.strict = false;
+            if (this.mode == "file") {
+                this.fsMode = "w+";
+                this.close();
+                this.open();
+            }
             return;
         }
         else {
             this.strict = true;
+            if (this.mode == "file") {
+                this.fsMode = "r";
+                this.close();
+                this.open();
+            }
             return;
         }
     }
     ;
     /**
-     * Dummy function, not needed on Non-Stream
+     * Opens the file in `file` mode. Must be run before reading or writing.
+     *
+     * @returns {number} file size
      */
     open() {
+        if (this.mode == "memory") {
+            return this.size;
+        }
+        if (this.fd != null) {
+            return this.size;
+        }
+        if (fs == undefined) {
+            throw new Error("Can't load file without Node.");
+        }
+        if (this.maxFileSize == null) {
+            this.maxFileSize = MAX_LENGTH();
+        }
+        try {
+            this.fd = fs.openSync(this.filePath, this.fsMode);
+        }
+        catch (error) {
+            throw new Error(error);
+        }
+        this.updateSize();
+        this.data = Buffer.alloc(this.size);
+        try {
+            fs.readSync(this.fd, this.data, 0, this.data.length, null);
+        }
+        catch (error) {
+            throw new Error(error);
+        }
+        if (this.offset != undefined || this.bitoffset != undefined) {
+            this.offset = ((Math.abs(this.offset || 0)) + Math.ceil((Math.abs(this.bitoffset || 0)) / 8));
+            // Adjust byte offset based on bit overflow
+            this.offset += Math.floor((Math.abs(this.bitoffset || 0)) / 8);
+            // Adjust bit offset
+            this.bitoffset = Math.abs(normalizeBitOffset(this.bitoffset)) % 8;
+            // Ensure bit offset stays between 0-7
+            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
+            // Ensure offset doesn't go negative
+            this.offset = Math.max(this.offset, 0);
+            if (this.offset > this.size) {
+                if (this.strict == false) {
+                    if (this.extendBufferSize != 0) {
+                        this.extendArray(this.extendBufferSize);
+                    }
+                    else {
+                        this.extendArray(this.offset - this.size);
+                    }
+                }
+                else {
+                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
+                }
+            }
+        }
         return this.size;
     }
     ;
     /**
-     * Dummy function, not needed on Non-Stream
+     * Internal update size
      */
     updateSize() {
-        this.return;
+        if (this.mode == "memory") {
+            return;
+        }
+        if (fs == undefined) {
+            throw new Error("Can't read file without Node.");
+        }
+        if (this.fd !== null) {
+            try {
+                const stat = fs.fstatSync(this.fd);
+                this.size = stat.size;
+                this.sizeB = this.size * 8;
+            }
+            catch (error) {
+                throw new Error(error);
+            }
+            if (this.size > this.maxFileSize) {
+                throw new Error("File too large to load.");
+            }
+        }
     }
     ;
     /**
-     * removes data.
+     * commit data and removes it.
      */
     close() {
-        this.data = undefined;
+        if (this.mode == "memory") {
+            __classPrivateFieldSet(this, _BiBase_data, undefined, "f");
+            this.view = undefined;
+            return;
+        }
+        if (this.fd === null) {
+            return; // Already closed / or not open
+        }
+        if (fs == undefined) {
+            throw new Error("Can't use BitFile without Node.");
+        }
+        this.commit();
+        try {
+            fs.closeSync(this.fd);
+        }
+        catch (error) {
+            throw new Error(error);
+        }
+        this.fd = null;
+        return;
     }
     ;
     /**
-     * Dummy function, not needed on Non-Stream
+     * Write buffer to data
+     *
+     * @param {DataType} data
+     * @param {boolean} consume
+     * @param {number} start - likely this.offset
+     * @returns {Buffer | Uint8Array}
      */
-    read(start, length, consume = false) {
-        return this.lift(start, start + length, consume);
-    }
-    ;
-    /**
-     * Dummy function, not needed on Non-Stream
-     */
-    write(start, data, consume = false) {
+    write(data, consume = false, start = this.offset) {
+        if (this.mode == "memory") {
+            this.insert(data, consume, start);
+            return data;
+        }
+        this.open();
         this.insert(data, consume, start);
-        return data.length;
+        return this.commit();
     }
     ;
     /**
-     * Dummy function, not needed on Non-Stream
+     * Write data buffer back to file
+     *
+     * @returns {DataType}
      */
-    renameFile() {
+    commit() {
+        if (this.mode == "memory") {
+            return this.data;
+        }
+        this.open();
+        try {
+            fs.writeSync(this.fd, this.data, 0, this.data.length);
+        }
+        catch (error) {
+            throw new Error(error);
+        }
+        this.updateSize();
+        return this.data;
     }
     ;
     /**
-     * Dummy function, not needed on Non-Stream
+     * syncs the data to file
+     */
+    flush() {
+        if (this.fd) {
+            this.commit();
+        }
+    }
+    ;
+    /**
+     * Renames the file you are working on.
+     *
+     * Must be full file path and file name.
+     *
+     * Keeps write / read position.
+     *
+     * Note: This is permanent and can't be undone.
+     *
+     * @param {string} newFilePath - New full file path and name.
+     */
+    renameFile(newFilePath) {
+        if (this.mode == "memory") {
+            return;
+        }
+        try {
+            fs.closeSync(this.fd);
+            this.fd = null;
+            fs.renameSync(this.filePath, newFilePath);
+        }
+        catch (error) {
+            throw new Error(error);
+        }
+        this.filePath = newFilePath;
+        this.open();
+    }
+    ;
+    /**
+     * Deletes the working file.
+     *
+     * Note: This is permanentand can't be undone.
+     *
+     * It doesn't send the file to the recycling bin for recovery.
      */
     deleteFile() {
-    }
-    ;
-    /**
-     * Dummy function, not needed on Non-Stream
-     */
-    commit(consume = true) {
-        return consume ? 0 : 1;
+        if (this.mode == "memory") {
+            return;
+        }
+        try {
+            fs.closeSync(this.fd);
+            this.fd = null;
+            fs.unlinkSync(this.filePath);
+        }
+        catch (error) {
+            throw new Error(error);
+        }
     }
     ;
     extendArray(to_padd) {
@@ -1862,11 +2387,20 @@ class BiBase {
     }
     ;
     isBufferOrUint8Array(obj) {
-        return arraybuffcheck(obj);
+        return arrayBufferCheck(obj);
+    }
+    ;
+    /**
+     * Call this after everytime we set/replace `this.data`
+     */
+    updateView() {
+        if (__classPrivateFieldGet(this, _BiBase_data, "f")) {
+            this.view = new DataView(__classPrivateFieldGet(this, _BiBase_data, "f").buffer, __classPrivateFieldGet(this, _BiBase_data, "f").byteOffset ?? 0, __classPrivateFieldGet(this, _BiBase_data, "f").byteLength);
+        }
     }
     ;
     ///////////////////////////////
-    //         ENDIANNESS        //
+    // #region ENDIANNESS
     ///////////////////////////////
     /**
      *
@@ -1929,7 +2463,7 @@ class BiBase {
     }
     ;
     ///////////////////////////////
-    //            SIZE           //
+    // #region SIZE
     ///////////////////////////////
     /**
      * Size in bytes of the current buffer.
@@ -1986,12 +2520,12 @@ class BiBase {
     }
     ;
     ///////////////////////////////
-    //         POSITION          //
+    // #region POSITION
     ///////////////////////////////
     /**
      * Get the current byte position.
      *
-     * @return {number} current byte position
+     * @returns {number} current byte position
      */
     get tell() {
         return this.offset;
@@ -2000,7 +2534,7 @@ class BiBase {
     /**
      * Get the current byte position.
      *
-     * @return {number} current byte position
+     * @returns {number} current byte position
      */
     get FTell() {
         return this.offset;
@@ -2009,7 +2543,7 @@ class BiBase {
     /**
      * Get the current byte position.
      *
-     * @return {number} current byte position
+     * @returns {number} current byte position
      */
     get getOffset() {
         return this.offset;
@@ -2018,7 +2552,7 @@ class BiBase {
     /**
      * Get the current byte position;
      *
-     * @return {number} current byte position
+     * @returns {number} current byte position
      */
     get saveOffset() {
         return this.offset;
@@ -2027,7 +2561,7 @@ class BiBase {
     /**
      * Get the current byte position;
      *
-     * @return {number} current byte position
+     * @returns {number} current byte position
      */
     get off() {
         return this.offset;
@@ -2036,7 +2570,7 @@ class BiBase {
     /**
      * Get the current bit position (0-7).
      *
-     * @return {number} current bit position
+     * @returns {number} current bit position
      */
     get getOffsetBit() {
         return this.bitoffset;
@@ -2045,7 +2579,7 @@ class BiBase {
     /**
      * Get the current bit position (0-7).
      *
-     * @return {number} current bit position
+     * @returns {number} current bit position
      */
     get tellB() {
         return this.bitoffset;
@@ -2054,7 +2588,7 @@ class BiBase {
     /**
      * Get the current bit position (0-7).
      *
-     * @return {number} current bit position
+     * @returns {number} current bit position
      */
     get FTellB() {
         return this.bitoffset;
@@ -2063,7 +2597,7 @@ class BiBase {
     /**
      * Get the current bit position (0-7).
      *
-     * @return {number} current bit position
+     * @returns {number} current bit position
      */
     get offb() {
         return this.bitoffset;
@@ -2072,7 +2606,7 @@ class BiBase {
     /**
      * Get the current absolute bit position (from start of data).
      *
-     * @return {number} current absolute bit position
+     * @returns {number} current absolute bit position
      */
     get getOffsetAbsBit() {
         return (this.offset * 8) + this.bitoffset;
@@ -2081,7 +2615,7 @@ class BiBase {
     /**
      * Get the current absolute bit position (from start of data).
      *
-     * @return {number} current bit position
+     * @returns {number} current bit position
      */
     get saveOffsetAbsBit() {
         return (this.offset * 8) + this.bitoffset;
@@ -2090,7 +2624,7 @@ class BiBase {
     /**
      * Get the current absolute bit position (from start of data).
      *
-     * @return {number} current absolute bit position
+     * @returns {number} current absolute bit position
      */
     get tellAbsB() {
         return (this.offset * 8) + this.bitoffset;
@@ -2099,7 +2633,7 @@ class BiBase {
     /**
      * Get the current absolute bit position (from start of data).
      *
-     * @return {number} current absolute bit position
+     * @returns {number} current absolute bit position
      */
     get saveOffsetBit() {
         return (this.offset * 8) + this.bitoffset;
@@ -2108,7 +2642,7 @@ class BiBase {
     /**
      * Get the current absolute bit position (from start of data).
      *
-     * @return {number} current absolute bit position
+     * @returns {number} current absolute bit position
      */
     get offab() {
         return (this.offset * 8) + this.bitoffset;
@@ -2169,7 +2703,7 @@ class BiBase {
     }
     ;
     ///////////////////////////////
-    //        FINISHING          //
+    // #region FINISHING
     ///////////////////////////////
     /**
      * Returns current data.
@@ -2178,9 +2712,9 @@ class BiBase {
      *
      * Use ``.data`` instead if you want the full buffer data.
      *
-     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+     * @returns {DataType} ``Buffer`` or ``Uint8Array``
      */
-    get get() {
+    get() {
         if (this.extendBufferSize != 0) {
             this.trim();
         }
@@ -2194,13 +2728,10 @@ class BiBase {
      *
      * Use ``.data`` instead if you want the full buffer data.
      *
-     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+     * @returns {DataType} ``Buffer`` or ``Uint8Array``
      */
-    get return() {
-        if (this.extendBufferSize != 0) {
-            this.trim();
-        }
-        return this.data;
+    return() {
+        return this.get();
     }
     ;
     /**
@@ -2232,7 +2763,7 @@ class BiBase {
     }
     ;
     ///////////////////////////////
-    //       STRICTMODE          //
+    // #region STRICT MODE
     ///////////////////////////////
     /**
      * Disallows extending data if position is outside of max size.
@@ -2250,27 +2781,39 @@ class BiBase {
     ;
     /**
      * removes data.
+     *
+     * Commits any changes to file when editing a file.
      */
     end() {
-        this.data = undefined;
+        if (this.mode == "memory") {
+            __classPrivateFieldSet(this, _BiBase_data, undefined, "f");
+            this.view = undefined;
+            return;
+        }
+        this.commit();
+        return;
     }
     ;
     /**
      * removes data.
+     *
+     * Commits any changes to file when editing a file.
      */
     done() {
-        this.data = undefined;
+        return this.end();
     }
     ;
     /**
      * removes data.
+     *
+     * Commits any changes to file when editing a file.
      */
     finished() {
-        this.data = undefined;
+        return this.end();
     }
     ;
     ///////////////////////////////
-    //          FIND             //
+    // #region   FIND 
     ///////////////////////////////
     /**
      * Searches for byte position of string from current read position.
@@ -2388,7 +2931,7 @@ class BiBase {
     }
     ;
     ///////////////////////////////
-    //        MOVE TO            //
+    // #region MOVE TO
     ///////////////////////////////
     /**
      * Aligns current byte position.
@@ -2523,20 +3066,18 @@ class BiBase {
      * Set current byte and bit position to end of data.
      */
     gotoEnd() {
-        this.offset = this.size;
-        this.bitoffset = 0;
+        this.last();
     }
     ;
     /**
      * Set byte and bit position to start of data.
      */
     EoF() {
-        this.offset = this.size;
-        this.bitoffset = 0;
+        this.last();
     }
     ;
     ///////////////////////////////
-    //         REMOVE            //
+    // #region REMOVE
     ///////////////////////////////
     /**
      * Deletes part of data from start to current byte position unless supplied, returns removed.
@@ -2546,7 +3087,7 @@ class BiBase {
      * @param {number} startOffset - Start location (default 0)
      * @param {number} endOffset - End location (default current position)
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
     delete(startOffset, endOffset, consume) {
         return remove(this, startOffset || 0, endOffset || this.offset, consume || false, true);
@@ -2557,7 +3098,7 @@ class BiBase {
      *
      * Note: Errors in strict mode.
      *
-     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
     clip() {
         return remove(this, this.offset, this.size, false, true);
@@ -2568,7 +3109,7 @@ class BiBase {
      *
      * Note: Errors in strict mode.
      *
-     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
     trim() {
         return remove(this, this.offset, this.size, false, true);
@@ -2581,7 +3122,7 @@ class BiBase {
      *
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {TemplateStringsArray} Removed data as ``Buffer`` or ``Uint8Array``
      */
     crop(length, consume) {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, true);
@@ -2594,7 +3135,7 @@ class BiBase {
      *
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
     drop(length, consume) {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, true);
@@ -2605,7 +3146,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Offset to add it at (defaults to current position)
      */
@@ -2618,7 +3159,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Offset to add it at (defaults to current position)
      */
@@ -2627,7 +3168,7 @@ class BiBase {
     }
     ;
     ///////////////////////////////
-    //        COPY OUT           //
+    // #region  COPY OUT
     ///////////////////////////////
     /**
      * Returns part of data from current byte position to end of data unless supplied.
@@ -2636,7 +3177,7 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
     lift(startOffset, endOffset, consume, fillValue) {
         return remove(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
@@ -2649,7 +3190,7 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
     fill(startOffset, endOffset, consume, fillValue) {
         return remove(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
@@ -2662,7 +3203,7 @@ class BiBase {
      *
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length
-     * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
     extract(length, consume) {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, false);
@@ -2675,7 +3216,7 @@ class BiBase {
      *
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length
-     * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
     slice(length, consume) {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, false);
@@ -2688,21 +3229,21 @@ class BiBase {
      *
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length
-     * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
     wrap(length, consume) {
         return remove(this, this.offset, this.offset + (length || 0), consume || false, false);
     }
     ;
     ///////////////////////////////
-    //          INSERT           //
+    // #region   INSERT
     ///////////////////////////////
     /**
      * Inserts data into data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Byte position to add at (defaults to current position)
      */
@@ -2715,7 +3256,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Byte position to add at (defaults to current position)
      */
@@ -2728,7 +3269,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     unshift(data, consume) {
@@ -2740,7 +3281,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     prepend(data, consume) {
@@ -2752,7 +3293,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     push(data, consume) {
@@ -2764,7 +3305,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     append(data, consume) {
@@ -2772,7 +3313,7 @@ class BiBase {
     }
     ;
     ///////////////////////////////
-    //          MATH             //
+    // #region  MATH 
     ///////////////////////////////
     /**
      * XOR data.
@@ -2784,12 +3325,10 @@ class BiBase {
      */
     xor(xorKey, startOffset, endOffset, consume) {
         var XORKey = xorKey;
-        if (typeof xorKey == "number") ;
-        else if (typeof xorKey == "string") {
+        if (typeof xorKey == "string") {
             xorKey = new TextEncoder().encode(xorKey);
         }
-        else if (this.isBufferOrUint8Array(XORKey)) ;
-        else {
+        else if (!(this.isBufferOrUint8Array(XORKey) || typeof xorKey == "number")) {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
         return XOR(this, xorKey, startOffset || this.offset, endOffset || this.size, consume || false);
@@ -2832,12 +3371,10 @@ class BiBase {
      */
     or(orKey, startOffset, endOffset, consume) {
         var ORKey = orKey;
-        if (typeof orKey == "number") ;
-        else if (typeof orKey == "string") {
+        if (typeof orKey == "string") {
             orKey = new TextEncoder().encode(orKey);
         }
-        else if (this.isBufferOrUint8Array(ORKey)) ;
-        else {
+        else if (!(this.isBufferOrUint8Array(ORKey) || typeof orKey == "number")) {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
         return OR(this, orKey, startOffset || this.offset, endOffset || this.size, consume || false);
@@ -2873,19 +3410,17 @@ class BiBase {
     /**
      * AND data.
      *
-     * @param {number|string|Array<number>|Buffer} andKey - Value, string or array to AND
+     * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
      * @param {number} startOffset - Start location (default current byte position)
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
     and(andKey, startOffset, endOffset, consume) {
         var ANDKey = andKey;
-        if (typeof ANDKey == "number") ;
-        else if (typeof ANDKey == "string") {
+        if (typeof ANDKey == "string") {
             ANDKey = new TextEncoder().encode(ANDKey);
         }
-        else if (typeof ANDKey == "object") ;
-        else {
+        else if (!(typeof ANDKey == "object" || typeof ANDKey == "number")) {
             throw new Error("AND must be a number, string, number array or Buffer");
         }
         return AND(this, andKey, startOffset || this.offset, endOffset || this.size, consume || false);
@@ -2894,7 +3429,7 @@ class BiBase {
     /**
      * AND data.
      *
-     * @param {number|string|Array<number>|Buffer} andKey - Value, string or array to AND
+     * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
      * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
@@ -2921,19 +3456,17 @@ class BiBase {
     /**
      * Add value to data.
      *
-     * @param {number|string|Array<number>|Buffer} addKey - Value, string or array to add to data
+     * @param {number|string|Uint8Array|Buffer} addKey - Value, string or array to add to data
      * @param {number} startOffset - Start location (default current byte position)
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
     add(addKey, startOffset, endOffset, consume) {
         var addedKey = addKey;
-        if (typeof addedKey == "number") ;
-        else if (typeof addedKey == "string") {
+        if (typeof addedKey == "string") {
             addedKey = new TextEncoder().encode(addedKey);
         }
-        else if (typeof addedKey == "object") ;
-        else {
+        else if (!(typeof addedKey == "object" || typeof addedKey == "number")) {
             throw new Error("Add key must be a number, string, number array or Buffer");
         }
         return ADD(this, addedKey, startOffset || this.offset, endOffset || this.size, consume || false);
@@ -2942,7 +3475,7 @@ class BiBase {
     /**
      * Add value to data.
      *
-     * @param {number|string|Array<number>|Buffer} addKey - Value, string or array to add to data
+     * @param {number|string|Uint8Array|Buffer} addKey - Value, string or array to add to data
      * @param {number} length - Length in bytes to add from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
@@ -2990,19 +3523,17 @@ class BiBase {
     /**
      * Left shift data.
      *
-     * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to left shift data
+     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to left shift data
      * @param {number} startOffset - Start location (default current byte position)
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
     lShift(shiftKey, startOffset, endOffset, consume) {
         var lShiftKey = shiftKey;
-        if (typeof lShiftKey == "number") ;
-        else if (typeof lShiftKey == "string") {
+        if (typeof lShiftKey == "string") {
             lShiftKey = new TextEncoder().encode(lShiftKey);
         }
-        else if (typeof lShiftKey == "object") ;
-        else {
+        else if (!(typeof lShiftKey == "object" || typeof lShiftKey == "number")) {
             throw new Error("Left shift must be a number, string, number array or Buffer");
         }
         return LSHIFT(this, lShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
@@ -3011,7 +3542,7 @@ class BiBase {
     /**
      * Left shift data.
      *
-     * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to left shift data
+     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to left shift data
      * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
@@ -3038,19 +3569,17 @@ class BiBase {
     /**
      * Right shift data.
      *
-     * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to right shift data
+     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to right shift data
      * @param {number} startOffset - Start location (default current byte position)
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
     rShift(shiftKey, startOffset, endOffset, consume) {
         var rShiftKey = shiftKey;
-        if (typeof rShiftKey == "number") ;
-        else if (typeof rShiftKey == "string") {
+        if (typeof rShiftKey == "string") {
             rShiftKey = new TextEncoder().encode(rShiftKey);
         }
-        else if (typeof rShiftKey == "object") ;
-        else {
+        else if (!(typeof rShiftKey == "object" || typeof rShiftKey == "number")) {
             throw new Error("Right shift must be a number, string, number array or Buffer");
         }
         return RSHIFT(this, rShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
@@ -3059,7 +3588,7 @@ class BiBase {
     /**
      * Right shift data.
      *
-     * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to right shift data
+     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to right shift data
      * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
@@ -3084,7 +3613,7 @@ class BiBase {
     }
     ;
     ///////////////////////////////
-    //        BIT READER         //
+    // #region BIT READER
     ///////////////////////////////
     /**
      *
@@ -3219,6 +3748,9 @@ class BiBase {
         return this.readBit(bits, unsigned, "little");
     }
     ;
+    ///////////////////////////////
+    // #region BYTE READER
+    ///////////////////////////////
     /**
      * Read byte.
      *
@@ -3280,6 +3812,9 @@ class BiBase {
         return this.readByte(true);
     }
     ;
+    ///////////////////////////////
+    // #region INT16 READER
+    ///////////////////////////////
     /**
      * Read short.
      *
@@ -3386,6 +3921,9 @@ class BiBase {
         return this.readInt16(false, "big");
     }
     ;
+    ///////////////////////////////
+    // #region HALF FLOAT
+    ///////////////////////////////
     /**
      * Read half float.
      *
@@ -3442,6 +3980,9 @@ class BiBase {
         return this.readHalfFloat("little");
     }
     ;
+    ///////////////////////////////
+    // #region INT32 READER
+    ///////////////////////////////
     /**
      * Read 32 bit integer.
      *
@@ -3546,6 +4087,9 @@ class BiBase {
         return this.readInt32(true);
     }
     ;
+    ///////////////////////////////
+    // #region FLOAT32 READER
+    ///////////////////////////////
     /**
      * Read float.
      *
@@ -3602,6 +4146,9 @@ class BiBase {
         return this.readFloat("little");
     }
     ;
+    ///////////////////////////////
+    // #region INT64 READER
+    ///////////////////////////////
     /**
      * Read signed 64 bit integer.
      *
@@ -3609,7 +4156,6 @@ class BiBase {
      *
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {endian?} endian - ``big`` or ``little``
-     * @returns {BigValue}
      */
     readInt64(unsigned, endian) {
         return rint64(this, unsigned, endian);
@@ -3727,6 +4273,9 @@ class BiBase {
         return this.readInt64(true, "little");
     }
     ;
+    ///////////////////////////////
+    // #region FLOAT64 READER
+    ///////////////////////////////
     /**
      * Read double float.
      *
@@ -3783,6 +4332,9 @@ class BiBase {
         return this.readDoubleFloat("little");
     }
     ;
+    ///////////////////////////////
+    // #region STRING READER
+    ///////////////////////////////
     /**
     * Reads string, use options object for different types.
     *
@@ -3793,7 +4345,7 @@ class BiBase {
     * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
     * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
-    * @return {Promise<string>}
+    * @returns {string}
     */
     readString(options) {
         return rstring(this, options);
@@ -3816,11 +4368,12 @@ class BiBase {
     }
     ;
 }
+_BiBase_data = new WeakMap();
 
 /**
  * Binary reader, includes bitfields and strings.
  *
- * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+ * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
  * @param {BiOptions?} options - Any options to set at start
  * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
  * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
@@ -3828,6 +4381,7 @@ class BiBase {
  * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
  * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
  * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+ * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
  *
  * @since 2.0
  */
@@ -3835,7 +4389,7 @@ class BiReader extends BiBase {
     /**
      * Binary reader, includes bitfields and strings.
      *
-     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+     * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
      * @param {BiOptions?} options - Any options to set at start
      * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
      * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
@@ -3843,29 +4397,25 @@ class BiReader extends BiBase {
      * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
      * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
      * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
      */
-    constructor(data, options = {}) {
-        super();
+    constructor(input, options = {}) {
+        super(input, options.writeable ?? false);
+        if (input == undefined) {
+            throw new Error("Can not start BiReader without data.");
+        }
         this.strict = true;
-        if (data == undefined) {
-            throw new Error("Data required");
-        }
-        else {
-            if (!this.isBufferOrUint8Array(data)) {
-                throw new Error("Write data must be Uint8Array or Buffer");
-            }
-            this.data = data;
-        }
-        this.enforceBigInt = options?.enforceBigInt ?? false;
-        if (options.extendBufferSize != undefined && options.extendBufferSize != 0) {
+        this.enforceBigInt = (options?.enforceBigInt) ?? hasBigInt;
+        if (options.extendBufferSize != undefined &&
+            options.extendBufferSize != 0) {
             this.extendBufferSize = options.extendBufferSize;
         }
-        this.size = this.data.length;
-        this.sizeB = this.data.length * 8;
-        if (options.endianness != undefined && typeof options.endianness != "string") {
+        if (options.endianness != undefined &&
+            typeof options.endianness != "string") {
             throw new Error("Endian must be big or little");
         }
-        if (options.endianness != undefined && !(options.endianness == "big" || options.endianness == "little")) {
+        if (options.endianness != undefined &&
+            !(options.endianness == "big" || options.endianness == "little")) {
             throw new Error("Byte order must be big or little");
         }
         this.endian = options.endianness || "little";
@@ -3874,7 +4424,27 @@ class BiReader extends BiBase {
         }
         else {
             if (options.strict != undefined) {
-                throw new Error("Strict mode must be true of false");
+                throw new Error("Strict mode must be true or false");
+            }
+        }
+        if (input == undefined) {
+            throw new Error("Data or file path required");
+        }
+        else {
+            if (typeof input == "string") {
+                this.filePath = input;
+                this.mode = "file";
+                this.offset = options.byteOffset ?? 0;
+                this.bitoffset = options.bitOffset ?? 0;
+            }
+            else if (this.isBufferOrUint8Array(input)) {
+                this.data = input;
+                this.mode = "memory";
+                this.size = this.data.length;
+                this.sizeB = this.data.length * 8;
+            }
+            else {
+                throw new Error("Write data must be Uint8Array or Buffer");
             }
         }
         if (options.byteOffset != undefined || options.bitOffset != undefined) {
@@ -3882,7 +4452,7 @@ class BiReader extends BiBase {
             // Adjust byte offset based on bit overflow
             this.offset += Math.floor((Math.abs(options.bitOffset || 0)) / 8);
             // Adjust bit offset
-            this.bitoffset = (Math.abs(options.bitOffset || 0) + 64) % 8;
+            this.bitoffset = Math.abs(normalizeBitOffset(options.bitOffset)) % 8;
             // Ensure bit offset stays between 0-7
             this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
             // Ensure offset doesn't go negative
@@ -3901,10 +4471,13 @@ class BiReader extends BiBase {
                 }
             }
         }
+        if (this.mode == "file") {
+            this.open();
+        }
     }
     ;
     //
-    // Bit Aliases
+    // #region Bit Aliases
     //
     /**
      * Bit field reader.
@@ -6096,7 +6669,7 @@ class BiReader extends BiBase {
     }
     ;
     //
-    // byte read
+    // #region byte read
     //
     /**
      * Read byte.
@@ -6135,7 +6708,7 @@ class BiReader extends BiBase {
     }
     ;
     //
-    //short16 read
+    // #region short16 read
     //
     /**
      * Read short.
@@ -6300,7 +6873,7 @@ class BiReader extends BiBase {
     }
     ;
     //
-    //half float read
+    // #region half float read
     //
     /**
      * Read half float.
@@ -6357,7 +6930,7 @@ class BiReader extends BiBase {
     }
     ;
     //
-    //int read
+    // #region int read
     //
     /**
      * Read 32 bit integer.
@@ -6576,7 +7149,7 @@ class BiReader extends BiBase {
     }
     ;
     //
-    //float read
+    // #region float read
     //
     /**
      * Read float.
@@ -6606,14 +7179,12 @@ class BiReader extends BiBase {
     }
     ;
     //
-    //int64 reader
+    // #region int64 reader
     //
     /**
      * Read signed 64 bit integer
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get int64() {
         return this.readInt64();
@@ -6623,8 +7194,6 @@ class BiReader extends BiBase {
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get bigint() {
         return this.readInt64();
@@ -6634,8 +7203,6 @@ class BiReader extends BiBase {
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get quad() {
         return this.readInt64();
@@ -6645,8 +7212,6 @@ class BiReader extends BiBase {
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get uint64() {
         return this.readInt64(true);
@@ -6656,8 +7221,6 @@ class BiReader extends BiBase {
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get ubigint() {
         return this.readInt64(true);
@@ -6667,8 +7230,6 @@ class BiReader extends BiBase {
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get uquad() {
         return this.readInt64(true);
@@ -6678,8 +7239,6 @@ class BiReader extends BiBase {
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get int64be() {
         return this.readInt64(false, "big");
@@ -6689,8 +7248,6 @@ class BiReader extends BiBase {
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get bigintbe() {
         return this.readInt64(false, "big");
@@ -6700,8 +7257,6 @@ class BiReader extends BiBase {
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get quadbe() {
         return this.readInt64(false, "big");
@@ -6711,8 +7266,6 @@ class BiReader extends BiBase {
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get uint64be() {
         return this.readInt64(true, "big");
@@ -6722,8 +7275,6 @@ class BiReader extends BiBase {
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get ubigintbe() {
         return this.readInt64(true, "big");
@@ -6733,8 +7284,6 @@ class BiReader extends BiBase {
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get uquadbe() {
         return this.readInt64(true, "big");
@@ -6744,8 +7293,6 @@ class BiReader extends BiBase {
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get int64le() {
         return this.readInt64(false, "little");
@@ -6755,8 +7302,6 @@ class BiReader extends BiBase {
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get bigintle() {
         return this.readInt64(false, "little");
@@ -6766,8 +7311,6 @@ class BiReader extends BiBase {
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get quadle() {
         return this.readInt64(false, "little");
@@ -6777,8 +7320,6 @@ class BiReader extends BiBase {
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get uint64le() {
         return this.readInt64(true, "little");
@@ -6788,8 +7329,6 @@ class BiReader extends BiBase {
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get ubigintle() {
         return this.readInt64(true, "little");
@@ -6799,15 +7338,13 @@ class BiReader extends BiBase {
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
     get uquadle() {
         return this.readInt64(true, "little");
     }
     ;
     //
-    //doublefloat reader
+    // #region doublefloat reader
     //
     /**
      * Read double float.
@@ -6864,7 +7401,7 @@ class BiReader extends BiBase {
     }
     ;
     //
-    //string reader
+    // #region string reader
     //
     /**
     * Reads string, use options object for different types.
@@ -6877,7 +7414,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
     * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
-    * @return {string}
+    * @returns {string}
     */
     string(options) {
         return this.readString(options);
@@ -6888,7 +7425,7 @@ class BiReader extends BiBase {
     *
     * Default is ``utf-8``
     *
-    * @return {string}
+    * @returns {string}
     */
     get str() {
         return this.readString(this.strSettings);
@@ -6901,7 +7438,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     utf8string(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
@@ -6914,7 +7451,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     cstring(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
@@ -6927,7 +7464,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     ansistring(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue, stripNull: stripNull });
@@ -6941,7 +7478,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     utf16string(length, terminateValue, stripNull, endian) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
@@ -6955,7 +7492,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     unistring(length, terminateValue, stripNull, endian) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
@@ -6968,7 +7505,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     utf16stringle(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
@@ -6981,7 +7518,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     unistringle(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
@@ -6994,7 +7531,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     utf16stringbe(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
@@ -7007,7 +7544,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     unistringbe(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
@@ -7020,7 +7557,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring(lengthReadSize, stripNull, endian) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
@@ -7032,7 +7569,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring1(stripNull, endian) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: endian });
@@ -7043,7 +7580,7 @@ class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring1le(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "little" });
@@ -7054,7 +7591,7 @@ class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring1be(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "big" });
@@ -7066,7 +7603,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring2(stripNull, endian) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: endian });
@@ -7077,7 +7614,7 @@ class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring2le(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "little" });
@@ -7088,7 +7625,7 @@ class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring2be(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "big" });
@@ -7100,7 +7637,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring4(stripNull, endian) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: endian });
@@ -7111,7 +7648,7 @@ class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring4le(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "little" });
@@ -7122,7 +7659,7 @@ class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring4be(stripNull) {
         return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "big" });
@@ -7135,7 +7672,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring(lengthReadSize, stripNull, endian) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: lengthReadSize, endian: endian, stripNull: stripNull });
@@ -7147,10 +7684,32 @@ class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring1(stripNull, endian) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: endian, stripNull: stripNull });
+    }
+    ;
+    /**
+    * Reads Wide-Pascal string 1 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    wpstring1le(stripNull) {
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "little", stripNull: stripNull });
+    }
+    ;
+    /**
+    * Reads Wide-Pascal string 1 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    wpstring1be(stripNull) {
+        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "big", stripNull: stripNull });
     }
     ;
     /**
@@ -7159,7 +7718,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring2(stripNull, endian) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: endian, stripNull: stripNull });
@@ -7170,7 +7729,7 @@ class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring2le(stripNull) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "little", stripNull: stripNull });
@@ -7181,7 +7740,7 @@ class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring2be(stripNull) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "big", stripNull: stripNull });
@@ -7193,7 +7752,7 @@ class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring4(stripNull, endian) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: endian, stripNull: stripNull });
@@ -7204,7 +7763,7 @@ class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring4be(stripNull) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "big", stripNull: stripNull });
@@ -7215,7 +7774,7 @@ class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring4le(stripNull) {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "little", stripNull: stripNull });
@@ -7226,7 +7785,7 @@ class BiReader extends BiBase {
 /**
  * Binary writer, includes bitfields and strings.
  *
- * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+ * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
  * @param {BiOptions?} options - Any options to set at start
  * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
  * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
@@ -7234,6 +7793,7 @@ class BiReader extends BiBase {
  * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
  * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
  * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+ * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
  *
  * @since 2.0
  */
@@ -7241,7 +7801,7 @@ class BiWriter extends BiBase {
     /**
      * Binary writer, includes bitfields and strings.
      *
-     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+     * @param {string|Buffer|Uint8Array} input - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
      * @param {BiOptions?} options - Any options to set at start
      * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
      * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
@@ -7249,51 +7809,63 @@ class BiWriter extends BiBase {
      * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
      * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
      * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
      */
-    constructor(data, options = {}) {
-        super();
+    constructor(input, options = {}) {
+        super(input, options.writeable ?? true);
         this.strict = false;
-        if (data == undefined) {
-            if (typeof Buffer !== 'undefined') {
-                this.data = Buffer.alloc(this.offset || 1 + (this.bitoffset != 0 ? 1 : 0));
-            }
-            else {
-                this.data = new Uint8Array(this.offset || 1 + (this.bitoffset != 0 ? 1 : 0));
-            }
-        }
-        else {
-            if (!this.isBufferOrUint8Array(data)) {
-                throw new Error("Write data must be Uint8Array or Buffer.");
-            }
-            this.data = data;
-        }
-        this.enforceBigInt = options?.enforceBigInt ?? false;
-        if (options.extendBufferSize != undefined && options.extendBufferSize != 0) {
+        this.enforceBigInt = (options?.enforceBigInt) ?? hasBigInt;
+        if (options.extendBufferSize != undefined &&
+            options.extendBufferSize != 0) {
             this.extendBufferSize = options.extendBufferSize;
         }
-        this.size = this.data.length;
-        this.sizeB = this.data.length * 8;
+        if (input == undefined) {
+            input = new Uint8Array(this.extendBufferSize);
+            console.warn(`BiWriter started without data. Creating Uint8Array with extendBufferSize.`);
+        }
+        if (options.endianness != undefined &&
+            typeof options.endianness != "string") {
+            throw new Error("endianness must be big or little.");
+        }
+        if (options.endianness != undefined &&
+            !(options.endianness == "big" || options.endianness == "little")) {
+            throw new Error("Endianness must be big or little.");
+        }
+        this.endian = options.endianness || "little";
         if (typeof options.strict == "boolean") {
             this.strict = options.strict;
         }
         else {
             if (options.strict != undefined) {
-                throw new Error("Strict mode must be true of false.");
+                throw new Error("Strict mode must be true or false.");
             }
         }
-        if (options.endianness != undefined && typeof options.endianness != "string") {
-            throw new Error("endianness must be big or little.");
+        if (input == undefined) {
+            throw new Error("Data or file path required");
         }
-        if (options.endianness != undefined && !(options.endianness == "big" || options.endianness == "little")) {
-            throw new Error("Endianness must be big or little.");
+        else {
+            if (typeof input == "string") {
+                this.filePath = input;
+                this.mode = "file";
+                this.offset = options.byteOffset ?? 0;
+                this.bitoffset = options.bitOffset ?? 0;
+            }
+            else if (this.isBufferOrUint8Array(input)) {
+                this.data = input;
+                this.mode = "memory";
+                this.size = this.data.length;
+                this.sizeB = this.data.length * 8;
+            }
+            else {
+                throw new Error("Write data must be Uint8Array or Buffer");
+            }
         }
-        this.endian = options.endianness || "little";
         if (options.byteOffset != undefined || options.bitOffset != undefined) {
             this.offset = ((Math.abs(options.byteOffset || 0)) + Math.ceil((Math.abs(options.bitOffset || 0)) / 8));
             // Adjust byte offset based on bit overflow
             this.offset += Math.floor((Math.abs(options.bitOffset || 0)) / 8);
             // Adjust bit offset
-            this.bitoffset = (Math.abs(options.bitOffset || 0) + 64) % 8;
+            this.bitoffset = Math.abs(normalizeBitOffset(options.bitOffset)) % 8;
             // Ensure bit offset stays between 0-7
             this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
             // Ensure offset doesn't go negative
@@ -7312,10 +7884,13 @@ class BiWriter extends BiBase {
                 }
             }
         }
+        if (this.mode == "file") {
+            this.open();
+        }
     }
     ;
     //
-    // Bit Aliases
+    // #region Bit Aliases
     //
     /**
      * Bit field writer.
@@ -9513,7 +10088,7 @@ class BiWriter extends BiBase {
     }
     ;
     //
-    // byte write
+    // #region byte write
     //
     /**
      * Write byte.
@@ -9552,7 +10127,7 @@ class BiWriter extends BiBase {
     }
     ;
     //
-    // short writes
+    // #region short writes
     //
     /**
      * Write int16.
@@ -9717,7 +10292,7 @@ class BiWriter extends BiBase {
     }
     ;
     //
-    // half float
+    // #region half float
     //
     /**
      * Writes half float.
@@ -9774,7 +10349,7 @@ class BiWriter extends BiBase {
     }
     ;
     //
-    // int32 write
+    // #region int32 write
     //
     /**
      * Write int32.
@@ -10002,7 +10577,7 @@ class BiWriter extends BiBase {
     }
     ;
     //
-    // float write
+    // #region float write
     //
     /**
     * Write float.
@@ -10032,7 +10607,7 @@ class BiWriter extends BiBase {
     }
     ;
     //
-    // int64 write
+    // #region int64 write
     //
     /**
      * Write 64 bit integer.
@@ -10197,7 +10772,7 @@ class BiWriter extends BiBase {
     }
     ;
     //
-    // doublefloat
+    // #region doublefloat
     //
     /**
      * Writes double float.
@@ -10254,7 +10829,7 @@ class BiWriter extends BiBase {
     }
     ;
     //
-    // string
+    // #region string
     //
     /**
     * Writes string, use options object for different types.
@@ -10608,6 +11183,16 @@ class BiReaderStream {
 }
 /**
  * Isn't usable in browser.
+ * @since 4.0
+ * @deprecated Use ``BiReader`` instead.
+ */
+class BiFileReader {
+    constructor() {
+        throw new Error("BiFileReader isn't usable in browser. Use BiReader instead.");
+    }
+}
+/**
+ * Isn't usable in browser.
  * @since 3.0
  * @deprecated Use ``BiWriter`` instead.
  */
@@ -10636,6 +11221,16 @@ class biwriter {
         throw new Error("biwriter is deprecated. Use BiWriter instead.");
     }
 }
+/**
+ * Isn't usable in browser.
+ * @since 4.0
+ * @deprecated Use ``BiWriter`` instead.
+ */
+class BiFileWriter {
+    constructor() {
+        throw new Error("BiWriterStream isn't usable in browser. Use BiWriter instead.");
+    }
+}
 
-export { BiReader, BiReaderStream, BiWriter, BiWriterStream, bireader, biwriter, hexdump };
+export { BiBase, BiFileReader, BiFileWriter, BiReader, BiReaderStream, BiWriter, BiWriterStream, bireader, biwriter, hexdump };
 //# sourceMappingURL=index.browser.js.map

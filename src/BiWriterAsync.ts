@@ -6,10 +6,10 @@ import {
     stringOptions,
     normalizeBitOffset
 } from "./common.js";
-import { BiBase } from './core/BiBase.js';
+import { BiBaseAsync } from './core/BiBaseAsync.js';
 
 /**
- * Binary writer, includes bitfields and strings.
+ * Async Binary writer, includes bitfields and strings.
  *
  * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
  * @param {BiOptions?} options - Any options to set at start
@@ -21,12 +21,12 @@ import { BiBase } from './core/BiBase.js';
  * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
  * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
  * 
- * @since 2.0
+ * @since 4.0
  */
-export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends boolean> extends BiBase<DataType, hasBigInt> {
+export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt extends boolean> extends BiBaseAsync<DataType, hasBigInt> {
 
     /**
-     * Binary writer, includes bitfields and strings.
+     * Async Binary writer, includes bitfields and strings.
      *
      * @param {string|Buffer|Uint8Array} input - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
      * @param {BiOptions?} options - Any options to set at start
@@ -123,10 +123,32 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
                 }
             }
         }
+    };
 
-        if (this.mode == "file") {
-            this.open();
-        }
+    /**
+     * 
+     * Creates and opens a new `BiWriterAsync`
+     * 
+     * includes bitfields and strings.
+     *
+     * @param {string|Buffer|Uint8Array} input - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+     * @param {BiOptions?} options - Any options to set at start
+     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
+     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
+     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
+     * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
+     * 
+     * @returns {Promise<BiWriterAsync<DataType, hasBigInt>>}
+     */
+    static async create<DataType extends Buffer | Uint8Array, hasBigInt extends boolean>(input: string | DataType, options: BiOptions = {}): Promise<BiWriterAsync<DataType, hasBigInt>>{
+        const instance = new BiWriterAsync<DataType, hasBigInt>(input, options);
+
+        await instance.open();
+
+        return instance;
     };
 
     //
@@ -142,10 +164,9 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * @param {number} bits - bits to write
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
      */
-    bit(value: number, bits: number, unsigned?: boolean, endian?: endian): void {
-        return this.writeBit(value, bits, unsigned, endian);
+    async bit(value: number, bits: number, unsigned?: boolean, endian?: endian) {
+        return await this.writeBit(value, bits, unsigned, endian);
     };
 
     /**
@@ -156,10 +177,9 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * @param {number} value - value as int 
      * @param {number} bits - bits to write
      * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
      */
-    ubit(value: number, bits: number, endian?: endian): void {
-        return this.writeBit(value, bits, true, endian);
+    async ubit(value: number, bits: number, endian?: endian) {
+        return await this.writeBit(value, bits, true, endian);
     };
 
     /**
@@ -170,10 +190,9 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * @param {number} value - value as int
      * @param {number} bits - bits to write
      * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
      */
-    bitbe(value: number, bits: number, unsigned?: boolean): void {
-        return this.bit(value, bits, unsigned, "big");
+    async bitbe(value: number, bits: number, unsigned?: boolean) {
+        return await this.bit(value, bits, unsigned, "big");
     };
 
     /**
@@ -183,10 +202,9 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      * @param {number} bits - bits to write
-     * @returns {number}
      */
-    ubitbe(value: number, bits: number): void {
-        return this.bit(value, bits, true, "big");
+    async ubitbe(value: number, bits: number) {
+        return await this.bit(value, bits, true, "big");
     };
 
     /**
@@ -196,10 +214,9 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int
      * @param {number} bits - bits to write
-     * @returns {number}
      */
-    ubitle(value: number, bits: number): void {
-        return this.bit(value, bits, true, "little");
+    async ubitle(value: number, bits: number) {
+        return await this.bit(value, bits, true, "little");
     };
 
     /**
@@ -210,10 +227,9 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * @param {number} value - value as int
      * @param {number} bits - bits to write
      * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
      */
-    bitle(value: number, bits: number, unsigned?: boolean): void {
-        return this.bit(value, bits, unsigned, "little");
+    async bitle(value: number, bits: number, unsigned?: boolean) {
+        return await this.bit(value, bits, unsigned, "little");
     };
 
     /**
@@ -223,8 +239,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit1(value: number) {
-        this.bit(value, 1);
+    async bit1(value: number) {
+        await this.bit(value, 1);
     };
 
     /**
@@ -234,8 +250,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit1le(value: number) {
-        this.bit(value, 1, undefined, "little");
+    async bit1le(value: number) {
+        await this.bit(value, 1, undefined, "little");
     };
 
     /**
@@ -245,8 +261,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit1be(value: number) {
-        this.bit(value, 1, undefined, "big");
+    async bit1be(value: number) {
+        await this.bit(value, 1, undefined, "big");
     };
 
     /**
@@ -256,8 +272,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit1(value: number) {
-        this.bit(value, 1, true);
+    async ubit1(value: number) {
+        await this.bit(value, 1, true);
     };
 
     /**
@@ -267,8 +283,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit1le(value: number) {
-        this.bit(value, 1, true, "little");;
+    async ubit1le(value: number) {
+        await this.bit(value, 1, true, "little");;
     };
 
     /**
@@ -278,8 +294,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit1be(value: number) {
-        this.bit(value, 1, true, "big");
+    async ubit1be(value: number) {
+        await this.bit(value, 1, true, "big");
     };
 
     /**
@@ -289,8 +305,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit2(value: number) {
-        this.bit(value, 2);
+    async bit2(value: number) {
+        await this.bit(value, 2);
     };
 
     /**
@@ -300,8 +316,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit2le(value: number) {
-        this.bit(value, 2, undefined, "little");
+    async bit2le(value: number) {
+        await this.bit(value, 2, undefined, "little");
     };
 
     /**
@@ -311,8 +327,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit2be(value: number) {
-        this.bit(value, 2, undefined, "big");
+    async bit2be(value: number) {
+        await this.bit(value, 2, undefined, "big");
     };
 
     /**
@@ -322,8 +338,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit2(value: number) {
-        this.bit(value, 2, true);
+    async ubit2(value: number) {
+        await this.bit(value, 2, true);
     };
 
     /**
@@ -333,8 +349,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit2le(value: number) {
-        this.bit(value, 2, true, "little");;
+    async ubit2le(value: number) {
+        await this.bit(value, 2, true, "little");;
     };
 
     /**
@@ -344,8 +360,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit2be(value: number) {
-        this.bit(value, 2, true, "big");
+    async ubit2be(value: number) {
+        await this.bit(value, 2, true, "big");
     };
 
     /**
@@ -355,8 +371,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit3(value: number) {
-        this.bit(value, 3);
+    async bit3(value: number) {
+        await this.bit(value, 3);
     };
 
     /**
@@ -366,8 +382,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit3le(value: number) {
-        this.bit(value, 3, undefined, "little");
+    async bit3le(value: number) {
+        await this.bit(value, 3, undefined, "little");
     };
 
     /**
@@ -377,8 +393,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit3be(value: number) {
-        this.bit(value, 3, undefined, "big");
+    async bit3be(value: number) {
+        await this.bit(value, 3, undefined, "big");
     };
 
     /**
@@ -388,8 +404,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit3(value: number) {
-        this.bit(value, 3, true);
+    async ubit3(value: number) {
+        await this.bit(value, 3, true);
     };
 
     /**
@@ -399,8 +415,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit3le(value: number) {
-        this.bit(value, 3, true, "little");;
+    async ubit3le(value: number) {
+        await this.bit(value, 3, true, "little");;
     };
 
     /**
@@ -410,8 +426,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit3be(value: number) {
-        this.bit(value, 3, true, "big");
+    async ubit3be(value: number) {
+        await this.bit(value, 3, true, "big");
     };
 
     /**
@@ -421,8 +437,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit4(value: number) {
-        this.bit(value, 4);
+    async bit4(value: number) {
+        await this.bit(value, 4);
     };
 
     /**
@@ -432,8 +448,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit4le(value: number) {
-        this.bit(value, 4, undefined, "little");
+    async bit4le(value: number) {
+        await this.bit(value, 4, undefined, "little");
     };
 
     /**
@@ -443,8 +459,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit4be(value: number) {
-        this.bit(value, 4, undefined, "big");
+    async bit4be(value: number) {
+        await this.bit(value, 4, undefined, "big");
     };
 
     /**
@@ -454,8 +470,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit4(value: number) {
-        this.bit(value, 4, true);
+    async ubit4(value: number) {
+        await this.bit(value, 4, true);
     };
 
     /**
@@ -465,8 +481,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit4le(value: number) {
-        this.bit(value, 4, true, "little");;
+    async ubit4le(value: number) {
+        await this.bit(value, 4, true, "little");;
     };
 
     /**
@@ -476,8 +492,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit4be(value: number) {
-        this.bit(value, 4, true, "big");
+    async ubit4be(value: number) {
+        await this.bit(value, 4, true, "big");
     };
 
     /**
@@ -487,8 +503,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit5(value: number) {
-        this.bit(value, 5);
+    async bit5(value: number) {
+        await this.bit(value, 5);
     };
 
     /**
@@ -498,8 +514,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit5le(value: number) {
-        this.bit(value, 5, undefined, "little");
+    async bit5le(value: number) {
+        await this.bit(value, 5, undefined, "little");
     };
 
     /**
@@ -509,8 +525,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit5be(value: number) {
-        this.bit(value, 5, undefined, "big");
+    async bit5be(value: number) {
+        await this.bit(value, 5, undefined, "big");
     };
 
     /**
@@ -520,8 +536,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit5(value: number) {
-        this.bit(value, 5, true);
+    async ubit5(value: number) {
+        await this.bit(value, 5, true);
     };
 
     /**
@@ -531,8 +547,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit5le(value: number) {
-        this.bit(value, 5, true, "little");;
+    async ubit5le(value: number) {
+        await this.bit(value, 5, true, "little");
     };
 
     /**
@@ -542,8 +558,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit5be(value: number) {
-        this.bit(value, 5, true, "big");
+    async ubit5be(value: number) {
+        await this.bit(value, 5, true, "big");
     };
 
     /**
@@ -553,8 +569,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit6(value: number) {
-        this.bit(value, 6);
+    async bit6(value: number) {
+        await this.bit(value, 6);
     };
 
     /**
@@ -564,8 +580,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit6le(value: number) {
-        this.bit(value, 6, undefined, "little");
+    async bit6le(value: number) {
+        await this.bit(value, 6, undefined, "little");
     };
 
     /**
@@ -575,8 +591,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit6be(value: number) {
-        this.bit(value, 6, undefined, "big");
+    async bit6be(value: number) {
+        await this.bit(value, 6, undefined, "big");
     };
 
     /**
@@ -586,8 +602,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit6(value: number) {
-        this.bit(value, 6, true);
+    async ubit6(value: number) {
+        await this.bit(value, 6, true);
     };
 
     /**
@@ -597,8 +613,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit6le(value: number) {
-        this.bit(value, 6, true, "little");;
+    async ubit6le(value: number) {
+        await this.bit(value, 6, true, "little");
     };
 
     /**
@@ -608,8 +624,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit6be(value: number) {
-        this.bit(value, 6, true, "big");
+    async ubit6be(value: number) {
+        await this.bit(value, 6, true, "big");
     };
 
     /**
@@ -619,8 +635,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit7(value: number) {
-        this.bit(value, 7);
+    async bit7(value: number) {
+        await this.bit(value, 7);
     };
 
     /**
@@ -630,8 +646,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit7le(value: number) {
-        this.bit(value, 7, undefined, "little");
+    async bit7le(value: number) {
+        await this.bit(value, 7, undefined, "little");
     };
 
     /**
@@ -641,8 +657,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit7be(value: number) {
-        this.bit(value, 7, undefined, "big");
+    async bit7be(value: number) {
+        await this.bit(value, 7, undefined, "big");
     };
 
     /**
@@ -652,8 +668,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit7(value: number) {
-        this.bit(value, 7, true);
+    async ubit7(value: number) {
+        await this.bit(value, 7, true);
     };
 
     /**
@@ -663,8 +679,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit7le(value: number) {
-        this.bit(value, 7, true, "little");;
+    async ubit7le(value: number) {
+        await this.bit(value, 7, true, "little");
     };
 
     /**
@@ -674,8 +690,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit7be(value: number) {
-        this.bit(value, 7, true, "big");
+    async ubit7be(value: number) {
+        await this.bit(value, 7, true, "big");
     };
 
     /**
@@ -685,8 +701,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit8(value: number) {
-        this.bit(value, 8);
+    async bit8(value: number) {
+        await this.bit(value, 8);
     };
 
     /**
@@ -696,8 +712,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit8le(value: number) {
-        this.bit(value, 8, undefined, "little");
+    async bit8le(value: number) {
+        await this.bit(value, 8, undefined, "little");
     };
 
     /**
@@ -707,8 +723,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit8be(value: number) {
-        this.bit(value, 8, undefined, "big");
+    async bit8be(value: number) {
+        await this.bit(value, 8, undefined, "big");
     };
 
     /**
@@ -718,8 +734,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit8(value: number) {
-        this.bit(value, 8, true);
+    async ubit8(value: number) {
+        await this.bit(value, 8, true);
     };
 
     /**
@@ -729,8 +745,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit8le(value: number) {
-        this.bit(value, 8, true, "little");;
+    async ubit8le(value: number) {
+        await this.bit(value, 8, true, "little");;
     };
 
     /**
@@ -740,8 +756,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit8be(value: number) {
-        this.bit(value, 8, true, "big");
+    async ubit8be(value: number) {
+        await this.bit(value, 8, true, "big");
     };
 
     /**
@@ -751,8 +767,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit9(value: number) {
-        this.bit(value, 9);
+    async bit9(value: number) {
+        await this.bit(value, 9);
     };
 
     /**
@@ -762,8 +778,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit9le(value: number) {
-        this.bit(value, 9, undefined, "little");
+    async bit9le(value: number) {
+        await this.bit(value, 9, undefined, "little");
     };
 
     /**
@@ -773,8 +789,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit9be(value: number) {
-        this.bit(value, 9, undefined, "big");
+    async bit9be(value: number) {
+        await this.bit(value, 9, undefined, "big");
     };
 
     /**
@@ -784,8 +800,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit9(value: number) {
-        this.bit(value, 9, true);
+    async ubit9(value: number) {
+        await this.bit(value, 9, true);
     };
 
     /**
@@ -795,8 +811,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit9le(value: number) {
-        this.bit(value, 9, true, "little");;
+    async ubit9le(value: number) {
+        await this.bit(value, 9, true, "little");;
     };
 
     /**
@@ -806,8 +822,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit9be(value: number) {
-        this.bit(value, 9, true, "big");
+    async ubit9be(value: number) {
+        await this.bit(value, 9, true, "big");
     };
 
     /**
@@ -817,8 +833,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit10(value: number) {
-        this.bit(value, 10);
+    async bit10(value: number) {
+        await this.bit(value, 10);
     };
 
     /**
@@ -828,8 +844,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit10le(value: number) {
-        this.bit(value, 10, undefined, "little");
+    async bit10le(value: number) {
+        await this.bit(value, 10, undefined, "little");
     };
 
     /**
@@ -839,8 +855,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit10be(value: number) {
-        this.bit(value, 10, undefined, "big");
+    async bit10be(value: number) {
+        await this.bit(value, 10, undefined, "big");
     };
 
     /**
@@ -850,8 +866,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit10(value: number) {
-        this.bit(value, 10, true);
+    async ubit10(value: number) {
+        await this.bit(value, 10, true);
     };
 
     /**
@@ -861,8 +877,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit10le(value: number) {
-        this.bit(value, 10, true, "little");;
+    async ubit10le(value: number) {
+        await this.bit(value, 10, true, "little");;
     };
 
     /**
@@ -872,8 +888,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit10be(value: number) {
-        this.bit(value, 10, true, "big");
+    async ubit10be(value: number) {
+        await this.bit(value, 10, true, "big");
     };
 
     /**
@@ -883,8 +899,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit11(value: number) {
-        this.bit(value, 11);
+    async bit11(value: number) {
+        await this.bit(value, 11);
     };
 
     /**
@@ -894,8 +910,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit11le(value: number) {
-        this.bit(value, 11, undefined, "little");
+    async bit11le(value: number) {
+        await this.bit(value, 11, undefined, "little");
     };
 
     /**
@@ -905,8 +921,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit11be(value: number) {
-        this.bit(value, 11, undefined, "big");
+    async bit11be(value: number) {
+        await this.bit(value, 11, undefined, "big");
     };
 
     /**
@@ -916,8 +932,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit11(value: number) {
-        this.bit(value, 11, true);
+    async ubit11(value: number) {
+        await this.bit(value, 11, true);
     };
 
     /**
@@ -927,8 +943,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit11le(value: number) {
-        this.bit(value, 11, true, "little");;
+    async ubit11le(value: number) {
+        await this.bit(value, 11, true, "little");;
     };
 
     /**
@@ -938,8 +954,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit11be(value: number) {
-        this.bit(value, 11, true, "big");
+    async ubit11be(value: number) {
+        await this.bit(value, 11, true, "big");
     };
 
     /**
@@ -949,8 +965,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit12(value: number) {
-        this.bit(value, 12);
+    async bit12(value: number) {
+        await this.bit(value, 12);
     };
 
     /**
@@ -960,8 +976,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit12le(value: number) {
-        this.bit(value, 12, undefined, "little");
+    async bit12le(value: number) {
+        await this.bit(value, 12, undefined, "little");
     };
 
     /**
@@ -971,8 +987,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit12be(value: number) {
-        this.bit(value, 12, undefined, "big");
+    async bit12be(value: number) {
+        await this.bit(value, 12, undefined, "big");
     };
 
     /**
@@ -982,8 +998,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit12(value: number) {
-        this.bit(value, 12, true);
+    async ubit12(value: number) {
+        await this.bit(value, 12, true);
     };
 
     /**
@@ -993,8 +1009,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit12le(value: number) {
-        this.bit(value, 12, true, "little");;
+    async ubit12le(value: number) {
+        await this.bit(value, 12, true, "little");;
     };
 
     /**
@@ -1004,8 +1020,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit12be(value: number) {
-        this.bit(value, 12, true, "big");
+    async ubit12be(value: number) {
+        await this.bit(value, 12, true, "big");
     };
 
     /**
@@ -1015,8 +1031,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit13(value: number) {
-        this.bit(value, 13);
+    async bit13(value: number) {
+        await this.bit(value, 13);
     };
 
     /**
@@ -1026,8 +1042,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit13le(value: number) {
-        this.bit(value, 13, undefined, "little");
+    async bit13le(value: number) {
+        await this.bit(value, 13, undefined, "little");
     };
 
     /**
@@ -1037,8 +1053,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit13be(value: number) {
-        this.bit(value, 13, undefined, "big");
+    async bit13be(value: number) {
+        await this.bit(value, 13, undefined, "big");
     };
 
     /**
@@ -1048,8 +1064,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit13(value: number) {
-        this.bit(value, 13, true);
+    async ubit13(value: number) {
+        await this.bit(value, 13, true);
     };
 
     /**
@@ -1059,8 +1075,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit13le(value: number) {
-        this.bit(value, 13, true, "little");;
+    async ubit13le(value: number) {
+        await this.bit(value, 13, true, "little");;
     };
 
     /**
@@ -1070,8 +1086,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit13be(value: number) {
-        this.bit(value, 13, true, "big");
+    async ubit13be(value: number) {
+        await this.bit(value, 13, true, "big");
     };
 
     /**
@@ -1081,8 +1097,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit14(value: number) {
-        this.bit(value, 14);
+    async bit14(value: number) {
+        await this.bit(value, 14);
     };
 
     /**
@@ -1092,8 +1108,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit14le(value: number) {
-        this.bit(value, 14, undefined, "little");
+    async bit14le(value: number) {
+        await this.bit(value, 14, undefined, "little");
     };
 
     /**
@@ -1103,8 +1119,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit14be(value: number) {
-        this.bit(value, 14, undefined, "big");
+    async bit14be(value: number) {
+        await this.bit(value, 14, undefined, "big");
     };
 
     /**
@@ -1114,8 +1130,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit14(value: number) {
-        this.bit(value, 14, true);
+    async ubit14(value: number) {
+        await this.bit(value, 14, true);
     };
 
     /**
@@ -1125,8 +1141,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit14le(value: number) {
-        this.bit(value, 14, true, "little");;
+    async ubit14le(value: number) {
+        await this.bit(value, 14, true, "little");;
     };
 
     /**
@@ -1136,8 +1152,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit14be(value: number) {
-        this.bit(value, 14, true, "big");
+    async ubit14be(value: number) {
+        await this.bit(value, 14, true, "big");
     };
 
     /**
@@ -1147,8 +1163,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit15(value: number) {
-        this.bit(value, 15);
+    async bit15(value: number) {
+        await this.bit(value, 15);
     };
 
     /**
@@ -1158,8 +1174,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit15le(value: number) {
-        this.bit(value, 15, undefined, "little");
+    async bit15le(value: number) {
+        await this.bit(value, 15, undefined, "little");
     };
 
     /**
@@ -1169,8 +1185,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit15be(value: number) {
-        this.bit(value, 15, undefined, "big");
+    async bit15be(value: number) {
+        await this.bit(value, 15, undefined, "big");
     };
 
     /**
@@ -1180,8 +1196,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit15(value: number) {
-        this.bit(value, 15, true);
+    async ubit15(value: number) {
+        await this.bit(value, 15, true);
     };
 
     /**
@@ -1191,8 +1207,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit15le(value: number) {
-        this.bit(value, 15, true, "little");;
+    async ubit15le(value: number) {
+        await this.bit(value, 15, true, "little");;
     };
 
     /**
@@ -1202,8 +1218,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit15be(value: number) {
-        this.bit(value, 15, true, "big");
+    async ubit15be(value: number) {
+        await this.bit(value, 15, true, "big");
     };
 
     /**
@@ -1213,8 +1229,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit16(value: number) {
-        this.bit(value, 16);
+    async bit16(value: number) {
+        await this.bit(value, 16);
     };
 
     /**
@@ -1224,8 +1240,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit16le(value: number) {
-        this.bit(value, 16, undefined, "little");
+    async bit16le(value: number) {
+        await this.bit(value, 16, undefined, "little");
     };
 
     /**
@@ -1235,8 +1251,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit16be(value: number) {
-        this.bit(value, 16, undefined, "big");
+    async bit16be(value: number) {
+        await this.bit(value, 16, undefined, "big");
     };
 
     /**
@@ -1246,8 +1262,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit16(value: number) {
-        this.bit(value, 16, true);
+    async ubit16(value: number) {
+        await this.bit(value, 16, true);
     };
 
     /**
@@ -1257,8 +1273,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit16le(value: number) {
-        this.bit(value, 16, true, "little");;
+    async ubit16le(value: number) {
+        await this.bit(value, 16, true, "little");;
     };
 
     /**
@@ -1268,8 +1284,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit16be(value: number) {
-        this.bit(value, 16, true, "big");
+    async ubit16be(value: number) {
+        await this.bit(value, 16, true, "big");
     };
 
     /**
@@ -1279,8 +1295,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit17(value: number) {
-        this.bit(value, 17);
+    async bit17(value: number) {
+        await this.bit(value, 17);
     };
 
     /**
@@ -1290,8 +1306,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit17le(value: number) {
-        this.bit(value, 17, undefined, "little");
+    async bit17le(value: number) {
+        await this.bit(value, 17, undefined, "little");
     };
 
     /**
@@ -1301,8 +1317,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit17be(value: number) {
-        this.bit(value, 17, undefined, "big");
+    async bit17be(value: number) {
+        await this.bit(value, 17, undefined, "big");
     };
 
     /**
@@ -1312,8 +1328,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit17(value: number) {
-        this.bit(value, 17, true);
+    async ubit17(value: number) {
+        await this.bit(value, 17, true);
     };
 
     /**
@@ -1323,8 +1339,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit17le(value: number) {
-        this.bit(value, 17, true, "little");;
+    async ubit17le(value: number) {
+        await this.bit(value, 17, true, "little");;
     };
 
     /**
@@ -1334,8 +1350,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit17be(value: number) {
-        this.bit(value, 17, true, "big");
+    async ubit17be(value: number) {
+        await this.bit(value, 17, true, "big");
     };
 
     /**
@@ -1345,8 +1361,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit18(value: number) {
-        this.bit(value, 18);
+    async bit18(value: number) {
+        await this.bit(value, 18);
     };
 
     /**
@@ -1356,8 +1372,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit18le(value: number) {
-        this.bit(value, 18, undefined, "little");
+    async bit18le(value: number) {
+        await this.bit(value, 18, undefined, "little");
     };
 
     /**
@@ -1367,8 +1383,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit18be(value: number) {
-        this.bit(value, 18, undefined, "big");
+    async bit18be(value: number) {
+        await this.bit(value, 18, undefined, "big");
     };
 
     /**
@@ -1378,8 +1394,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit18(value: number) {
-        this.bit(value, 18, true);
+    async ubit18(value: number) {
+        await this.bit(value, 18, true);
     };
 
     /**
@@ -1389,8 +1405,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit18le(value: number) {
-        this.bit(value, 18, true, "little");;
+    async ubit18le(value: number) {
+        await this.bit(value, 18, true, "little");;
     };
 
     /**
@@ -1400,8 +1416,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit18be(value: number) {
-        this.bit(value, 18, true, "big");
+    async ubit18be(value: number) {
+        await this.bit(value, 18, true, "big");
     };
 
     /**
@@ -1411,8 +1427,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit19(value: number) {
-        this.bit(value, 19);
+    async bit19(value: number) {
+        await this.bit(value, 19);
     };
 
     /**
@@ -1422,8 +1438,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit19le(value: number) {
-        this.bit(value, 19, undefined, "little");
+    async bit19le(value: number) {
+        await this.bit(value, 19, undefined, "little");
     };
 
     /**
@@ -1433,8 +1449,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit19be(value: number) {
-        this.bit(value, 19, undefined, "big");
+    async bit19be(value: number) {
+        await this.bit(value, 19, undefined, "big");
     };
 
     /**
@@ -1444,8 +1460,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit19(value: number) {
-        this.bit(value, 19, true);
+    async ubit19(value: number) {
+        await this.bit(value, 19, true);
     };
 
     /**
@@ -1455,8 +1471,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit19le(value: number) {
-        this.bit(value, 19, true, "little");;
+    async ubit19le(value: number) {
+        await this.bit(value, 19, true, "little");;
     };
 
     /**
@@ -1466,8 +1482,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit19be(value: number) {
-        this.bit(value, 19, true, "big");
+    async ubit19be(value: number) {
+        await this.bit(value, 19, true, "big");
     };
 
     /**
@@ -1477,8 +1493,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit20(value: number) {
-        this.bit(value, 20);
+    async bit20(value: number) {
+        await this.bit(value, 20);
     };
 
     /**
@@ -1488,8 +1504,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit20le(value: number) {
-        this.bit(value, 20, undefined, "little");
+    async bit20le(value: number) {
+        await this.bit(value, 20, undefined, "little");
     };
 
     /**
@@ -1499,8 +1515,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit20be(value: number) {
-        this.bit(value, 20, undefined, "big");
+    async bit20be(value: number) {
+        await this.bit(value, 20, undefined, "big");
     };
 
     /**
@@ -1510,8 +1526,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit20(value: number) {
-        this.bit(value, 20, true);
+    async ubit20(value: number) {
+        await this.bit(value, 20, true);
     };
 
     /**
@@ -1521,8 +1537,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit20le(value: number) {
-        this.bit(value, 20, true, "little");;
+    async ubit20le(value: number) {
+        await this.bit(value, 20, true, "little");;
     };
 
     /**
@@ -1532,8 +1548,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit20be(value: number) {
-        this.bit(value, 20, true, "big");
+    async ubit20be(value: number) {
+        await this.bit(value, 20, true, "big");
     };
 
     /**
@@ -1543,8 +1559,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit21(value: number) {
-        this.bit(value, 21);
+    async bit21(value: number) {
+        await this.bit(value, 21);
     };
 
     /**
@@ -1554,8 +1570,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit21le(value: number) {
-        this.bit(value, 21, undefined, "little");
+    async bit21le(value: number) {
+        await this.bit(value, 21, undefined, "little");
     };
 
     /**
@@ -1565,8 +1581,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit21be(value: number) {
-        this.bit(value, 21, undefined, "big");
+    async bit21be(value: number) {
+        await this.bit(value, 21, undefined, "big");
     };
 
     /**
@@ -1576,8 +1592,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit21(value: number) {
-        this.bit(value, 21, true);
+    async ubit21(value: number) {
+        await this.bit(value, 21, true);
     };
 
     /**
@@ -1587,8 +1603,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit21le(value: number) {
-        this.bit(value, 21, true, "little");;
+    async ubit21le(value: number) {
+        await this.bit(value, 21, true, "little");;
     };
 
     /**
@@ -1598,8 +1614,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit21be(value: number) {
-        this.bit(value, 21, true, "big");
+    async ubit21be(value: number) {
+        await this.bit(value, 21, true, "big");
     };
 
     /**
@@ -1609,8 +1625,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit22(value: number) {
-        this.bit(value, 22);
+    async bit22(value: number) {
+        await this.bit(value, 22);
     };
 
     /**
@@ -1620,8 +1636,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit22le(value: number) {
-        this.bit(value, 22, undefined, "little");
+    async bit22le(value: number) {
+        await this.bit(value, 22, undefined, "little");
     };
 
     /**
@@ -1631,8 +1647,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit22be(value: number) {
-        this.bit(value, 22, undefined, "big");
+    async bit22be(value: number) {
+        await this.bit(value, 22, undefined, "big");
     };
 
     /**
@@ -1642,8 +1658,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit22(value: number) {
-        this.bit(value, 22, true);
+    async ubit22(value: number) {
+        await this.bit(value, 22, true);
     };
 
     /**
@@ -1653,8 +1669,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit22le(value: number) {
-        this.bit(value, 22, true, "little");;
+    async ubit22le(value: number) {
+        await this.bit(value, 22, true, "little");;
     };
 
     /**
@@ -1664,8 +1680,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit22be(value: number) {
-        this.bit(value, 22, true, "big");
+    async ubit22be(value: number) {
+        await this.bit(value, 22, true, "big");
     };
 
     /**
@@ -1675,8 +1691,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit23(value: number) {
-        this.bit(value, 23);
+    async bit23(value: number) {
+        await this.bit(value, 23);
     };
 
     /**
@@ -1686,8 +1702,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit23le(value: number) {
-        this.bit(value, 23, undefined, "little");
+    async bit23le(value: number) {
+        await this.bit(value, 23, undefined, "little");
     };
 
     /**
@@ -1697,8 +1713,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit23be(value: number) {
-        this.bit(value, 23, undefined, "big");
+    async bit23be(value: number) {
+        await this.bit(value, 23, undefined, "big");
     };
 
     /**
@@ -1708,8 +1724,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit23(value: number) {
-        this.bit(value, 23, true);
+    async ubit23(value: number) {
+        await this.bit(value, 23, true);
     };
 
     /**
@@ -1719,8 +1735,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit23le(value: number) {
-        this.bit(value, 23, true, "little");;
+    async ubit23le(value: number) {
+        await this.bit(value, 23, true, "little");;
     };
 
     /**
@@ -1730,8 +1746,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit23be(value: number) {
-        this.bit(value, 23, true, "big");
+    async ubit23be(value: number) {
+        await this.bit(value, 23, true, "big");
     };
 
     /**
@@ -1741,8 +1757,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit24(value: number) {
-        this.bit(value, 24);
+    async bit24(value: number) {
+        await this.bit(value, 24);
     };
 
     /**
@@ -1752,8 +1768,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit24le(value: number) {
-        this.bit(value, 24, undefined, "little");
+    async bit24le(value: number) {
+        await this.bit(value, 24, undefined, "little");
     };
 
     /**
@@ -1763,8 +1779,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit24be(value: number) {
-        this.bit(value, 24, undefined, "big");
+    async bit24be(value: number) {
+        await this.bit(value, 24, undefined, "big");
     };
 
     /**
@@ -1774,8 +1790,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit24(value: number) {
-        this.bit(value, 24, true);
+    async ubit24(value: number) {
+        await this.bit(value, 24, true);
     };
 
     /**
@@ -1785,8 +1801,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit24le(value: number) {
-        this.bit(value, 24, true, "little");;
+    async ubit24le(value: number) {
+        await this.bit(value, 24, true, "little");;
     };
 
     /**
@@ -1796,8 +1812,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit24be(value: number) {
-        this.bit(value, 24, true, "big");
+    async ubit24be(value: number) {
+        await this.bit(value, 24, true, "big");
     };
 
     /**
@@ -1807,8 +1823,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit25(value: number) {
-        this.bit(value, 25);
+    async bit25(value: number) {
+        await this.bit(value, 25);
     };
 
     /**
@@ -1818,8 +1834,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit25le(value: number) {
-        this.bit(value, 25, undefined, "little");
+    async bit25le(value: number) {
+        await this.bit(value, 25, undefined, "little");
     };
 
     /**
@@ -1829,8 +1845,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit25be(value: number) {
-        this.bit(value, 25, undefined, "big");
+    async bit25be(value: number) {
+        await this.bit(value, 25, undefined, "big");
     };
 
     /**
@@ -1840,8 +1856,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit25(value: number) {
-        this.bit(value, 25, true);
+    async ubit25(value: number) {
+        await this.bit(value, 25, true);
     };
 
     /**
@@ -1851,8 +1867,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit25le(value: number) {
-        this.bit(value, 25, true, "little");;
+    async ubit25le(value: number) {
+        await this.bit(value, 25, true, "little");;
     };
 
     /**
@@ -1862,8 +1878,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit25be(value: number) {
-        this.bit(value, 25, true, "big");
+    async ubit25be(value: number) {
+        await this.bit(value, 25, true, "big");
     };
 
     /**
@@ -1873,8 +1889,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit26(value: number) {
-        this.bit(value, 26);
+    async bit26(value: number) {
+        await this.bit(value, 26);
     };
 
     /**
@@ -1884,8 +1900,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit26le(value: number) {
-        this.bit(value, 26, undefined, "little");
+    async bit26le(value: number) {
+        await this.bit(value, 26, undefined, "little");
     };
 
     /**
@@ -1895,8 +1911,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit26be(value: number) {
-        this.bit(value, 26, undefined, "big");
+    async bit26be(value: number) {
+        await this.bit(value, 26, undefined, "big");
     };
 
     /**
@@ -1906,8 +1922,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit26(value: number) {
-        this.bit(value, 26, true);
+    async ubit26(value: number) {
+        await this.bit(value, 26, true);
     };
 
     /**
@@ -1917,8 +1933,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit26le(value: number) {
-        this.bit(value, 26, true, "little");;
+    async ubit26le(value: number) {
+        await this.bit(value, 26, true, "little");;
     };
 
     /**
@@ -1928,8 +1944,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit26be(value: number) {
-        this.bit(value, 26, true, "big");
+    async ubit26be(value: number) {
+        await this.bit(value, 26, true, "big");
     };
 
     /**
@@ -1939,8 +1955,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit27(value: number) {
-        this.bit(value, 27);
+    async bit27(value: number) {
+        await this.bit(value, 27);
     };
 
     /**
@@ -1950,8 +1966,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit27le(value: number) {
-        this.bit(value, 27, undefined, "little");
+    async bit27le(value: number) {
+        await this.bit(value, 27, undefined, "little");
     };
 
     /**
@@ -1961,8 +1977,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit27be(value: number) {
-        this.bit(value, 27, undefined, "big");
+    async bit27be(value: number) {
+        await this.bit(value, 27, undefined, "big");
     };
 
     /**
@@ -1972,8 +1988,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit27(value: number) {
-        this.bit(value, 27, true);
+    async ubit27(value: number) {
+        await this.bit(value, 27, true);
     };
 
     /**
@@ -1983,8 +1999,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit27le(value: number) {
-        this.bit(value, 27, true, "little");;
+    async ubit27le(value: number) {
+        await this.bit(value, 27, true, "little");;
     };
 
     /**
@@ -1994,8 +2010,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit27be(value: number) {
-        this.bit(value, 27, true, "big");
+    async ubit27be(value: number) {
+        await this.bit(value, 27, true, "big");
     };
 
     /**
@@ -2005,8 +2021,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit28(value: number) {
-        this.bit(value, 28);
+    async bit28(value: number) {
+        await this.bit(value, 28);
     };
 
     /**
@@ -2016,8 +2032,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit28le(value: number) {
-        this.bit(value, 28, undefined, "little");
+    async bit28le(value: number) {
+        await this.bit(value, 28, undefined, "little");
     };
 
     /**
@@ -2027,8 +2043,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit28be(value: number) {
-        this.bit(value, 28, undefined, "big");
+    async bit28be(value: number) {
+        await this.bit(value, 28, undefined, "big");
     };
 
     /**
@@ -2038,8 +2054,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit28(value: number) {
-        this.bit(value, 28, true);
+    async ubit28(value: number) {
+        await this.bit(value, 28, true);
     };
 
     /**
@@ -2049,8 +2065,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit28le(value: number) {
-        this.bit(value, 28, true, "little");;
+    async ubit28le(value: number) {
+        await this.bit(value, 28, true, "little");;
     };
 
     /**
@@ -2060,8 +2076,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit28be(value: number) {
-        this.bit(value, 28, true, "big");
+    async ubit28be(value: number) {
+        await this.bit(value, 28, true, "big");
     };
 
     /**
@@ -2071,8 +2087,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit29(value: number) {
-        this.bit(value, 29);
+    async bit29(value: number) {
+        await this.bit(value, 29);
     };
 
     /**
@@ -2082,8 +2098,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit29le(value: number) {
-        this.bit(value, 29, undefined, "little");
+    async bit29le(value: number) {
+        await this.bit(value, 29, undefined, "little");
     };
 
     /**
@@ -2093,8 +2109,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit29be(value: number) {
-        this.bit(value, 29, undefined, "big");
+    async bit29be(value: number) {
+        await this.bit(value, 29, undefined, "big");
     };
 
     /**
@@ -2104,8 +2120,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit29(value: number) {
-        this.bit(value, 29, true);
+    async ubit29(value: number) {
+        await this.bit(value, 29, true);
     };
 
     /**
@@ -2115,8 +2131,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit29le(value: number) {
-        this.bit(value, 29, true, "little");;
+    async ubit29le(value: number) {
+        await this.bit(value, 29, true, "little");;
     };
 
     /**
@@ -2126,8 +2142,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit29be(value: number) {
-        this.bit(value, 29, true, "big");
+    async ubit29be(value: number) {
+        await this.bit(value, 29, true, "big");
     };
 
     /**
@@ -2137,8 +2153,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit30(value: number) {
-        this.bit(value, 30);
+    async bit30(value: number) {
+        await this.bit(value, 30);
     };
 
     /**
@@ -2148,8 +2164,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit30le(value: number) {
-        this.bit(value, 30, undefined, "little");
+    async bit30le(value: number) {
+        await this.bit(value, 30, undefined, "little");
     };
 
     /**
@@ -2159,8 +2175,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit30be(value: number) {
-        this.bit(value, 30, undefined, "big");
+    async bit30be(value: number) {
+        await this.bit(value, 30, undefined, "big");
     };
 
     /**
@@ -2170,8 +2186,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit30(value: number) {
-        this.bit(value, 30, true);
+    async ubit30(value: number) {
+        await this.bit(value, 30, true);
     };
 
     /**
@@ -2181,8 +2197,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit30le(value: number) {
-        this.bit(value, 30, true, "little");;
+    async ubit30le(value: number) {
+        await this.bit(value, 30, true, "little");;
     };
 
     /**
@@ -2192,8 +2208,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit30be(value: number) {
-        this.bit(value, 30, true, "big");
+    async ubit30be(value: number) {
+        await this.bit(value, 30, true, "big");
     };
 
     /**
@@ -2203,8 +2219,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit31(value: number) {
-        this.bit(value, 31);
+    async bit31(value: number) {
+        await this.bit(value, 31);
     };
 
     /**
@@ -2214,8 +2230,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit31le(value: number) {
-        this.bit(value, 31, undefined, "little");
+    async bit31le(value: number) {
+        await this.bit(value, 31, undefined, "little");
     };
 
     /**
@@ -2225,8 +2241,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit31be(value: number) {
-        this.bit(value, 31, undefined, "big");
+    async bit31be(value: number) {
+        await this.bit(value, 31, undefined, "big");
     };
 
     /**
@@ -2236,8 +2252,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit31(value: number) {
-        this.bit(value, 31, true);
+    async ubit31(value: number) {
+        await this.bit(value, 31, true);
     };
 
     /**
@@ -2247,8 +2263,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit31le(value: number) {
-        this.bit(value, 31, true, "little");;
+    async ubit31le(value: number) {
+        await this.bit(value, 31, true, "little");;
     };
 
     /**
@@ -2258,8 +2274,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit31be(value: number) {
-        this.bit(value, 31, true, "big");
+    async ubit31be(value: number) {
+        await this.bit(value, 31, true, "big");
     };
 
     /**
@@ -2269,8 +2285,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit32(value: number) {
-        this.bit(value, 32);
+    async bit32(value: number) {
+        await this.bit(value, 32);
     };
 
     /**
@@ -2280,8 +2296,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit32le(value: number) {
-        this.bit(value, 32, undefined, "little");
+    async bit32le(value: number) {
+        await this.bit(value, 32, undefined, "little");
     };
 
     /**
@@ -2291,8 +2307,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set bit32be(value: number) {
-        this.bit(value, 32, undefined, "big");
+    async bit32be(value: number) {
+        await this.bit(value, 32, undefined, "big");
     };
 
     /**
@@ -2302,8 +2318,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit32(value: number) {
-        this.bit(value, 32, true);
+    async ubit32(value: number) {
+        await this.bit(value, 32, true);
     };
 
     /**
@@ -2313,8 +2329,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit32le(value: number) {
-        this.bit(value, 32, true, "little");;
+    async ubit32le(value: number) {
+        await this.bit(value, 32, true, "little");;
     };
 
     /**
@@ -2324,8 +2340,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set ubit32be(value: number) {
-        this.bit(value, 32, true, "big");
+    async ubit32be(value: number) {
+        await this.bit(value, 32, true, "big");
     };
 
     //
@@ -2337,8 +2353,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set byte(value: number) {
-        this.writeByte(value);
+    async byte(value: number) {
+        await this.writeByte(value);
     };
 
     /**
@@ -2346,8 +2362,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set int8(value: number) {
-        this.writeByte(value);
+    async int8(value: number) {
+        await this.writeByte(value);
     };
 
     /**
@@ -2355,8 +2371,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set uint8(value: number) {
-        this.writeByte(value, true);
+    async uint8(value: number) {
+        await this.writeByte(value, true);
     };
 
     /**
@@ -2364,8 +2380,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set ubyte(value: number) {
-        this.writeByte(value, true);
+    async ubyte(value: number) {
+        await this.writeByte(value, true);
     };
 
     //
@@ -2377,8 +2393,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set int16(value: number) {
-        this.writeInt16(value);
+    async int16(value: number) {
+        await this.writeInt16(value);
     };
 
     /**
@@ -2386,8 +2402,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set short(value: number) {
-        this.writeInt16(value);
+    async short(value: number) {
+        await this.writeInt16(value);
     };
 
     /**
@@ -2395,8 +2411,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set word(value: number) {
-        this.writeInt16(value);
+    async word(value: number) {
+        await this.writeInt16(value);
     };
 
     /**
@@ -2404,8 +2420,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set uint16(value: number) {
-        this.writeInt16(value, true);
+    async uint16(value: number) {
+        await this.writeInt16(value, true);
     };
 
     /**
@@ -2413,8 +2429,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set ushort(value: number) {
-        this.writeInt16(value, true);
+    async ushort(value: number) {
+        await this.writeInt16(value, true);
     };
 
     /**
@@ -2422,8 +2438,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set uword(value: number) {
-        this.writeInt16(value, true);
+    async uword(value: number) {
+        await this.writeInt16(value, true);
     };
 
     /**
@@ -2431,8 +2447,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set int16be(value: number) {
-        this.writeInt16(value, false, "big");
+    async int16be(value: number) {
+        await this.writeInt16(value, false, "big");
     };
 
     /**
@@ -2440,8 +2456,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set shortbe(value: number) {
-        this.writeInt16(value, false, "big");
+    async shortbe(value: number) {
+        await this.writeInt16(value, false, "big");
     };
 
     /**
@@ -2449,8 +2465,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set wordbe(value: number) {
-        this.writeInt16(value, false, "big");
+    async wordbe(value: number) {
+        await this.writeInt16(value, false, "big");
     };
 
     /**
@@ -2458,8 +2474,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set uint16be(value: number) {
-        this.writeInt16(value, true, "big");
+    async uint16be(value: number) {
+        await this.writeInt16(value, true, "big");
     };
 
     /**
@@ -2467,8 +2483,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set ushortbe(value: number) {
-        this.writeInt16(value, true, "big");
+    async ushortbe(value: number) {
+        await this.writeInt16(value, true, "big");
     };
 
     /**
@@ -2476,8 +2492,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set uwordbe(value: number) {
-        this.writeInt16(value, true, "big");
+    async uwordbe(value: number) {
+        await this.writeInt16(value, true, "big");
     };
 
     /**
@@ -2485,8 +2501,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set int16le(value: number) {
-        this.writeInt16(value, false, "little");
+    async int16le(value: number) {
+        await this.writeInt16(value, false, "little");
     };
 
     /**
@@ -2494,8 +2510,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set shortle(value: number) {
-        this.writeInt16(value, false, "little");
+    async shortle(value: number) {
+        await this.writeInt16(value, false, "little");
     };
 
     /**
@@ -2503,8 +2519,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set wordle(value: number) {
-        this.writeInt16(value, false, "little");
+    async wordle(value: number) {
+        await this.writeInt16(value, false, "little");
     };
 
     /**
@@ -2512,8 +2528,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set uint16le(value: number) {
-        this.writeInt16(value, true, "little");
+    async uint16le(value: number) {
+        await this.writeInt16(value, true, "little");
     };
 
     /**
@@ -2521,8 +2537,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set ushortle(value: number) {
-        this.writeInt16(value, true, "little");
+    async ushortle(value: number) {
+        await this.writeInt16(value, true, "little");
     };
 
     /**
@@ -2530,8 +2546,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set uwordle(value: number) {
-        this.writeInt16(value, true, "little");
+    async uwordle(value: number) {
+        await this.writeInt16(value, true, "little");
     };
 
     //
@@ -2543,8 +2559,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set half(value: number) {
-        this.writeHalfFloat(value);
+    async half(value: number) {
+        await this.writeHalfFloat(value);
     };
 
     /**
@@ -2552,8 +2568,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set halffloat(value: number) {
-        this.writeHalfFloat(value);
+    async halffloat(value: number) {
+        await this.writeHalfFloat(value);
     };
 
     /**
@@ -2561,8 +2577,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set halffloatbe(value: number) {
-        this.writeHalfFloat(value, "big");
+    async halffloatbe(value: number) {
+        await this.writeHalfFloat(value, "big");
     };
 
     /**
@@ -2570,8 +2586,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set halfbe(value: number) {
-        this.writeHalfFloat(value, "big");
+    async halfbe(value: number) {
+        await this.writeHalfFloat(value, "big");
     };
 
     /**
@@ -2579,8 +2595,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set halffloatle(value: number) {
-        this.writeHalfFloat(value, "little");
+    async halffloatle(value: number) {
+        await this.writeHalfFloat(value, "little");
     };
 
     /**
@@ -2588,8 +2604,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set halfle(value: number) {
-        this.writeHalfFloat(value, "little");
+    async halfle(value: number) {
+        await this.writeHalfFloat(value, "little");
     };
 
     //
@@ -2601,8 +2617,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set int(value: number) {
-        this.writeInt32(value);
+    async int(value: number) {
+        await this.writeInt32(value);
     };
 
     /**
@@ -2610,8 +2626,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     *
     * @param {number} value - value as int 
     */
-    set int32(value: number) {
-        this.writeInt32(value);
+    async int32(value: number) {
+        await this.writeInt32(value);
     };
 
     /**
@@ -2619,8 +2635,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set double(value: number) {
-        this.writeInt32(value);
+    async double(value: number) {
+        await this.writeInt32(value);
     };
 
     /**
@@ -2628,8 +2644,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set long(value: number) {
-        this.writeInt32(value);
+    async long(value: number) {
+        await this.writeInt32(value);
     };
 
     /**
@@ -2637,8 +2653,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set uint32(value: number) {
-        this.writeInt32(value, true);
+    async uint32(value: number) {
+        await this.writeInt32(value, true);
     };
 
     /**
@@ -2646,8 +2662,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set uint(value: number) {
-        this.writeInt32(value, true);
+    async uint(value: number) {
+        await this.writeInt32(value, true);
     };
 
     /**
@@ -2655,8 +2671,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     *
     * @param {number} value - value as int 
     */
-    set udouble(value: number) {
-        this.writeInt32(value, true);
+    async udouble(value: number) {
+        await this.writeInt32(value, true);
     };
 
     /**
@@ -2664,8 +2680,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     *
     * @param {number} value - value as int 
     */
-    set ulong(value: number) {
-        this.writeInt32(value, true);
+    async ulong(value: number) {
+        await this.writeInt32(value, true);
     };
 
     /**
@@ -2673,8 +2689,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set int32le(value: number) {
-        this.writeInt32(value, false, "little");
+    async int32le(value: number) {
+        await this.writeInt32(value, false, "little");
     };
 
     /**
@@ -2682,8 +2698,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set intle(value: number) {
-        this.writeInt32(value, false, "little");
+    async intle(value: number) {
+        await this.writeInt32(value, false, "little");
     };
 
     /**
@@ -2691,8 +2707,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set doublele(value: number) {
-        this.writeInt32(value, false, "little");
+    async doublele(value: number) {
+        await this.writeInt32(value, false, "little");
     };
 
     /**
@@ -2700,8 +2716,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set longle(value: number) {
-        this.writeInt32(value, false, "little");
+    async longle(value: number) {
+        await this.writeInt32(value, false, "little");
     };
 
     /**
@@ -2709,8 +2725,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set uint32le(value: number) {
-        this.writeInt32(value, true, "little");
+    async uint32le(value: number) {
+        await this.writeInt32(value, true, "little");
     };
 
     /**
@@ -2718,8 +2734,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set uintle(value: number) {
-        this.writeInt32(value, true, "little");
+    async uintle(value: number) {
+        await this.writeInt32(value, true, "little");
     };
 
     /**
@@ -2727,8 +2743,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set udoublele(value: number) {
-        this.writeInt32(value, true, "little");
+    async udoublele(value: number) {
+        await this.writeInt32(value, true, "little");
     };
 
     /**
@@ -2736,8 +2752,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set ulongle(value: number) {
-        this.writeInt32(value, true, "little");
+    async ulongle(value: number) {
+        await this.writeInt32(value, true, "little");
     };
 
     /**
@@ -2745,8 +2761,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set intbe(value: number) {
-        this.writeInt32(value, false, "big");
+    async intbe(value: number) {
+        await this.writeInt32(value, false, "big");
     };
 
     /**
@@ -2754,8 +2770,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set int32be(value: number) {
-        this.writeInt32(value, false, "big");
+    async int32be(value: number) {
+        await this.writeInt32(value, false, "big");
     };
 
     /**
@@ -2763,8 +2779,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set doublebe(value: number) {
-        this.writeInt32(value, false, "big");
+    async doublebe(value: number) {
+        await this.writeInt32(value, false, "big");
     };
 
     /**
@@ -2772,8 +2788,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set longbe(value: number) {
-        this.writeInt32(value, false, "big");
+    async longbe(value: number) {
+        await this.writeInt32(value, false, "big");
     };
 
     /**
@@ -2781,8 +2797,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set writeUInt32BE(value: number) {
-        this.writeInt32(value, true, "big");
+    async writeUInt32BE(value: number) {
+        await this.writeInt32(value, true, "big");
     };
 
     /**
@@ -2790,8 +2806,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set uint32be(value: number) {
-        this.writeInt32(value, true, "big");
+    async uint32be(value: number) {
+        await this.writeInt32(value, true, "big");
     };
 
     /**
@@ -2799,8 +2815,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set uintbe(value: number) {
-        this.writeInt32(value, true, "big");
+    async uintbe(value: number) {
+        await this.writeInt32(value, true, "big");
     };
 
     /**
@@ -2808,8 +2824,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int 
      */
-    set udoublebe(value: number) {
-        this.writeInt32(value, true, "big");
+    async udoublebe(value: number) {
+        await this.writeInt32(value, true, "big");
     };
 
     /**
@@ -2817,8 +2833,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      *
      * @param {number} value - value as int
      */
-    set ulongbe(value: number) {
-        this.writeInt32(value, true, "big");
+    async ulongbe(value: number) {
+        await this.writeInt32(value, true, "big");
     };
 
     //
@@ -2830,8 +2846,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {number} value - value as int 
     */
-    set float(value: number) {
-        this.writeFloat(value);
+    async float(value: number) {
+        await this.writeFloat(value);
     };
 
     /**
@@ -2839,8 +2855,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set floatle(value: number) {
-        this.writeFloat(value, "little");
+    async floatle(value: number) {
+        await this.writeFloat(value, "little");
     };
 
     /**
@@ -2848,8 +2864,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {number} value - value as int 
     */
-    set floatbe(value: number) {
-        this.writeFloat(value, "big");
+    async floatbe(value: number) {
+        await this.writeFloat(value, "big");
     };
 
     //
@@ -2861,8 +2877,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set int64(value: BigValue) {
-        this.writeInt64(value);
+    async int64(value: BigValue) {
+        await this.writeInt64(value);
     };
 
     /**
@@ -2870,8 +2886,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {BigValue} value - value as int 
     */
-    set quad(value: BigValue) {
-        this.writeInt64(value);
+    async quad(value: BigValue) {
+        await this.writeInt64(value);
     };
 
     /**
@@ -2879,8 +2895,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set bigint(value: BigValue) {
-        this.writeInt64(value);
+    async bigint(value: BigValue) {
+        await this.writeInt64(value);
     };
 
     /**
@@ -2888,8 +2904,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set uint64(value: BigValue) {
-        this.writeInt64(value, true);
+    async uint64(value: BigValue) {
+        await this.writeInt64(value, true);
     };
 
     /**
@@ -2897,8 +2913,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set ubigint(value: BigValue) {
-        this.writeInt64(value, true);
+    async ubigint(value: BigValue) {
+        await this.writeInt64(value, true);
     };
 
     /**
@@ -2906,8 +2922,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {BigValue} value - value as int 
     */
-    set uquad(value: BigValue) {
-        this.writeInt64(value, true,);
+    async uquad(value: BigValue) {
+        await this.writeInt64(value, true,);
     };
 
     /**
@@ -2915,8 +2931,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set int64le(value: BigValue) {
-        this.writeInt64(value, false, "little");
+    async int64le(value: BigValue) {
+        await this.writeInt64(value, false, "little");
     };
 
     /**
@@ -2924,8 +2940,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set bigintle(value: BigValue) {
-        this.writeInt64(value, false, "little");
+    async bigintle(value: BigValue) {
+        await this.writeInt64(value, false, "little");
     };
 
     /**
@@ -2933,8 +2949,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set quadle(value: BigValue) {
-        this.writeInt64(value, false, "little");
+    async quadle(value: BigValue) {
+        await this.writeInt64(value, false, "little");
     };
 
     /**
@@ -2942,8 +2958,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set uint64le(value: BigValue) {
-        this.writeInt64(value, true, "little");
+    async uint64le(value: BigValue) {
+        await this.writeInt64(value, true, "little");
     };
 
     /**
@@ -2951,8 +2967,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set ubigintle(value: BigValue) {
-        this.writeInt64(value, true, "little");
+    async ubigintle(value: BigValue) {
+        await this.writeInt64(value, true, "little");
     };
 
     /**
@@ -2960,8 +2976,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set uquadle(value: BigValue) {
-        this.writeInt64(value, true, "little");
+    async uquadle(value: BigValue) {
+        await this.writeInt64(value, true, "little");
     };
 
     /**
@@ -2969,8 +2985,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set int64be(value: BigValue) {
-        this.writeInt64(value, false, "big");
+    async int64be(value: BigValue) {
+        await this.writeInt64(value, false, "big");
     };
 
     /**
@@ -2978,8 +2994,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set bigintbe(value: BigValue) {
-        this.writeInt64(value, false, "big");
+    async bigintbe(value: BigValue) {
+        await this.writeInt64(value, false, "big");
     };
 
     /**
@@ -2987,8 +3003,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set quadbe(value: BigValue) {
-        this.writeInt64(value, false, "big");
+    async quadbe(value: BigValue) {
+        await this.writeInt64(value, false, "big");
     };
 
     /**
@@ -2996,8 +3012,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set uint64be(value: BigValue) {
-        this.writeInt64(value, true, "big");
+    async uint64be(value: BigValue) {
+        await this.writeInt64(value, true, "big");
     };
 
     /**
@@ -3005,8 +3021,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set ubigintbe(value: BigValue) {
-        this.writeInt64(value, true, "big");
+    async ubigintbe(value: BigValue) {
+        await this.writeInt64(value, true, "big");
     };
 
     /**
@@ -3014,8 +3030,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {BigValue} value - value as int 
      */
-    set uquadbe(value: BigValue) {
-        this.writeInt64(value, true, "big");
+    async uquadbe(value: BigValue) {
+        await this.writeInt64(value, true, "big");
     };
 
     //
@@ -3027,8 +3043,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set doublefloat(value: number) {
-        this.writeDoubleFloat(value);
+    async doublefloat(value: number) {
+        await this.writeDoubleFloat(value);
     };
 
     /**
@@ -3036,8 +3052,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set dfloat(value: number) {
-        this.writeDoubleFloat(value);
+    async dfloat(value: number) {
+        await this.writeDoubleFloat(value);
     };
 
     /**
@@ -3045,8 +3061,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set dfloatbe(value: number) {
-        this.writeDoubleFloat(value, "big");
+    async dfloatbe(value: number) {
+        await this.writeDoubleFloat(value, "big");
     };
 
     /**
@@ -3054,8 +3070,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set doublefloatbe(value: number) {
-        this.writeDoubleFloat(value, "big");
+    async doublefloatbe(value: number) {
+        await this.writeDoubleFloat(value, "big");
     };
 
     /**
@@ -3063,8 +3079,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set dfloatle(value: number) {
-        this.writeDoubleFloat(value, "little");
+    async dfloatle(value: number) {
+        await this.writeDoubleFloat(value, "little");
     };
 
     /**
@@ -3072,8 +3088,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * @param {number} value - value as int 
      */
-    set doublefloatle(value: number) {
-        this.writeDoubleFloat(value, "little");
+    async doublefloatle(value: number) {
+        await this.writeDoubleFloat(value, "little");
     };
 
     //
@@ -3092,8 +3108,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types 
     * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
     */
-    string(string: string, options?: stringOptions): void {
-        return this.writeString(string, options);
+    async string(string: string, options?: stringOptions) {
+        return await this.writeString(string, options);
     };
 
     /**
@@ -3103,8 +3119,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {string} string - text string
     */
-    set str(string: string) {
-        this.writeString(string, this.strSettings);
+    async str(string: string) {
+        await this.writeString(string, this.strSettings);
     };
 
     /**
@@ -3114,8 +3130,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {stringOptions["length"]} length - for fixed length utf strings
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
-    utf8string(string: string, length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"]): void {
-        return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
+    async utf8string(string: string, length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"]) {
+        return await this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
     };
 
     /**
@@ -3125,8 +3141,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {stringOptions["length"]} length - for fixed length utf strings
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
-    cstring(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]): void {
-        return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
+    async cstring(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]) {
+        return await this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
     };
 
     /**
@@ -3136,8 +3152,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {stringOptions["length"]} length - for fixed length utf strings
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
-    ansistring(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]): void {
-        return this.string(string, { stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue });
+   async ansistring(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]) {
+        return await this.string(string, { stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue });
     };
 
     /**
@@ -3148,8 +3164,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
     */
-    utf16string(string: string, length?: number, terminateValue?: stringOptions["terminateValue"], endian?: stringOptions["endian"]): void {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
+    async utf16string(string: string, length?: number, terminateValue?: stringOptions["terminateValue"], endian?: stringOptions["endian"]) {
+        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
     };
 
     /**
@@ -3160,8 +3176,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
     */
-    unistring(string: string, length?: number, terminateValue?: stringOptions["terminateValue"], endian?: stringOptions["endian"]): void {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
+    async unistring(string: string, length?: number, terminateValue?: stringOptions["terminateValue"], endian?: stringOptions["endian"]) {
+        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
     };
 
     /**
@@ -3171,8 +3187,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {stringOptions["length"]} length - for fixed length utf strings
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
-    utf16stringle(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]): void {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
+    async utf16stringle(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]) {
+        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
     };
 
     /**
@@ -3182,8 +3198,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {stringOptions["length"]} length - for fixed length utf strings
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
-    unistringle(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]): void {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
+    async unistringle(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]) {
+        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
     };
 
     /**
@@ -3193,8 +3209,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {stringOptions["length"]} length - for fixed length utf strings
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
-    utf16stringbe(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]): void {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
+    async utf16stringbe(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]) {
+        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
     };
 
     /**
@@ -3204,8 +3220,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {stringOptions["length"]} length - for fixed length utf strings
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
-    unistringbe(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]): void {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
+    async unistringbe(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]) {
+        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
     };
 
     /**
@@ -3215,8 +3231,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     * @param {stringOptions["endian"]} endian - ``big`` or ``little`` for 2 or 4 byte length write size
     */
-    pstring(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"], endian?: stringOptions["endian"]): void {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: lengthWriteSize, endian: endian });
+    async pstring(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"], endian?: stringOptions["endian"]) {
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: lengthWriteSize, endian: endian });
     };
 
     /**
@@ -3225,8 +3241,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {string} string - text string
     * @param {stringOptions["endian"]} endian - ``big`` or ``little`` for 2 or 4 byte length write size
     */
-    pstring1(string: string, endian?: stringOptions["endian"]): void {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: endian });
+    async pstring1(string: string, endian?: stringOptions["endian"]) {
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: endian });
     };
 
     /**
@@ -3234,8 +3250,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {string} string - text string
     */
-    pstring1le(string: string): void {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "little" });
+    async pstring1le(string: string) {
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "little" });
     };
 
     /**
@@ -3243,8 +3259,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {string} string - text string
     */
-    pstring1be(string: string): void {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "big" });
+    async pstring1be(string: string) {
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "big" });
     };
 
     /**
@@ -3253,8 +3269,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {string} string - text string
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
-    pstring2(string: string, endian?: stringOptions["endian"]): void {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: endian });
+    async pstring2(string: string, endian?: stringOptions["endian"]) {
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: endian });
     };
 
     /**
@@ -3262,8 +3278,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {string} string - text string
     */
-    pstring2le(string: string): void {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "little" });
+    async pstring2le(string: string) {
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "little" });
     };
 
     /**
@@ -3271,8 +3287,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {string} string - text string
     */
-    pstring2be(string: string): void {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "big" });
+    async pstring2be(string: string) {
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "big" });
     };
 
     /**
@@ -3281,8 +3297,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {string} string - text string
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
-    pstring4(string: string, endian?: stringOptions["endian"]): void {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: endian });
+    async pstring4(string: string, endian?: stringOptions["endian"]) {
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: endian });
     };
 
     /**
@@ -3290,8 +3306,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {string} string - text string
     */
-    pstring4be(string: string): void {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "big" });
+    async pstring4be(string: string) {
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "big" });
     };
 
     /**
@@ -3299,8 +3315,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {string} string - text string
     */
-    pstring4le(string: string): void {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "little" });
+    async pstring4le(string: string) {
+        return await this .string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "little" });
     };
 
     /**
@@ -3310,8 +3326,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
-    wpstring(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"], endian?: stringOptions["endian"]): void {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: endian });
+    async wpstring(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"], endian?: stringOptions["endian"]) {
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: endian });
     };
 
     /**
@@ -3320,8 +3336,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {string} string - text string
     * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     */
-    wpstringbe(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"]): void {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "big" });
+    async wpstringbe(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"]) {
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "big" });
     };
 
     /**
@@ -3330,8 +3346,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {string} string - text string
     * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     */
-    wpstringle(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"]): void {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "little" });
+    async wpstringle(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"]) {
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "little" });
     };
 
     /**
@@ -3340,8 +3356,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {string} string - text string
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
-    wpstring1(string: string, endian?: stringOptions["endian"]): void {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: endian });
+    async wpstring1(string: string, endian?: stringOptions["endian"]) {
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: endian });
     };
 
     /**
@@ -3349,8 +3365,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {string} string - text string
     */
-    wpstring1be(string: string): void {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "big" });
+    async wpstring1be(string: string) {
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "big" });
     };
 
     /**
@@ -3358,8 +3374,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {string} string - text string
     */
-    wpstring1le(string: string): void {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "little" });
+    async wpstring1le(string: string) {
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "little" });
     };
 
     /**
@@ -3368,8 +3384,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {string} string - text string
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
-    wpstring2(string: string, endian?: stringOptions["endian"]): void {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: endian });
+    async wpstring2(string: string, endian?: stringOptions["endian"]) {
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: endian });
     };
 
     /**
@@ -3377,8 +3393,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {string} string - text string
     */
-    wpstring2le(string: string): void {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "little" });
+    async wpstring2le(string: string) {
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "little" });
     };
 
     /**
@@ -3386,8 +3402,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {string} string - text string
     */
-    wpstring2be(string: string): void {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "big" });
+    async wpstring2be(string: string) {
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "big" });
     };
 
     /**
@@ -3396,8 +3412,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @param {string} string - text string
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
-    wpstring4(string: string, endian?: stringOptions["endian"]): void {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: endian });
+    async wpstring4(string: string, endian?: stringOptions["endian"]) {
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: endian });
     };
 
     /**
@@ -3405,8 +3421,8 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {string} string - text string
     */
-    wpstring4le(string: string): void {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "little" });
+    async wpstring4le(string: string) {
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "little" });
     };
 
     /**
@@ -3414,7 +3430,7 @@ export class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {string} string - text string
     */
-    wpstring4be(string: string): void {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "big" });
+    async wpstring4be(string: string) {
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "big" });
     };
 };

@@ -1,4 +1,3 @@
-/// <reference types="node" />
 type endian = "little" | "big";
 type BigValue = number | bigint;
 type BiOptions = {
@@ -28,6 +27,10 @@ type BiOptions = {
      * Set this to ``true`` if you wish for it to always stay a ``BigInt``.
      */
     enforceBigInt?: boolean;
+    /**
+     * Allow data writes when reading a file
+     */
+    writeable?: boolean;
 };
 type hexdumpOptions = {
     /**
@@ -93,7 +96,19 @@ type stringOptions = {
     endian?: "big" | "little";
 };
 
-declare class BiBase {
+/**
+ * For file system in Node
+ */
+type FileDescriptor = number;
+/**
+ * file system read modes
+ */
+type fsMode = "w+" | "r";
+/**
+ * Base class for BiReader and BiWriter
+ */
+declare class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends boolean> {
+    #private;
     /**
      * Endianness of default read.
      * @type {endian}
@@ -124,11 +139,6 @@ declare class BiBase {
      */
     errorDump: boolean;
     /**
-     * Current buffer data.
-     * @type {Buffer|Uint8Array|null}
-     */
-    data: Buffer | Uint8Array | null;
-    /**
      * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
      *
      * Otherwise it extends just the amount of the next written value.
@@ -138,16 +148,33 @@ declare class BiBase {
      * NOTE: Using ``BiWriter.get`` or ``BiWriter.return`` will now remove all data after the current write position. Use ``BiWriter.data`` to get the full buffer instead.
      */
     extendBufferSize: number;
-    fd: any;
-    filePath: string;
-    fsMode: string;
+    fd: FileDescriptor | null;
+    filePath: string | null;
+    fsMode: fsMode;
     /**
      * The settings that used when using the .str getter / setter
      */
     private strDefaults;
+    /**
+     * Window size of the file data (largest amount it can read)
+     */
     maxFileSize: number | null;
-    enforceBigInt: boolean;
-    constructor();
+    enforceBigInt: hasBigInt;
+    view: DataView;
+    mode: 'memory' | 'file';
+    /**
+     * Get the current buffer data.
+     *
+     * @type {DataType}
+     */
+    get data(): DataType;
+    /**
+     * Set the current buffer data.
+     *
+     * @param {DataType} data
+     */
+    set data(data: DataType);
+    constructor(input?: string | DataType, writeable?: boolean);
     /**
      * Settings for when using .str
      *
@@ -161,39 +188,64 @@ declare class BiBase {
      */
     writeMode(mode: boolean): void;
     /**
-     * Dummy function, not needed on Non-Stream
+     * Opens the file in `file` mode. Must be run before reading or writing.
+     *
+     * @returns {number} file size
      */
     open(): number;
     /**
-     * Dummy function, not needed on Non-Stream
+     * Internal update size
      */
     updateSize(): void;
     /**
-     * removes data.
+     * commit data and removes it.
      */
     close(): void;
     /**
-     * Dummy function, not needed on Non-Stream
+     * Write buffer to data
+     *
+     * @param {DataType} data
+     * @param {boolean} consume
+     * @param {number} start - likely this.offset
+     * @returns {Buffer | Uint8Array}
      */
-    read(start: number, length: number, consume?: boolean): Buffer | Uint8Array;
+    write(data: DataType, consume?: boolean, start?: number): DataType;
     /**
-     * Dummy function, not needed on Non-Stream
+     * Write data buffer back to file
+     *
+     * @returns {DataType}
      */
-    write(start: number, data: Buffer, consume?: boolean): number;
+    commit(): DataType;
     /**
-     * Dummy function, not needed on Non-Stream
+     * syncs the data to file
      */
-    renameFile(): void;
+    flush(): void;
     /**
-     * Dummy function, not needed on Non-Stream
+     * Renames the file you are working on.
+     *
+     * Must be full file path and file name.
+     *
+     * Keeps write / read position.
+     *
+     * Note: This is permanent and can't be undone.
+     *
+     * @param {string} newFilePath - New full file path and name.
+     */
+    renameFile(newFilePath: string): void;
+    /**
+     * Deletes the working file.
+     *
+     * Note: This is permanentand can't be undone.
+     *
+     * It doesn't send the file to the recycling bin for recovery.
      */
     deleteFile(): void;
-    /**
-     * Dummy function, not needed on Non-Stream
-     */
-    commit(consume?: boolean): number;
     extendArray(to_padd: number): void;
-    isBufferOrUint8Array(obj: Buffer | Uint8Array): boolean;
+    isBufferOrUint8Array(obj: any): boolean;
+    /**
+     * Call this after everytime we set/replace `this.data`
+     */
+    updateView(): void;
     /**
      *
      * Change endian, defaults to little.
@@ -266,85 +318,85 @@ declare class BiBase {
     /**
      * Get the current byte position.
      *
-     * @return {number} current byte position
+     * @returns {number} current byte position
      */
     get tell(): number;
     /**
      * Get the current byte position.
      *
-     * @return {number} current byte position
+     * @returns {number} current byte position
      */
     get FTell(): number;
     /**
      * Get the current byte position.
      *
-     * @return {number} current byte position
+     * @returns {number} current byte position
      */
     get getOffset(): number;
     /**
      * Get the current byte position;
      *
-     * @return {number} current byte position
+     * @returns {number} current byte position
      */
     get saveOffset(): number;
     /**
      * Get the current byte position;
      *
-     * @return {number} current byte position
+     * @returns {number} current byte position
      */
     get off(): number;
     /**
      * Get the current bit position (0-7).
      *
-     * @return {number} current bit position
+     * @returns {number} current bit position
      */
     get getOffsetBit(): number;
     /**
      * Get the current bit position (0-7).
      *
-     * @return {number} current bit position
+     * @returns {number} current bit position
      */
     get tellB(): number;
     /**
      * Get the current bit position (0-7).
      *
-     * @return {number} current bit position
+     * @returns {number} current bit position
      */
     get FTellB(): number;
     /**
      * Get the current bit position (0-7).
      *
-     * @return {number} current bit position
+     * @returns {number} current bit position
      */
     get offb(): number;
     /**
      * Get the current absolute bit position (from start of data).
      *
-     * @return {number} current absolute bit position
+     * @returns {number} current absolute bit position
      */
     get getOffsetAbsBit(): number;
     /**
      * Get the current absolute bit position (from start of data).
      *
-     * @return {number} current bit position
+     * @returns {number} current bit position
      */
     get saveOffsetAbsBit(): number;
     /**
      * Get the current absolute bit position (from start of data).
      *
-     * @return {number} current absolute bit position
+     * @returns {number} current absolute bit position
      */
     get tellAbsB(): number;
     /**
      * Get the current absolute bit position (from start of data).
      *
-     * @return {number} current absolute bit position
+     * @returns {number} current absolute bit position
      */
     get saveOffsetBit(): number;
     /**
      * Get the current absolute bit position (from start of data).
      *
-     * @return {number} current absolute bit position
+     * @returns {number} current absolute bit position
      */
     get offab(): number;
     /**
@@ -390,9 +442,9 @@ declare class BiBase {
      *
      * Use ``.data`` instead if you want the full buffer data.
      *
-     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+     * @returns {DataType} ``Buffer`` or ``Uint8Array``
      */
-    get get(): Buffer | Uint8Array;
+    get(): DataType;
     /**
      * Returns current data.
      *
@@ -400,9 +452,9 @@ declare class BiBase {
      *
      * Use ``.data`` instead if you want the full buffer data.
      *
-     * @returns {Buffer|Uint8Array} ``Buffer`` or ``Uint8Array``
+     * @returns {DataType} ``Buffer`` or ``Uint8Array``
      */
-    get return(): Buffer | Uint8Array;
+    return(): DataType;
     /**
     * Creates hex dump string. Will console log or return string if set in options.
     *
@@ -432,14 +484,20 @@ declare class BiBase {
     unrestrict(): void;
     /**
      * removes data.
+     *
+     * Commits any changes to file when editing a file.
      */
     end(): void;
     /**
      * removes data.
+     *
+     * Commits any changes to file when editing a file.
      */
     done(): void;
     /**
      * removes data.
+     *
+     * Commits any changes to file when editing a file.
      */
     finished(): void;
     /**
@@ -640,25 +698,25 @@ declare class BiBase {
      * @param {number} startOffset - Start location (default 0)
      * @param {number} endOffset - End location (default current position)
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    delete(startOffset?: number, endOffset?: number, consume?: boolean): Buffer | Uint8Array;
+    delete(startOffset?: number, endOffset?: number, consume?: boolean): DataType;
     /**
      * Deletes part of data from current byte position to end, returns removed.
      *
      * Note: Errors in strict mode.
      *
-     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    clip(): Buffer | Uint8Array;
+    clip(): DataType;
     /**
      * Deletes part of data from current byte position to end, returns removed.
      *
      * Note: Errors in strict mode.
      *
-     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    trim(): Buffer | Uint8Array;
+    trim(): DataType;
     /**
      * Deletes part of data from current byte position to supplied length, returns removed.
      *
@@ -666,9 +724,9 @@ declare class BiBase {
      *
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {TemplateStringsArray} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    crop(length: number, consume?: boolean): Buffer | Uint8Array;
+    crop(length: number, consume?: boolean): DataType;
     /**
      * Deletes part of data from current position to supplied length, returns removed.
      *
@@ -676,29 +734,29 @@ declare class BiBase {
      *
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {Buffer|Uint8Array} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    drop(length: number, consume?: boolean): Buffer | Uint8Array;
+    drop(length: number, consume?: boolean): DataType;
     /**
      * Replaces data in data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Offset to add it at (defaults to current position)
      */
-    replace(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
+    replace(data: DataType, consume?: boolean, offset?: number): void;
     /**
      * Replaces data in data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Offset to add it at (defaults to current position)
      */
-    overwrite(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
+    overwrite(data: DataType, consume?: boolean, offset?: number): void;
     /**
      * Returns part of data from current byte position to end of data unless supplied.
      *
@@ -706,9 +764,9 @@ declare class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Buffer | Uint8Array;
+    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): DataType;
     /**
      * Returns part of data from current byte position to end of data unless supplied.
      *
@@ -716,9 +774,9 @@ declare class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Buffer | Uint8Array;
+    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): DataType;
     /**
      * Extract data from current position to length supplied.
      *
@@ -726,9 +784,9 @@ declare class BiBase {
      *
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length
-     * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    extract(length: number, consume?: boolean): Buffer | Uint8Array;
+    extract(length: number, consume?: boolean): DataType;
     /**
      * Extract data from current position to length supplied.
      *
@@ -736,9 +794,9 @@ declare class BiBase {
      *
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length
-     * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    slice(length: number, consume?: boolean): Buffer | Uint8Array;
+    slice(length: number, consume?: boolean): DataType;
     /**
      * Extract data from current position to length supplied.
      *
@@ -746,65 +804,65 @@ declare class BiBase {
      *
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length
-     * @returns {Buffer|Uint8Array} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    wrap(length: number, consume?: boolean): Buffer | Uint8Array;
+    wrap(length: number, consume?: boolean): DataType;
     /**
      * Inserts data into data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Byte position to add at (defaults to current position)
      */
-    insert(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
+    insert(data: DataType, consume?: boolean, offset?: number): void;
     /**
      * Inserts data into data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Byte position to add at (defaults to current position)
      */
-    place(data: Buffer | Uint8Array, consume?: boolean, offset?: number): void;
+    place(data: DataType, consume?: boolean, offset?: number): void;
     /**
      * Adds data to start of supplied data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    unshift(data: Buffer | Uint8Array, consume?: boolean): void;
+    unshift(data: DataType, consume?: boolean): void;
     /**
      * Adds data to start of supplied data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    prepend(data: Buffer | Uint8Array, consume?: boolean): void;
+    prepend(data: DataType, consume?: boolean): void;
     /**
      * Adds data to end of supplied data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    push(data: Buffer | Uint8Array, consume?: boolean): void;
+    push(data: DataType, consume?: boolean): void;
     /**
      * Adds data to end of supplied data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    append(data: Buffer | Uint8Array, consume?: boolean): void;
+    append(data: DataType, consume?: boolean): void;
     /**
      * XOR data.
      *
@@ -842,37 +900,37 @@ declare class BiBase {
     /**
      * AND data.
      *
-     * @param {number|string|Array<number>|Buffer} andKey - Value, string or array to AND
+     * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
      * @param {number} startOffset - Start location (default current byte position)
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    and(andKey: number | string | Array<number> | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    and(andKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
      * AND data.
      *
-     * @param {number|string|Array<number>|Buffer} andKey - Value, string or array to AND
+     * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
      * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    andThis(andKey: number | string | Array<number> | Buffer, length?: number, consume?: boolean): void;
+    andThis(andKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
     /**
      * Add value to data.
      *
-     * @param {number|string|Array<number>|Buffer} addKey - Value, string or array to add to data
+     * @param {number|string|Uint8Array|Buffer} addKey - Value, string or array to add to data
      * @param {number} startOffset - Start location (default current byte position)
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    add(addKey: number | string | Array<number> | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    add(addKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
      * Add value to data.
      *
-     * @param {number|string|Array<number>|Buffer} addKey - Value, string or array to add to data
+     * @param {number|string|Uint8Array|Buffer} addKey - Value, string or array to add to data
      * @param {number} length - Length in bytes to add from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    addThis(addKey: number | string | Array<number> | Buffer, length?: number, consume?: boolean): void;
+    addThis(addKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
     /**
      * Not data.
      *
@@ -891,37 +949,37 @@ declare class BiBase {
     /**
      * Left shift data.
      *
-     * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to left shift data
+     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to left shift data
      * @param {number} startOffset - Start location (default current byte position)
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    lShift(shiftKey: number | string | Array<number> | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    lShift(shiftKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
      * Left shift data.
      *
-     * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to left shift data
+     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to left shift data
      * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    lShiftThis(shiftKey: number | string | Array<number> | Buffer, length?: number, consume?: boolean): void;
+    lShiftThis(shiftKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
     /**
      * Right shift data.
      *
-     * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to right shift data
+     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to right shift data
      * @param {number} startOffset - Start location (default current byte position)
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    rShift(shiftKey: number | string | Array<number> | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
+    rShift(shiftKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
     /**
      * Right shift data.
      *
-     * @param {number|string|Array<number>|Buffer} shiftKey - Value, string or array to right shift data
+     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to right shift data
      * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    rShiftThis(shiftKey: number | string | Array<number> | Buffer, length?: number, consume?: boolean): void;
+    rShiftThis(shiftKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
     /**
      *
      * Write bits, must have at least value and number of bits.
@@ -1293,9 +1351,8 @@ declare class BiBase {
      *
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {endian?} endian - ``big`` or ``little``
-     * @returns {BigValue}
      */
-    readInt64(unsigned?: boolean, endian?: endian): BigValue;
+    readInt64(unsigned?: boolean, endian?: endian): hasBigInt extends true ? bigint : number;
     /**
      * Write 64 bit integer.
      *
@@ -1342,7 +1399,7 @@ declare class BiBase {
      *
      * @returns {BigValue}
      */
-    readUInt64(): BigValue;
+    readUInt64(): hasBigInt extends true ? bigint : number;
     /**
      * Read signed 64 bit integer.
      *
@@ -1350,7 +1407,7 @@ declare class BiBase {
      *
      * @returns {BigValue}
      */
-    readInt64BE(): BigValue;
+    readInt64BE(): hasBigInt extends true ? bigint : number;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -1358,7 +1415,7 @@ declare class BiBase {
      *
      * @returns {BigValue}
      */
-    readUInt64BE(): BigValue;
+    readUInt64BE(): hasBigInt extends true ? bigint : number;
     /**
      * Read signed 64 bit integer.
      *
@@ -1366,7 +1423,7 @@ declare class BiBase {
      *
      * @returns {BigValue}
      */
-    readInt64LE(): BigValue;
+    readInt64LE(): hasBigInt extends true ? bigint : number;
     /**
      * Read unsigned 64 bit integer.
      *
@@ -1374,7 +1431,7 @@ declare class BiBase {
      *
      * @returns {BigValue}
      */
-    readUInt64LE(): BigValue;
+    readUInt64LE(): hasBigInt extends true ? bigint : number;
     /**
      * Read double float.
      *
@@ -1423,7 +1480,7 @@ declare class BiBase {
     * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
     * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
-    * @return {Promise<string>}
+    * @returns {string}
     */
     readString(options?: stringOptions): string;
     /**
@@ -1444,7 +1501,7 @@ declare class BiBase {
 /**
  * Binary reader, includes bitfields and strings.
  *
- * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+ * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
  * @param {BiOptions?} options - Any options to set at start
  * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
  * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
@@ -1452,14 +1509,15 @@ declare class BiBase {
  * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
  * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
  * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+ * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
  *
  * @since 2.0
  */
-declare class BiReader extends BiBase {
+declare class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends boolean> extends BiBase<DataType, hasBigInt> {
     /**
      * Binary reader, includes bitfields and strings.
      *
-     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+     * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
      * @param {BiOptions?} options - Any options to set at start
      * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
      * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
@@ -1467,8 +1525,9 @@ declare class BiReader extends BiBase {
      * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
      * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
      * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
      */
-    constructor(data: Buffer | Uint8Array, options?: BiOptions);
+    constructor(input: string | DataType, options?: BiOptions);
     /**
      * Bit field reader.
      *
@@ -3398,146 +3457,110 @@ declare class BiReader extends BiBase {
      * Read signed 64 bit integer
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get int64(): BigValue;
+    get int64(): hasBigInt extends true ? bigint : number;
     /**
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get bigint(): BigValue;
+    get bigint(): hasBigInt extends true ? bigint : number;
     /**
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get quad(): BigValue;
+    get quad(): hasBigInt extends true ? bigint : number;
     /**
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get uint64(): BigValue;
+    get uint64(): hasBigInt extends true ? bigint : number;
     /**
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get ubigint(): BigValue;
+    get ubigint(): hasBigInt extends true ? bigint : number;
     /**
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get uquad(): BigValue;
+    get uquad(): hasBigInt extends true ? bigint : number;
     /**
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get int64be(): BigValue;
+    get int64be(): hasBigInt extends true ? bigint : number;
     /**
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get bigintbe(): BigValue;
+    get bigintbe(): hasBigInt extends true ? bigint : number;
     /**
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get quadbe(): BigValue;
+    get quadbe(): hasBigInt extends true ? bigint : number;
     /**
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get uint64be(): BigValue;
+    get uint64be(): hasBigInt extends true ? bigint : number;
     /**
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get ubigintbe(): BigValue;
+    get ubigintbe(): hasBigInt extends true ? bigint : number;
     /**
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get uquadbe(): BigValue;
+    get uquadbe(): hasBigInt extends true ? bigint : number;
     /**
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get int64le(): BigValue;
+    get int64le(): hasBigInt extends true ? bigint : number;
     /**
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get bigintle(): BigValue;
+    get bigintle(): hasBigInt extends true ? bigint : number;
     /**
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get quadle(): BigValue;
+    get quadle(): hasBigInt extends true ? bigint : number;
     /**
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get uint64le(): BigValue;
+    get uint64le(): hasBigInt extends true ? bigint : number;
     /**
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get ubigintle(): BigValue;
+    get ubigintle(): hasBigInt extends true ? bigint : number;
     /**
      * Read unsigned 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
      */
-    get uquadle(): BigValue;
+    get uquadle(): hasBigInt extends true ? bigint : number;
     /**
      * Read double float.
      *
@@ -3585,7 +3608,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
     * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
-    * @return {string}
+    * @returns {string}
     */
     string(options?: stringOptions): string;
     /**
@@ -3593,7 +3616,7 @@ declare class BiReader extends BiBase {
     *
     * Default is ``utf-8``
     *
-    * @return {string}
+    * @returns {string}
     */
     get str(): string;
     /**
@@ -3603,7 +3626,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     utf8string(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3613,7 +3636,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     cstring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3623,7 +3646,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     ansistring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3634,7 +3657,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     utf16string(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
     /**
@@ -3645,7 +3668,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     unistring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
     /**
@@ -3655,7 +3678,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     utf16stringle(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3665,7 +3688,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     unistringle(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3675,7 +3698,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     utf16stringbe(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3685,7 +3708,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     unistringbe(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3695,7 +3718,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
     /**
@@ -3704,7 +3727,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring1(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
     /**
@@ -3712,7 +3735,7 @@ declare class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring1le(stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3720,7 +3743,7 @@ declare class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring1be(stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3729,7 +3752,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring2(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
     /**
@@ -3737,7 +3760,7 @@ declare class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring2le(stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3745,7 +3768,7 @@ declare class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring2be(stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3754,7 +3777,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring4(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
     /**
@@ -3762,7 +3785,7 @@ declare class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring4le(stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3770,7 +3793,7 @@ declare class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     pstring4be(stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3780,7 +3803,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
     /**
@@ -3789,16 +3812,32 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring1(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
+    /**
+    * Reads Wide-Pascal string 1 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    wpstring1le(stripNull?: stringOptions["stripNull"]): string;
+    /**
+    * Reads Wide-Pascal string 1 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    wpstring1be(stripNull?: stringOptions["stripNull"]): string;
     /**
     * Reads Wide-Pascal string 2 byte length read.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring2(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
     /**
@@ -3806,7 +3845,7 @@ declare class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring2le(stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3814,7 +3853,7 @@ declare class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring2be(stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3823,7 +3862,7 @@ declare class BiReader extends BiBase {
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring4(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
     /**
@@ -3831,7 +3870,7 @@ declare class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring4be(stripNull?: stringOptions["stripNull"]): string;
     /**
@@ -3839,7 +3878,7 @@ declare class BiReader extends BiBase {
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
-    * @return {string}
+    * @returns {string}
     */
     wpstring4le(stripNull?: stringOptions["stripNull"]): string;
 }
@@ -3847,7 +3886,7 @@ declare class BiReader extends BiBase {
 /**
  * Binary writer, includes bitfields and strings.
  *
- * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+ * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
  * @param {BiOptions?} options - Any options to set at start
  * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
  * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
@@ -3855,14 +3894,15 @@ declare class BiReader extends BiBase {
  * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
  * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
  * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+ * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
  *
  * @since 2.0
  */
-declare class BiWriter extends BiBase {
+declare class BiWriter<DataType extends Buffer | Uint8Array, hasBigInt extends boolean> extends BiBase<DataType, hasBigInt> {
     /**
      * Binary writer, includes bitfields and strings.
      *
-     * @param {Buffer|Uint8Array} data - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+     * @param {string|Buffer|Uint8Array} input - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
      * @param {BiOptions?} options - Any options to set at start
      * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
      * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
@@ -3870,8 +3910,9 @@ declare class BiWriter extends BiBase {
      * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
      * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
      * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
      */
-    constructor(data?: Buffer | Uint8Array, options?: BiOptions);
+    constructor(input?: string | DataType, options?: BiOptions);
     /**
      * Bit field writer.
      *
@@ -6204,6 +6245,14 @@ declare class BiReaderStream {
 }
 /**
  * Isn't usable in browser.
+ * @since 4.0
+ * @deprecated Use ``BiReader`` instead.
+ */
+declare class BiFileReader {
+    constructor();
+}
+/**
+ * Isn't usable in browser.
  * @since 3.0
  * @deprecated Use ``BiWriter`` instead.
  */
@@ -6226,5 +6275,13 @@ declare class bireader {
 declare class biwriter {
     constructor();
 }
+/**
+ * Isn't usable in browser.
+ * @since 4.0
+ * @deprecated Use ``BiWriter`` instead.
+ */
+declare class BiFileWriter {
+    constructor();
+}
 
-export { BiReader, BiReaderStream, BiWriter, BiWriterStream, bireader, biwriter, hexdump };
+export { BiBase, BiFileReader, BiFileWriter, BiReader, BiReaderStream, BiWriter, BiWriterStream, bireader, biwriter, hexdump };

@@ -1,16 +1,19 @@
 import {
+    BigValue,
     BiOptions,
     hasBigInt,
     endian,
     stringOptions,
     normalizeBitOffset
 } from "./common.js";
-import { BiBase } from './core/BiBase.js';
+import { BiBaseLegacy } from './core/BiBaseLegacy.js';
 
 /**
+ * Read large files in older version of Node.js
+ * 
  * Binary reader, includes bitfields and strings.
  *
- * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+ * @param {string} filePath - Path to file
  * @param {BiOptions?} options - Any options to set at start
  * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
  * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
@@ -20,14 +23,16 @@ import { BiBase } from './core/BiBase.js';
  * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
  * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
  * 
- * @since 2.0
+ * @since 4.0
  */
-export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends boolean> extends BiBase<DataType, hasBigInt> {
+export class BiReaderLegacy<hasBigInt extends boolean>  extends BiBaseLegacy<hasBigInt> {
 
     /**
+     * Read large files in older version of Node.js
+     * 
      * Binary reader, includes bitfields and strings.
      *
-     * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+     * @param {string} filePath - Path to file
      * @param {BiOptions?} options - Any options to set at start
      * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
      * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
@@ -37,11 +42,11 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
      * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
      */
-    constructor(input: string | DataType, options: BiOptions = {}) {
-        super(input, options.writeable ?? false);
+    constructor(filePath: string, options: BiOptions = {}) {
+        super(filePath, options.writeable ?? false);
 
-        if (input == undefined) {
-            throw new Error("Can not start BiReader without data.");
+        if (filePath == undefined) {
+            throw new Error("Can not start BiReaderLegacy without file path.");
         }
 
         this.strict = true;
@@ -57,7 +62,6 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
             typeof options.endianness != "string") {
             throw new Error("Endian must be big or little");
         }
-
         if (options.endianness != undefined &&
             !(options.endianness == "big" || options.endianness == "little")) {
             throw new Error("Byte order must be big or little");
@@ -73,29 +77,9 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
             }
         }
 
-        if (input == undefined) {
-            throw new Error("Data or file path required");
-        } else {
-            if (typeof input == "string") {
-                this.filePath = input;
+        this.offset = options.byteOffset ?? 0;
 
-                this.mode = "file";
-
-                this.offset = options.byteOffset ?? 0;
-
-                this.bitoffset = options.bitOffset ?? 0;
-            } else if (this.isBufferOrUint8Array(input)) {
-                this.data = input as DataType;
-
-                this.mode = "memory";
-
-                this.size = this.data.length;
-
-                this.sizeB = this.data.length * 8;
-            } else {
-                throw new Error("Write data must be Uint8Array or Buffer");
-            }
-        }
+        this.bitoffset = options.bitOffset ?? 0;
 
         if (options.byteOffset != undefined || options.bitOffset != undefined) {
             this.offset = ((Math.abs(options.byteOffset || 0)) + Math.ceil((Math.abs(options.bitOffset || 0)) / 8));
@@ -121,13 +105,11 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
             }
         }
 
-        if (this.mode == "file") {
-            this.open();
-        }
+        this.open();
     };
 
     //
-    // #region Bit Aliases
+    // Bit Aliases
     //
 
     /**
@@ -2320,7 +2302,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     };
 
     //
-    // #region byte read
+    // byte read
     //
 
     /**
@@ -2360,7 +2342,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     };
 
     //
-    // #region short16 read
+    //short16 read
     //
 
     /**
@@ -2526,7 +2508,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     };
 
     //
-    // #region half float read
+    //half float read
     //
 
     /**
@@ -2584,7 +2566,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     };
 
     //
-    // #region int read
+    //int read
     //
 
     /**
@@ -2804,7 +2786,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     };
 
     //
-    // #region float read
+    //float read
     //
 
     /**
@@ -2835,7 +2817,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     };
 
     //
-    // #region int64 reader
+    //int64 reader
     //
 
     /**
@@ -2861,7 +2843,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get quad(): hasBigInt extends true ? bigint : number{
+    get quad(): hasBigInt extends true ? bigint : number {
         return this.readInt64();
     };
 
@@ -3001,7 +2983,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     };
 
     //
-    // #region doublefloat reader
+    //doublefloat reader
     //
 
     /**
@@ -3059,7 +3041,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     };
 
     //
-    // #region string reader
+    //string reader
     //
 
     /**
@@ -3360,6 +3342,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "little", stripNull: stripNull });
     };
 
+
     /**
     * Reads Wide-Pascal string 1 byte length read in big endian order.
     * 
@@ -3370,6 +3353,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     wpstring1be(stripNull?: stringOptions["stripNull"]): string {
         return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "big", stripNull: stripNull });
     };
+
 
     /**
     * Reads Wide-Pascal string 2 byte length read.

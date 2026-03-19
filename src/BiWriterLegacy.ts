@@ -1,7 +1,16 @@
-import { BigValue, BiOptions, endian, stringOptions } from "./common.js";
-import { BiBaseStreamer } from './core/BiBaseStream.js';
+import {
+    BigValue,
+    hasBigInt,
+    BiOptions,
+    endian,
+    stringOptions,
+    normalizeBitOffset
+} from "./common.js";
+import { BiBaseLegacy } from './core/BiBaseLegacy.js';
 
 /**
+ * Write large files in older version of Node.js
+ * 
  * Binary writer, includes bitfields and strings.
  * 
  * Note: Must start with .open() before writing.
@@ -14,12 +23,15 @@ import { BiBaseStreamer } from './core/BiBaseStream.js';
  * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
  * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
  * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+ * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
  * 
- * @since 3.1
+ * @since 4.0
  */
-export class BiWriterStream extends BiBaseStreamer {
+export class BiWriterLegacy<hasBigInt extends boolean> extends BiBaseLegacy<hasBigInt> {
 
     /**
+     * Write large files in older version of Node.js
+     * 
      * Binary writer, includes bitfields and strings.
      * 
      * Note: Must start with .open() before writing.
@@ -32,22 +44,29 @@ export class BiWriterStream extends BiBaseStreamer {
      * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
      * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
      * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
      */
     constructor(filePath: string, options: BiOptions = {}) {
-        super(filePath, true);
+        super(filePath, options.writeable ?? true);
+
         this.strict = false;
 
-        if (options.extendBufferSize != undefined && options.extendBufferSize != 0) {
+        if (filePath == undefined) {
+            throw new Error("Can not start BiWriterLegacy without file path.");
+        }
+
+        if (options.extendBufferSize != undefined &&
+            options.extendBufferSize != 0) {
             this.extendBufferSize = options.extendBufferSize;
         }
 
-        this.enforceBigInt = options?.enforceBigInt ?? false;
+        this.enforceBigInt = (options?.enforceBigInt) as hasBigInt ?? hasBigInt as hasBigInt
 
         if (typeof options.strict == "boolean") {
             this.strict = options.strict;
         } else {
             if (options.strict != undefined) {
-                throw new Error("Strict mode must be true of false.");
+                throw new Error("Strict mode must be true or false.");
             }
         }
 
@@ -56,12 +75,41 @@ export class BiWriterStream extends BiBaseStreamer {
         if (options.endianness != undefined && typeof options.endianness != "string") {
             throw new Error("endianness must be big or little.");
         }
-        if (options.endianness != undefined && !(options.endianness == "big" || options.endianness == "little")) {
+
+        if (options.endianness != undefined &&
+            !(options.endianness == "big" || options.endianness == "little")) {
             throw new Error("Endianness must be big or little.");
         }
 
         this.offset = options.byteOffset ?? 0;
+
         this.bitoffset = options.bitOffset ?? 0;
+
+        if (options.byteOffset != undefined || options.bitOffset != undefined) {
+            this.offset = ((Math.abs(options.byteOffset || 0)) + Math.ceil((Math.abs(options.bitOffset || 0)) / 8));
+            // Adjust byte offset based on bit overflow
+            this.offset += Math.floor((Math.abs(options.bitOffset || 0)) / 8);
+            // Adjust bit offset
+            this.bitoffset = Math.abs(normalizeBitOffset(options.bitOffset)) % 8;
+            // Ensure bit offset stays between 0-7
+            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
+            // Ensure offset doesn't go negative
+            this.offset = Math.max(this.offset, 0);
+
+            if (this.offset > this.size) {
+                if (this.strict == false) {
+                    if (this.extendBufferSize != 0) {
+                        this.extendArray(this.extendBufferSize);
+                    } else {
+                        this.extendArray(this.offset - this.size);
+                    }
+                } else {
+                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
+                }
+            }
+        }
+
+        this.open();
     };
 
     //

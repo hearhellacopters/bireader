@@ -1,5 +1,6 @@
 export { BiReader } from './BiReader.js';
 export { BiWriter } from './BiWriter.js';
+export { BiBase } from './core/BiBase.js'
 export { hexdump } from './common.js';
 
 /**
@@ -10,6 +11,17 @@ export { hexdump } from './common.js';
 export class BiReaderStream {
     constructor() {
         throw new Error("BiReaderStream isn't usable in browser. Use BiReader instead.");
+    }
+};
+
+/**
+ * Isn't usable in browser.
+ * @since 4.0 
+ * @deprecated Use ``BiReader`` instead.
+ */
+export class BiFileReader {
+    constructor() {
+        throw new Error("BiFileReader isn't usable in browser. Use BiReader instead.");
     }
 };
 
@@ -43,5 +55,16 @@ export class bireader {
 export class biwriter {
     constructor() {
         throw new Error("biwriter is deprecated. Use BiWriter instead.");
+    }
+};
+
+/**
+ * Isn't usable in browser.
+ * @since 4.0 
+ * @deprecated Use ``BiWriter`` instead.
+ */
+export class BiFileWriter {
+    constructor() {
+        throw new Error("BiWriterStream isn't usable in browser. Use BiWriter instead.");
     }
 };

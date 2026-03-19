@@ -28,28 +28,48 @@ export type BiOptions = {
      * 
      * Set this to ``true`` if you wish for it to always stay a ``BigInt``.
      */
-    enforceBigInt?: boolean
+    enforceBigInt?: boolean,
+    /**
+     * Allow data writes when reading a file
+     */
+    writeable?: boolean
 };
+
+export const canInt8 = "getUint8" in DataView.prototype && "getInt8" in DataView.prototype && "setUint8" in DataView.prototype && "setInt8" in DataView.prototype;
+
+export const canInt16 = "getUint16" in DataView.prototype && "getInt16" in DataView.prototype && "setUint16" in DataView.prototype && "setInt16" in DataView.prototype;
+
+export const canFloat16 = 'getFloat16' in DataView.prototype && 'setFloat16' in DataView.prototype;
+
+export const canInt32 = 'getInt32' in DataView.prototype && 'getUint32' in DataView.prototype && 'setInt32' in DataView.prototype && 'setUint32' in DataView.prototype;
+
+export const canFloat32 = "getFloat32" in DataView.prototype && "setFloat32" in DataView.prototype;
+
+export const canBigInt64 = "getBigUint64" in DataView.prototype && "getBigInt64" in DataView.prototype && "setBigUint64" in DataView.prototype && "setBigInt64" in DataView.prototype;
+
+export const canFloat64 = "getFloat64" in DataView.prototype && "setFloat64" in DataView.prototype;
+
+export const hasBigInt = typeof BigInt === 'function';
 
 const MIN_SAFE = BigInt(Number.MIN_SAFE_INTEGER);
 
 const MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
 
 export function isSafeInt64(big: bigint): boolean {
-  return big >= MIN_SAFE && big <= MAX_SAFE;
+    return big >= MIN_SAFE && big <= MAX_SAFE;
 };
 
-export function isBuffer(obj: Buffer | Uint8Array): boolean {
-    return buffcheck(obj);
+export function isBuffer(obj: any): boolean {
+    return (typeof Buffer !== 'undefined' && Buffer.isBuffer(obj));
 };
 
-function buffcheck(obj: Buffer | Uint8Array): boolean {
-    return (typeof Buffer !== 'undefined' && obj instanceof Buffer);
-};
-
-export function arraybuffcheck(obj: Buffer | Uint8Array): boolean {
+export function arrayBufferCheck(obj: Buffer | Uint8Array): boolean {
     return obj instanceof Uint8Array || isBuffer(obj);
 };
+
+export function normalizeBitOffset(bit: number): number {
+    return ((bit % 8) + 8) % 8;
+}
 
 export type hexdumpOptions = {
     /**
@@ -81,7 +101,6 @@ export type hexdumpOptions = {
  * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
  */
 export function hexdump(src: Uint8Array | Buffer, options: hexdumpOptions = {}): void | string {
-
     if (!(src instanceof Uint8Array || isBuffer(src))) {
         throw new Error("Write data must be Uint8Array or Buffer.");
     }
@@ -94,13 +113,17 @@ export function hexdump(src: Uint8Array | Buffer, options: hexdumpOptions = {}):
     };
 
     var length: any = options && options.length;
+
     var startByte: any = options && options.startByte;
 
     if ((startByte || 0) > ctx.size) {
         throw new Error("Hexdump start is outside of data size: " + startByte + " of " + ctx.size);
     }
+
     const start = startByte || ctx.offset;
+
     const end = Math.min(start + (length || 192), ctx.size);
+
     if (start + (length || 0) > ctx.size) {
         throw new Error("Hexdump amount is outside of data size: " + (start + (length || 0)) + " of " + end);
     }
@@ -113,178 +136,215 @@ export function hexdump(src: Uint8Array | Buffer, options: hexdumpOptions = {}):
 export function _hexDump(data: Buffer | Uint8Array, options: hexdumpOptions = {}, start: number, end: number): string {
     function hex_check(byte: number, bits: number,): number {
         var value = 0;
+
         for (var i = 0; i < bits;) {
-            var remaining = bits - i;
-            var bitOffset = 0;
-            var currentByte = byte;
-            var read = Math.min(remaining, 8 - bitOffset);
-            var mask: number, readBits: number;
-            mask = ~(0xFF << read);
-            readBits = (currentByte >> (8 - read - bitOffset)) & mask;
+            const remaining = bits - i;
+
+            const bitOffset = 0;
+
+            const currentByte = byte;
+
+            const read = Math.min(remaining, 8 - bitOffset);
+
+            const mask = ~(0xFF << read);
+
+            const readBits = (currentByte >> (8 - read - bitOffset)) & mask;
+
             value <<= read;
+
             value |= readBits;
+
             i += read;
         }
+
         value = value >>> 0;
+
         return value;
     }
-    var suppressUnicode: any = options && options.suppressUnicode || false;
+
+    const suppressUnicode: any = options && options.suppressUnicode || false;
+
     const rows: Array<string> = [];
+
     var header = "   0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  ";
-    var ending = "0123456789ABCDEF";
+
+    const ending = "0123456789ABCDEF";
+
     var addr: string = "";
+
     for (let i = start; i < end; i += 16) {
         addr = i.toString(16).padStart(5, '0');
+
         var row = <unknown>data.subarray(i, i + 16) as number[] || [];
+
         var hex = Array.from(row, (byte) => byte.toString(16).padStart(2, '0')).join(' ');
+
         rows.push(`${addr}  ${hex.padEnd(47)}  `);
     }
+
     let result = '';
+
     let make_wide: boolean = false;
+
     let i = start;
+
     while (i < end) {
         const byte = data[i] as number;
+
         if (byte < 32 || byte == 127) {
             result += '.';
-        }
-        else if (byte < 127) {
+        } else if (byte < 127) {
             // Valid UTF-8 start byte or single-byte character
             // Convert the byte to a character and add it to the result
             result += String.fromCharCode(byte);
-        }
-        else if (suppressUnicode) {
+        } else if (suppressUnicode) {
             result += '.';
-        }
-        else if (hex_check(byte, 1) == 0) {
+        } else if (hex_check(byte, 1) == 0) {
             //Byte 1
             result += String.fromCharCode(byte);
-        }
-        else if (hex_check(byte, 3) == 6) {
+        } else if (hex_check(byte, 3) == 6) {
             //Byte 2
             if (i + 1 <= end) {
                 //check second byte
                 const byte2 = data[i + 1] as number;
+
                 if (hex_check(byte2, 2) == 2) {
                     const charCode = ((byte & 0x1f) << 6) | (byte2 & 0x3f);
+
                     i++;
+
                     make_wide = true;
+
                     const read = " " + String.fromCharCode(charCode);
+
                     result += read;
-                }
-                else {
+                } else {
                     result += ".";
                 }
-            }
-            else {
+            } else {
                 result += ".";
             }
-        }
-        else if (hex_check(byte, 4) == 14) {
+        } else if (hex_check(byte, 4) == 14) {
             //Byte 3
             if (i + 1 <= end) {
                 //check second byte
                 const byte2 = data[i + 1] as number;
+
                 if (hex_check(byte2, 2) == 2) {
                     if (i + 2 <= end) {
                         //check third byte
                         const byte3 = data[i + 2] as number;
+
                         if (hex_check(byte3, 2) == 2) {
                             const charCode =
                                 ((byte & 0x0f) << 12) |
                                 ((byte2 & 0x3f) << 6) |
                                 (byte3 & 0x3f);
+
                             i += 2;
+
                             make_wide = true;
+
                             const read = "  " + String.fromCharCode(charCode);
+
                             result += read;
-                        }
-                        else {
+                        } else {
                             i++;
+
                             result += " .";
                         }
-                    }
-                    else {
+                    } else {
                         i++;
+
                         result += " .";
                     }
-                }
-                else {
+                } else {
                     result += ".";
                 }
-            }
-            else {
+            } else {
                 result += ".";
             }
-        }
-        else if (hex_check(byte, 5) == 28) {
+        } else if (hex_check(byte, 5) == 28) {
             //Byte 4
             if (i + 1 <= end) {
                 //check second byte
                 const byte2 = data[i + 1] as number;
+
                 if (hex_check(byte2, 2) == 2) {
                     if (i + 2 <= end) {
                         //check third byte
                         const byte3 = data[i + 2] as number;
+
                         if (hex_check(byte3, 2) == 2) {
                             if (i + 3 <= end) {
                                 //check fourth byte
                                 const byte4 = data[i + 2] as number;
+
                                 if (hex_check(byte4, 2) == 2) {
                                     const charCode = (((byte4 & 0xFF) << 24) | ((byte3 & 0xFF) << 16) | ((byte2 & 0xFF) << 8) | (byte & 0xFF));
-                                    i += 3
+
+                                    i += 3;
+
                                     make_wide = true;
+
                                     const read = "   " + String.fromCharCode(charCode);
+
                                     result += read;
-                                }
-                                else {
-                                    i += 2
+                                } else {
+                                    i += 2;
+
                                     result += "  .";
                                 }
-                            }
-                            else {
-                                i += 2
+                            } else {
+                                i += 2;
+
                                 result += "  .";
                             }
-                        }
-                        else {
+                        } else {
                             i++;
+
                             result += " .";
                         }
-                    }
-                    else {
+                    } else {
                         i++;
+
                         result += " .";
                     }
-                }
-                else {
+                } else {
                     result += ".";
                 }
-            }
-            else {
+            } else {
                 result += ".";
             }
-        }
-        else {
+        } else {
             // Invalid UTF-8 byte, add a period to the result
             result += '.';
         }
+
         i++;
     }
+
     const chunks = result.match(new RegExp(`.{1,${16}}`, 'g'));
+
     chunks?.forEach((self, i) => {
         rows[i] = rows[i] + (make_wide ? "|" + self + "|" : self);
     })
+
     header = "".padStart(addr.length) + header + (make_wide ? "" : ending);
+
     rows.unshift(header);
+
     if (make_wide) {
         rows.push("*Removed character byte header on unicode detection");
     }
+
     if (options && options.returnString) {
         return rows.join("\n");
-    }
-    else {
+    } else {
         const retVal = rows.join("\n");
+
         console.log(retVal);
+
         return retVal;
     }
 };
