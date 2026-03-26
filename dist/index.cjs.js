@@ -1,30 +1,196 @@
 'use strict';
 
-var fs$1 = require('fs');
-var buffer = require('buffer');
-var fs$2 = require('fs/promises');
+/******************************************************************************
+Copyright (c) Microsoft Corporation.
 
-const canInt8 = "getUint8" in DataView.prototype && "getInt8" in DataView.prototype && "setUint8" in DataView.prototype && "setInt8" in DataView.prototype;
-const canInt16 = "getUint16" in DataView.prototype && "getInt16" in DataView.prototype && "setUint16" in DataView.prototype && "setInt16" in DataView.prototype;
-const canFloat16 = 'getFloat16' in DataView.prototype && 'setFloat16' in DataView.prototype;
-const canInt32 = 'getInt32' in DataView.prototype && 'getUint32' in DataView.prototype && 'setInt32' in DataView.prototype && 'setUint32' in DataView.prototype;
-const canFloat32 = "getFloat32" in DataView.prototype && "setFloat32" in DataView.prototype;
-const canBigInt64 = "getBigUint64" in DataView.prototype && "getBigInt64" in DataView.prototype && "setBigUint64" in DataView.prototype && "setBigInt64" in DataView.prototype;
-const canFloat64 = "getFloat64" in DataView.prototype && "setFloat64" in DataView.prototype;
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+***************************************************************************** */
+/* global Reflect, Promise, SuppressedError, Symbol, Iterator */
+
+
+function __classPrivateFieldGet(receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+}
+
+function __classPrivateFieldSet(receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
+}
+
+typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
+    var e = new Error(message);
+    return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
+};
+
+// #region Types
+// #region Checks
+const testFallback = process && process.argv && process.argv.indexOf("FALLBACK=true") != -1;
+const canInt8 = testFallback ? false : "getUint8" in DataView.prototype && "getInt8" in DataView.prototype && "setUint8" in DataView.prototype && "setInt8" in DataView.prototype;
+const canInt16 = testFallback ? false : "getUint16" in DataView.prototype && "getInt16" in DataView.prototype && "setUint16" in DataView.prototype && "setInt16" in DataView.prototype;
+const canFloat16 = testFallback ? false : 'getFloat16' in DataView.prototype && 'setFloat16' in DataView.prototype;
+const canInt32 = testFallback ? false : 'getInt32' in DataView.prototype && 'getUint32' in DataView.prototype && 'setInt32' in DataView.prototype && 'setUint32' in DataView.prototype;
+const canFloat32 = testFallback ? false : "getFloat32" in DataView.prototype && "setFloat32" in DataView.prototype;
+const canBigInt64 = testFallback ? false : "getBigUint64" in DataView.prototype && "getBigInt64" in DataView.prototype && "setBigUint64" in DataView.prototype && "setBigInt64" in DataView.prototype;
+const canFloat64 = testFallback ? false : "getFloat64" in DataView.prototype && "setFloat64" in DataView.prototype;
 const hasBigInt = typeof BigInt === 'function';
-const MIN_SAFE = BigInt(Number.MIN_SAFE_INTEGER);
-const MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
+const MIN_SAFE_BIGINT = hasBigInt ? BigInt(Number.MIN_SAFE_INTEGER) : 0;
+const MAX_SAFE_BIGINT = hasBigInt ? BigInt(Number.MAX_SAFE_INTEGER) : 0;
+// #region Helpers
+/**
+ * If value can be convert to number
+ */
 function isSafeInt64(big) {
-    return big >= MIN_SAFE && big <= MAX_SAFE;
+    return hasBigInt ? (big >= MIN_SAFE_BIGINT && big <= MAX_SAFE_BIGINT) : false;
 }
 function isBuffer(obj) {
     return (typeof Buffer !== 'undefined' && Buffer.isBuffer(obj));
 }
-function arrayBufferCheck(obj) {
+function isUint8Array(obj) {
+    if (typeof Buffer === 'undefined') {
+        return true;
+    }
+    if (typeof Buffer !== 'undefined' && Buffer.isBuffer(obj)) {
+        return false;
+    }
+    return true;
+}
+function isBufferOrUint8Array(obj) {
     return obj instanceof Uint8Array || isBuffer(obj);
 }
 function normalizeBitOffset(bit) {
     return ((bit % 8) + 8) % 8;
+}
+function safeFromCharCode(arr) {
+    const chunk = 0x8000;
+    let result = "";
+    for (let i = 0; i < arr.length; i += chunk) {
+        result += String.fromCharCode(...arr.slice(i, i + chunk));
+    }
+    return result;
+}
+function safeFromCodePoint(arr) {
+    const chunk = 0x8000;
+    let result = "";
+    for (let i = 0; i < arr.length; i += chunk) {
+        result += String.fromCodePoint(...arr.slice(i, i + chunk));
+    }
+    return result;
+}
+function textEncode(string, bytesPerChar = 1) {
+    switch (bytesPerChar) {
+        case 1:
+            return new TextEncoder().encode(string);
+        case 2:
+            {
+                const utf16Buffer = new Uint16Array(string.length);
+                for (let i = 0; i < string.length; i++) {
+                    utf16Buffer[i] = string.charCodeAt(i);
+                }
+                return new Uint8Array(utf16Buffer.buffer);
+            }
+        case 4:
+            {
+                const utf32Buffer = new Uint32Array(string.length);
+                for (let i = 0; i < string.length; i++) {
+                    utf32Buffer[i] = string.codePointAt(i);
+                }
+                return new Uint8Array(utf32Buffer.buffer);
+            }
+        default:
+            return new Uint8Array(0);
+    }
+}
+/**
+ * Converts the number to a safe value
+ */
+function numberSafe(value, bits, unsigned) {
+    var min, max;
+    if (!!unsigned == true || bits == 1) {
+        switch (bits) {
+            case 8:
+                max = 255;
+                break;
+            case 16:
+                max = 65535;
+                break;
+            case 32:
+                max = 4294967295;
+                break;
+            default:
+                {
+                    if (bits <= 54) {
+                        max = Math.pow(2, bits) - 1;
+                    }
+                    else if (bits > 54 && hasBigInt) {
+                        max = Math.pow(2, bits) - 1;
+                    }
+                    else {
+                        throw new RangeError("System can't have BigInt support to handle large numbers.");
+                    }
+                }
+                break;
+        }
+        min = 0;
+    }
+    else {
+        switch (bits) {
+            case 8:
+                max = 127;
+                break;
+            case 16:
+                max = 32767;
+                break;
+            case 32:
+                max = 2147483647;
+                break;
+            default:
+                {
+                    if (bits <= 55) {
+                        max = Math.pow(2, bits - 1) - 1;
+                    }
+                    else if (bits > 55 && hasBigInt) {
+                        max = Math.pow(2, bits - 1) - 1;
+                    }
+                    else {
+                        throw new RangeError("System can't have BigInt support to handle large numbers.");
+                    }
+                }
+                break;
+        }
+        min = -max - 1;
+    }
+    if (value < min) {
+        if (typeof value == "bigint") {
+            return BigInt(min);
+        }
+        else {
+            return min;
+        }
+    }
+    else if (value > max) {
+        if (typeof value == "bigint") {
+            return BigInt(max);
+        }
+        else {
+            return max;
+        }
+    }
+    else {
+        return value;
+    }
 }
 /**
  * Creates hex dump string. Will console log or return string if set in options.
@@ -58,7 +224,7 @@ function hexdump(src, options = {}) {
     return _hexDump(data, options, start, end);
 }
 function _hexDump(data, options = {}, start, end) {
-    function hex_check(byte, bits) {
+    function _hexCheck(byte, bits) {
         var value = 0;
         for (var i = 0; i < bits;) {
             const remaining = bits - i;
@@ -86,7 +252,7 @@ function _hexDump(data, options = {}, start, end) {
         rows.push(`${addr}  ${hex.padEnd(47)}  `);
     }
     let result = '';
-    let make_wide = false;
+    let makeWide = false;
     let i = start;
     while (i < end) {
         const byte = data[i];
@@ -101,19 +267,19 @@ function _hexDump(data, options = {}, start, end) {
         else if (suppressUnicode) {
             result += '.';
         }
-        else if (hex_check(byte, 1) == 0) {
+        else if (_hexCheck(byte, 1) == 0) {
             //Byte 1
             result += String.fromCharCode(byte);
         }
-        else if (hex_check(byte, 3) == 6) {
+        else if (_hexCheck(byte, 3) == 6) {
             //Byte 2
             if (i + 1 <= end) {
                 //check second byte
                 const byte2 = data[i + 1];
-                if (hex_check(byte2, 2) == 2) {
+                if (_hexCheck(byte2, 2) == 2) {
                     const charCode = ((byte & 0x1f) << 6) | (byte2 & 0x3f);
                     i++;
-                    make_wide = true;
+                    makeWide = true;
                     const read = " " + String.fromCharCode(charCode);
                     result += read;
                 }
@@ -125,21 +291,21 @@ function _hexDump(data, options = {}, start, end) {
                 result += ".";
             }
         }
-        else if (hex_check(byte, 4) == 14) {
+        else if (_hexCheck(byte, 4) == 14) {
             //Byte 3
             if (i + 1 <= end) {
                 //check second byte
                 const byte2 = data[i + 1];
-                if (hex_check(byte2, 2) == 2) {
+                if (_hexCheck(byte2, 2) == 2) {
                     if (i + 2 <= end) {
                         //check third byte
                         const byte3 = data[i + 2];
-                        if (hex_check(byte3, 2) == 2) {
+                        if (_hexCheck(byte3, 2) == 2) {
                             const charCode = ((byte & 0x0f) << 12) |
                                 ((byte2 & 0x3f) << 6) |
                                 (byte3 & 0x3f);
                             i += 2;
-                            make_wide = true;
+                            makeWide = true;
                             const read = "  " + String.fromCharCode(charCode);
                             result += read;
                         }
@@ -161,23 +327,23 @@ function _hexDump(data, options = {}, start, end) {
                 result += ".";
             }
         }
-        else if (hex_check(byte, 5) == 28) {
+        else if (_hexCheck(byte, 5) == 28) {
             //Byte 4
             if (i + 1 <= end) {
                 //check second byte
                 const byte2 = data[i + 1];
-                if (hex_check(byte2, 2) == 2) {
+                if (_hexCheck(byte2, 2) == 2) {
                     if (i + 2 <= end) {
                         //check third byte
                         const byte3 = data[i + 2];
-                        if (hex_check(byte3, 2) == 2) {
+                        if (_hexCheck(byte3, 2) == 2) {
                             if (i + 3 <= end) {
                                 //check fourth byte
                                 const byte4 = data[i + 2];
-                                if (hex_check(byte4, 2) == 2) {
+                                if (_hexCheck(byte4, 2) == 2) {
                                     const charCode = (((byte4 & 0xFF) << 24) | ((byte3 & 0xFF) << 16) | ((byte2 & 0xFF) << 8) | (byte & 0xFF));
                                     i += 3;
-                                    make_wide = true;
+                                    makeWide = true;
                                     const read = "   " + String.fromCharCode(charCode);
                                     result += read;
                                 }
@@ -217,11 +383,11 @@ function _hexDump(data, options = {}, start, end) {
     }
     const chunks = result.match(new RegExp(`.{1,${16}}`, 'g'));
     chunks?.forEach((self, i) => {
-        rows[i] = rows[i] + (make_wide ? "|" + self + "|" : self);
+        rows[i] = rows[i] + (makeWide ? "|" + self + "|" : self);
     });
-    header = "".padStart(addr.length) + header + (make_wide ? "" : ending);
+    header = "".padStart(addr.length) + header + (makeWide ? "" : ending);
     rows.unshift(header);
-    if (make_wide) {
+    if (makeWide) {
         rows.push("*Removed character byte header on unicode detection");
     }
     if (options && options.returnString) {
@@ -233,987 +399,181 @@ function _hexDump(data, options = {}, start, end) {
         return retVal;
     }
 }
-
-/******************************************************************************
-Copyright (c) Microsoft Corporation.
-
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-***************************************************************************** */
-/* global Reflect, Promise, SuppressedError, Symbol, Iterator */
-
-
-function __classPrivateFieldGet(receiver, state, kind, f) {
-    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
-    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
-    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
-}
-
-function __classPrivateFieldSet(receiver, state, value, kind, f) {
-    if (kind === "m") throw new TypeError("Private method is not writable");
-    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
-    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
-    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
-}
-
-typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
-    var e = new Error(message);
-    return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
-};
-
-var _BiBase_data;
-const bufferConstants$2 = { MAX_LENGTH: 2147483647 }; // 2 gigs
-var fs;
-(async function () {
-    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-        // We are in Node.js
-        try {
-            if (typeof require !== 'undefined') {
-                fs = require('fs');
-                const buffer = require("buffer");
-                bufferConstants$2.MAX_LENGTH = buffer.constants.MAX_LENGTH;
-            }
-            else {
-                fs = await import('fs');
-                const buffer = await import('buffer');
-                bufferConstants$2.MAX_LENGTH = buffer.constants.MAX_LENGTH;
-            }
-        }
-        catch (error) {
-            console.error('Failed to load fs and buffer module:', error);
-        }
-    }
-})();
-function MAX_LENGTH$2() {
-    return bufferConstants$2.MAX_LENGTH;
-}
-function hexDumpBase$2(ctx, options = {}) {
-    var length = options && options.length;
-    var startByte = options && options.startByte;
-    if ((startByte || 0) > ctx.size) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error("Hexdump start is outside of data size: " + startByte + " of " + ctx.size);
-    }
-    const start = startByte || ctx.offset;
-    const end = Math.min(start + (length || 192), ctx.size);
-    if (start + (length || 0) > ctx.size) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error("Hexdump amount is outside of data size: " + (start + (length || 0)) + " of " + end);
-    }
-    var data = ctx.data;
-    if (ctx.mode == "file") {
-        data = ctx.lift(start, start + length, false);
-    }
-    return _hexDump(data, options, start, end);
-}
-// #region Movement
-function skip$2(ctx, bytes, bits) {
-    var new_size = (((bytes || 0) + ctx.offset) + Math.ceil((ctx.bitoffset + (bits || 0)) / 8));
-    if (bits && bits < 0) {
-        new_size = Math.floor(((((bytes || 0) + ctx.offset) * 8) + ctx.bitoffset + (bits || 0)) / 8);
-    }
-    if (new_size > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                ctx.extendArray(new_size - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: Seek of range of data: seek " + new_size + " of " + ctx.size);
-        }
-    }
-    // Adjust byte offset based on bit overflow
-    ctx.offset += Math.floor((ctx.bitoffset + (bits || 0)) / 8);
-    // Adjust bit offset
-    ctx.bitoffset = (ctx.bitoffset + normalizeBitOffset(bits)) % 8;
-    // Adjust byte offset based on byte overflow
-    ctx.offset += bytes;
-    // Ensure bit offset stays between 0-7
-    ctx.bitoffset = Math.min(Math.max(ctx.bitoffset, 0), 7);
-    // Ensure offset doesn't go negative
-    ctx.offset = Math.max(ctx.offset, 0);
-    return;
-}
-function align$2(ctx, n) {
-    const a = ctx.offset % n;
-    if (a) {
-        ctx.skip(n - a);
-    }
-}
-function alignRev$2(ctx, n) {
-    const a = ctx.offset % n;
-    if (a) {
-        ctx.skip(a * -1);
-    }
-}
-function goto$2(ctx, bytes, bits) {
-    var new_size = (((bytes || 0)) + Math.ceil(((bits || 0)) / 8));
-    if (bits && bits < 0) {
-        new_size = Math.floor(((((bytes || 0)) * 8) + (bits || 0)) / 8);
-    }
-    if (new_size > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                ctx.extendArray(new_size - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: Goto outside of range of data: goto " + new_size + " of " + ctx.size);
-        }
-    }
-    ctx.offset = bytes;
-    // Adjust byte offset based on bit overflow
-    ctx.offset += Math.floor(((bits || 0)) / 8);
-    // Adjust bit offset
-    ctx.bitoffset = normalizeBitOffset(bits) % 8;
-    // Ensure bit offset stays between 0-7
-    ctx.bitoffset = Math.min(Math.max(ctx.bitoffset, 0), 7);
-    // Ensure offset doesn't go negative
-    ctx.offset = Math.max(ctx.offset, 0);
-    return;
-}
-// #region Manipulation
-function check_size$2(ctx, write_bytes, write_bit, offset) {
-    const bits = (write_bit || 0) + ctx.bitoffset;
-    var new_off = (ctx.offset);
-    var writesize = write_bytes || 0;
-    if (bits != 0) {
-        //add bits
-        writesize += Math.ceil(bits / 8);
-    }
-    //if bigger extend
-    const needed_size = new_off + writesize;
-    if (needed_size > ctx.size) {
-        const dif = needed_size - ctx.size;
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                ctx.extendArray(dif);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: ` + needed_size + " at " + ctx.offset + " of " + ctx.size);
-        }
-    }
-    //start read location
-    return new_off;
-}
-function extendarray$2(ctx, to_padd) {
-    ctx.open();
-    if (ctx.strict) {
-        throw new Error('File position is outside of file size while in strict mode.');
-    }
-    if (ctx.size + to_padd > ctx.maxFileSize) {
-        throw new Error("buffer extend outside of max: " + (ctx.size + to_padd) + " to " + ctx.maxFileSize);
-    }
-    if (ctx.mode == "file") {
-        if (ctx.extendBufferSize != 0) {
-            if (ctx.extendBufferSize > to_padd) {
-                to_padd = ctx.extendBufferSize;
-            }
-        }
-        try {
-            fs.ftruncateSync(ctx.fd, ctx.size + to_padd);
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-        ctx.updateSize();
-        return;
-    }
-    if (isBuffer(ctx.data)) {
-        var paddbuffer = Buffer.alloc(to_padd);
-        ctx.data = Buffer.concat([ctx.data, paddbuffer]);
-    }
-    else {
-        const newBuf = new Uint8Array(ctx.size + to_padd);
-        newBuf.set(ctx.data);
-        ctx.data = newBuf;
-    }
-    ctx.size = ctx.data.length;
-    ctx.sizeB = ctx.data.length * 8;
-    return;
-}
-function remove$2(ctx, startOffset, endOffset, consume, remove, fillValue) {
-    ctx.open();
-    const new_start = Math.abs(startOffset || 0);
-    const new_offset = (endOffset || ctx.offset);
-    if (new_offset > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                ctx.extendArray(new_offset - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + endOffset + " of " + ctx.size);
-        }
-    }
-    if (ctx.strict == true && remove == true) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + ctx.size);
-    }
-    const data_removed = ctx.data.subarray(new_start, new_offset);
-    if (remove) {
-        const part1 = ctx.data.subarray(0, new_start);
-        const part2 = ctx.data.subarray(new_offset, ctx.size);
-        if (isBuffer(ctx.data)) {
-            ctx.data = Buffer.concat([part1, part2]);
-        }
-        else {
-            const newBuf = new Uint8Array(part1.byteLength + part2.byteLength);
-            newBuf.set(part1, 0);
-            newBuf.set(part2, part1.byteLength);
-            ctx.data = newBuf;
-        }
-        ctx.size = ctx.data.length;
-        ctx.sizeB = ctx.data.length * 8;
-    }
-    if (fillValue != undefined && remove == false) {
-        const part1 = ctx.data.subarray(0, new_start);
-        const part2 = ctx.data.subarray(new_offset, ctx.size);
-        const replacement = new Array(data_removed.length).fill(fillValue & 0xff);
-        if (isBuffer(ctx.data)) {
-            const buff_placement = Buffer.from(replacement);
-            ctx.data = Buffer.concat([part1, buff_placement, part2]);
-        }
-        else {
-            const newBuf = new Uint8Array(part1.byteLength + replacement.length + part2.byteLength);
-            newBuf.set(part1, 0);
-            newBuf.set(replacement, part1.byteLength);
-            newBuf.set(part2, part1.byteLength + replacement.length);
-            ctx.data = newBuf;
-        }
-        ctx.size = ctx.data.length;
-        ctx.sizeB = ctx.data.length * 8;
-    }
-    if (consume == true) {
-        if (remove != true) {
-            ctx.offset = new_offset;
-            ctx.bitoffset = 0;
-        }
-        else {
-            ctx.offset = new_start;
-            ctx.bitoffset = 0;
-        }
-    }
-    return data_removed;
-}
-function addData$2(ctx, data, consume, offset, replace) {
-    if (ctx.strict == true) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Can not insert data in strict mode. Use unrestrict() to enable.`);
-    }
-    ctx.open();
-    if (isBuffer(data) && !isBuffer(ctx.data)) {
-        data = Buffer.from(data);
-    }
-    if (data instanceof Uint8Array && !(ctx.data instanceof Uint8Array)) {
-        data = new Uint8Array(data);
-    }
-    var needed_size = offset || ctx.offset;
-    if (replace) {
-        needed_size = (offset || ctx.offset) + data.length;
-        const part1 = ctx.data.subarray(0, needed_size - data.length);
-        const part2 = ctx.data.subarray(needed_size, ctx.size);
-        if (isBuffer(ctx.data)) {
-            ctx.data = Buffer.concat([part1, data, part2]);
-        }
-        else {
-            const newBuf = new Uint8Array(part1.byteLength + data.byteLength + part2.byteLength);
-            newBuf.set(part1, 0);
-            newBuf.set(data, part1.byteLength);
-            newBuf.set(part2, part1.byteLength + data.byteLength);
-            ctx.data = newBuf;
-        }
-        ctx.size = ctx.data.length;
-        ctx.sizeB = ctx.data.length * 8;
-    }
-    else {
-        const part1 = ctx.data.subarray(0, needed_size);
-        const part2 = ctx.data.subarray(needed_size, ctx.size);
-        if (isBuffer(ctx.data)) {
-            ctx.data = Buffer.concat([part1, data, part2]);
-        }
-        else {
-            const newBuf = new Uint8Array(part1.byteLength + data.byteLength + part2.byteLength);
-            newBuf.set(part1, 0);
-            newBuf.set(data, part1.byteLength);
-            newBuf.set(part2, part1.byteLength + data.byteLength);
-            ctx.data = newBuf;
-        }
-        ctx.size = ctx.data.length;
-        ctx.sizeB = ctx.data.length * 8;
-    }
-    if (consume) {
-        ctx.offset = (offset || ctx.offset) + data.length;
-        ctx.bitoffset = 0;
-    }
-}
 // #region Math
-function AND$2(ctx, and_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
+function _AND(data, start, end, andKey) {
+    if (typeof andKey == "string") {
+        andKey = Uint8Array.from(Array.from(andKey).map(letter => letter.charCodeAt(0)));
+    }
+    if (isBufferOrUint8Array(andKey) || typeof andKey == "number") {
+        var index = -1;
+        for (let i = start; i < end; i++) {
+            if (typeof andKey == "number") {
+                data[i] = data[i] & (andKey & 0xff);
             }
             else {
-                ctx.extendArray((end || 0) - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    ctx.open();
-    if (typeof and_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] & (and_key & 0xff);
-            if (consume) {
-                ctx.offset = i;
-                ctx.bitoffset = 0;
-            }
-        }
-    }
-    else {
-        if (typeof and_key == "string") {
-            and_key = Uint8Array.from(Array.from(and_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(and_key)) {
-            var number = -1;
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != and_key.length - 1) {
-                    number = number + 1;
+                if (index != andKey.length - 1) {
+                    index++;
                 }
                 else {
-                    number = 0;
+                    index = 0;
                 }
-                ctx.data[i] = ctx.data[i] & and_key[number];
-                if (consume) {
-                    ctx.offset = i;
-                    ctx.bitoffset = 0;
-                }
+                data[i] = data[i] & andKey[index];
             }
         }
-        else {
-            throw new Error("AND key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-}
-function OR$2(ctx, or_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                ctx.extendArray((end || 0) - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    ctx.open();
-    if (typeof or_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] | (or_key & 0xff);
-            if (consume) {
-                ctx.offset = i;
-                ctx.bitoffset = 0;
-            }
-        }
+        return { offset: end, bitoffset: 0 };
     }
     else {
-        if (typeof or_key == "string") {
-            or_key = Uint8Array.from(Array.from(or_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(or_key)) {
-            var number = -1;
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != or_key.length - 1) {
-                    number = number + 1;
+        throw new Error("AND key must be a byte value, string, Uint8Array or Buffer");
+    }
+}
+function _OR(data, start, end, orKey) {
+    if (typeof orKey == "string") {
+        orKey = Uint8Array.from(Array.from(orKey).map(letter => letter.charCodeAt(0)));
+    }
+    if (isBufferOrUint8Array(orKey) || typeof orKey == "number") {
+        var index = -1;
+        for (let i = start; i < end; i++) {
+            if (typeof orKey == "number") {
+                data[i] = data[i] | (orKey & 0xff);
+            }
+            else {
+                if (index != orKey.length - 1) {
+                    index++;
                 }
                 else {
-                    number = 0;
+                    index = 0;
                 }
-                ctx.data[i] = ctx.data[i] | or_key[number];
-                if (consume) {
-                    ctx.offset = i;
-                    ctx.bitoffset = 0;
-                }
+                data[i] = data[i] | orKey[index];
             }
         }
-        else {
-            throw new Error("OR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-}
-function XOR$2(ctx, xor_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                ctx.extendArray((end || 0) - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    ctx.open();
-    if (typeof xor_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] ^ (xor_key & 0xff);
-            if (consume) {
-                ctx.offset = i;
-                ctx.bitoffset = 0;
-            }
-        }
+        return { offset: end, bitoffset: 0 };
     }
     else {
-        if (typeof xor_key == "string") {
-            xor_key = Uint8Array.from(Array.from(xor_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(xor_key)) {
-            let number = -1;
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != xor_key.length - 1) {
-                    number = number + 1;
+        throw new Error("OR key must be a byte value, string, Uint8Array or Buffer");
+    }
+}
+function _XOR(data, start, end, xorKey) {
+    if (typeof xorKey == "string") {
+        xorKey = Uint8Array.from(Array.from(xorKey).map(letter => letter.charCodeAt(0)));
+    }
+    if (isBufferOrUint8Array(xorKey) || typeof xorKey == "number") {
+        let index = -1;
+        for (let i = start; i < end; i++) {
+            if (typeof xorKey == "number") {
+                data[i] = data[i] ^ (xorKey & 0xff);
+            }
+            else {
+                if (index != xorKey.length - 1) {
+                    index++;
                 }
                 else {
-                    number = 0;
+                    index = 0;
                 }
-                ctx.data[i] = ctx.data[i] ^ xor_key[number];
-                if (consume) {
-                    ctx.offset = i;
-                    ctx.bitoffset = 0;
-                }
+                data[i] = data[i] ^ xorKey[index];
             }
         }
-        else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-}
-function NOT$2(ctx, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                ctx.extendArray((end || 0) - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    ctx.open();
-    for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-        ctx.data[i] = ~ctx.data[i];
-        if (consume) {
-            ctx.offset = i;
-            ctx.bitoffset = 0;
-        }
-    }
-}
-function LSHIFT$2(ctx, shift_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                ctx.extendArray((end || 0) - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    ctx.open();
-    if (typeof shift_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] << shift_key;
-            if (consume) {
-                ctx.offset = i;
-                ctx.bitoffset = 0;
-            }
-        }
+        return { offset: end, bitoffset: 0 };
     }
     else {
-        if (typeof shift_key == "string") {
-            shift_key = Uint8Array.from(Array.from(shift_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(shift_key)) {
-            var number = -1;
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != shift_key.length - 1) {
-                    number = number + 1;
+        throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
+    }
+}
+function _LSHIFT(data, start, end, shiftKey) {
+    if (typeof shiftKey == "string") {
+        shiftKey = Uint8Array.from(Array.from(shiftKey).map(letter => letter.charCodeAt(0)));
+    }
+    if (isBufferOrUint8Array(shiftKey) || typeof shiftKey == "number") {
+        var index = -1;
+        for (let i = start; i < end; i++) {
+            if (typeof shiftKey == "number") {
+                data[i] = data[i] << shiftKey;
+            }
+            else {
+                if (index != shiftKey.length - 1) {
+                    index++;
                 }
                 else {
-                    number = 0;
+                    index = 0;
                 }
-                ctx.data[i] = ctx.data[i] << shift_key[number];
-                if (consume) {
-                    ctx.offset = i;
-                    ctx.bitoffset = 0;
-                }
+                data[i] = data[i] << shiftKey[index];
             }
         }
-        else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-}
-function RSHIFT$2(ctx, shift_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                ctx.extendArray((end || 0) - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    ctx.open();
-    if (typeof shift_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] >> shift_key;
-            if (consume) {
-                ctx.offset = i;
-                ctx.bitoffset = 0;
-            }
-        }
+        return { offset: end, bitoffset: 0 };
     }
     else {
-        if (typeof shift_key == "string") {
-            shift_key = Uint8Array.from(Array.from(shift_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(shift_key)) {
-            var number = -1;
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != shift_key.length - 1) {
-                    number = number + 1;
+        throw new Error("Left Shift key must be a byte value, string, Uint8Array or Buffer");
+    }
+}
+function _RSHIFT(data, start, end, shiftKey) {
+    if (typeof shiftKey == "string") {
+        shiftKey = Uint8Array.from(Array.from(shiftKey).map(letter => letter.charCodeAt(0)));
+    }
+    if (isBufferOrUint8Array(shiftKey) || typeof shiftKey == "number") {
+        var index = -1;
+        for (let i = start; i < end; i++) {
+            if (typeof shiftKey == "number") {
+                data[i] = data[i] >> shiftKey;
+            }
+            else {
+                if (index != shiftKey.length - 1) {
+                    index++;
                 }
                 else {
-                    number = 0;
+                    index = 0;
                 }
-                ctx.data[i] = ctx.data[i] >> shift_key[number];
-                if (consume) {
-                    ctx.offset = i;
-                    ctx.bitoffset = 0;
-                }
+                data[i] = data[i] >> shiftKey[index];
             }
         }
-        else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-}
-function ADD$2(ctx, add_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                ctx.extendArray((end || 0) - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    ctx.open();
-    if (typeof add_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] + add_key;
-            if (consume) {
-                ctx.offset = i;
-                ctx.bitoffset = 0;
-            }
-        }
+        return { offset: end, bitoffset: 0 };
     }
     else {
-        if (typeof add_key == "string") {
-            add_key = Uint8Array.from(Array.from(add_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(add_key)) {
-            var number = -1;
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != add_key.length - 1) {
-                    number = number + 1;
+        throw new Error("Right Shift key must be a byte value, string, Uint8Array or Buffer");
+    }
+}
+function _ADD(data, start, end, addKey) {
+    if (typeof addKey == "string") {
+        addKey = Uint8Array.from(Array.from(addKey).map(letter => letter.charCodeAt(0)));
+    }
+    if (isBufferOrUint8Array(addKey) || typeof addKey == "number") {
+        var index = -1;
+        for (let i = start; i < end; i++) {
+            if (typeof addKey == "number") {
+                data[i] = data[i] + addKey;
+            }
+            else {
+                if (index != addKey.length - 1) {
+                    index = index + 1;
                 }
                 else {
-                    number = 0;
+                    index = 0;
                 }
-                ctx.data[i] = ctx.data[i] + add_key[number];
-                if (consume) {
-                    ctx.offset = i;
-                    ctx.bitoffset = 0;
-                }
+                data[i] = data[i] + addKey[index];
             }
         }
-        else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-}
-// #region Search
-function fString$2(ctx, searchString) {
-    ctx.open();
-    // Convert the searchString to Uint8Array
-    const searchArray = new TextEncoder().encode(searchString);
-    for (let i = ctx.offset; i <= ctx.size - searchArray.length; i++) {
-        var match = true;
-        for (let j = 0; j < searchArray.length; j++) {
-            if (ctx.data[i + j] !== searchArray[j]) {
-                match = false;
-                break;
-            }
-        }
-        if (match) {
-            return i; // Found the string, return the index
-        }
-    }
-    return -1; // String not found
-}
-function fNumber$2(ctx, targetNumber, bits, unsigned, endian) {
-    ctx.open();
-    check_size$2(ctx, Math.floor(bits / 8), 0);
-    for (let z = ctx.offset; z <= (ctx.size - (bits / 8)); z++) {
-        var off_in_bits = 0;
-        var value = 0;
-        for (var i = 0; i < bits;) {
-            const remaining = bits - i;
-            const bitOffset = off_in_bits & 7;
-            const currentByte = ctx.data[z + (off_in_bits >> 3)];
-            const read = Math.min(remaining, 8 - bitOffset);
-            if ((endian != undefined ? endian : ctx.endian) == "big") {
-                let mask = ~(0xFF << read);
-                let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
-                value <<= read;
-                value |= readBits;
-            }
-            else {
-                let mask = ~(0xFF << read);
-                let readBits = (currentByte >> bitOffset) & mask;
-                value |= readBits << i;
-            }
-            off_in_bits += read;
-            i += read;
-        }
-        if (unsigned == true || bits <= 7) {
-            value = value >>> 0;
-        }
-        else {
-            if (bits !== 32 && value & (1 << (bits - 1))) {
-                value |= -1 ^ ((1 << bits) - 1);
-            }
-        }
-        if (value === targetNumber) {
-            return z - ctx.offset; // Found the byte, return the index from current
-        }
-    }
-    return -1; // number not found
-}
-function fHalfFloat$2(ctx, targetNumber, endian) {
-    ctx.open();
-    check_size$2(ctx, 2, 0);
-    for (let z = ctx.offset; z <= (ctx.size - 2); z++) {
-        var value = 0;
-        if ((endian != undefined ? endian : ctx.endian) == "little") {
-            value = ((ctx.data[z + 1] & 0xFFFF) << 8) | (ctx.data[z] & 0xFFFF);
-        }
-        else {
-            value = ((ctx.data[z] & 0xFFFF) << 8) | (ctx.data[z + 1] & 0xFFFF);
-        }
-        const sign = (value & 0x8000) >> 15;
-        const exponent = (value & 0x7C00) >> 10;
-        const fraction = value & 0x03FF;
-        var floatValue;
-        if (exponent === 0) {
-            if (fraction === 0) {
-                floatValue = (sign === 0) ? 0 : -0; // +/-0
-            }
-            else {
-                // Denormalized number
-                floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, -14) * (fraction / 0x0400);
-            }
-        }
-        else if (exponent === 0x1F) {
-            if (fraction === 0) {
-                floatValue = (sign === 0) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-            }
-            else {
-                floatValue = Number.NaN;
-            }
-        }
-        else {
-            // Normalized number
-            floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x0400);
-        }
-        if (floatValue === targetNumber) {
-            return z; // Found the number, return the index
-        }
-    }
-    return -1; // number not found
-}
-function fFloat$2(ctx, targetNumber, endian) {
-    ctx.open();
-    check_size$2(ctx, 4, 0);
-    for (let z = ctx.offset; z <= (ctx.size - 4); z++) {
-        var value = 0;
-        if ((endian != undefined ? endian : ctx.endian) == "little") {
-            value = ((ctx.data[z + 3] & 0xFF) << 24) |
-                ((ctx.data[z + 2] & 0xFF) << 16) |
-                ((ctx.data[z + 1] & 0xFF) << 8) |
-                (ctx.data[z] & 0xFF);
-        }
-        else {
-            value = ((ctx.data[z] & 0xFF) << 24) |
-                ((ctx.data[z + 1] & 0xFF) << 16) |
-                ((ctx.data[z + 2] & 0xFF) << 8) |
-                (ctx.data[z + 3] & 0xFF);
-        }
-        const isNegative = (value & 0x80000000) !== 0 ? 1 : 0;
-        // Extract the exponent and fraction parts
-        const exponent = (value >> 23) & 0xFF;
-        const fraction = value & 0x7FFFFF;
-        // Calculate the float value
-        var floatValue;
-        if (exponent === 0) {
-            // Denormalized number (exponent is 0)
-            floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
-        }
-        else if (exponent === 0xFF) {
-            // Infinity or NaN (exponent is 255)
-            floatValue = fraction === 0 ? (isNegative ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : Number.NaN;
-        }
-        else {
-            // Normalized number
-            floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
-        }
-        if (floatValue === targetNumber) {
-            return z; // Found the number, return the index
-        }
-    }
-    return -1; // number not found
-}
-function fBigInt$2(ctx, targetNumber, unsigned, endian) {
-    if (!hasBigInt) {
-        throw new Error("System doesn't support BigInt values.");
-    }
-    ctx.open();
-    check_size$2(ctx, 8, 0);
-    for (let z = ctx.offset; z <= (ctx.size - 8); z++) {
-        var value = BigInt(0);
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            for (let i = 0; i < 8; i++) {
-                value = value | BigInt((ctx.data[z + i] & 0xFF)) << BigInt(8 * i);
-            }
-            if (unsigned == undefined || unsigned == false) {
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-            }
-        }
-        else {
-            for (let i = 0; i < 8; i++) {
-                value = (value << BigInt(8)) | BigInt((ctx.data[z + i] & 0xFF));
-            }
-            if (unsigned == undefined || unsigned == false) {
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-            }
-        }
-        if (value == BigInt(targetNumber)) {
-            return z;
-        }
-    }
-    return -1; // number not found
-}
-function fDoubleFloat$2(ctx, targetNumber, endian) {
-    if (!hasBigInt) {
-        throw new Error("System doesn't support BigInt values.");
-    }
-    ctx.open();
-    check_size$2(ctx, 8, 0);
-    for (let z = ctx.offset; z <= (ctx.size - 8); z++) {
-        var value = BigInt(0);
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            for (let i = 0; i < 8; i++) {
-                value = value | BigInt((ctx.data[z + i] & 0xFF)) << BigInt(8 * i);
-            }
-        }
-        else {
-            for (let i = 0; i < 8; i++) {
-                value = (value << BigInt(8)) | BigInt((ctx.data[z + i] & 0xFF));
-            }
-        }
-        const sign = (value & BigInt("9223372036854775808")) >> BigInt(63);
-        const exponent = Number((value & BigInt("9218868437227405312")) >> BigInt(52)) - 1023;
-        const fraction = Number(value & BigInt("4503599627370495")) / Math.pow(2, 52);
-        var floatValue;
-        if (exponent == -1023) {
-            if (fraction == 0) {
-                floatValue = (sign == BigInt(0)) ? 0 : -0; // +/-0
-            }
-            else {
-                // Denormalized number
-                floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, -1022) * fraction;
-            }
-        }
-        else if (exponent == 1024) {
-            if (fraction == 0) {
-                floatValue = (sign == BigInt(0)) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-            }
-            else {
-                floatValue = Number.NaN;
-            }
-        }
-        else {
-            // Normalized number
-            floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
-        }
-        if (floatValue == targetNumber) {
-            return z;
-        }
-    }
-    return -1; // number not found
-}
-// #region Write / Read Bits
-function wbit$2(ctx, value, bits, unsigned, endian) {
-    ctx.open();
-    if (value == undefined) {
-        throw new Error('Must supply value.');
-    }
-    if (bits == undefined) {
-        throw new Error("Enter number of bits to write");
-    }
-    if (bits == 0) {
-        return;
-    }
-    if (bits <= 0 || bits > 32) {
-        throw new Error('Bit length must be between 1 and 32. Got ' + bits);
-    }
-    if (unsigned == true || bits == 1) {
-        if (value < 0 || value > Math.pow(2, bits)) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error(`Value is out of range for the specified ${bits}bit length.` + " min: " + 0 + " max: " + Math.pow(2, bits) + " value: " + value);
-        }
+        return { offset: end, bitoffset: 0 };
     }
     else {
-        const maxValue = Math.pow(2, bits - 1) - 1;
-        const minValue = -maxValue - 1;
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error(`Value is out of range for the specified ${bits}bit length.` + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
+        throw new Error("ADD key must be a byte value, string, Uint8Array or Buffer");
     }
-    if (unsigned == true || bits == 1) {
-        const maxValue = Math.pow(2, bits) - 1;
-        value = value & maxValue;
-    }
-    const size_needed = ((((bits - 1) + ctx.bitoffset) / 8) + ctx.offset);
-    if (size_needed > ctx.size) {
-        //add size
-        if (ctx.extendBufferSize != 0) {
-            ctx.extendArray(ctx.extendBufferSize);
-        }
-        else {
-            ctx.extendArray(size_needed - ctx.size);
-        }
-    }
-    var off_in_bits = (ctx.offset * 8) + ctx.bitoffset;
-    for (var i = 0; i < bits;) {
-        const remaining = bits - i;
-        const bitOffset = off_in_bits & 7;
-        const byteOffset = off_in_bits >> 3;
-        const written = Math.min(remaining, 8 - bitOffset);
-        if ((endian != undefined ? endian : ctx.endian) == "big") {
-            let mask = ~(-1 << written);
-            let writeBits = (value >> (bits - i - written)) & mask;
-            var destShift = 8 - bitOffset - written;
-            let destMask = ~(mask << destShift);
-            ctx.data[byteOffset] = (ctx.data[byteOffset] & destMask) | (writeBits << destShift);
-        }
-        else {
-            let mask = ~(0xFF << written);
-            let writeBits = value & mask;
-            value >>= written;
-            let destMask = ~(mask << bitOffset);
-            ctx.data[byteOffset] = (ctx.data[byteOffset] & destMask) | (writeBits << bitOffset);
-        }
-        off_in_bits += written;
-        i += written;
-    }
-    ctx.offset = ctx.offset + Math.floor(((bits) + ctx.bitoffset) / 8); //end byte
-    ctx.bitoffset = ((bits) + ctx.bitoffset) % 8;
 }
-function rbit$2(ctx, bits, unsigned, endian) {
-    ctx.open();
-    if (bits == undefined || typeof bits != "number") {
-        throw new Error("Enter number of bits to read");
+function _NOT(data, start, end) {
+    for (let i = start; i < end; i++) {
+        data[i] = ~data[i];
     }
-    if (bits == 0) {
-        return 0;
-    }
-    if (bits <= 0 || bits > 32) {
-        throw new Error('Bit length must be between 1 and 32. Got ' + bits);
-    }
-    const size_needed = ((((bits - 1) + ctx.bitoffset) / 8) + ctx.offset);
-    if (bits <= 0 || size_needed > ctx.size) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error("Invalid number of bits to read: " + size_needed + " of " + ctx.size);
-    }
-    var off_in_bits = (ctx.offset * 8) + ctx.bitoffset;
+    return { offset: end, bitoffset: 0 };
+}
+// #region Read / Writes
+/**
+ * bit read function
+ */
+function _rbit(data, bits, offset, endian, unsigned) {
     var value = 0;
     for (var i = 0; i < bits;) {
         const remaining = bits - i;
-        const bitOffset = off_in_bits & 7;
-        const currentByte = ctx.data[off_in_bits >> 3];
+        const bitOffset = offset & 7;
+        const currentByte = data[offset >> 3];
         const read = Math.min(remaining, 8 - bitOffset);
-        if ((endian != undefined ? endian : ctx.endian) == "big") {
+        if (endian == "big") {
             let mask = ~(0xFF << read);
             let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
             value <<= read;
@@ -1224,161 +584,95 @@ function rbit$2(ctx, bits, unsigned, endian) {
             let readBits = (currentByte >> bitOffset) & mask;
             value |= readBits << i;
         }
-        off_in_bits += read;
+        offset += read;
         i += read;
     }
-    ctx.offset = ctx.offset + Math.floor(((bits) + ctx.bitoffset) / 8); //end byte
-    ctx.bitoffset = ((bits) + ctx.bitoffset) % 8;
-    if (unsigned == true || bits <= 7) {
-        return value >>> 0;
-    }
-    if (bits !== 32 && value & (1 << (bits - 1))) {
-        value |= -1 ^ ((1 << bits) - 1);
+    if (!unsigned) {
+        const signBit = 1 << (bits - 1);
+        if (value & signBit) {
+            value -= (1 << bits);
+        }
     }
     return value;
 }
-// #region Write / Read Bytes
-function wbyte$2(ctx, value, unsigned) {
-    ctx.open();
-    check_size$2(ctx, 1, 0);
+/**
+ * Write bits
+ */
+function _wbit(data, value, bits, offsetBit, endian, unsigned) {
+    // fits the value as unsigned
+    if (unsigned == true || bits == 1) {
+        const maxValue = Math.pow(2, bits) - 1;
+        value = value & maxValue;
+    }
+    for (var i = 0; i < bits;) {
+        const remaining = bits - i;
+        const bitOffset = offsetBit & 7;
+        const byteOffset = offsetBit >> 3;
+        const written = Math.min(remaining, 8 - bitOffset);
+        if (endian == "big") {
+            let mask = ~(-1 << written);
+            let writeBits = (value >> (bits - i - written)) & mask;
+            var destShift = 8 - bitOffset - written;
+            let destMask = ~(mask << destShift);
+            data[byteOffset] = (data[byteOffset] & destMask) | (writeBits << destShift);
+        }
+        else {
+            let mask = ~(0xFF << written);
+            let writeBits = value & mask;
+            value >>= written;
+            let destMask = ~(mask << bitOffset);
+            data[byteOffset] = (data[byteOffset] & destMask) | (writeBits << bitOffset);
+        }
+        offsetBit += written;
+        i += written;
+    }
+    return;
+}
+function _rbyte(data, offset, unsigned) {
+    const value = data[offset];
     if (unsigned == true) {
-        if (value < 0 || value > 255) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 8bit length.' + " min: " + 0 + " max: " + 255 + " value: " + value);
-        }
+        return value & 0xFF;
     }
     else {
-        const maxValue = Math.pow(2, 8 - 1) - 1;
-        const minValue = -maxValue - 1;
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 8bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-    if (canInt8) {
-        if ((unsigned == undefined || unsigned == false)) {
-            ctx.view.setInt8(ctx.offset, value);
-        }
-        else {
-            ctx.view.setUint8(ctx.offset, value);
-        }
-    }
-    else {
-        ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-    }
-    ctx.offset += 1;
-    ctx.bitoffset = 0;
-}
-function rbyte$2(ctx, unsigned) {
-    ctx.open();
-    check_size$2(ctx, 1);
-    var read;
-    if (canInt8) {
-        if ((unsigned == undefined || unsigned == false)) {
-            read = ctx.view.getInt8(ctx.offset);
-        }
-        else {
-            read = ctx.view.getUint8(ctx.offset);
-        }
-        ctx.offset += 1;
-        ctx.bitoffset = 0;
-        return read;
-    }
-    read = ctx.data[ctx.offset];
-    ctx.offset += 1;
-    ctx.bitoffset = 0;
-    if (unsigned == true) {
-        return read & 0xFF;
-    }
-    else {
-        return read > 127 ? read - 256 : read;
+        return value > 127 ? value - 256 : value;
     }
 }
-// #region Write / Read Int16
-function wint16$2(ctx, value, unsigned, endian) {
-    ctx.open();
-    check_size$2(ctx, 2, 0);
-    if (unsigned == true) {
-        if (value < 0 || value > 65535) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 16bit length.' + " min: " + 0 + " max: " + 65535 + " value: " + value);
-        }
-    }
-    else {
-        const maxValue = Math.pow(2, 16 - 1) - 1;
-        const minValue = -maxValue - 1;
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 16bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-    if (canInt16) {
-        if ((unsigned == undefined || unsigned == false)) {
-            ctx.view.setInt16(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            ctx.view.setUint16(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-    }
-    else {
-        if ((endian != undefined ? endian : ctx.endian) == "little") {
-            ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xff;
-            ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff;
-        }
-        else {
-            ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff;
-            ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? value : value & 0xff;
-        }
-    }
-    ctx.offset += 2;
-    ctx.bitoffset = 0;
+function _wbyte(data, value, offset, unsigned) {
+    data[offset] = unsigned ? value & 0xFF : value;
+    return;
 }
-function rint16$2(ctx, unsigned, endian) {
-    ctx.open();
-    check_size$2(ctx, 2);
-    var read;
-    if (canInt16) {
-        if (unsigned == undefined || unsigned == false) {
-            read = ctx.view.getInt16(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            read = ctx.view.getUint16(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        ctx.offset += 2;
-        ctx.bitoffset = 0;
-        return read;
+function _rint16(data, offset, endian, unsigned) {
+    var value;
+    if (endian == "little") {
+        value = ((data[offset + 1] & 0xFFFF) << 8) | (data[offset] & 0xFFFF);
     }
     else {
-        if ((endian != undefined ? endian : ctx.endian) == "little") {
-            read = ((ctx.data[ctx.offset + 1] & 0xFFFF) << 8) | (ctx.data[ctx.offset] & 0xFFFF);
+        value = ((data[offset] & 0xFFFF) << 8) | (data[offset + 1] & 0xFFFF);
+    }
+    if (!!unsigned == false) {
+        const signBit = 1 << (16 - 1);
+        if (value & signBit) {
+            value -= (1 << 16);
         }
-        else {
-            read = ((ctx.data[ctx.offset] & 0xFFFF) << 8) | (ctx.data[ctx.offset + 1] & 0xFFFF);
-        }
     }
-    ctx.offset += 2;
-    ctx.bitoffset = 0;
-    if (unsigned == undefined || unsigned == false) {
-        return read & 0x8000 ? -(0x10000 - read) : read;
-    }
-    else {
-        return read & 0xFFFF;
-    }
+    return value;
 }
-// #region Write / Read Float16
-function rhalffloat$2(ctx, endian) {
-    if (canFloat16) {
-        ctx.open();
-        check_size$2(ctx, 2);
-        const float16Value = ctx.view.getFloat16(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        ctx.offset += 2;
-        ctx.bitoffset = 0;
-        return float16Value;
+function _wint16(data, value, offset, endian, unsigned = false) {
+    if (endian == "little") {
+        data[offset] = unsigned == false ? value : value & 0xff;
+        data[offset + 1] = unsigned == false ? (value >> 8) : (value >> 8) & 0xff;
     }
-    var uint16Value = ctx.readInt16(true, (endian != undefined ? endian : ctx.endian));
-    const sign = (uint16Value & 0x8000) >> 15;
-    const exponent = (uint16Value & 0x7C00) >> 10;
-    const fraction = uint16Value & 0x03FF;
+    else {
+        data[offset] = unsigned == false ? (value >> 8) : (value >> 8) & 0xff;
+        data[offset + 1] = unsigned == false ? value : value & 0xff;
+    }
+    return;
+}
+function _rhalffloat(data, offset, endian) {
+    const value = _rint16(data, offset, endian, true);
+    const sign = (value & 0x8000) >> 15;
+    const exponent = (value & 0x7C00) >> 10;
+    const fraction = value & 0x03FF;
     var floatValue;
     if (exponent === 0) {
         if (fraction === 0) {
@@ -1403,25 +697,11 @@ function rhalffloat$2(ctx, endian) {
     }
     return floatValue;
 }
-function whalffloat$2(ctx, value, endian) {
-    ctx.open();
-    check_size$2(ctx, 2, 0);
-    const maxValue = 65504;
-    const minValue = 5.96e-08;
-    if (value < minValue || value > maxValue) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error('Value is out of range for the specified half float length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-    }
-    if (canFloat16) {
-        ctx.view.setFloat16(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        ctx.offset += 2;
-        ctx.bitoffset = 0;
-        return;
-    }
-    const floatView = new Float32Array(1);
-    const intView = new Uint32Array(floatView.buffer);
-    floatView[0] = value;
-    const x = intView[0];
+const float32Array = new Float32Array(1);
+const float32AsInts = new Uint32Array(float32Array.buffer);
+function _whalffloat(data, value, offset, endian) {
+    float32Array[0] = value;
+    const x = float32AsInts[0];
     const sign = (x >> 31) & 0x1;
     var exponent = (x >> 23) & 0xff;
     var mantissa = x & 0x7fffff;
@@ -1452,109 +732,52 @@ function whalffloat$2(ctx, value, endian) {
         mantissa = mantissa >> 13;
         halfFloatBits = (sign << 15) | (exponent << 10) | mantissa;
     }
-    // Write bytes based on endianness
-    if ((endian == undefined ? ctx.endian : endian) == "little") {
-        ctx.data[ctx.offset] = halfFloatBits & 0xFF;
-        ctx.data[ctx.offset + 1] = (halfFloatBits >> 8) & 0xFF;
+    if (endian == "little") {
+        data[offset] = halfFloatBits & 0xFF;
+        data[offset + 1] = (halfFloatBits >> 8) & 0xFF;
     }
     else {
-        ctx.data[ctx.offset] = (halfFloatBits >> 8) & 0xFF;
-        ctx.data[ctx.offset + 1] = halfFloatBits & 0xFF;
+        data[offset] = (halfFloatBits >> 8) & 0xFF;
+        data[offset + 1] = halfFloatBits & 0xFF;
     }
-    ctx.offset += 2;
-    ctx.bitoffset = 0;
+    return;
 }
-// #region Write / Read Int32
-function wint32$2(ctx, value, unsigned, endian) {
-    ctx.open();
-    check_size$2(ctx, 4, 0);
-    if (unsigned == true) {
-        if (value < 0 || value > 4294967295) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 32bit length.' + " min: " + 0 + " max: " + 4294967295 + " value: " + value);
-        }
+function _rint32(data, offset, endian, unsigned) {
+    var value;
+    if (endian == "little") {
+        value = ((data[offset + 3] & 0xFF) << 24) |
+            ((data[offset + 2] & 0xFF) << 16) |
+            ((data[offset + 1] & 0xFF) << 8) |
+            (data[offset] & 0xFF);
     }
     else {
-        const maxValue = Math.pow(2, 32 - 1) - 1;
-        const minValue = -maxValue - 1;
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 32bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
+        value = ((data[offset] & 0xFF) << 24) |
+            ((data[offset + 1] & 0xFF) << 16) |
+            ((data[offset + 2] & 0xFF) << 8) |
+            (data[offset + 3] & 0xFF);
     }
-    if (canInt32) {
-        if ((unsigned == undefined || unsigned == false)) {
-            ctx.view.setInt32(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            ctx.view.setUint32(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
+    if (unsigned) {
+        return value >>> 0;
     }
-    else {
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-            ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
-            ctx.data[ctx.offset + 2] = (unsigned == undefined || unsigned == false) ? (value >> 16) : (value >> 16) & 0xFF;
-            ctx.data[ctx.offset + 3] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
-        }
-        else {
-            ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
-            ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 16) : (value >> 16) & 0xFF;
-            ctx.data[ctx.offset + 2] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
-            ctx.data[ctx.offset + 3] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-        }
-    }
-    ctx.offset += 4;
-    ctx.bitoffset = 0;
+    return value;
 }
-function rint32$2(ctx, unsigned, endian) {
-    ctx.open();
-    check_size$2(ctx, 4);
-    var read;
-    if (canInt32) {
-        if ((unsigned == undefined || unsigned == false)) {
-            read = ctx.view.getInt32(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            read = ctx.view.getUint32(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        ctx.offset += 4;
-        ctx.bitoffset = 0;
-        return read;
-    }
-    if ((endian != undefined ? endian : ctx.endian) == "little") {
-        read = ((ctx.data[ctx.offset + 3] & 0xFF) << 24) |
-            ((ctx.data[ctx.offset + 2] & 0xFF) << 16) |
-            ((ctx.data[ctx.offset + 1] & 0xFF) << 8) |
-            (ctx.data[ctx.offset] & 0xFF);
+function _wint32(data, value, offset, endian, unsigned = false) {
+    if (endian == "little") {
+        data[offset] = unsigned == false ? value : value & 0xFF;
+        data[offset + 1] = unsigned == false ? (value >> 8) : (value >> 8) & 0xFF;
+        data[offset + 2] = unsigned == false ? (value >> 16) : (value >> 16) & 0xFF;
+        data[offset + 3] = unsigned == false ? (value >> 24) : (value >> 24) & 0xFF;
     }
     else {
-        read = ((ctx.data[ctx.offset] & 0xFF) << 24) |
-            ((ctx.data[ctx.offset + 1] & 0xFF) << 16) |
-            ((ctx.data[ctx.offset + 2] & 0xFF) << 8) |
-            (ctx.data[ctx.offset + 3] & 0xFF);
+        data[offset] = unsigned == false ? (value >> 24) : (value >> 24) & 0xFF;
+        data[offset + 1] = unsigned == false ? (value >> 16) : (value >> 16) & 0xFF;
+        data[offset + 2] = unsigned == false ? (value >> 8) : (value >> 8) & 0xFF;
+        data[offset + 3] = unsigned == false ? value : value & 0xFF;
     }
-    ctx.offset += 4;
-    ctx.bitoffset = 0;
-    if (unsigned == undefined || unsigned == false) {
-        return read;
-    }
-    else {
-        return read >>> 0;
-    }
+    return;
 }
-// #region Write / Read Float32
-function rfloat$2(ctx, endian) {
-    if (canFloat32) {
-        ctx.open();
-        check_size$2(ctx, 4);
-        const float32Value = ctx.view.getFloat32(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        ctx.offset += 4;
-        ctx.bitoffset = 0;
-        return float32Value;
-    }
-    const uint32Value = ctx.readInt32(true, (endian == undefined ? ctx.endian : endian));
-    // Check if the value is negative (i.e., the most significant bit is set)
+function _rfloat(data, offset, endian) {
+    const uint32Value = _rint32(data, offset, endian, true);
     const isNegative = (uint32Value & 0x80000000) !== 0 ? 1 : 0;
     // Extract the exponent and fraction parts
     const exponent = (uint32Value >> 23) & 0xFF;
@@ -1575,208 +798,40 @@ function rfloat$2(ctx, endian) {
     }
     return floatValue;
 }
-function wfloat$2(ctx, value, endian) {
-    ctx.open();
-    check_size$2(ctx, 4, 0);
-    const MIN_POSITIVE_FLOAT32 = Number.MIN_VALUE;
-    const MAX_POSITIVE_FLOAT32 = 3.4028235e+38;
-    const MIN_NEGATIVE_FLOAT32 = -34028235e31;
-    const MAX_NEGATIVE_FLOAT32 = -Number.MIN_VALUE;
-    if (!((value === 0) ||
-        (value >= MIN_POSITIVE_FLOAT32 && value <= MAX_POSITIVE_FLOAT32) ||
-        (value >= MIN_NEGATIVE_FLOAT32 && value <= MAX_NEGATIVE_FLOAT32))) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error('Value is out of range for the specified float length.' + " min: " + MIN_NEGATIVE_FLOAT32 + " max: " + MAX_POSITIVE_FLOAT32 + " value: " + value);
-    }
-    if (canFloat32) {
-        ctx.view.setFloat32(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-    }
-    else {
-        const arrayFloat = new Float32Array(1);
-        arrayFloat[0] = value;
-        if (endian != undefined ? endian == "little" : ctx.endian == "little") {
-            ctx.data[ctx.offset] = arrayFloat.buffer[0];
-            ctx.data[ctx.offset + 1] = arrayFloat.buffer[1];
-            ctx.data[ctx.offset + 2] = arrayFloat.buffer[2];
-            ctx.data[ctx.offset + 3] = arrayFloat.buffer[3];
-        }
-        else {
-            ctx.data[ctx.offset] = arrayFloat.buffer[3];
-            ctx.data[ctx.offset + 1] = arrayFloat.buffer[2];
-            ctx.data[ctx.offset + 2] = arrayFloat.buffer[1];
-            ctx.data[ctx.offset + 3] = arrayFloat.buffer[0];
-        }
-    }
-    ctx.offset += 4;
-    ctx.bitoffset = 0;
+function _wfloat(data, value, offset, endian) {
+    float32Array[0] = value;
+    _wint32(data, float32AsInts[0], offset, endian, true);
+    return;
 }
-// #region Write / Read Int64
-function rint64$2(ctx, unsigned, endian) {
-    if (!hasBigInt) {
-        throw new Error("System doesn't support BigInt values.");
-    }
-    ctx.open();
-    check_size$2(ctx, 8);
+function _rint64(data, offset, endian, unsigned) {
     var value = BigInt(0);
-    if (canBigInt64) {
-        if (unsigned == undefined || unsigned == false) {
-            value = ctx.view.getBigInt64(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
+    for (let i = 0; i < 8; i++) {
+        if (endian == "little") {
+            value = value | BigInt((data[offset + i] & 0xFF)) << BigInt(8 * i);
         }
         else {
-            value = ctx.view.getBigUint64(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        ctx.offset += 8;
-    }
-    else {
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            for (let i = 0; i < 8; i++) {
-                value = value | BigInt((ctx.data[ctx.offset] & 0xFF)) << BigInt(8 * i);
-                ctx.offset += 1;
-            }
-            if (unsigned == undefined || unsigned == false) {
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-            }
-        }
-        else {
-            for (let i = 0; i < 8; i++) {
-                value = (value << BigInt(8)) | BigInt((ctx.data[ctx.offset] & 0xFF));
-                ctx.offset += 1;
-            }
-            if (unsigned == undefined || unsigned == false) {
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-            }
+            value = (value << BigInt(8)) | BigInt((data[offset + i] & 0xFF));
         }
     }
-    ctx.bitoffset = 0;
-    if (ctx.enforceBigInt == true) {
-        return value;
-    }
-    else {
-        if (isSafeInt64(value)) {
-            return Number(value);
-        }
-        else {
-            throw new Error("Value is outside of number range and enforceBigInt is set to false. " + value);
+    if (unsigned == false) {
+        if (value & (BigInt(1) << BigInt(63))) {
+            value -= BigInt(1) << BigInt(64);
         }
     }
+    return value;
 }
-function wint64$2(ctx, value, unsigned, endian) {
-    if (!hasBigInt) {
-        throw new Error("System doesn't support BigInt values.");
+function _wint64(data, value, offset, endian, unsigned) {
+    const bigIntArray = unsigned ? new BigUint64Array(1) : new BigInt64Array(1);
+    bigIntArray[0] = BigInt(value);
+    // Use two 32-bit views to write the Int64
+    const int32Array = unsigned ? new Uint32Array(bigIntArray.buffer) : new Int32Array(bigIntArray.buffer);
+    for (let i = 0; i < 2; i++) {
+        _wint32(data, int32Array[i], offset + (i * 4), endian, unsigned);
     }
-    ctx.open();
-    check_size$2(ctx, 8, 0);
-    if (unsigned == true) {
-        if (value < 0 || value > Math.pow(2, 64) - 1) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 64bit length.' + " min: " + 0 + " max: " + (Math.pow(2, 64) - 1) + " value: " + value);
-        }
-    }
-    else {
-        const maxValue = Math.pow(2, 63) - 1;
-        const minValue = -Math.pow(2, 63);
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 64bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-    if (canBigInt64) {
-        if (unsigned == undefined || unsigned == false) {
-            ctx.view.setBigInt64(ctx.offset, BigInt(value), endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            ctx.view.setBigUint64(ctx.offset, BigInt(value), endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-    }
-    else {
-        // Convert the BigInt to a 64-bit signed integer
-        const bigIntArray = new BigInt64Array(1);
-        bigIntArray[0] = BigInt(value);
-        // Use two 32-bit views to write the Int64
-        const int32Array = new Int32Array(bigIntArray.buffer);
-        for (let i = 0; i < 2; i++) {
-            if ((endian == undefined ? ctx.endian : endian) == "little") {
-                if (unsigned == undefined || unsigned == false) {
-                    ctx.data[ctx.offset + i * 4 + 0] = int32Array[i];
-                    ctx.data[ctx.offset + i * 4 + 1] = (int32Array[i] >> 8);
-                    ctx.data[ctx.offset + i * 4 + 2] = (int32Array[i] >> 16);
-                    ctx.data[ctx.offset + i * 4 + 3] = (int32Array[i] >> 24);
-                }
-                else {
-                    ctx.data[ctx.offset + i * 4 + 0] = int32Array[i] & 0xFF;
-                    ctx.data[ctx.offset + i * 4 + 1] = (int32Array[i] >> 8) & 0xFF;
-                    ctx.data[ctx.offset + i * 4 + 2] = (int32Array[i] >> 16) & 0xFF;
-                    ctx.data[ctx.offset + i * 4 + 3] = (int32Array[i] >> 24) & 0xFF;
-                }
-            }
-            else {
-                if (unsigned == undefined || unsigned == false) {
-                    ctx.data[ctx.offset + (1 - i) * 4 + 3] = int32Array[i];
-                    ctx.data[ctx.offset + (1 - i) * 4 + 2] = (int32Array[i] >> 8);
-                    ctx.data[ctx.offset + (1 - i) * 4 + 1] = (int32Array[i] >> 16);
-                    ctx.data[ctx.offset + (1 - i) * 4 + 0] = (int32Array[i] >> 24);
-                }
-                else {
-                    ctx.data[ctx.offset + (1 - i) * 4 + 3] = int32Array[i] & 0xFF;
-                    ctx.data[ctx.offset + (1 - i) * 4 + 2] = (int32Array[i] >> 8) & 0xFF;
-                    ctx.data[ctx.offset + (1 - i) * 4 + 1] = (int32Array[i] >> 16) & 0xFF;
-                    ctx.data[ctx.offset + (1 - i) * 4 + 0] = (int32Array[i] >> 24) & 0xFF;
-                }
-            }
-        }
-    }
-    ctx.offset += 8;
-    ctx.bitoffset = 0;
+    return;
 }
-// #region Write / Read Float64
-function wdfloat$2(ctx, value, endian) {
-    ctx.open();
-    check_size$2(ctx, 8, 0);
-    const MIN_POSITIVE_FLOAT64 = 2.2250738585072014e-308;
-    const MAX_POSITIVE_FLOAT64 = Number.MAX_VALUE;
-    const MIN_NEGATIVE_FLOAT64 = -Number.MAX_VALUE;
-    const MAX_NEGATIVE_FLOAT64 = -22250738585072014e-324;
-    if (!((value === 0) ||
-        (value >= MIN_POSITIVE_FLOAT64 && value <= MAX_POSITIVE_FLOAT64) ||
-        (value >= MIN_NEGATIVE_FLOAT64 && value <= MAX_NEGATIVE_FLOAT64))) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error('Value is out of range for the specified 64bit length.' + " min: " + MIN_NEGATIVE_FLOAT64 + " max: " + MAX_POSITIVE_FLOAT64 + " value: " + value);
-    }
-    if (canFloat64) {
-        ctx.view.setFloat64(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-    }
-    else {
-        const intArray = new Int32Array(2);
-        const floatArray = new Float64Array(intArray.buffer);
-        floatArray[0] = value;
-        const bytes = new Uint8Array(intArray.buffer);
-        for (let i = 0; i < 8; i++) {
-            if ((endian == undefined ? ctx.endian : endian) == "little") {
-                ctx.data[ctx.offset + i] = bytes[i];
-            }
-            else {
-                ctx.data[ctx.offset + (7 - i)] = bytes[i];
-            }
-        }
-    }
-    ctx.offset += 8;
-    ctx.bitoffset = 0;
-}
-function rdfloat$2(ctx, endian) {
-    if (canFloat64) {
-        ctx.open();
-        check_size$2(ctx, 8, 0);
-        const floatValue = ctx.view.getFloat64(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        ctx.offset += 8;
-        ctx.bitoffset = 0;
-        return floatValue;
-    }
-    endian = (endian == undefined ? ctx.endian : endian);
-    var uint64Value = ctx.readInt64(true, endian);
+function _rdfloat(data, offset, endian) {
+    var uint64Value = _rint64(data, offset, endian, true);
     const sign = (BigInt(uint64Value) & BigInt("9223372036854775808")) >> BigInt(63);
     const exponent = Number((BigInt(uint64Value) & BigInt("9218868437227405312")) >> BigInt(52)) - 1023;
     const fraction = Number(BigInt(uint64Value) & BigInt("4503599627370495")) / Math.pow(2, 52);
@@ -1804,238 +859,302 @@ function rdfloat$2(ctx, endian) {
     }
     return floatValue;
 }
-// #region Write / Read Strings
-function rstring$2(ctx, options) {
-    ctx.open();
-    var length = options && options.length;
-    var stringType = options && options.stringType || 'utf-8';
-    var terminateValue = options && options.terminateValue;
-    var lengthReadSize = options && options.lengthReadSize || 1;
-    var stripNull = options && options.stripNull || true;
-    var encoding = options && options.encoding || 'utf-8';
-    var endian = options && options.endian || ctx.endian;
-    var terminate = terminateValue;
-    if (length != undefined) {
-        check_size$2(ctx, length);
-    }
-    if (typeof terminateValue == "number") {
-        terminate = terminateValue & 0xFF;
-    }
-    else {
-        if (terminateValue != undefined) {
-            throw new Error("terminateValue must be a number");
-        }
-    }
-    if (stringType == 'utf-8' || stringType == 'utf-16') {
-        if (encoding == undefined) {
-            if (stringType == 'utf-8') {
-                encoding = 'utf-8';
-            }
-            if (stringType == 'utf-16') {
-                encoding = 'utf-16';
-            }
-        }
-        // Read the string as UTF-8 encoded untill 0 or terminateValue
-        const encodedBytes = [];
-        if (length == undefined && terminateValue == undefined) {
-            terminate = 0;
-        }
-        var read_length = 0;
-        if (length != undefined) {
-            read_length = length;
+function _wdfloat(data, value, offset, endian) {
+    const intArray = new Int32Array(2);
+    const floatArray = new Float64Array(intArray.buffer);
+    floatArray[0] = value;
+    const bytes = new Uint8Array(intArray.buffer);
+    for (let i = 0; i < 8; i++) {
+        if (endian == "little") {
+            data[offset + i] = bytes[i];
         }
         else {
-            read_length = ctx.data.length - ctx.offset;
+            data[offset + (7 - i)] = bytes[i];
         }
-        for (let i = 0; i < read_length; i++) {
-            if (stringType === 'utf-8') {
-                var read = ctx.readUByte();
-                if (read == terminate) {
-                    break;
-                }
-                else {
-                    if (!(stripNull == true && read == 0)) {
-                        encodedBytes.push(read);
-                    }
-                }
-            }
-            else {
-                var read = ctx.readInt16(true, endian);
-                var read1 = read & 0xFF;
-                var read2 = (read >> 8) & 0xFF;
-                if (read == terminate) {
-                    break;
-                }
-                else {
-                    if (!(stripNull == true && read == 0)) {
-                        encodedBytes.push(read1);
-                        encodedBytes.push(read2);
-                    }
-                }
-            }
-        }
-        return new TextDecoder(encoding).decode(new Uint8Array(encodedBytes));
     }
-    else if (stringType == 'pascal' || stringType == 'wide-pascal') {
-        if (encoding == undefined) {
-            if (stringType == 'pascal') {
-                encoding = 'utf-8';
-            }
-            if (stringType == 'wide-pascal') {
-                encoding = 'utf-16';
-            }
-        }
-        var maxBytes;
+    return;
+}
+function _rstring(stringType, lengthReadSize, readLengthinBytes, terminateValue, stripNull, encoding, endian, readUByte, readUInt16, readUInt32) {
+    const encodedBytes = [];
+    if (stringType === 'pascal' || stringType === 'wide-pascal' || stringType === "double-wide-pascal") {
+        terminateValue = undefined;
         if (lengthReadSize == 1) {
-            maxBytes = ctx.readUByte();
+            readLengthinBytes = readUByte();
         }
         else if (lengthReadSize == 2) {
-            maxBytes = ctx.readInt16(true, endian);
+            readLengthinBytes = readUInt16(endian);
         }
         else if (lengthReadSize == 4) {
-            maxBytes = ctx.readInt32(true, endian);
+            readLengthinBytes = readUInt32(endian);
         }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("Invalid length read size: " + lengthReadSize);
-        }
-        // Read the string as Pascal or Delphi encoded
-        const encodedBytes = [];
-        for (let i = 0; i < maxBytes; i++) {
-            if (stringType == 'wide-pascal') {
-                const read = ctx.readInt16(true, endian);
-                i++;
-                if (!(stripNull == true && read == 0)) {
-                    encodedBytes.push(read);
-                }
-            }
-            else {
-                const read = ctx.readUByte();
-                if (!(stripNull == true && read == 0)) {
-                    encodedBytes.push(read);
-                }
-            }
-        }
-        var str_return;
-        if (stringType == 'wide-pascal') {
-            const strBuffer = new Uint16Array(encodedBytes);
-            str_return = new TextDecoder().decode(strBuffer.buffer);
-        }
-        else {
-            const strBuffer = new Uint8Array(encodedBytes);
-            str_return = new TextDecoder(encoding).decode(strBuffer);
-        }
-        return str_return;
     }
-    else {
-        throw new Error('Unsupported string type: ' + stringType);
+    var readSize = 1;
+    switch (stringType) {
+        case 'utf-8':
+        case 'ascii':
+        case 'pascal':
+            readSize = 1;
+            break;
+        case 'utf-16':
+        case 'wide-pascal':
+            readSize = 2;
+            break;
+        case 'utf-32':
+        case 'double-wide-pascal':
+            readSize = 4;
+            break;
+    }
+    for (let i = 0; i < readLengthinBytes; i++) {
+        var read = terminateValue;
+        switch (readSize) {
+            case 1:
+                read = readUByte();
+                break;
+            case 2:
+                read = readUInt16(endian);
+                i++;
+                break;
+            case 4:
+                read = readUInt32(endian);
+                i++;
+                i++;
+                i++;
+                if (stringType == 'utf-32' && read > 0x10FFFF) {
+                    read = terminateValue;
+                }
+                break;
+        }
+        if (read == terminateValue) {
+            break;
+        }
+        else {
+            if (!(stripNull == true && read == 0)) {
+                encodedBytes.push(read);
+            }
+        }
+    }
+    switch (stringType) {
+        case "pascal":
+        case "ascii":
+        case "utf-16":
+        case "wide-pascal":
+            return safeFromCharCode(encodedBytes);
+        case "double-wide-pascal":
+        case "utf-32":
+            return safeFromCodePoint(encodedBytes);
+        default:
+            try {
+                return new TextDecoder(encoding).decode(new Uint8Array(encodedBytes));
+            }
+            catch (err) {
+                throw new Error(`Unsupported encoding: ${encoding}`);
+            }
     }
 }
-function wstring$2(ctx, string, options) {
-    ctx.open();
-    var length = options && options.length;
-    var stringType = options && options.stringType || 'utf-8';
-    var terminateValue = options && options.terminateValue;
-    var lengthWriteSize = options && options.lengthWriteSize || 1;
-    options && options.encoding || 'utf-8';
-    var endian = options && options.endian || ctx.endian;
-    if (stringType === 'utf-8' || stringType === 'utf-16') {
-        const encoder = new TextEncoder();
-        const encodedString = encoder.encode(string);
-        if (length == undefined && terminateValue == undefined) {
-            terminateValue = 0;
+async function _rstringAsync(stringType, lengthReadSize, readLengthinBytes, terminateValue, stripNull, encoding, endian, readUByte, readUInt16, readUInt32) {
+    const encodedBytes = [];
+    if (stringType === 'pascal' || stringType === 'wide-pascal' || stringType === "double-wide-pascal") {
+        terminateValue = undefined;
+        if (lengthReadSize == 1) {
+            readLengthinBytes = await readUByte();
         }
-        var totalLength = (length || encodedString.byteLength) + (terminateValue != undefined ? 1 : 0);
-        if (stringType == 'utf-16') {
-            totalLength = (length || encodedString.byteLength) + (terminateValue != undefined ? 2 : 0);
+        else if (lengthReadSize == 2) {
+            readLengthinBytes = await readUInt16(endian);
         }
-        check_size$2(ctx, totalLength, 0);
-        // Write the string bytes to the Uint8Array
-        for (let i = 0; i < encodedString.length; i++) {
-            if (stringType === 'utf-16') {
-                const charCode = encodedString[i];
-                if (endian == "little") {
-                    ctx.data[ctx.offset + i * 2] = charCode & 0xFF;
-                    ctx.data[ctx.offset + i * 2 + 1] = (charCode >> 8) & 0xFF;
-                }
-                else {
-                    ctx.data[ctx.offset + i * 2 + 1] = charCode & 0xFF;
-                    ctx.data[ctx.offset + i * 2] = (charCode >> 8) & 0xFF;
-                }
-            }
-            else {
-                ctx.data[ctx.offset + i] = encodedString[i];
-            }
+        else if (lengthReadSize == 4) {
+            readLengthinBytes = await readUInt32(endian);
         }
-        if (terminateValue != undefined) {
-            if (stringType === 'utf-16') {
-                ctx.data[ctx.offset + totalLength - 1] = terminateValue & 0xFF;
-                ctx.data[ctx.offset + totalLength] = (terminateValue >> 8) & 0xFF;
-            }
-            else {
-                ctx.data[ctx.offset + totalLength] = terminateValue;
-            }
-        }
-        ctx.offset += totalLength;
-        ctx.bitoffset = 0;
     }
-    else if (stringType == 'pascal' || stringType == 'wide-pascal') {
-        const encoder = new TextEncoder();
-        // Calculate the length of the string based on the specified max length
-        var maxLength;
-        // Encode the string in the specified encoding
-        if (lengthWriteSize == 1) {
-            maxLength = 255;
+    var readSize = 1;
+    switch (stringType) {
+        case 'utf-8':
+        case 'ascii':
+        case 'pascal':
+            readSize = 1;
+            break;
+        case 'utf-16':
+        case 'wide-pascal':
+            readSize = 2;
+            break;
+        case 'utf-32':
+        case 'double-wide-pascal':
+            readSize = 4;
+            break;
+    }
+    for (let i = 0; i < readLengthinBytes; i++) {
+        var read = terminateValue;
+        switch (readSize) {
+            case 1:
+                read = await readUByte();
+                break;
+            case 2:
+                read = await readUInt16(endian);
+                i++;
+                break;
+            case 4:
+                read = await readUInt32(endian);
+                i++;
+                i++;
+                i++;
+                if (stringType == 'utf-32' && read > 0x10FFFF) {
+                    read = terminateValue;
+                }
+                break;
         }
-        else if (lengthWriteSize == 2) {
-            maxLength = 65535;
-        }
-        else if (lengthWriteSize == 4) {
-            maxLength = 4294967295;
+        if (read == terminateValue) {
+            break;
         }
         else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("Invalid length write size: " + lengthWriteSize);
+            if (!(stripNull == true && read == 0)) {
+                encodedBytes.push(read);
+            }
         }
-        if (string.length > maxLength || (length || 0) > maxLength) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("String outsize of max write length: " + maxLength);
-        }
-        const maxBytes = Math.min(string.length, maxLength);
-        const encodedString = encoder.encode(string.substring(0, maxBytes));
-        var totalLength = (length || encodedString.byteLength);
+    }
+    switch (stringType) {
+        case "pascal":
+        case "ascii":
+        case "utf-16":
+        case "wide-pascal":
+            return safeFromCharCode(encodedBytes);
+        case "double-wide-pascal":
+        case "utf-32":
+            return safeFromCodePoint(encodedBytes);
+        default:
+            try {
+                return new TextDecoder(encoding).decode(new Uint8Array(encodedBytes));
+            }
+            catch (err) {
+                throw new Error(`Unsupported encoding: ${encoding}`);
+            }
+    }
+}
+function _wstring(encodedString, stringType, endian, terminateValue, lengthWriteSize, writeUByte, writeUInt16, writeUInt32) {
+    if (stringType == "pascal" ||
+        stringType == 'wide-pascal' ||
+        stringType == 'double-wide-pascal') {
         if (lengthWriteSize == 1) {
-            ctx.writeUByte(totalLength);
+            writeUByte(encodedString.byteLength);
         }
         else if (lengthWriteSize == 2) {
-            ctx.writeUInt16(totalLength, endian);
+            writeUInt16(encodedString.byteLength, endian);
         }
         else if (lengthWriteSize == 4) {
-            ctx.writeUInt32(totalLength, endian);
+            writeUInt32(encodedString.byteLength, endian);
         }
-        check_size$2(ctx, totalLength, 0);
-        // Write the string bytes to the Uint8Array
-        for (let i = 0; i < totalLength; i++) {
-            if (stringType == 'wide-pascal') {
-                if (endian == "little") {
-                    ctx.data[ctx.offset + i] = encodedString[i];
-                    ctx.data[ctx.offset + i + 1] = encodedString[i + 1];
-                }
-                else {
-                    ctx.data[ctx.offset + i + 1] = encodedString[i];
-                    ctx.data[ctx.offset + i] = encodedString[i + 1];
-                }
+    }
+    const view = new DataView(encodedString.buffer, encodedString.byteOffset, encodedString.byteLength);
+    for (let i = 0; i < view.byteLength; i++) {
+        switch (stringType) {
+            case 'ascii':
+            case 'utf-8':
+            case 'pascal':
+                writeUByte(view.getUint8(i));
+                break;
+            case 'utf-16':
+            case 'wide-pascal':
+                writeUInt16(view.getUint16(i, true), endian);
                 i++;
+                break;
+            case 'utf-32':
+            case 'double-wide-pascal':
+                writeUInt32(view.getUint32(i, true), endian);
+                i++;
+                i++;
+                i++;
+                break;
+        }
+    }
+    if (stringType == "ascii" || stringType == 'utf-8') {
+        writeUByte(terminateValue);
+    }
+    else if (stringType == 'utf-16') {
+        writeUInt16(terminateValue, endian);
+    }
+    else if (stringType == 'utf-32') {
+        writeUInt32(terminateValue, endian);
+    }
+}
+async function _wstringAsync(encodedString, stringType, endian, terminateValue, lengthWriteSize, writeUByte, writeUInt16, writeUInt32) {
+    if (stringType == "pascal" ||
+        stringType == 'wide-pascal' ||
+        stringType == 'double-wide-pascal') {
+        if (lengthWriteSize == 1) {
+            await writeUByte(encodedString.byteLength);
+        }
+        else if (lengthWriteSize == 2) {
+            await writeUInt16(encodedString.byteLength, endian);
+        }
+        else if (lengthWriteSize == 4) {
+            await writeUInt32(encodedString.byteLength, endian);
+        }
+    }
+    const view = new DataView(encodedString.buffer, encodedString.byteOffset, encodedString.byteLength);
+    for (let i = 0; i < view.byteLength; i++) {
+        switch (stringType) {
+            case 'ascii':
+            case 'utf-8':
+            case 'pascal':
+                await writeUByte(view.getUint8(i));
+                break;
+            case 'utf-16':
+            case 'wide-pascal':
+                await writeUInt16(view.getUint16(i, true), endian);
+                i++;
+                break;
+            case 'utf-32':
+            case 'double-wide-pascal':
+                await writeUInt32(view.getUint32(i, true), endian);
+                i++;
+                i++;
+                i++;
+                break;
+        }
+    }
+    if (stringType == "ascii" || stringType == 'utf-8') {
+        await writeUByte(terminateValue);
+    }
+    else if (stringType == 'utf-16') {
+        await writeUInt16(terminateValue, endian);
+    }
+    else if (stringType == 'utf-32') {
+        await writeUInt32(terminateValue, endian);
+    }
+}
+
+/**
+ * @file BiReader / Writer base for working in sync Buffers or full file reads. Node and Browser.
+ */
+var _BiBase_instances, _BiBase_offset, _BiBase_insetBit, _BiBase_data, _BiBase_view, _BiBase_updateSize, _BiBase_updateBuffer, _BiBase_updateView, _BiBase_checkSize, _BiBase_confrimSize, _BiBase_extendArray, _BiBase_findNumber;
+// #region Imports
+var fs$1;
+(async function () {
+    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+        // We are in Node.js
+        try {
+            if (typeof require !== 'undefined') {
+                if (typeof fs$1 === "undefined") {
+                    fs$1 = require('fs');
+                }
             }
             else {
-                ctx.data[ctx.offset + i] = encodedString[i];
+                if (typeof fs$1 === "undefined") {
+                    fs$1 = await import('fs');
+                }
             }
         }
-        ctx.offset += totalLength;
-        ctx.bitoffset = 0;
+        catch (error) {
+            console.error('Failed to load fs module:', error);
+        }
     }
-    else {
-        throw new Error('Unsupported string type: ' + stringType);
+})();
+function _fileExists$1(filePath) {
+    try {
+        fs$1.accessSync(filePath, fs$1.constants.F_OK);
+        return true; // File exists
+    }
+    catch (error) {
+        // @ts-ignore
+        return false;
     }
 }
 // #region Class
@@ -2060,11 +1179,21 @@ class BiBase {
     set data(data) {
         if (this.isBufferOrUint8Array(data)) {
             __classPrivateFieldSet(this, _BiBase_data, data, "f");
-            this.updateView();
+            __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_updateView).call(this);
+            this.size = __classPrivateFieldGet(this, _BiBase_data, "f").length;
+            this.bitSize = this.size * 8;
         }
     }
     ;
-    constructor(input, writeable) {
+    /**
+     * Get the DataView of current buffer data.
+     */
+    get view() {
+        return __classPrivateFieldGet(this, _BiBase_view, "f");
+    }
+    ;
+    constructor(input, options = {}) {
+        _BiBase_instances.add(this);
         /**
          * Endianness of default read.
          * @type {endian}
@@ -2073,11 +1202,11 @@ class BiBase {
         /**
          * Current read byte location.
          */
-        this.offset = 0;
+        _BiBase_offset.set(this, 0);
         /**
-         * Current read byte's bit location.
+         * Current read byte's bit location. 0 - 7
          */
-        this.bitoffset = 0;
+        _BiBase_insetBit.set(this, 0);
         /**
          * Size in bytes of the current buffer.
          */
@@ -2085,16 +1214,23 @@ class BiBase {
         /**
          * Size in bits of the current buffer.
          */
-        this.sizeB = 0;
+        this.bitSize = 0;
         /**
-         * Allows the buffer to extend reading or writing outside of current size
+         * Stops the buffer extending on reading or writing outside of current size
          */
         this.strict = false;
         /**
          * Console log a hexdump on error.
          */
         this.errorDump = false;
+        /**
+         * Master Buffer
+         */
         _BiBase_data.set(this, null);
+        /**
+         * DataView of master Buffer
+         */
+        _BiBase_view.set(this, void 0);
         /**
          * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
          *
@@ -2104,41 +1240,75 @@ class BiBase {
          *
          * NOTE: Using ``BiWriter.get`` or ``BiWriter.return`` will now remove all data after the current write position. Use ``BiWriter.data`` to get the full buffer instead.
          */
-        this.extendBufferSize = 0;
+        this.growthIncrement = 1048576;
+        /**
+         * Open file description
+         */
         this.fd = null;
+        /**
+         * Current file path
+         */
         this.filePath = null;
+        /**
+         * File write mode
+         */
         this.fsMode = "r";
         /**
          * The settings that used when using the .str getter / setter
          */
         this.strDefaults = { stringType: "utf-8", terminateValue: 0x0 };
         /**
-         * Window size of the file data (largest amount it can read)
+         * All int64 reads will return as bigint type
          */
-        this.maxFileSize = null;
         this.enforceBigInt = null;
-        this.mode = 'memory';
+        this.wasExpanded = false;
+        const { byteOffset, bitOffset, endianness, strict, growthIncrement, enforceBigInt, readOnly } = options;
+        if (typeof strict != "boolean") {
+            throw new Error("Strict mode must be true or false");
+        }
+        this.readOnly = !!readOnly;
+        this.strict = readOnly ? true : strict;
+        this.fsMode = this.readOnly ? 'r' : 'r+';
+        this.enforceBigInt = !!enforceBigInt;
+        if (this.enforceBigInt && !hasBigInt) {
+            this.enforceBigInt = false;
+        }
+        this.growthIncrement = growthIncrement;
+        if (typeof endianness != "string" || !(endianness == "big" || endianness == "little")) {
+            throw new TypeError("Endian must be big or little");
+        }
+        this.endian = endianness;
         if (typeof input == "string") {
-            if (typeof Buffer === 'undefined' || typeof fs == "undefined") {
-                throw new Error("Need node to read or write files.");
+            if (typeof Buffer === 'undefined' || typeof fs$1 === "undefined") {
+                throw new Error("Can't load file outside of Node.");
             }
             this.filePath = input;
-            this.mode = "file";
+            this.isMemoryMode = false;
+        }
+        else if (this.isBufferOrUint8Array(input)) {
+            this.data = input;
+            this.isMemoryMode = true;
+            this.size = __classPrivateFieldGet(this, _BiBase_data, "f").length;
+            this.bitSize = __classPrivateFieldGet(this, _BiBase_data, "f").length * 8;
         }
         else {
-            this.mode = "memory";
+            throw new Error("Write data must be Uint8Array or Buffer");
         }
-        if (this.maxFileSize == null) {
-            this.maxFileSize = MAX_LENGTH$2() || 0x80000000;
+        __classPrivateFieldSet(this, _BiBase_offset, byteOffset ?? 0, "f");
+        if ((bitOffset ?? 0) != 0) {
+            __classPrivateFieldSet(this, _BiBase_offset, Math.floor(byteOffset / 8), "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, byteOffset % 8, "f");
         }
-        if (writeable != undefined) {
-            if (writeable == true) {
-                this.fsMode = "w+";
-            }
-            else {
-                this.fsMode = "r";
-            }
-        }
+        __classPrivateFieldSet(this, _BiBase_offset, ((Math.abs(__classPrivateFieldGet(this, _BiBase_offset, "f"))) + Math.ceil((Math.abs(__classPrivateFieldGet(this, _BiBase_insetBit, "f"))) / 8)), "f");
+        // Adjust byte offset based on bit overflow
+        __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + Math.floor((Math.abs(__classPrivateFieldGet(this, _BiBase_insetBit, "f"))) / 8), "f");
+        // Adjust bit offset
+        __classPrivateFieldSet(this, _BiBase_insetBit, Math.abs(normalizeBitOffset(__classPrivateFieldGet(this, _BiBase_insetBit, "f"))) % 8, "f");
+        // Ensure bit offset stays between 0-7
+        __classPrivateFieldSet(this, _BiBase_insetBit, Math.min(Math.max(__classPrivateFieldGet(this, _BiBase_insetBit, "f"), 0), 7), "f");
+        // Ensure offset doesn't go negative
+        __classPrivateFieldSet(this, _BiBase_offset, Math.max(__classPrivateFieldGet(this, _BiBase_offset, "f"), 0), "f");
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, __classPrivateFieldGet(this, _BiBase_offset, "f"));
     }
     ;
     /**
@@ -2157,178 +1327,144 @@ class BiBase {
         this.strDefaults.terminateValue = settings.terminateValue;
     }
     ;
+    ///////////////////////////////
+    // #region INTERNALS
+    ///////////////////////////////
     /**
-     * Enables expanding in reader (changes strict)
-     *
-     * @param {boolean} mode - Enable expanding in reader (changes strict)
+     * Checks if obj is an Uint8Array or a Buffer
      */
-    writeMode(mode) {
+    isBufferOrUint8Array(obj) {
+        return isBufferOrUint8Array(obj);
+    }
+    ;
+    /**
+     * Checks if obj is a Buffer
+     */
+    isBuffer(obj) {
+        return isBuffer(obj);
+    }
+    ;
+    /**
+     * Checks if obj is an Uint8Array
+     */
+    isUint8Array(obj) {
+        return isUint8Array(obj);
+    }
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ///////////////////////////////
+    // #region FILE MODE
+    ///////////////////////////////
+    /**
+     * Enables writing and expanding (changes strict AND readonly)
+     *
+     * @param {boolean} mode - True to enable writing and expanding (changes strict AND readonly)
+     */
+    writeMode(mode = true) {
         if (mode) {
             this.strict = false;
-            if (this.mode == "file") {
-                this.fsMode = "w+";
-                this.close();
-                this.open();
-            }
-            return;
+            this.readOnly = false;
+            this.fsMode = "r+";
         }
         else {
             this.strict = true;
-            if (this.mode == "file") {
-                this.fsMode = "r";
-                this.close();
-                this.open();
-            }
-            return;
+            this.readOnly = true;
+            this.fsMode = "r";
+        }
+        if (!this.isMemoryMode) {
+            this.close();
+            this.open();
         }
     }
     ;
     /**
      * Opens the file in `file` mode. Must be run before reading or writing.
      *
-     * @returns {number} file size
+     * Can be used to pass new data to a loaded class, shifting to memory mode.
      */
-    open() {
-        if (this.mode == "memory") {
-            return this.size;
-        }
-        if (this.fd != null) {
-            return this.size;
-        }
-        if (fs == undefined) {
-            throw new Error("Can't load file without Node.");
-        }
-        if (this.maxFileSize == null) {
-            this.maxFileSize = MAX_LENGTH$2();
-        }
-        try {
-            this.fd = fs.openSync(this.filePath, this.fsMode);
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-        this.updateSize();
-        this.data = Buffer.alloc(this.size);
-        try {
-            fs.readSync(this.fd, this.data, 0, this.data.length, null);
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-        if (this.offset != undefined || this.bitoffset != undefined) {
-            this.offset = ((Math.abs(this.offset || 0)) + Math.ceil((Math.abs(this.bitoffset || 0)) / 8));
-            // Adjust byte offset based on bit overflow
-            this.offset += Math.floor((Math.abs(this.bitoffset || 0)) / 8);
-            // Adjust bit offset
-            this.bitoffset = Math.abs(normalizeBitOffset(this.bitoffset)) % 8;
-            // Ensure bit offset stays between 0-7
-            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
-            // Ensure offset doesn't go negative
-            this.offset = Math.max(this.offset, 0);
-            if (this.offset > this.size) {
-                if (this.strict == false) {
-                    if (this.extendBufferSize != 0) {
-                        this.extendArray(this.extendBufferSize);
-                    }
-                    else {
-                        this.extendArray(this.offset - this.size);
-                    }
-                }
-                else {
-                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
-                }
-            }
-        }
-        return this.size;
-    }
-    ;
-    /**
-     * Internal update size
-     */
-    updateSize() {
-        if (this.mode == "memory") {
+    open(data) {
+        if (this.isBufferOrUint8Array(data)) {
+            this.close();
+            this.filePath = null;
+            this.fd == null;
+            this.isMemoryMode = true;
+            this.data = data;
+            __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_updateSize).call(this);
+            __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_updateBuffer).call(this);
             return;
         }
-        if (fs == undefined) {
-            throw new Error("Can't read file without Node.");
+        if (this.isMemoryMode) {
+            return;
         }
-        if (this.fd !== null) {
-            try {
-                const stat = fs.fstatSync(this.fd);
-                this.size = stat.size;
-                this.sizeB = this.size * 8;
-            }
-            catch (error) {
-                throw new Error(error);
-            }
-            if (this.size > this.maxFileSize) {
-                throw new Error("File too large to load.");
-            }
+        if (this.fd != null) {
+            return;
         }
+        if (typeof fs$1 === "undefined") {
+            throw new Error("Can't load file outside of Node.");
+        }
+        if (!_fileExists$1(this.filePath)) {
+            fs$1.writeFileSync(this.filePath, "");
+        }
+        try {
+            this.fd = fs$1.openSync(this.filePath, this.fsMode);
+        }
+        catch (error) {
+            throw new Error(error);
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_updateSize).call(this);
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_updateBuffer).call(this);
     }
     ;
     /**
      * commit data and removes it.
      */
     close() {
-        if (this.mode == "memory") {
-            __classPrivateFieldSet(this, _BiBase_data, undefined, "f");
-            this.view = undefined;
-            return;
+        if (this.isMemoryMode) {
+            const data = __classPrivateFieldGet(this, _BiBase_data, "f");
+            __classPrivateFieldSet(this, _BiBase_data, null, "f");
+            __classPrivateFieldSet(this, _BiBase_view, null, "f");
+            return data;
         }
         if (this.fd === null) {
             return; // Already closed / or not open
         }
-        if (fs == undefined) {
-            throw new Error("Can't use BitFile without Node.");
+        if (typeof fs$1 === "undefined") {
+            throw new Error("Can't load file outside of Node.");
         }
         this.commit();
         try {
-            fs.closeSync(this.fd);
+            fs$1.closeSync(this.fd);
         }
         catch (error) {
             throw new Error(error);
         }
         this.fd = null;
-        return;
-    }
-    ;
-    /**
-     * Write buffer to data
-     *
-     * @param {DataType} data
-     * @param {boolean} consume
-     * @param {number} start - likely this.offset
-     * @returns {Buffer | Uint8Array}
-     */
-    write(data, consume = false, start = this.offset) {
-        if (this.mode == "memory") {
-            this.insert(data, consume, start);
-            return data;
-        }
-        this.open();
-        this.insert(data, consume, start);
-        return this.commit();
+        const data = __classPrivateFieldGet(this, _BiBase_data, "f");
+        __classPrivateFieldSet(this, _BiBase_data, null, "f");
+        __classPrivateFieldSet(this, _BiBase_view, null, "f");
+        return data;
     }
     ;
     /**
      * Write data buffer back to file
-     *
-     * @returns {DataType}
      */
     commit() {
-        if (this.mode == "memory") {
-            return this.data;
+        if (this.isMemoryMode || this.readOnly) {
+            return __classPrivateFieldGet(this, _BiBase_data, "f");
         }
+        // this.mode == "file"
         this.open();
         try {
-            fs.writeSync(this.fd, this.data, 0, this.data.length);
+            fs$1.writeSync(this.fd, __classPrivateFieldGet(this, _BiBase_data, "f"), 0, __classPrivateFieldGet(this, _BiBase_data, "f").length);
         }
         catch (error) {
             throw new Error(error);
         }
-        this.updateSize();
-        return this.data;
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_updateSize).call(this);
     }
     ;
     /**
@@ -2352,13 +1488,12 @@ class BiBase {
      * @param {string} newFilePath - New full file path and name.
      */
     renameFile(newFilePath) {
-        if (this.mode == "memory") {
+        if (this.isMemoryMode) {
             return;
         }
         try {
-            fs.closeSync(this.fd);
-            this.fd = null;
-            fs.renameSync(this.filePath, newFilePath);
+            this.close();
+            fs$1.renameSync(this.filePath, newFilePath);
         }
         catch (error) {
             throw new Error(error);
@@ -2370,39 +1505,25 @@ class BiBase {
     /**
      * Deletes the working file.
      *
-     * Note: This is permanentand can't be undone.
+     * Note: This is permanent and can't be undone.
      *
      * It doesn't send the file to the recycling bin for recovery.
      */
     deleteFile() {
-        if (this.mode == "memory") {
+        if (this.isMemoryMode) {
             return;
         }
+        if (this.readOnly) {
+            throw new Error("Can't delete file in readonly mode!");
+        }
         try {
-            fs.closeSync(this.fd);
-            this.fd = null;
-            fs.unlinkSync(this.filePath);
+            this.close();
+            fs$1.unlinkSync(this.filePath);
         }
         catch (error) {
             throw new Error(error);
         }
-    }
-    ;
-    extendArray(to_padd) {
-        return extendarray$2(this, to_padd);
-    }
-    ;
-    isBufferOrUint8Array(obj) {
-        return arrayBufferCheck(obj);
-    }
-    ;
-    /**
-     * Call this after everytime we set/replace `this.data`
-     */
-    updateView() {
-        if (__classPrivateFieldGet(this, _BiBase_data, "f")) {
-            this.view = new DataView(__classPrivateFieldGet(this, _BiBase_data, "f").buffer, __classPrivateFieldGet(this, _BiBase_data, "f").byteOffset ?? 0, __classPrivateFieldGet(this, _BiBase_data, "f").byteLength);
-        }
+        this.filePath = null;
     }
     ;
     ///////////////////////////////
@@ -2418,10 +1539,10 @@ class BiBase {
      */
     endianness(endian) {
         if (endian == undefined || typeof endian != "string") {
-            throw new Error("Endian must be big or little");
+            throw new TypeError("Endian must be big or little");
         }
         if (endian != undefined && !(endian == "big" || endian == "little")) {
-            throw new Error("Endian must be big or little");
+            throw new TypeError("Endian must be big or little");
         }
         this.endian = endian;
     }
@@ -2492,6 +1613,15 @@ class BiBase {
     /**
      * Size in bytes of the current buffer.
      *
+     *  @returns {number} size
+     */
+    get fileSize() {
+        return this.size;
+    }
+    ;
+    /**
+     * Size in bytes of the current buffer.
+     *
      * @returns {number} size
      */
     get FileSize() {
@@ -2503,8 +1633,8 @@ class BiBase {
      *
      * @returns {number} size
      */
-    get lengthB() {
-        return this.sizeB;
+    get lengthBits() {
+        return this.bitSize;
     }
     ;
     /**
@@ -2512,8 +1642,8 @@ class BiBase {
      *
      * @returns {number} size
      */
-    get FileSizeB() {
-        return this.sizeB;
+    get sizeBits() {
+        return this.bitSize;
     }
     ;
     /**
@@ -2521,13 +1651,58 @@ class BiBase {
      *
      * @returns {number} size
      */
-    get lenb() {
-        return this.sizeB;
+    get fileBitSize() {
+        return this.bitSize;
+    }
+    ;
+    /**
+     * Size in bytes of the current buffer.
+     *
+     *  @returns {number} size
+     */
+    get fileSizeBits() {
+        return this.bitSize;
+    }
+    ;
+    /**
+     * Size in bits of the current buffer.
+     *
+     * @returns {number} size
+     */
+    get lenBits() {
+        return this.bitSize;
     }
     ;
     ///////////////////////////////
     // #region POSITION
     ///////////////////////////////
+    /**
+     * Get the current byte position.
+     *
+     * @returns {number} current byte position
+     */
+    get offset() {
+        return __classPrivateFieldGet(this, _BiBase_offset, "f");
+    }
+    ;
+    /**
+     * Get the current byte position;
+     *
+     * @returns {number} current byte position
+     */
+    get off() {
+        return this.offset;
+    }
+    ;
+    /**
+     * Get the current byte position.
+     *
+     * @returns {number} current byte position
+     */
+    get getOffset() {
+        return this.offset;
+    }
+    ;
     /**
      * Get the current byte position.
      *
@@ -2547,15 +1722,6 @@ class BiBase {
     }
     ;
     /**
-     * Get the current byte position.
-     *
-     * @returns {number} current byte position
-     */
-    get getOffset() {
-        return this.offset;
-    }
-    ;
-    /**
      * Get the current byte position;
      *
      * @returns {number} current byte position
@@ -2569,125 +1735,224 @@ class BiBase {
      *
      * @returns {number} current byte position
      */
-    get off() {
+    get byteOffset() {
         return this.offset;
     }
     ;
     /**
-     * Get the current bit position (0-7).
+     * Set the current byte position.
+     *
+     * Same as {@link goto}
+     */
+    set offset(value) {
+        this.goto(value);
+    }
+    ;
+    /**
+     * Set the current byte position.
+     *
+     * Same as {@link goto}
+     */
+    set setOffset(value) {
+        this.offset = value;
+    }
+    ;
+    /**
+     * Set the current byte position.
+     *
+     * Same as {@link goto}
+     */
+    set setByteOffset(value) {
+        this.offset = value;
+    }
+    ;
+    /**
+     * Get the current bit position.
      *
      * @returns {number} current bit position
      */
-    get getOffsetBit() {
-        return this.bitoffset;
+    get bitOffset() {
+        return (__classPrivateFieldGet(this, _BiBase_offset, "f") * 8) + __classPrivateFieldGet(this, _BiBase_insetBit, "f");
     }
     ;
     /**
-     * Get the current bit position (0-7).
+     * Get the current bit position.
      *
      * @returns {number} current bit position
      */
-    get tellB() {
-        return this.bitoffset;
+    get offsetBits() {
+        return this.bitOffset;
     }
-    ;
     /**
-     * Get the current bit position (0-7).
+     * Get the current bit position.
      *
      * @returns {number} current bit position
      */
-    get FTellB() {
-        return this.bitoffset;
+    get getBitOffset() {
+        return this.bitOffset;
     }
     ;
     /**
-     * Get the current bit position (0-7).
+     * Get the current bit position.
      *
      * @returns {number} current bit position
      */
-    get offb() {
-        return this.bitoffset;
+    get saveBitOffset() {
+        return this.bitOffset;
     }
     ;
     /**
-     * Get the current absolute bit position (from start of data).
-     *
-     * @returns {number} current absolute bit position
-     */
-    get getOffsetAbsBit() {
-        return (this.offset * 8) + this.bitoffset;
-    }
-    ;
-    /**
-     * Get the current absolute bit position (from start of data).
+     * Get the current bit position.
      *
      * @returns {number} current bit position
      */
-    get saveOffsetAbsBit() {
-        return (this.offset * 8) + this.bitoffset;
+    get FTellBits() {
+        return this.bitOffset;
     }
     ;
     /**
-     * Get the current absolute bit position (from start of data).
+     * Get the current bit position.
      *
-     * @returns {number} current absolute bit position
+     * @returns {number} current bit position
      */
-    get tellAbsB() {
-        return (this.offset * 8) + this.bitoffset;
+    get tellBits() {
+        return this.bitOffset;
     }
     ;
     /**
-     * Get the current absolute bit position (from start of data).
+     * Get the current bit position.
      *
-     * @returns {number} current absolute bit position
+     * @returns {number} current bit position
      */
-    get saveOffsetBit() {
-        return (this.offset * 8) + this.bitoffset;
+    get offBits() {
+        return this.bitOffset;
     }
     ;
     /**
-     * Get the current absolute bit position (from start of data).
+     * Set the current bit position.
      *
-     * @returns {number} current absolute bit position
+     * Same as {@link goto}
      */
-    get offab() {
-        return (this.offset * 8) + this.bitoffset;
+    set bitOffset(value) {
+        this.goto(value - (value % 8), value % 8);
     }
     ;
     /**
-     * Size in bytes of current read position to the end
+     * Set the current bit position.
+     */
+    set setOffsetBits(value) {
+        this.bitOffset = value;
+    }
+    ;
+    /**
+     * Set the current bit position.
+     */
+    set setBitOffset(value) {
+        this.setOffsetBits = value;
+    }
+    ;
+    /**
+     * Get the current bit position with in the current byte (0-7).
+     *
+     * @returns {number} current bit position
+     */
+    get insetBit() {
+        return __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+    }
+    ;
+    /**
+     * Get the current bit position with in the current byte (0-7).
+     *
+     * @returns {number} current bit position
+     */
+    get getInsetBit() {
+        return this.insetBit;
+    }
+    ;
+    /**
+     * Set the current bit position with in the current byte (0-7).
+     */
+    set insetBit(value) {
+        this.goto(this.offset, value % 8);
+    }
+    ;
+    /**
+     * Get the current bit position with in the current byte (0-7).
+     *
+     * @returns {number} current bit position
+     */
+    get saveInsetBit() {
+        return this.insetBit;
+    }
+    ;
+    /**
+     * Get the current bit position with in the current byte (0-7).
+     *
+     * @returns {number} current bit position
+     */
+    get inBit() {
+        return this.insetBit;
+    }
+    ;
+    /**
+     * Get the current bit position with in the current byte (0-7).
+     *
+     * @returns {number} current bit position
+     */
+    get bitTell() {
+        return this.insetBit;
+    }
+    ;
+    /**
+     * Set the current bit position with in the byte (0-7).
+     */
+    set setInsetBit(value) {
+        this.insetBit = value;
+    }
+    ;
+    /**
+     * Size in bytes of current read position to the end of the data.
      *
      * @returns {number} size
      */
     get remain() {
-        return this.size - this.offset;
+        return this.size - __classPrivateFieldGet(this, _BiBase_offset, "f");
     }
     ;
     /**
-     * Size in bytes of current read position to the end
+     * Size in bytes of current read position to the end of the data.
+     *
+     * @returns {number} size
+     */
+    get remainBytes() {
+        return this.remain;
+    }
+    ;
+    /**
+     * Size in bytes of current read position to the end of the data.
      *
      * @returns {number} size
      */
     get FEoF() {
-        return this.size - this.offset;
+        return this.remainBytes;
     }
     ;
     /**
-     * Size in bits of current read position to the end
+     * Size in bits of current read position to the end of the data.
      *
      * @returns {number} size
      */
-    get remainB() {
-        return (this.size * 8) - this.saveOffsetAbsBit;
+    get remainBits() {
+        return (this.size * 8) - this.bitOffset;
     }
     ;
     /**
-     * Size in bits of current read position to the end
+     * Size in bits of current read position to the end of the data.
      *
      * @returns {number} size
      */
-    get FEoFB() {
-        return (this.size * 8) - this.saveOffsetAbsBit;
+    get FEoFBits() {
+        return this.remainBits;
     }
     ;
     /**
@@ -2696,7 +1961,7 @@ class BiBase {
      * @returns {number} size
      */
     get getLine() {
-        return Math.abs(Math.floor((this.offset - 1) / 16));
+        return Math.abs(Math.floor((__classPrivateFieldGet(this, _BiBase_offset, "f") - 1) / 16));
     }
     ;
     /**
@@ -2705,7 +1970,7 @@ class BiBase {
      * @returns {number} size
      */
     get row() {
-        return Math.abs(Math.floor((this.offset - 1) / 16));
+        return this.getLine;
     }
     ;
     ///////////////////////////////
@@ -2714,23 +1979,36 @@ class BiBase {
     /**
      * Returns current data.
      *
-     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
+     * Note: Will remove all data after current position if ``growthIncrement`` was set and you expanded data past the end once.
      *
      * Use ``.data`` instead if you want the full buffer data.
      *
      * @returns {DataType} ``Buffer`` or ``Uint8Array``
      */
     get() {
-        if (this.extendBufferSize != 0) {
+        if (this.growthIncrement != 0 && this.wasExpanded) {
             this.trim();
         }
-        return this.data;
+        return __classPrivateFieldGet(this, _BiBase_data, "f");
     }
     ;
     /**
      * Returns current data.
      *
-     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
+     * Note: Will remove all data after current position if ``growthIncrement`` was set and you expanded data past the end once.
+     *
+     * Use ``.data`` instead if you want the full buffer data.
+     *
+     * @returns {DataType} ``Buffer`` or ``Uint8Array``
+     */
+    getFullBuffer() {
+        return this.get();
+    }
+    ;
+    /**
+     * Returns current data.
+     *
+     * Note: Will remove all data after current position if ``growthIncrement`` was set and you expanded data past the end once.
      *
      * Use ``.data`` instead if you want the full buffer data.
      *
@@ -2740,6 +2018,36 @@ class BiBase {
         return this.get();
     }
     ;
+    /**
+     * Returns and remove data.
+     *
+     * Commits any changes to file when editing a file.
+     */
+    end() {
+        return this.close();
+    }
+    ;
+    /**
+     * removes data.
+     *
+     * Commits any changes to file when editing a file.
+     */
+    done() {
+        return this.end();
+    }
+    ;
+    /**
+     * removes data.
+     *
+     * Commits any changes to file when editing a file.
+     */
+    finished() {
+        return this.end();
+    }
+    ;
+    ///////////////////////////////
+    // #region HEX DUMP
+    ///////////////////////////////
     /**
     * Creates hex dump string. Will console log or return string if set in options.
     *
@@ -2751,7 +2059,14 @@ class BiBase {
     * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
     */
     hexdump(options = {}) {
-        return hexDumpBase$2(this, options);
+        const length = options?.length ?? 192;
+        const startByte = options?.startByte ?? __classPrivateFieldGet(this, _BiBase_offset, "f");
+        const endByte = Math.min(startByte + length, this.size);
+        const newSize = endByte - startByte;
+        if (startByte > this.size || endByte > this.size) {
+            throw new RangeError("Hexdump amount is outside of data size: " + newSize + " of " + endByte);
+        }
+        return _hexDump(this.data, options, startByte, endByte);
     }
     ;
     /**
@@ -2785,42 +2100,46 @@ class BiBase {
         this.strict = false;
     }
     ;
-    /**
-     * removes data.
-     *
-     * Commits any changes to file when editing a file.
-     */
-    end() {
-        if (this.mode == "memory") {
-            __classPrivateFieldSet(this, _BiBase_data, undefined, "f");
-            this.view = undefined;
-            return;
-        }
-        this.commit();
-        return;
-    }
-    ;
-    /**
-     * removes data.
-     *
-     * Commits any changes to file when editing a file.
-     */
-    done() {
-        return this.end();
-    }
-    ;
-    /**
-     * removes data.
-     *
-     * Commits any changes to file when editing a file.
-     */
-    finished() {
-        return this.end();
-    }
-    ;
     ///////////////////////////////
     // #region   FIND 
     ///////////////////////////////
+    /**
+     * Searches for position of array of byte values from current read position.
+     *
+     * Returns -1 if not found.
+     *
+     * Does not change current read position.
+     *
+     * @param {Uint8Array | Buffer | Array<number>} bytesToFind
+     */
+    findBytes(bytesToFind) {
+        if (Array.isArray(bytesToFind)) {
+            bytesToFind = new Uint8Array(bytesToFind);
+        }
+        this.open();
+        if (this.isBuffer(this.data)) {
+            var offset = this.data.subarray(__classPrivateFieldGet(this, _BiBase_offset, "f"), this.size).indexOf(bytesToFind);
+            if (offset == -1) {
+                return -1;
+            }
+            return offset + __classPrivateFieldGet(this, _BiBase_offset, "f");
+        }
+        // this.data == Uint8Array
+        for (let i = __classPrivateFieldGet(this, _BiBase_offset, "f"); i <= this.size - bytesToFind.length; i++) {
+            var match = true;
+            for (let j = 0; j < bytesToFind.length; j++) {
+                if (this.data[i + j] !== bytesToFind[j]) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                return i; // Found the string, return the index
+            }
+        }
+        return -1;
+    }
+    ;
     /**
      * Searches for byte position of string from current read position.
      *
@@ -2829,10 +2148,13 @@ class BiBase {
      * Does not change current read position.
      *
      * @param {string} string - String to search for.
+     * @param {1|2|4} bytesPerChar - how many bytes each character should take up
      */
-    findString(string) {
-        return fString$2(this, string);
+    findString(string, bytesPerChar = 1) {
+        const encoded = textEncode(string, bytesPerChar);
+        return this.findBytes(encoded);
     }
+    ;
     ;
     /**
      * Searches for byte value (can be signed or unsigned) position from current read position.
@@ -2845,8 +2167,8 @@ class BiBase {
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findByte(value, unsigned, endian) {
-        return fNumber$2(this, value, 8, unsigned == undefined ? true : unsigned, endian);
+    findByte(value, unsigned = true, endian = this.endian) {
+        return __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_findNumber).call(this, value, 8, unsigned, endian);
     }
     ;
     /**
@@ -2860,8 +2182,8 @@ class BiBase {
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findShort(value, unsigned, endian) {
-        return fNumber$2(this, value, 16, unsigned == undefined ? true : unsigned, endian);
+    findShort(value, unsigned = true, endian = this.endian) {
+        return __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_findNumber).call(this, value, 16, unsigned, endian);
     }
     ;
     /**
@@ -2875,8 +2197,8 @@ class BiBase {
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findInt(value, unsigned, endian) {
-        return fNumber$2(this, value, 32, unsigned == undefined ? true : unsigned, endian);
+    findInt(value, unsigned = true, endian = this.endian) {
+        return __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_findNumber).call(this, value, 32, unsigned, endian);
     }
     ;
     /**
@@ -2890,8 +2212,38 @@ class BiBase {
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findInt64(value, unsigned, endian) {
-        return fBigInt$2(this, value, unsigned == undefined ? true : unsigned, endian);
+    findInt64(value, unsigned = true, endian = this.endian) {
+        if (!hasBigInt) {
+            throw new Error("System doesn't support BigInt values.");
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 8, 0, __classPrivateFieldGet(this, _BiBase_offset, "f"));
+        for (let z = __classPrivateFieldGet(this, _BiBase_offset, "f"); z <= (this.size - 8); z++) {
+            var startingValue = BigInt(0);
+            if (endian == "little") {
+                for (let i = 0; i < 8; i++) {
+                    startingValue = startingValue | BigInt((this.data[z + i] & 0xFF)) << BigInt(8 * i);
+                }
+                if (!unsigned) {
+                    if (startingValue & (BigInt(1) << BigInt(63))) {
+                        startingValue -= BigInt(1) << BigInt(64);
+                    }
+                }
+            }
+            else {
+                for (let i = 0; i < 8; i++) {
+                    startingValue = (startingValue << BigInt(8)) | BigInt((this.data[z + i] & 0xFF));
+                }
+                if (!unsigned) {
+                    if (startingValue & (BigInt(1) << BigInt(63))) {
+                        startingValue -= BigInt(1) << BigInt(64);
+                    }
+                }
+            }
+            if (startingValue == BigInt(value)) {
+                return z;
+            }
+        }
+        return -1; // number not found
     }
     ;
     /**
@@ -2904,8 +2256,46 @@ class BiBase {
      * @param {number} value - Number to search for.
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findHalfFloat(value, endian) {
-        return fHalfFloat$2(this, value, endian);
+    findHalfFloat(value, endian = this.endian) {
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 2, 0, __classPrivateFieldGet(this, _BiBase_offset, "f"));
+        for (let z = __classPrivateFieldGet(this, _BiBase_offset, "f"); z <= (this.size - 2); z++) {
+            var startingValue = 0;
+            if (endian == "little") {
+                startingValue = ((this.data[z + 1] & 0xFFFF) << 8) | (this.data[z] & 0xFFFF);
+            }
+            else {
+                startingValue = ((this.data[z] & 0xFFFF) << 8) | (this.data[z + 1] & 0xFFFF);
+            }
+            const sign = (startingValue & 0x8000) >> 15;
+            const exponent = (startingValue & 0x7C00) >> 10;
+            const fraction = startingValue & 0x03FF;
+            var floatValue;
+            if (exponent === 0) {
+                if (fraction === 0) {
+                    floatValue = (sign === 0) ? 0 : -0; // +/-0
+                }
+                else {
+                    // Denormalized number
+                    floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, -14) * (fraction / 0x0400);
+                }
+            }
+            else if (exponent === 0x1F) {
+                if (fraction === 0) {
+                    floatValue = (sign === 0) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+                }
+                else {
+                    floatValue = Number.NaN;
+                }
+            }
+            else {
+                // Normalized number
+                floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x0400);
+            }
+            if (floatValue === value) {
+                return z; // Found the number, return the index
+            }
+        }
+        return -1; // number not found
     }
     ;
     /**
@@ -2918,8 +2308,45 @@ class BiBase {
      * @param {number} value - Number to search for.
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findFloat(value, endian) {
-        return fFloat$2(this, value, endian);
+    findFloat(value, endian = this.endian) {
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 4, 0, __classPrivateFieldGet(this, _BiBase_offset, "f"));
+        for (let z = __classPrivateFieldGet(this, _BiBase_offset, "f"); z <= (this.size - 4); z++) {
+            var startingValue = 0;
+            if (endian == "little") {
+                startingValue = ((this.data[z + 3] & 0xFF) << 24) |
+                    ((this.data[z + 2] & 0xFF) << 16) |
+                    ((this.data[z + 1] & 0xFF) << 8) |
+                    (this.data[z] & 0xFF);
+            }
+            else {
+                startingValue = ((this.data[z] & 0xFF) << 24) |
+                    ((this.data[z + 1] & 0xFF) << 16) |
+                    ((this.data[z + 2] & 0xFF) << 8) |
+                    (this.data[z + 3] & 0xFF);
+            }
+            const isNegative = (startingValue & 0x80000000) !== 0 ? 1 : 0;
+            // Extract the exponent and fraction parts
+            const exponent = (startingValue >> 23) & 0xFF;
+            const fraction = startingValue & 0x7FFFFF;
+            // Calculate the float value
+            var floatValue;
+            if (exponent === 0) {
+                // Denormalized number (exponent is 0)
+                floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
+            }
+            else if (exponent === 0xFF) {
+                // Infinity or NaN (exponent is 255)
+                floatValue = fraction === 0 ? (isNegative ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : Number.NaN;
+            }
+            else {
+                // Normalized number
+                floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
+            }
+            if (floatValue === value) {
+                return z; // Found the number, return the index
+            }
+        }
+        return -1; // number not found
     }
     ;
     /**
@@ -2932,8 +2359,53 @@ class BiBase {
      * @param {number} value - Number to search for.
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findDoubleFloat(value, endian) {
-        return fDoubleFloat$2(this, value, endian);
+    findDoubleFloat(value, endian = this.endian) {
+        if (!hasBigInt) {
+            throw new Error("System doesn't support BigInt values.");
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 8, 0, __classPrivateFieldGet(this, _BiBase_offset, "f"));
+        for (let z = __classPrivateFieldGet(this, _BiBase_offset, "f"); z <= (this.size - 8); z++) {
+            var startingValue = BigInt(0);
+            if (endian == "little") {
+                for (let i = 0; i < 8; i++) {
+                    startingValue = startingValue | BigInt((this.data[z + i] & 0xFF)) << BigInt(8 * i);
+                }
+            }
+            else {
+                for (let i = 0; i < 8; i++) {
+                    startingValue = (startingValue << BigInt(8)) | BigInt((this.data[z + i] & 0xFF));
+                }
+            }
+            const sign = (startingValue & BigInt("9223372036854775808")) >> BigInt(63);
+            const exponent = Number((startingValue & BigInt("9218868437227405312")) >> BigInt(52)) - 1023;
+            const fraction = Number(startingValue & BigInt("4503599627370495")) / Math.pow(2, 52);
+            var floatValue;
+            if (exponent == -1023) {
+                if (fraction == 0) {
+                    floatValue = (sign == BigInt(0)) ? 0 : -0; // +/-0
+                }
+                else {
+                    // Denormalized number
+                    floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, -1022) * fraction;
+                }
+            }
+            else if (exponent == 1024) {
+                if (fraction == 0) {
+                    floatValue = (sign == BigInt(0)) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+                }
+                else {
+                    floatValue = Number.NaN;
+                }
+            }
+            else {
+                // Normalized number
+                floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
+            }
+            if (floatValue == value) {
+                return z;
+            }
+        }
+        return -1; // number not found
     }
     ;
     ///////////////////////////////
@@ -2947,7 +2419,10 @@ class BiBase {
      * @param {number} number - Byte to align
      */
     align(number) {
-        return align$2(this, number);
+        const a = __classPrivateFieldGet(this, _BiBase_offset, "f") % number;
+        if (a) {
+            this.skip(number - a);
+        }
     }
     ;
     /**
@@ -2958,7 +2433,10 @@ class BiBase {
      * @param {number} number - Byte to align
      */
     alignRev(number) {
-        return alignRev$2(this, number);
+        const a = __classPrivateFieldGet(this, _BiBase_offset, "f") % number;
+        if (a) {
+            this.skip(a * -1);
+        }
     }
     ;
     /**
@@ -2970,7 +2448,22 @@ class BiBase {
      * @param {number} bits - Bits to skip
      */
     skip(bytes, bits) {
-        return skip$2(this, bytes, bits);
+        var newOffset = ((bytes + __classPrivateFieldGet(this, _BiBase_offset, "f")) + Math.ceil((__classPrivateFieldGet(this, _BiBase_insetBit, "f") + bits) / 8));
+        if (bits && bits < 0) {
+            newOffset = Math.floor((((bytes + __classPrivateFieldGet(this, _BiBase_offset, "f")) * 8) + __classPrivateFieldGet(this, _BiBase_insetBit, "f") + bits) / 8);
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, newOffset);
+        // Adjust byte offset based on bit overflow
+        __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + Math.floor((__classPrivateFieldGet(this, _BiBase_insetBit, "f") + bits) / 8), "f");
+        // Adjust bit offset
+        __classPrivateFieldSet(this, _BiBase_insetBit, (__classPrivateFieldGet(this, _BiBase_insetBit, "f") + normalizeBitOffset(bits)) % 8, "f");
+        // Adjust byte offset based on byte overflow
+        __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + bytes, "f");
+        // Ensure bit offset stays between 0-7
+        __classPrivateFieldSet(this, _BiBase_insetBit, Math.min(Math.max(__classPrivateFieldGet(this, _BiBase_insetBit, "f"), 0), 7), "f");
+        // Ensure offset doesn't go negative
+        __classPrivateFieldSet(this, _BiBase_offset, Math.max(__classPrivateFieldGet(this, _BiBase_offset, "f"), 0), "f");
+        return;
     }
     ;
     /**
@@ -2983,18 +2476,6 @@ class BiBase {
     */
     jump(bytes, bits) {
         this.skip(bytes, bits);
-    }
-    ;
-    /**
-     * Change position directly to address.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
-     */
-    FSeek(byte, bit) {
-        return goto$2(this, byte, bit);
     }
     ;
     /**
@@ -3017,8 +2498,34 @@ class BiBase {
      * @param {number} byte - byte to set to
      * @param {number} bit - bit to set to
      */
-    goto(byte, bit) {
-        return goto$2(this, byte, bit);
+    goto(byte = 0, bit = 0) {
+        var newOffset = byte + Math.ceil(bit / 8);
+        if (bit && bit < 0) {
+            newOffset = Math.floor(((byte * 8) + bit) / 8);
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, newOffset);
+        __classPrivateFieldSet(this, _BiBase_offset, byte, "f");
+        // Adjust byte offset based on bit overflow
+        __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + Math.floor(bit / 8), "f");
+        // Adjust bit offset
+        __classPrivateFieldSet(this, _BiBase_insetBit, normalizeBitOffset(bit) % 8, "f");
+        // Ensure bit offset stays between 0-7
+        __classPrivateFieldSet(this, _BiBase_insetBit, Math.min(Math.max(__classPrivateFieldGet(this, _BiBase_insetBit, "f"), 0), 7), "f");
+        // Ensure offset doesn't go negative
+        __classPrivateFieldSet(this, _BiBase_offset, Math.max(__classPrivateFieldGet(this, _BiBase_offset, "f"), 0), "f");
+        return;
+    }
+    ;
+    /**
+     * Change position directly to address.
+     *
+     * Note: Will extend array if strict mode is off and outside of max size.
+     *
+     * @param {number} byte - byte to set to
+     * @param {number} bit - bit to set to
+     */
+    FSeek(byte, bit) {
+        return this.goto(byte, bit);
     }
     ;
     /**
@@ -3049,8 +2556,8 @@ class BiBase {
      * Set byte and bit position to start of data.
      */
     rewind() {
-        this.offset = 0;
-        this.bitoffset = 0;
+        __classPrivateFieldSet(this, _BiBase_offset, 0, "f");
+        __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
     }
     ;
     /**
@@ -3064,8 +2571,8 @@ class BiBase {
      * Set current byte and bit position to end of data.
      */
     last() {
-        this.offset = this.size;
-        this.bitoffset = 0;
+        __classPrivateFieldSet(this, _BiBase_offset, this.size, "f");
+        __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
     }
     ;
     /**
@@ -3095,8 +2602,33 @@ class BiBase {
      * @param {boolean} consume - Move position to end of removed data (default false)
      * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    delete(startOffset, endOffset, consume) {
-        return remove$2(this, startOffset || 0, endOffset || this.offset, consume || false, true);
+    delete(startOffset = 0, endOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), consume = false) {
+        if (this.readOnly || this.strict) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + this.size);
+        }
+        this.open();
+        startOffset = Math.abs(startOffset);
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        const dataRemoved = this.data.subarray(startOffset, endOffset);
+        const part1 = this.data.subarray(0, startOffset);
+        const part2 = this.data.subarray(endOffset, this.size);
+        if (this.isBuffer(this.data)) {
+            this.data = Buffer.concat([part1, part2]);
+        }
+        else {
+            const newBuf = new Uint8Array(part1.byteLength + part2.byteLength);
+            newBuf.set(part1, 0);
+            newBuf.set(part2, part1.byteLength);
+            this.data = newBuf;
+        }
+        this.size = this.data.length;
+        this.bitSize = this.data.length * 8;
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, startOffset, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        return dataRemoved;
     }
     ;
     /**
@@ -3107,7 +2639,7 @@ class BiBase {
      * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
     clip() {
-        return remove$2(this, this.offset, this.size, false, true);
+        return this.delete(__classPrivateFieldGet(this, _BiBase_offset, "f"), this.size, false);
     }
     ;
     /**
@@ -3118,7 +2650,7 @@ class BiBase {
      * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
     trim() {
-        return remove$2(this, this.offset, this.size, false, true);
+        return this.delete(__classPrivateFieldGet(this, _BiBase_offset, "f"), this.size, false);
     }
     ;
     /**
@@ -3128,10 +2660,10 @@ class BiBase {
      *
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {TemplateStringsArray} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    crop(length, consume) {
-        return remove$2(this, this.offset, this.offset + (length || 0), consume || false, true);
+    crop(length = 0, consume = false) {
+        return this.delete(__classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
     }
     ;
     /**
@@ -3143,8 +2675,62 @@ class BiBase {
      * @param {boolean} consume - Move position to end of removed data (default false)
      * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    drop(length, consume) {
-        return remove$2(this, this.offset, this.offset + (length || 0), consume || false, true);
+    drop(length = 0, consume = false) {
+        return this.delete(__classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
+    }
+    ;
+    ///////////////////////////////
+    // #region REPLACE
+    ///////////////////////////////
+    /**
+     * Replaces data in data.
+     *
+     * Note: Errors on strict mode if past end of data.
+     *
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {number} offset - Offset to add it at (defaults to current position)
+     * @param {boolean} consume - Move current byte position to end of data (default false)
+     */
+    replace(data, offset = __classPrivateFieldGet(this, _BiBase_offset, "f"), consume = false) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't replace data in readOnly mode!");
+        }
+        this.open();
+        // input is Buffer
+        if (this.isBuffer(data)) {
+            if (this.isUint8Array(this.data)) {
+                // source is Uint8Array
+                data = new Uint8Array(data);
+            }
+        }
+        else {
+            // input is Uint8Array
+            if (this.isBuffer(this.data)) {
+                // source is Buffer
+                data = Buffer.from(data);
+            }
+        }
+        const neededSize = offset + data.length;
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, neededSize);
+        const part1 = this.data.subarray(0, neededSize - data.length);
+        const part2 = this.data.subarray(neededSize, this.size);
+        if (this.isBuffer(this.data)) {
+            this.data = Buffer.concat([part1, data, part2]);
+        }
+        else {
+            const newBuf = new Uint8Array(part1.byteLength + data.byteLength + part2.byteLength);
+            newBuf.set(part1, 0);
+            newBuf.set(data, part1.byteLength);
+            newBuf.set(part2, part1.byteLength + data.byteLength);
+            this.data = newBuf;
+        }
+        this.size = this.data.length;
+        this.bitSize = this.data.length * 8;
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, offset + data.length, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
     }
     ;
     /**
@@ -3153,24 +2739,11 @@ class BiBase {
      * Note: Errors on strict mode.
      *
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
-     * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Offset to add it at (defaults to current position)
-     */
-    replace(data, consume, offset) {
-        return addData$2(this, data, consume || false, offset || this.offset, true);
-    }
-    ;
-    /**
-     * Replaces data in data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {boolean} consume - Move current byte position to end of data (default false)
-     * @param {number} offset - Offset to add it at (defaults to current position)
      */
-    overwrite(data, consume, offset) {
-        return addData$2(this, data, consume || false, offset || this.offset, true);
+    overwrite(data, offset = __classPrivateFieldGet(this, _BiBase_offset, "f"), consume = false) {
+        return this.replace(data, offset, consume);
     }
     ;
     ///////////////////////////////
@@ -3185,8 +2758,58 @@ class BiBase {
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    lift(startOffset, endOffset, consume, fillValue) {
-        return remove$2(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
+    fill(startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false, fillValue) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't remove data in readonly mode!");
+        }
+        this.open();
+        if (startOffset < 0 || endOffset > this.size) {
+            throw new RangeError('Remove range out of bounds');
+        }
+        const removeLen = endOffset - startOffset;
+        if (removeLen <= 0) {
+            if (this.isMemoryMode) {
+                if (this.isBuffer(this.data)) {
+                    return Buffer.alloc(0);
+                }
+                else {
+                    return new Uint8Array(0);
+                }
+            }
+            else {
+                return Buffer.alloc(0);
+            }
+        }
+        if (endOffset > this.size && this.strict) {
+            throw new Error('Cannot extend data while in strict mode. Use unrestrict() to enable.');
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        const dataRemoved = this.data.subarray(startOffset, endOffset);
+        // without a fill value it's a basic lift
+        if (fillValue != undefined) {
+            const part1 = this.data.subarray(0, startOffset);
+            const part2 = this.data.subarray(endOffset, this.size);
+            const replacement = new Array(dataRemoved.length).fill(fillValue & 0xff);
+            if (isBuffer(this.data)) {
+                const buffReplacement = Buffer.from(replacement);
+                this.data = Buffer.concat([part1, buffReplacement, part2]);
+            }
+            else {
+                const newBuf = new Uint8Array(part1.byteLength + replacement.length + part2.byteLength);
+                newBuf.set(part1, 0);
+                newBuf.set(replacement, part1.byteLength);
+                newBuf.set(part2, part1.byteLength + replacement.length);
+                this.data = newBuf;
+            }
+            this.size = this.data.length;
+            this.bitSize = this.data.length * 8;
+        }
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, endOffset, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        return dataRemoved;
     }
     ;
     /**
@@ -3198,8 +2821,8 @@ class BiBase {
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    fill(startOffset, endOffset, consume, fillValue) {
-        return remove$2(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
+    lift(startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false, fillValue) {
+        return this.fill(startOffset, endOffset, consume, fillValue);
     }
     ;
     /**
@@ -3208,11 +2831,11 @@ class BiBase {
      * Note: Does not affect supplied data.
      *
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
+     * @param {number} consume - Moves offset to end of length (default false)
      * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    extract(length, consume) {
-        return remove$2(this, this.offset, this.offset + (length || 0), consume || false, false);
+    extract(length = 0, consume = false) {
+        return this.fill(__classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
     }
     ;
     /**
@@ -3221,11 +2844,11 @@ class BiBase {
      * Note: Does not affect supplied data.
      *
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
+     * @param {number} consume - Moves offset to end of length (default false)
      * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    slice(length, consume) {
-        return remove$2(this, this.offset, this.offset + (length || 0), consume || false, false);
+    slice(length = 0, consume = false) {
+        return this.fill(__classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
     }
     ;
     /**
@@ -3234,11 +2857,11 @@ class BiBase {
      * Note: Does not affect supplied data.
      *
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
+     * @param {number} consume - Moves offset to end of length (default false)
      * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    wrap(length, consume) {
-        return remove$2(this, this.offset, this.offset + (length || 0), consume || false, false);
+    wrap(length = 0, consume = false) {
+        return this.fill(__classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
     }
     ;
     ///////////////////////////////
@@ -3250,11 +2873,56 @@ class BiBase {
      * Note: Errors on strict mode.
      *
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Byte position to add at (defaults to current position)
+     * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    insert(data, consume, offset) {
-        return addData$2(this, data, consume || false, offset || this.offset, false);
+    insert(data, offset = __classPrivateFieldGet(this, _BiBase_offset, "f"), consume = true) {
+        if (this.strict == true || this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Can not insert data in strict mode. Use unrestrict() to enable.`);
+        }
+        if (!this.strict) {
+            if (offset < 0 || offset > this.size) {
+                throw new RangeError('Insert offset out of bounds');
+            }
+        }
+        this.open();
+        // input is Buffer
+        if (this.isBuffer(data)) {
+            if (this.isUint8Array(this.data)) {
+                // source is Uint8Array
+                data = new Uint8Array(data);
+            }
+        }
+        else {
+            // input is Uint8Array
+            if (this.isBuffer(this.data)) {
+                // source is Buffer
+                data = Buffer.from(data);
+            }
+        }
+        const insertLen = data?.length ?? 0;
+        if (insertLen === 0) {
+            return;
+        }
+        const part1 = this.data.subarray(0, offset);
+        const part2 = this.data.subarray(offset, this.size);
+        if (this.isBuffer(this.data)) {
+            this.data = Buffer.concat([part1, data, part2]);
+        }
+        else {
+            const newBuf = new Uint8Array(part1.byteLength + data.byteLength + part2.byteLength);
+            newBuf.set(part1, 0);
+            newBuf.set(data, part1.byteLength);
+            newBuf.set(part2, part1.byteLength + data.byteLength);
+            this.data = newBuf;
+        }
+        this.size = this.data.length;
+        this.bitSize = this.data.length * 8;
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, offset + data.length, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
     }
     ;
     /**
@@ -3263,11 +2931,11 @@ class BiBase {
      * Note: Errors on strict mode.
      *
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Byte position to add at (defaults to current position)
+     * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    place(data, consume, offset) {
-        return addData$2(this, data, consume || false, offset || this.offset, false);
+    place(data, offset = __classPrivateFieldGet(this, _BiBase_offset, "f"), consume = true) {
+        return this.insert(data, offset, consume);
     }
     ;
     /**
@@ -3278,8 +2946,8 @@ class BiBase {
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    unshift(data, consume) {
-        return addData$2(this, data, consume || false, 0, false);
+    unshift(data, consume = false) {
+        return this.insert(data, 0, consume);
     }
     ;
     /**
@@ -3290,8 +2958,8 @@ class BiBase {
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    prepend(data, consume) {
-        return addData$2(this, data, consume || false, 0, false);
+    prepend(data, consume = false) {
+        return this.insert(data, 0, consume);
     }
     ;
     /**
@@ -3302,8 +2970,8 @@ class BiBase {
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    push(data, consume) {
-        return addData$2(this, data, consume || false, this.size, false);
+    push(data, consume = false) {
+        return this.insert(data, this.size, consume);
     }
     ;
     /**
@@ -3314,8 +2982,8 @@ class BiBase {
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    append(data, consume) {
-        return addData$2(this, data, consume || false, this.size, false);
+    append(data, consume = false) {
+        return this.push(data, consume);
     }
     ;
     ///////////////////////////////
@@ -3329,15 +2997,24 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    xor(xorKey, startOffset, endOffset, consume) {
-        var XORKey = xorKey;
+    xor(xorKey, startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
+        }
         if (typeof xorKey == "string") {
             xorKey = new TextEncoder().encode(xorKey);
         }
-        else if (!(this.isBufferOrUint8Array(XORKey) || typeof xorKey == "number")) {
+        else if (!(this.isBufferOrUint8Array(xorKey) || typeof xorKey == "number")) {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
-        return XOR$2(this, xorKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        this.open();
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        const returnData = _XOR(this.data, startOffset, Math.min(endOffset, this.size), xorKey);
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, returnData.offset, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, returnData.bitoffset, "f");
+        }
     }
     ;
     /**
@@ -3347,24 +3024,25 @@ class BiBase {
      * @param {number} length - Length in bytes to XOR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    xorThis(xorKey, length, consume) {
-        var Length = length || 1;
-        var XORKey = xorKey;
+    xorThis(xorKey, length, consume = false) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
+        }
         if (typeof xorKey == "number") {
-            Length = length || 1;
+            length = length ?? 1;
         }
         else if (typeof xorKey == "string") {
-            const encoder = new TextEncoder().encode(xorKey);
-            XORKey = encoder;
-            Length = length || encoder.length;
+            xorKey = new TextEncoder().encode(xorKey);
+            length = length ?? xorKey.length;
         }
-        else if (this.isBufferOrUint8Array(XORKey)) {
-            Length = length || xorKey.length;
+        else if (this.isBufferOrUint8Array(xorKey)) {
+            length = length ?? xorKey.length;
         }
         else {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
-        return XOR$2(this, XORKey, this.offset, this.offset + Length, consume || false);
+        return this.xor(xorKey, __classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
     }
     ;
     /**
@@ -3375,15 +3053,24 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    or(orKey, startOffset, endOffset, consume) {
-        var ORKey = orKey;
+    or(orKey, startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
+        }
         if (typeof orKey == "string") {
             orKey = new TextEncoder().encode(orKey);
         }
-        else if (!(this.isBufferOrUint8Array(ORKey) || typeof orKey == "number")) {
+        else if (!(this.isBufferOrUint8Array(orKey) || typeof orKey == "number")) {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
-        return OR$2(this, orKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        this.open();
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        const returnData = _OR(this.data, startOffset, Math.min(endOffset, this.size), orKey);
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, returnData.offset, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, returnData.bitoffset, "f");
+        }
     }
     ;
     /**
@@ -3394,23 +3081,24 @@ class BiBase {
      * @param {boolean} consume - Move current position to end of data (default false)
      */
     orThis(orKey, length, consume) {
-        var Length = length || 1;
-        var ORKey = orKey;
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
+        }
         if (typeof orKey == "number") {
-            Length = length || 1;
+            length = length ?? 1;
         }
         else if (typeof orKey == "string") {
-            const encoder = new TextEncoder().encode(orKey);
-            ORKey = encoder;
-            Length = length || encoder.length;
+            orKey = new TextEncoder().encode(orKey);
+            length = length ?? orKey.length;
         }
-        else if (this.isBufferOrUint8Array(ORKey)) {
-            Length = length || orKey.length;
+        else if (this.isBufferOrUint8Array(orKey)) {
+            length = length ?? orKey.length;
         }
         else {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
-        return OR$2(this, ORKey, this.offset, this.offset + Length, consume || false);
+        return this.or(orKey, __classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume || false);
     }
     ;
     /**
@@ -3421,15 +3109,24 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    and(andKey, startOffset, endOffset, consume) {
-        var ANDKey = andKey;
-        if (typeof ANDKey == "string") {
-            ANDKey = new TextEncoder().encode(ANDKey);
+    and(andKey, startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
         }
-        else if (!(typeof ANDKey == "object" || typeof ANDKey == "number")) {
+        if (typeof andKey == "string") {
+            andKey = new TextEncoder().encode(andKey);
+        }
+        else if (!(typeof andKey == "object" || typeof andKey == "number")) {
             throw new Error("AND must be a number, string, number array or Buffer");
         }
-        return AND$2(this, andKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        this.open();
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        const returnData = _AND(this.data, startOffset, Math.min(endOffset, this.size), andKey);
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, returnData.offset, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, returnData.bitoffset, "f");
+        }
     }
     ;
     /**
@@ -3439,24 +3136,25 @@ class BiBase {
      * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    andThis(andKey, length, consume) {
-        var Length = length || 1;
-        var ANDKey = andKey;
+    andThis(andKey, length, consume = false) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
+        }
         if (typeof andKey == "number") {
-            Length = length || 1;
+            length = length ?? 1;
         }
         else if (typeof andKey == "string") {
-            const encoder = new TextEncoder().encode(andKey);
-            ANDKey = encoder;
-            Length = length || encoder.length;
+            andKey = new TextEncoder().encode(andKey);
+            length = length ?? andKey.length;
         }
-        else if (typeof andKey == "object") {
-            Length = length || andKey.length;
+        else if (this.isBufferOrUint8Array(andKey)) {
+            length = length ?? andKey.length;
         }
         else {
-            throw new Error("AND must be a number, string, number array or Buffer");
+            throw new Error("AND must be a number, string, Uint8Array or Buffer");
         }
-        return AND$2(this, ANDKey, this.offset, this.offset + Length, consume || false);
+        return this.and(andKey, __classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
     }
     ;
     /**
@@ -3467,15 +3165,24 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    add(addKey, startOffset, endOffset, consume) {
-        var addedKey = addKey;
-        if (typeof addedKey == "string") {
-            addedKey = new TextEncoder().encode(addedKey);
+    add(addKey, startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
         }
-        else if (!(typeof addedKey == "object" || typeof addedKey == "number")) {
+        if (typeof addKey == "string") {
+            addKey = new TextEncoder().encode(addKey);
+        }
+        else if (!(typeof addKey == "object" || typeof addKey == "number")) {
             throw new Error("Add key must be a number, string, number array or Buffer");
         }
-        return ADD$2(this, addedKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        this.open();
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        const returnData = _ADD(this.data, startOffset, Math.min(endOffset, this.size), addKey);
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, returnData.offset, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, returnData.bitoffset, "f");
+        }
     }
     ;
     /**
@@ -3485,24 +3192,25 @@ class BiBase {
      * @param {number} length - Length in bytes to add from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    addThis(addKey, length, consume) {
-        var Length = length || 1;
-        var AddedKey = addKey;
-        if (typeof AddedKey == "number") {
-            Length = length || 1;
+    addThis(addKey, length, consume = false) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
         }
-        else if (typeof AddedKey == "string") {
-            const encoder = new TextEncoder().encode(AddedKey);
-            AddedKey = encoder;
-            Length = length || encoder.length;
+        if (typeof addKey == "number") {
+            length = length ?? 1;
         }
-        else if (typeof AddedKey == "object") {
-            Length = length || AddedKey.length;
+        else if (typeof addKey == "string") {
+            addKey = new TextEncoder().encode(addKey);
+            length = length ?? addKey.length;
+        }
+        else if (this.isBufferOrUint8Array(addKey)) {
+            length = length ?? addKey.length;
         }
         else {
-            throw new Error("Add key must be a number, string, number array or Buffer");
+            throw new Error("ADD must be a number, string, Uint8Array or Buffer");
         }
-        return ADD$2(this, AddedKey, this.offset, this.offset + Length, consume || false);
+        return this.add(addKey, __classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
     }
     ;
     /**
@@ -3512,8 +3220,18 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    not(startOffset, endOffset, consume) {
-        return NOT$2(this, startOffset || this.offset, endOffset || this.size, consume || false);
+    not(startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
+        }
+        this.open();
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        const returnData = _NOT(this.data, startOffset, Math.min(endOffset, this.size));
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, returnData.offset, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, returnData.bitoffset, "f");
+        }
     }
     ;
     /**
@@ -3522,8 +3240,8 @@ class BiBase {
      * @param {number} length - Length in bytes to NOT from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    notThis(length, consume) {
-        return NOT$2(this, this.offset, this.offset + (length || 1), consume || false);
+    notThis(length = 1, consume = false) {
+        return this.not(__classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
     }
     ;
     /**
@@ -3534,15 +3252,24 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    lShift(shiftKey, startOffset, endOffset, consume) {
-        var lShiftKey = shiftKey;
-        if (typeof lShiftKey == "string") {
-            lShiftKey = new TextEncoder().encode(lShiftKey);
+    lShift(shiftKey, startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
         }
-        else if (!(typeof lShiftKey == "object" || typeof lShiftKey == "number")) {
+        if (typeof shiftKey == "string") {
+            shiftKey = new TextEncoder().encode(shiftKey);
+        }
+        else if (!(typeof shiftKey == "object" || typeof shiftKey == "number")) {
             throw new Error("Left shift must be a number, string, number array or Buffer");
         }
-        return LSHIFT$2(this, lShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        this.open();
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        const returnData = _LSHIFT(this.data, startOffset, Math.min(endOffset, this.size), shiftKey);
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, returnData.offset, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, returnData.bitoffset, "f");
+        }
     }
     ;
     /**
@@ -3552,24 +3279,25 @@ class BiBase {
      * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    lShiftThis(shiftKey, length, consume) {
-        var Length = length || 1;
-        var lShiftKey = shiftKey;
-        if (typeof lShiftKey == "number") {
-            Length = length || 1;
+    lShiftThis(shiftKey, length, consume = false) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
         }
-        else if (typeof lShiftKey == "string") {
-            const encoder = new TextEncoder().encode(lShiftKey);
-            lShiftKey = encoder;
-            Length = length || encoder.length;
+        if (typeof shiftKey == "number") {
+            length = length ?? 1;
         }
-        else if (typeof lShiftKey == "object") {
-            Length = length || lShiftKey.length;
+        else if (typeof shiftKey == "string") {
+            shiftKey = new TextEncoder().encode(shiftKey);
+            length = length ?? shiftKey.length;
+        }
+        else if (this.isBufferOrUint8Array(shiftKey)) {
+            length = length ?? shiftKey.length;
         }
         else {
-            throw new Error("Left shift must be a number, string, number array or Buffer");
+            throw new Error("Left shift must be a number, string, Uint8Array or Buffer");
         }
-        return LSHIFT$2(this, shiftKey, this.offset, this.offset + Length, consume || false);
+        return this.lShift(shiftKey, __classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
     }
     ;
     /**
@@ -3580,15 +3308,24 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    rShift(shiftKey, startOffset, endOffset, consume) {
-        var rShiftKey = shiftKey;
-        if (typeof rShiftKey == "string") {
-            rShiftKey = new TextEncoder().encode(rShiftKey);
+    rShift(shiftKey, startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
         }
-        else if (!(typeof rShiftKey == "object" || typeof rShiftKey == "number")) {
+        if (typeof shiftKey == "string") {
+            shiftKey = new TextEncoder().encode(shiftKey);
+        }
+        else if (!(typeof shiftKey == "object" || typeof shiftKey == "number")) {
             throw new Error("Right shift must be a number, string, number array or Buffer");
         }
-        return RSHIFT$2(this, rShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        this.open();
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        const returnData = _RSHIFT(this.data, startOffset, Math.min(endOffset, this.size), shiftKey);
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, returnData.offset, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, returnData.bitoffset, "f");
+        }
     }
     ;
     /**
@@ -3598,98 +3335,30 @@ class BiBase {
      * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    rShiftThis(shiftKey, length, consume) {
-        var Length = length || 1;
-        var lShiftKey = shiftKey;
-        if (typeof lShiftKey == "number") {
-            Length = length || 1;
+    rShiftThis(shiftKey, length, consume = false) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
         }
-        else if (typeof lShiftKey == "string") {
-            const encoder = new TextEncoder().encode(lShiftKey);
-            lShiftKey = encoder;
-            Length = length || encoder.length;
+        if (typeof shiftKey == "number") {
+            length = length ?? 1;
         }
-        else if (typeof lShiftKey == "object") {
-            Length = length || lShiftKey.length;
+        else if (typeof shiftKey == "string") {
+            shiftKey = new TextEncoder().encode(shiftKey);
+            length = length ?? shiftKey.length;
+        }
+        else if (this.isBufferOrUint8Array(shiftKey)) {
+            length = length ?? shiftKey.length;
         }
         else {
-            throw new Error("Right shift must be a number, string, number array or Buffer");
+            throw new Error("right shift must be a number, string, Uint8Array or Buffer");
         }
-        return RSHIFT$2(this, lShiftKey, this.offset, this.offset + Length, consume || false);
+        return this.rShift(shiftKey, __classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
     }
     ;
     ///////////////////////////////
     // #region BIT READER
     ///////////////////////////////
-    /**
-     *
-     * Write bits, must have at least value and number of bits.
-     *
-     * ``Note``: When returning to a byte write, remaining bits are skipped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - number of bits to write
-     * @param {boolean} unsigned - if value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeBit(value, bits, unsigned, endian) {
-        return wbit$2(this, value, bits, unsigned, endian);
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @returns number
-     */
-    writeUBitBE(value, bits) {
-        return wbit$2(this, value, bits, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns number
-     */
-    writeBitBE(value, bits, unsigned) {
-        return wbit$2(this, value, bits, unsigned, "big");
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @returns number
-     */
-    writeUBitLE(value, bits) {
-        return wbit$2(this, value, bits, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns number
-     */
-    writeBitLE(value, bits, unsigned) {
-        return wbit$2(this, value, bits, unsigned, "little");
-    }
-    ;
     /**
      * Bit field reader.
      *
@@ -3698,10 +3367,29 @@ class BiBase {
      * @param {number} bits - bits to read
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
      * @returns {number}
      */
-    readBit(bits, unsigned, endian) {
-        return rbit$2(this, bits, unsigned, endian);
+    readBit(bits, unsigned = false, endian = this.endian, consume = true) {
+        this.open();
+        if (typeof bits != "number") {
+            throw new TypeError("Enter number of bits to read");
+        }
+        if (bits == 0) {
+            return 0;
+        }
+        if (bits <= 0 || bits > 32) {
+            throw new Error('Bit length must be between 1 and 32. Got ' + bits);
+        }
+        const sizeNeeded = Math.floor(((bits - 1) + __classPrivateFieldGet(this, _BiBase_insetBit, "f")) / 8) + __classPrivateFieldGet(this, _BiBase_offset, "f");
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, sizeNeeded);
+        const bitStart = (__classPrivateFieldGet(this, _BiBase_offset, "f") * 8) + __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        const value = _rbit(this.data, bits, bitStart, endian, unsigned);
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + Math.floor((bits + __classPrivateFieldGet(this, _BiBase_insetBit, "f")) / 8), "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, (bits + __classPrivateFieldGet(this, _BiBase_insetBit, "f")) % 8, "f");
+        }
+        return value;
     }
     ;
     /**
@@ -3714,19 +3402,6 @@ class BiBase {
      */
     readUBitBE(bits) {
         return this.readBit(bits, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
-     */
-    readBitBE(bits, unsigned) {
-        return this.readBit(bits, unsigned, "big");
     }
     ;
     /**
@@ -3750,8 +3425,111 @@ class BiBase {
      * @param {boolean} unsigned - if the value is unsigned
      * @returns {number}
      */
+    readBitBE(bits, unsigned) {
+        return this.readBit(bits, unsigned, "big");
+    }
+    ;
+    /**
+     * Bit field reader.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @param {number} bits - bits to read
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns {number}
+     */
     readBitLE(bits, unsigned) {
         return this.readBit(bits, unsigned, "little");
+    }
+    ;
+    /**
+     *
+     * Write bits, must have at least value and number of bits.
+     *
+     * ``Note``: When returning to a byte write, remaining bits are skipped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - number of bits to write
+     * @param {boolean} unsigned - if value is unsigned
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
+     */
+    writeBit(value, bits, unsigned = false, endian = this.endian, consume = true) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readOnly mode!");
+        }
+        this.open();
+        if (bits == 0) {
+            return;
+        }
+        if (bits <= 0 || bits > 32) {
+            throw new Error('Bit length must be between 1 and 32. Got ' + bits);
+        }
+        value = numberSafe(value, bits, unsigned);
+        const endOffset = Math.ceil(((bits - 1) + __classPrivateFieldGet(this, _BiBase_insetBit, "f")) / 8) + __classPrivateFieldGet(this, _BiBase_offset, "f");
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        const offset = (__classPrivateFieldGet(this, _BiBase_offset, "f") * 8) + __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        _wbit(this.data, value, bits, offset, endian, unsigned);
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + Math.floor((bits + __classPrivateFieldGet(this, _BiBase_insetBit, "f")) / 8), "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, (bits + __classPrivateFieldGet(this, _BiBase_insetBit, "f")) % 8, "f");
+        }
+        return;
+    }
+    ;
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @returns number
+     */
+    writeUBitBE(value, bits) {
+        return this.writeBit(value, bits, true, "big");
+    }
+    ;
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @returns number
+     */
+    writeUBitLE(value, bits) {
+        return this.writeBit(value, bits, true, "little");
+    }
+    ;
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns number
+     */
+    writeBitBE(value, bits, unsigned) {
+        return this.writeBit(value, bits, unsigned, "big");
+    }
+    ;
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns number
+     */
+    writeBitLE(value, bits, unsigned) {
+        return this.writeBit(value, bits, unsigned, "little");
     }
     ;
     ///////////////////////////////
@@ -3760,53 +3538,30 @@ class BiBase {
     /**
      * Read byte.
      *
-     * @param {boolean} unsigned - if value is unsigned or not
+     * @param {boolean} unsigned - if the value is unsigned or not
+     * @param {boolean} consume - move offset after read
      * @returns {number}
      */
-    readByte(unsigned) {
-        return rbyte$2(this, unsigned);
-    }
-    ;
-    /**
-     * Read multiple bytes.
-     *
-     * @param {number} amount - amount of bytes to read
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @returns {number[]}
-     */
-    readBytes(amount, unsigned) {
-        return Array.from({ length: amount }, () => rbyte$2(this, unsigned));
-    }
-    ;
-    /**
-     * Write byte.
-     *
-     * @param {number} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
-     */
-    writeByte(value, unsigned) {
-        return wbyte$2(this, value, unsigned);
-    }
-    ;
-    /**
-     * Write multiple bytes.
-     *
-     * @param {number[]} values - array of values as int
-     * @param {boolean} unsigned - if the value is unsigned
-     */
-    writeBytes(values, unsigned) {
-        for (let i = 0; i < values.length; i++) {
-            wbyte$2(this, values[i], unsigned);
+    readByte(unsigned = false, consume = true) {
+        this.open();
+        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        if (trueBit != 0) {
+            trueByte += 1;
         }
-    }
-    ;
-    /**
-     * Write unsigned byte.
-     *
-     * @param {number} value - value as int
-     */
-    writeUByte(value) {
-        return wbyte$2(this, value, true);
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 1, 0, trueByte);
+        var value;
+        if (canInt8) {
+            value = unsigned ? this.view.getUint8(trueByte) : this.view.getInt8(trueByte);
+        }
+        else {
+            value = _rbyte(this.data, trueByte, unsigned);
+        }
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 1, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        return value;
     }
     ;
     /**
@@ -3818,6 +3573,97 @@ class BiBase {
         return this.readByte(true);
     }
     ;
+    /**
+     * Read multiple bytes.
+     *
+     * @param {number} amount - amount of bytes to read
+     * @param {boolean} unsigned - if value is unsigned or not
+     * @param {boolean} consume - move offset after read
+     * @returns {number[]}
+     */
+    readBytes(amount, unsigned, consume = true) {
+        return Array.from({ length: amount }, () => this.readByte(unsigned, consume));
+    }
+    ;
+    /**
+     * Read multiple unsigned bytes.
+     *
+     * @param {number} amount - amount of bytes to read
+     * @param {boolean} consume - move offset after read
+     * @returns {number[]}
+     */
+    readUBytes(amount, consume = true) {
+        return this.readBytes(amount, true, consume);
+    }
+    ;
+    /**
+     * Write byte.
+     *
+     * @param {number} value - value as int
+     * @param {boolean} unsigned - if the value is unsigned
+     * @param {boolean} consume - move offset after write
+     */
+    writeByte(value, unsigned = false, consume = true) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readonly mode!");
+        }
+        this.open();
+        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 1, 0, trueByte);
+        if (canInt8) {
+            if (unsigned) {
+                this.view.setUint8(trueByte, value);
+            }
+            else {
+                this.view.setInt8(trueByte, value);
+            }
+        }
+        else {
+            _wbyte(this.data, numberSafe(value, 8, unsigned), trueByte, unsigned);
+        }
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 1, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        return;
+    }
+    ;
+    /**
+     * Write multiple bytes.
+     *
+     * @param {number[]} values - array of values as int
+     * @param {boolean} unsigned - if the value is unsigned
+     * @param {boolean} consume - move offset after write
+     */
+    writeBytes(values, unsigned, consume = true) {
+        for (let i = 0; i < values.length; i++) {
+            this.writeByte(values[i], unsigned, consume);
+        }
+    }
+    ;
+    /**
+     * Write multiple unsigned bytes.
+     *
+     * @param {number[]} values - array of values as int
+     * @param {boolean} consume - move offset after write
+     */
+    writeUBytes(values, consume = true) {
+        return this.writeBytes(values, true, consume);
+    }
+    ;
+    /**
+     * Write unsigned byte.
+     *
+     * @param {number} value - value as int
+     */
+    writeUByte(value) {
+        return this.writeByte(value, true);
+    }
+    ;
     ///////////////////////////////
     // #region INT16 READER
     ///////////////////////////////
@@ -3826,58 +3672,34 @@ class BiBase {
      *
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
      * @returns {number}
      */
-    readInt16(unsigned, endian) {
-        return rint16$2(this, unsigned, endian);
-    }
-    ;
-    /**
-     * Write int16.
-     *
-     * @param {number} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeInt16(value, unsigned, endian) {
-        return wint16$2(this, value, unsigned, endian);
-    }
-    ;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt16(value, endian) {
-        return wint16$2(this, value, true, endian);
-    }
-    ;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    writeUInt16BE(value) {
-        return this.writeInt16(value, true, "big");
-    }
-    ;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    writeUInt16LE(value) {
-        return this.writeInt16(value, true, "little");
-    }
-    ;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    writeInt16LE(value) {
-        return this.writeInt16(value, false, "little");
+    readInt16(unsigned = false, endian = this.endian, consume = true) {
+        this.open();
+        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 2, 0, trueByte);
+        var value;
+        if (canInt16) {
+            if (unsigned) {
+                value = this.view.getUint16(trueByte, endian == "little");
+            }
+            else {
+                value = this.view.getInt16(trueByte, endian == "little");
+            }
+        }
+        else {
+            value = _rint16(this.data, trueByte, endian, unsigned);
+        }
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 2, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        return value;
     }
     ;
     /**
@@ -3887,7 +3709,7 @@ class BiBase {
      *
      * @returns {number}
      */
-    readUInt16(endian) {
+    readUInt16(endian = this.endian) {
         return this.readInt16(true, endian);
     }
     ;
@@ -3897,7 +3719,16 @@ class BiBase {
      * @returns {number}
      */
     readUInt16LE() {
-        return this.readInt16(true, "little");
+        return this.readUInt16("little");
+    }
+    ;
+    /**
+     * Read unsigned short in big endian.
+     *
+     * @returns {number}
+     */
+    readUInt16BE() {
+        return this.readUInt16("big");
     }
     ;
     /**
@@ -3910,15 +3741,6 @@ class BiBase {
     }
     ;
     /**
-     * Read unsigned short in big endian.
-     *
-     * @returns {number}
-     */
-    readUInt16BE() {
-        return this.readInt16(true, "big");
-    }
-    ;
-    /**
     * Read signed short in big endian.
     *
     * @returns {number}
@@ -3927,49 +3749,135 @@ class BiBase {
         return this.readInt16(false, "big");
     }
     ;
+    /**
+     * Write int16.
+     *
+     * @param {number} value - value as int
+     * @param {boolean} unsigned - if the value is unsigned
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
+     */
+    writeInt16(value, unsigned = false, endian = this.endian, consume = true) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
+        }
+        this.open();
+        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 2, 0, trueByte);
+        if (canInt16) {
+            if (unsigned) {
+                this.view.setUint16(trueByte, value, endian == "little");
+            }
+            else {
+                this.view.setInt16(trueByte, value, endian == "little");
+            }
+        }
+        else {
+            _wint16(this.data, numberSafe(value, 16, unsigned), trueByte, endian, unsigned);
+        }
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 2, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        return;
+    }
+    ;
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    writeUInt16(value, endian = this.endian) {
+        return this.writeInt16(value, true, endian);
+    }
+    ;
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
+    writeUInt16BE(value) {
+        return this.writeUInt16(value, "big");
+    }
+    ;
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int
+     */
+    writeUInt16LE(value) {
+        return this.writeUInt16(value, "little");
+    }
+    ;
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int
+     */
+    writeInt16LE(value) {
+        return this.writeInt16(value, false, "little");
+    }
+    ;
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int
+     */
+    writeInt16BE(value) {
+        return this.writeInt16(value, false, "big");
+    }
+    ;
     ///////////////////////////////
     // #region HALF FLOAT
     ///////////////////////////////
     /**
-     * Read half float.
+     * Read 16 bit float.
      *
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
      * @returns {number}
      */
-    readHalfFloat(endian) {
-        return rhalffloat$2(this, endian);
+    readHalfFloat(endian = this.endian, consume = true) {
+        this.open();
+        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 2, 0, trueByte);
+        var value;
+        if (canFloat16) {
+            value = this.view.getFloat16(trueByte, endian == "little");
+        }
+        else {
+            value = _rhalffloat(this.data, trueByte, endian);
+        }
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 2, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        return value;
     }
     ;
     /**
-     * Writes half float.
+     * Read 16 bit float.
      *
-     * @param {number} value - value as int
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
+     * @returns {number}
      */
-    writeHalfFloat(value, endian) {
-        return whalffloat$2(this, value, endian);
+    readFloat16(endian = this.endian, consume = true) {
+        return this.readHalfFloat(endian, consume);
     }
     ;
     /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    writeHalfFloatBE(value) {
-        return this.writeHalfFloat(value, "big");
-    }
-    ;
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    writeHalfFloatLE(value) {
-        return this.writeHalfFloat(value, "little");
-    }
-    ;
-    /**
-    * Read half float.
+    * Read 16 bit float.
     *
     * @returns {number}
     */
@@ -3978,12 +3886,109 @@ class BiBase {
     }
     ;
     /**
-     * Read half float.
+    * Read 16 bit float.
+    *
+    * @returns {number}
+    */
+    readFloat16BE() {
+        return this.readHalfFloat("big");
+    }
+    ;
+    /**
+     * Read 16 bit float.
      *
      * @returns {number}
      */
     readHalfFloatLE() {
         return this.readHalfFloat("little");
+    }
+    ;
+    /**
+     * Read 16 bit float.
+     *
+     * @returns {number}
+     */
+    readFloat16LE() {
+        return this.readHalfFloat("little");
+    }
+    ;
+    /**
+     * Writes 16 bit float.
+     *
+     * @param {number} value - value as int
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
+     */
+    writeHalfFloat(value, endian = this.endian, consume = true) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
+        }
+        this.open();
+        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 2, 0, trueByte);
+        if (canFloat16) {
+            this.view.setFloat16(trueByte, value, endian == "little");
+        }
+        else {
+            _whalffloat(this.data, value, trueByte, endian);
+        }
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 2, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        return;
+    }
+    ;
+    /**
+     * Writes 16 bit float.
+     *
+     * @param {number} value - value as int
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
+     */
+    writeFloat16(value, endian = this.endian, consume = true) {
+        return this.writeHalfFloat(value, endian, consume);
+    }
+    ;
+    /**
+     * Writes 16 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    writeHalfFloatBE(value) {
+        return this.writeHalfFloat(value, "big");
+    }
+    ;
+    /**
+     * Writes 16 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    writeFloat16BE(value) {
+        return this.writeHalfFloat(value, "big");
+    }
+    ;
+    /**
+     * Writes 16 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    writeHalfFloatLE(value) {
+        return this.writeHalfFloat(value, "little");
+    }
+    ;
+    /**
+     * Writes 16 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    writeFloat16LE(value) {
+        return this.writeHalfFloat(value, "little");
     }
     ;
     ///////////////////////////////
@@ -3994,58 +3999,44 @@ class BiBase {
      *
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
      * @returns {number}
      */
-    readInt32(unsigned, endian) {
-        return rint32$2(this, unsigned, endian);
+    readInt32(unsigned = false, endian = this.endian, consume = true) {
+        this.open();
+        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 4, 0, trueByte);
+        var value;
+        if (canInt32) {
+            if (unsigned) {
+                value = this.view.getUint32(trueByte, endian == "little");
+            }
+            else {
+                value = this.view.getInt32(trueByte, endian == "little");
+            }
+        }
+        else {
+            value = _rint32(this.data, trueByte, endian, unsigned);
+        }
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 4, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        return value;
     }
     ;
     /**
-     * Write int32.
+     * Read signed 32 bit integer.
      *
-     * @param {number} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
      */
-    writeInt32(value, unsigned, endian) {
-        return wint32$2(this, value, unsigned, endian);
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt32(value, endian) {
-        return wint32$2(this, value, true, endian);
-    }
-    ;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    writeInt32LE(value) {
-        return this.writeInt32(value, false, "little");
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    writeUInt32LE(value) {
-        return this.writeInt32(value, true, "little");
-    }
-    ;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    writeInt32BE(value) {
-        return this.writeInt32(value, false, "big");
+    readInt(endian = this.endian) {
+        return this.readInt32(false, endian);
     }
     ;
     /**
@@ -4054,16 +4045,7 @@ class BiBase {
      * @returns {number}
      */
     readInt32BE() {
-        return this.readInt32(false, "big");
-    }
-    ;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    readUInt32BE() {
-        return this.readInt32(true, "big");
+        return this.readInt("big");
     }
     ;
     /**
@@ -4072,7 +4054,36 @@ class BiBase {
      * @returns {number}
      */
     readInt32LE() {
-        return this.readInt32(false, "little");
+        return this.readInt("little");
+    }
+    ;
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
+     */
+    readUInt32(endian = this.endian) {
+        return this.readInt32(true, endian);
+    }
+    ;
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
+     */
+    readUInt(endian = this.endian) {
+        return this.readInt32(true, endian);
+    }
+    ;
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @returns {number}
+     */
+    readUInt32BE() {
+        return this.readUInt("big");
     }
     ;
     /**
@@ -4081,61 +4092,158 @@ class BiBase {
      * @returns {number}
      */
     readUInt32LE() {
-        return this.readInt32(true, "little");
+        return this.readUInt("little");
     }
     ;
     /**
-     * Read unsigned 32 bit integer.
+     * Write 32 bit integer.
      *
-     * @returns {number}
+     * @param {number} value - value as int
+     * @param {boolean} unsigned - if the value is unsigned
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
      */
-    readUInt() {
-        return this.readInt32(true);
+    writeInt32(value, unsigned = false, endian = this.endian, consume = true) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
+        }
+        this.open();
+        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 4, 0, trueByte);
+        if (canInt32) {
+            if (unsigned) {
+                this.view.setUint32(trueByte, value, endian == "little");
+            }
+            else {
+                this.view.setInt32(trueByte, value, endian == "little");
+            }
+        }
+        else {
+            _wint32(this.data, numberSafe(value, 32, unsigned), trueByte, endian, unsigned);
+        }
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 4, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        return;
+    }
+    ;
+    /**
+     * Write signed 32 bit integer.
+     *
+     * @param {number} value - value as int
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    writeInt(value, endian = this.endian) {
+        return this.writeInt32(value, false, endian);
+    }
+    ;
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
+    writeInt32LE(value) {
+        return this.writeInt(value, "little");
+    }
+    ;
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int
+     */
+    writeInt32BE(value) {
+        return this.writeInt(value, "big");
+    }
+    ;
+    /**
+     * Write unsigned 32 bit integer.
+     *
+     * @param {number} value - value as int
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    writeUInt(value, endian = this.endian) {
+        return this.writeInt32(value, true, endian);
+    }
+    ;
+    /**
+     * Write unsigned 32 bit integer.
+     *
+     * @param {number} value - value as int
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    writeUInt32(value, endian = this.endian) {
+        return this.writeUInt(value, endian);
+    }
+    ;
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
+    writeUInt32BE(value) {
+        return this.writeUInt32(value, "big");
+    }
+    ;
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int
+     */
+    writeUInt32LE(value) {
+        return this.writeUInt32(value, "little");
     }
     ;
     ///////////////////////////////
     // #region FLOAT32 READER
     ///////////////////////////////
     /**
-     * Read float.
+     * Read 32 bit float.
      *
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
      * @returns {number}
      */
-    readFloat(endian) {
-        return rfloat$2(this, endian);
+    readFloat(endian = this.endian, consume = true) {
+        this.open();
+        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 4, 0, trueByte);
+        var value;
+        if (canFloat32) {
+            value = this.view.getFloat32(trueByte, endian == "little");
+        }
+        else {
+            value = _rfloat(this.data, trueByte, endian);
+        }
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 4, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        return value;
     }
     ;
     /**
-     * Write float.
+     * Read 32 bit float.
      *
-     * @param {number} value - value as int
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
+     * @returns {number}
      */
-    writeFloat(value, endian) {
-        return wfloat$2(this, value, endian);
+    readFloat32(endian = this.endian, consume = true) {
+        return this.readFloat(endian, consume);
     }
     ;
     /**
-     * Write float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloatLE(value) {
-        return this.writeFloat(value, "little");
-    }
-    ;
-    /**
-     * Write float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloatBE(value) {
-        return this.writeFloat(value, "big");
-    }
-    ;
-    /**
-     * Read float.
+     * Read 32 bit float.
      *
      * @returns {number}
      */
@@ -4144,12 +4252,98 @@ class BiBase {
     }
     ;
     /**
-     * Read float.
+     * Read 32 bit float.
+     *
+     * @returns {number}
+     */
+    readFloat32BE() {
+        return this.readFloat("big");
+    }
+    ;
+    /**
+     * Read 32 bit float.
      *
      * @returns {number}
      */
     readFloatLE() {
         return this.readFloat("little");
+    }
+    ;
+    /**
+     * Read 32 bit float.
+     *
+     * @returns {number}
+     */
+    readFloat32LE() {
+        return this.readFloat("little");
+    }
+    ;
+    /**
+     * Write 32 bit float.
+     *
+     * @param {number} value - value as int
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
+     */
+    writeFloat(value, endian = this.endian, consume = true) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
+        }
+        this.open();
+        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 4, 0, trueByte);
+        if (canFloat32) {
+            this.view.setFloat32(trueByte, value, endian == "little");
+        }
+        else {
+            _wfloat(this.data, value, trueByte, endian);
+        }
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 4, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        return;
+    }
+    ;
+    /**
+     * Write 32 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    writeFloatLE(value) {
+        return this.writeFloat(value, "little");
+    }
+    ;
+    /**
+     * Write 32 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    writeFloat32LE(value) {
+        return this.writeFloat(value, "little");
+    }
+    ;
+    /**
+     * Write 32 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    writeFloat32BE(value) {
+        return this.writeFloat(value, "big");
+    }
+    ;
+    /**
+     * Write 32 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    writeFloatBE(value) {
+        return this.writeFloat(value, "big");
     }
     ;
     ///////////////////////////////
@@ -4161,67 +4355,47 @@ class BiBase {
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      *
      * @param {boolean} unsigned - if value is unsigned or not
-     * @param {endian?} endian - ``big`` or ``little``
-     */
-    readInt64(unsigned, endian) {
-        return rint64$2(this, unsigned, endian);
-    }
-    ;
-    /**
-     * Write 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
      */
-    writeInt64(value, unsigned, endian) {
-        return wint64$2(this, value, unsigned, endian);
-    }
-    ;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt64(value, endian) {
-        return this.writeInt64(value, true, endian);
-    }
-    ;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeInt64LE(value) {
-        return this.writeInt64(value, false, "little");
-    }
-    ;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeUInt64LE(value) {
-        return this.writeInt64(value, true, "little");
-    }
-    ;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeInt64BE(value) {
-        return this.writeInt64(value, false, "big");
-    }
-    ;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeUInt64BE(value) {
-        return this.writeInt64(value, true, "big");
+    readInt64(unsigned = false, endian = this.endian, consume = true) {
+        if (!hasBigInt) {
+            throw new Error("System doesn't support BigInt values.");
+        }
+        this.open();
+        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 8, 0, trueByte);
+        var value;
+        if (canBigInt64) {
+            if (unsigned) {
+                value = this.view.getBigUint64(trueByte, endian == "little");
+            }
+            else {
+                value = this.view.getBigInt64(trueByte, endian == "little");
+            }
+        }
+        else {
+            value = _rint64(this.data, trueByte, endian, unsigned);
+        }
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 8, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        if (this.enforceBigInt == true || (typeof value == "bigint" && !isSafeInt64(value))) {
+            return value;
+        }
+        else {
+            if (isSafeInt64(value)) {
+                return Number(value);
+            }
+            else {
+                throw new Error("Value is outside of number range and enforceBigInt is set to false. " + value);
+            }
+        }
     }
     ;
     /**
@@ -4247,17 +4421,6 @@ class BiBase {
     }
     ;
     /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {BigValue}
-     */
-    readUInt64BE() {
-        return this.readInt64(true, "big");
-    }
-    ;
-    /**
      * Read signed 64 bit integer.
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
@@ -4275,53 +4438,154 @@ class BiBase {
      *
      * @returns {BigValue}
      */
+    readUInt64BE() {
+        return this.readInt64(true, "big");
+    }
+    ;
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     *
+     * @returns {BigValue}
+     */
     readUInt64LE() {
         return this.readInt64(true, "little");
+    }
+    ;
+    /**
+     * Write 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     * @param {boolean} unsigned - if the value is unsigned
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
+     */
+    writeInt64(value, unsigned = false, endian = this.endian, consume = true) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
+        }
+        if (!hasBigInt) {
+            throw new Error("System doesn't support BigInt values.");
+        }
+        this.open();
+        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 8, 0, trueByte);
+        if (canBigInt64) {
+            if (unsigned) {
+                this.view.setBigInt64(trueByte, BigInt(value), endian == "little");
+            }
+            else {
+                this.view.setBigUint64(trueByte, BigInt(value), endian == "little");
+            }
+        }
+        else {
+            _wint64(this.data, numberSafe(value, 64, unsigned), trueByte, endian, unsigned);
+        }
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 8, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        return;
+    }
+    ;
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    writeUInt64(value, endian = this.endian) {
+        return this.writeInt64(value, true, endian);
+    }
+    ;
+    /**
+     * Write signed 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
+    writeInt64LE(value) {
+        return this.writeInt64(value, false, "little");
+    }
+    ;
+    /**
+     * Write signed 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
+    writeInt64BE(value) {
+        return this.writeInt64(value, false, "big");
+    }
+    ;
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
+    writeUInt64LE(value) {
+        return this.writeInt64(value, true, "little");
+    }
+    ;
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
+    writeUInt64BE(value) {
+        return this.writeInt64(value, true, "big");
     }
     ;
     ///////////////////////////////
     // #region FLOAT64 READER
     ///////////////////////////////
     /**
-     * Read double float.
+     * Read 64 bit float.
      *
      * @param {endian} endian - ``big`` or ``little``
      * @returns {number}
      */
-    readDoubleFloat(endian) {
-        return rdfloat$2(this, endian);
+    readDoubleFloat(endian = this.endian, consume = true) {
+        this.open();
+        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 8, 0, trueByte);
+        var value;
+        if (canFloat64) {
+            value = this.view.getFloat64(trueByte, endian == "little");
+        }
+        else {
+            if (!hasBigInt) {
+                throw new Error("System doesn't support BigInt values.");
+            }
+            value = _rdfloat(this.data, trueByte, endian);
+        }
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 8, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        return value;
     }
     ;
     /**
-     * Writes double float.
+     * Read 64 bit float.
      *
-     * @param {number} value - value as int
      * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
      */
-    writeDoubleFloat(value, endian) {
-        return wdfloat$2(this, value, endian);
+    readFloat64(endian = this.endian) {
+        return this.readDoubleFloat(endian);
     }
     ;
     /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    writeDoubleFloatBE(value) {
-        return this.writeDoubleFloat(value, "big");
-    }
-    ;
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    writeDoubleFloatLE(value) {
-        return this.writeDoubleFloat(value, "little");
-    }
-    ;
-    /**
-     * Read double float.
+     * Read 64 bit float.
      *
      * @returns {number}
      */
@@ -4330,12 +4594,107 @@ class BiBase {
     }
     ;
     /**
-     * Read double float.
+     * Read 64 bit float.
+     *
+     * @returns {number}
+     */
+    readFloat64BE() {
+        return this.readDoubleFloat("big");
+    }
+    ;
+    /**
+     * Read 64 bit float.
      *
      * @returns {number}
      */
     readDoubleFloatLE() {
         return this.readDoubleFloat("little");
+    }
+    ;
+    /**
+     * Read 64 bit float.
+     *
+     * @returns {number}
+     */
+    readFloat64LE() {
+        return this.readDoubleFloat("little");
+    }
+    ;
+    /**
+     * Writes 64 bit float.
+     *
+     * @param {number} value - value as int
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    writeDoubleFloat(value, endian = this.endian, consume = true) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
+        }
+        this.open();
+        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 8, 0, trueByte);
+        if (canFloat64) {
+            this.view.setFloat64(trueByte, value, endian == "little");
+        }
+        else {
+            _wdfloat(this.data, value, trueByte, endian);
+        }
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 8, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        }
+        return;
+    }
+    ;
+    /**
+     * Writes 64 bit float.
+     *
+     * @param {number} value - value as int
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    writeFloat64(value, endian = this.endian) {
+        return this.writeDoubleFloat(value, endian);
+    }
+    ;
+    /**
+     * Writes 64 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    writeDoubleFloatBE(value) {
+        return this.writeDoubleFloat(value, "big");
+    }
+    ;
+    /**
+     * Writes 64 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    writeFloat64BE(value) {
+        return this.writeDoubleFloat(value, "big");
+    }
+    ;
+    /**
+     * Writes 64 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    writeDoubleFloatLE(value) {
+        return this.writeDoubleFloat(value, "little");
+    }
+    ;
+    /**
+     * Writes 64 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    writeFloat64LE(value) {
+        return this.writeDoubleFloat(value, "little");
     }
     ;
     ///////////////////////////////
@@ -4345,16 +4704,60 @@ class BiBase {
     * Reads string, use options object for different types.
     *
     * @param {stringOptions} options
-    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings (in units NOT bytes)
+    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
     * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
     * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
+    * @param {stringOptions["endian"]?} options.endian - for wide-pascal, double-wide-pascal and utf-16, utf-32
+    * @param {boolean} consume - move offset after read
     * @returns {string}
     */
-    readString(options) {
-        return rstring$2(this, options);
+    readString(options = this.strDefaults, consume = true) {
+        this.open();
+        var length = options.length;
+        var stringType = options.stringType ?? 'utf-8';
+        var terminateValue = options.terminateValue;
+        var lengthReadSize = options.lengthReadSize ?? 1;
+        var stripNull = options.stripNull ?? true;
+        var endian = options.endian ?? this.endian;
+        var encoding = options.encoding ?? 'utf-8';
+        var terminate = terminateValue;
+        var readLengthinBytes = 0;
+        if (length != undefined) {
+            switch (stringType) {
+                case "utf-8":
+                    readLengthinBytes = length;
+                    break;
+                case "utf-16":
+                    readLengthinBytes = length * 2;
+                    break;
+                case "utf-32":
+                    readLengthinBytes = length * 4;
+                    break;
+                default:
+                    readLengthinBytes = length;
+                    break;
+            }
+            __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, readLengthinBytes);
+        }
+        else {
+            readLengthinBytes = this.data.length - __classPrivateFieldGet(this, _BiBase_offset, "f");
+        }
+        if (terminateValue != undefined && typeof terminateValue == "number") {
+            terminate = terminateValue & 0xFF;
+        }
+        else {
+            terminate = 0;
+        }
+        const saved_offset = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        const saved_bitoffset = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        const str = _rstring(stringType, lengthReadSize, readLengthinBytes, terminate, stripNull, encoding, endian, this.readUByte.bind(this), this.readUInt16.bind(this), this.readUInt32.bind(this));
+        if (!consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, saved_offset, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, saved_bitoffset, "f");
+        }
+        return str;
     }
     ;
     /**
@@ -4363,31 +4766,258 @@ class BiBase {
     * @param {string} string - text string
     * @param {stringOptions?} options
     * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
     * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
     * @param {stringOptions["lengthWriteSize"]?} options.lengthWriteSize - for pascal strings. 1, 2 or 4 byte length write size
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
+    * @param {stringOptions["endian"]?} options.endian - for wide-pascal, double-wide-pascal and utf-16, utf-32
+    * @param {boolean} consume - move offset after write
     */
-    writeString(string, options) {
-        return wstring$2(this, string, options);
+    writeString(string, options = this.strDefaults, consume = true) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readonly mode!");
+        }
+        this.open();
+        var length = options.length;
+        var stringType = options.stringType ?? 'utf-8';
+        var terminateValue = options.terminateValue;
+        var lengthWriteSize = options.lengthWriteSize ?? 1;
+        var endian = options.endian ?? this.endian;
+        var maxLengthValue = length ?? string.length;
+        var strUnits = string.length;
+        var maxBytes;
+        switch (stringType) {
+            case 'pascal':
+                maxLengthValue = 255;
+                if (length != undefined) {
+                    maxLengthValue = length;
+                }
+                break;
+            case 'wide-pascal':
+                strUnits *= 2;
+                maxLengthValue = 65535;
+                if (length != undefined) {
+                    maxLengthValue = length / 2;
+                }
+                break;
+            case 'double-wide-pascal':
+                strUnits *= 4;
+                maxLengthValue = 4294967295;
+                if (length != undefined) {
+                    maxLengthValue = length / 4;
+                }
+                break;
+        }
+        if (terminateValue == undefined) {
+            if (stringType == "ascii" || stringType == 'utf-8' ||
+                stringType == 'utf-16' ||
+                stringType == 'utf-32') {
+                terminateValue = 0;
+            }
+        }
+        var maxBytes = Math.min(strUnits, maxLengthValue);
+        string = string.substring(0, maxBytes);
+        var encodedString;
+        var totalLength = string.length;
+        switch (stringType) {
+            case 'ascii':
+            case 'utf-8':
+            case 'pascal':
+                {
+                    encodedString = new TextEncoder().encode(string);
+                    totalLength = encodedString.byteLength + 1;
+                }
+                break;
+            case 'utf-16':
+            case 'wide-pascal':
+                {
+                    const utf16Buffer = new Uint16Array(string.length);
+                    for (let i = 0; i < string.length; i++) {
+                        utf16Buffer[i] = string.charCodeAt(i);
+                    }
+                    encodedString = new Uint8Array(utf16Buffer.buffer);
+                    totalLength = encodedString.byteLength + 2;
+                }
+                break;
+            case 'utf-32':
+            case 'double-wide-pascal':
+                {
+                    const utf32Buffer = new Uint32Array(string.length);
+                    for (let i = 0; i < string.length; i++) {
+                        utf32Buffer[i] = string.codePointAt(i);
+                    }
+                    encodedString = new Uint8Array(utf32Buffer.buffer);
+                    totalLength = encodedString.byteLength + 4;
+                }
+                break;
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, totalLength, 0, __classPrivateFieldGet(this, _BiBase_offset, "f"));
+        const savedOffset = __classPrivateFieldGet(this, _BiBase_offset, "f");
+        const savedBitOffset = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        _wstring(encodedString, stringType, endian, terminateValue, lengthWriteSize, this.writeUByte.bind(this), this.writeUInt16.bind(this), this.writeUInt32.bind(this));
+        if (!consume) {
+            __classPrivateFieldSet(this, _BiBase_offset, savedOffset, "f");
+            __classPrivateFieldSet(this, _BiBase_insetBit, savedBitOffset, "f");
+        }
+        return;
     }
     ;
 }
-_BiBase_data = new WeakMap();
+_BiBase_offset = new WeakMap(), _BiBase_insetBit = new WeakMap(), _BiBase_data = new WeakMap(), _BiBase_view = new WeakMap(), _BiBase_instances = new WeakSet(), _BiBase_updateSize = function _BiBase_updateSize() {
+    if (this.isMemoryMode) {
+        this.size = __classPrivateFieldGet(this, _BiBase_data, "f").length;
+        this.bitSize = this.size * 8;
+        return;
+    }
+    if (typeof fs$1 === "undefined") {
+        throw new Error("Can't load file outside of Node.");
+    }
+    if (this.fd != null) {
+        try {
+            const stat = fs$1.fstatSync(this.fd);
+            this.size = stat.size;
+            this.bitSize = this.size * 8;
+        }
+        catch (error) {
+            throw new Error(error);
+        }
+    }
+}, _BiBase_updateBuffer = function _BiBase_updateBuffer() {
+    if (!this.isMemoryMode) {
+        if (this.fd == null) {
+            try {
+                this.fd = fs$1.openSync(this.filePath, this.fsMode);
+            }
+            catch (error) {
+                throw new Error(error);
+            }
+        }
+        const data = Buffer.alloc(this.size);
+        try {
+            const bytesRead = fs$1.readSync(this.fd, data, 0, data.length, 0);
+            if (bytesRead != this.size) {
+                throw new Error("Didn't update file buffer size. Expecting " + this.size + " but got " + bytesRead);
+            }
+        }
+        catch (error) {
+            throw new Error(error);
+        }
+        this.data = data;
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_updateSize).call(this);
+    }
+    __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") ?? 0, "f");
+    __classPrivateFieldSet(this, _BiBase_insetBit, __classPrivateFieldGet(this, _BiBase_insetBit, "f") ?? 0, "f");
+    __classPrivateFieldSet(this, _BiBase_offset, ((Math.abs(__classPrivateFieldGet(this, _BiBase_offset, "f"))) + Math.ceil((Math.abs(__classPrivateFieldGet(this, _BiBase_insetBit, "f"))) / 8)), "f");
+    // Adjust byte offset based on bit overflow
+    __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + Math.floor((Math.abs(__classPrivateFieldGet(this, _BiBase_insetBit, "f"))) / 8), "f");
+    // Adjust bit offset
+    __classPrivateFieldSet(this, _BiBase_insetBit, Math.abs(normalizeBitOffset(__classPrivateFieldGet(this, _BiBase_insetBit, "f"))) % 8, "f");
+    // Ensure bit offset stays between 0-7
+    __classPrivateFieldSet(this, _BiBase_insetBit, Math.min(Math.max(__classPrivateFieldGet(this, _BiBase_insetBit, "f"), 0), 7), "f");
+    // Ensure offset doesn't go negative
+    __classPrivateFieldSet(this, _BiBase_offset, Math.max(__classPrivateFieldGet(this, _BiBase_offset, "f"), 0), "f");
+    __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, __classPrivateFieldGet(this, _BiBase_offset, "f"));
+}, _BiBase_updateView = function _BiBase_updateView() {
+    if (__classPrivateFieldGet(this, _BiBase_data, "f")) {
+        __classPrivateFieldSet(this, _BiBase_view, new DataView(__classPrivateFieldGet(this, _BiBase_data, "f").buffer, __classPrivateFieldGet(this, _BiBase_data, "f").byteOffset ?? 0, __classPrivateFieldGet(this, _BiBase_data, "f").byteLength), "f");
+    }
+}, _BiBase_checkSize = function _BiBase_checkSize(writeBytes = 0, writeBit = 0, offset = __classPrivateFieldGet(this, _BiBase_offset, "f")) {
+    this.open();
+    const bits = writeBit + __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+    if (bits != 0) {
+        //add bits
+        writeBytes += Math.ceil(bits / 8);
+    }
+    //if bigger extend
+    __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, offset + writeBytes);
+    //start read location
+    return offset;
+}, _BiBase_confrimSize = function _BiBase_confrimSize(neededSize) {
+    if (neededSize <= this.size) {
+        return;
+    }
+    var targetSize = neededSize;
+    if (targetSize > this.size) {
+        if (this.strict || this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: ` + neededSize + " at " + __classPrivateFieldGet(this, _BiBase_offset, "f") + " of " + this.size);
+        }
+        if (this.growthIncrement != 0) {
+            this.wasExpanded = true;
+            targetSize = Math.ceil(neededSize / this.growthIncrement) * this.growthIncrement;
+        }
+        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_extendArray).call(this, targetSize);
+    }
+}, _BiBase_extendArray = function _BiBase_extendArray(targetSize) {
+    this.open();
+    if (targetSize <= this.size) {
+        return;
+    }
+    const toPadd = targetSize - this.size;
+    if (this.isBuffer(__classPrivateFieldGet(this, _BiBase_data, "f"))) {
+        var paddbuffer = Buffer.alloc(toPadd);
+        this.data = Buffer.concat([__classPrivateFieldGet(this, _BiBase_data, "f"), paddbuffer]);
+    }
+    else {
+        const newBuf = new Uint8Array(this.size + toPadd);
+        newBuf.set(__classPrivateFieldGet(this, _BiBase_data, "f"));
+        this.data = newBuf;
+    }
+    this.size = __classPrivateFieldGet(this, _BiBase_data, "f").length;
+    this.bitSize = __classPrivateFieldGet(this, _BiBase_data, "f").length * 8;
+    return;
+}, _BiBase_findNumber = function _BiBase_findNumber(value, bits, unsigned, endian = this.endian) {
+    __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, Math.floor(bits / 8), 0, __classPrivateFieldGet(this, _BiBase_offset, "f"));
+    for (let z = __classPrivateFieldGet(this, _BiBase_offset, "f"); z <= (this.size - (bits / 8)); z++) {
+        var offsetInBits = 0;
+        var value = 0;
+        for (var i = 0; i < bits;) {
+            const remaining = bits - i;
+            const bitOffset = offsetInBits & 7;
+            const currentByte = this.data[z + (offsetInBits >> 3)];
+            const read = Math.min(remaining, 8 - bitOffset);
+            if (endian == "big") {
+                let mask = ~(0xFF << read);
+                let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
+                value <<= read;
+                value |= readBits;
+            }
+            else {
+                let mask = ~(0xFF << read);
+                let readBits = (currentByte >> bitOffset) & mask;
+                value |= readBits << i;
+            }
+            offsetInBits += read;
+            i += read;
+        }
+        if (unsigned || bits <= 7) {
+            value = value >>> 0;
+        }
+        else {
+            if (bits !== 32 && value & (1 << (bits - 1))) {
+                value |= -1 ^ ((1 << bits) - 1);
+            }
+        }
+        if (value === value) {
+            return z - __classPrivateFieldGet(this, _BiBase_offset, "f"); // Found the byte, return the index from current
+        }
+    }
+    return -1; // number not found
+};
 
 /**
  * Binary reader, includes bitfields and strings.
  *
  * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
  * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+ * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start reader (default ``0``)
+ * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
  * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
- * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
+ * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
+ * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
+ * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default ``true`` in reader)
  *
  * @since 2.0
  */
@@ -4397,89 +5027,26 @@ class BiReader extends BiBase {
      *
      * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
      * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start reader (default ``0``)
+     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
      * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
+     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true`` in reader)
+     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
+     * @param {BiOptions["readOnly"]} options.readOnly - If you want to prevent write operations (default ``true`` in reader)
      */
     constructor(input, options = {}) {
-        super(input, options.writeable ?? false);
+        options.byteOffset = options.byteOffset ?? 0;
+        options.bitOffset = options.bitOffset ?? 0;
+        options.endianness = options.endianness ?? "little";
+        options.strict = options.strict ?? true;
+        options.growthIncrement = options.growthIncrement ?? 1048576;
+        options.enforceBigInt = options.enforceBigInt ?? false;
+        options.readOnly = options.readOnly ?? true;
         if (input == undefined) {
             throw new Error("Can not start BiReader without data.");
         }
-        this.strict = true;
-        this.enforceBigInt = (options?.enforceBigInt) ?? hasBigInt;
-        if (options.extendBufferSize != undefined &&
-            options.extendBufferSize != 0) {
-            this.extendBufferSize = options.extendBufferSize;
-        }
-        if (options.endianness != undefined &&
-            typeof options.endianness != "string") {
-            throw new Error("Endian must be big or little");
-        }
-        if (options.endianness != undefined &&
-            !(options.endianness == "big" || options.endianness == "little")) {
-            throw new Error("Byte order must be big or little");
-        }
-        this.endian = options.endianness || "little";
-        if (typeof options.strict == "boolean") {
-            this.strict = options.strict;
-        }
-        else {
-            if (options.strict != undefined) {
-                throw new Error("Strict mode must be true or false");
-            }
-        }
-        if (input == undefined) {
-            throw new Error("Data or file path required");
-        }
-        else {
-            if (typeof input == "string") {
-                this.filePath = input;
-                this.mode = "file";
-                this.offset = options.byteOffset ?? 0;
-                this.bitoffset = options.bitOffset ?? 0;
-            }
-            else if (this.isBufferOrUint8Array(input)) {
-                this.data = input;
-                this.mode = "memory";
-                this.size = this.data.length;
-                this.sizeB = this.data.length * 8;
-            }
-            else {
-                throw new Error("Write data must be Uint8Array or Buffer");
-            }
-        }
-        if (options.byteOffset != undefined || options.bitOffset != undefined) {
-            this.offset = ((Math.abs(options.byteOffset || 0)) + Math.ceil((Math.abs(options.bitOffset || 0)) / 8));
-            // Adjust byte offset based on bit overflow
-            this.offset += Math.floor((Math.abs(options.bitOffset || 0)) / 8);
-            // Adjust bit offset
-            this.bitoffset = Math.abs(normalizeBitOffset(options.bitOffset)) % 8;
-            // Ensure bit offset stays between 0-7
-            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
-            // Ensure offset doesn't go negative
-            this.offset = Math.max(this.offset, 0);
-            if (this.offset > this.size) {
-                if (this.strict == false) {
-                    if (this.extendBufferSize != 0) {
-                        this.extendArray(this.extendBufferSize);
-                    }
-                    else {
-                        this.extendArray(this.offset - this.size);
-                    }
-                }
-                else {
-                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
-                }
-            }
-        }
-        if (this.mode == "file") {
-            this.open();
-        }
+        super(input, options);
     }
     ;
     //
@@ -7414,27 +7981,27 @@ class BiReader extends BiBase {
     *
     * @param {stringOptions} options
     * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["stringType"]?} options.stringType - ascii, utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
     * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
     * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
     * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
+    * @param {stringOptions["endian"]?} options.endian - for utf-16, utf-32, wide-pascal or double-wide-pascal
     * @returns {string}
     */
-    string(options) {
+    string(options = this.strDefaults) {
         return this.readString(options);
     }
     ;
     /**
-    * Reads string using setting from .strSettings
+    * Reads string using setting from .strDefaults
     *
     * Default is ``utf-8``
     *
     * @returns {string}
     */
     get str() {
-        return this.readString(this.strSettings);
+        return this.readString(this.strDefaults);
     }
     ;
     /**
@@ -7460,7 +8027,7 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     cstring(length, terminateValue, stripNull) {
-        return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
+        return this.utf8string(length, terminateValue, stripNull);
     }
     ;
     /**
@@ -7474,6 +8041,19 @@ class BiReader extends BiBase {
     */
     ansistring(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue, stripNull: stripNull });
+    }
+    ;
+    /**
+    * Reads latin1 string.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    latin1tring(length, terminateValue, stripNull) {
+        return this.string({ stringType: "utf-8", encoding: "iso-8859-1", length: length, terminateValue: terminateValue, stripNull: stripNull });
     }
     ;
     /**
@@ -7501,7 +8081,7 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     unistring(length, terminateValue, stripNull, endian) {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
+        return this.utf16string(length, terminateValue, stripNull, endian);
     }
     ;
     /**
@@ -7514,7 +8094,7 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     utf16stringle(length, terminateValue, stripNull) {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
+        return this.utf16string(length, terminateValue, stripNull, "little");
     }
     ;
     /**
@@ -7527,7 +8107,7 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     unistringle(length, terminateValue, stripNull) {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
+        return this.utf16stringle(length, terminateValue, stripNull);
     }
     ;
     /**
@@ -7540,7 +8120,7 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     utf16stringbe(length, terminateValue, stripNull) {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
+        return this.utf16string(length, terminateValue, stripNull, "big");
     }
     ;
     /**
@@ -7553,7 +8133,47 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     unistringbe(length, terminateValue, stripNull) {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
+        return this.utf16stringbe(length, terminateValue, stripNull);
+    }
+    ;
+    /**
+    * Reads UTF-32 (Unicode) string.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @returns {string}
+    */
+    utf32string(length, terminateValue, stripNull, endian) {
+        return this.string({ stringType: "utf-32", encoding: "utf-32", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
+    }
+    ;
+    /**
+    * Reads UTF-32 (Unicode) string in little endian order.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    utf32stringle(length, terminateValue, stripNull) {
+        return this.utf32string(length, terminateValue, stripNull, "little");
+    }
+    ;
+    /**
+    * Reads UTF-32 (Unicode) string in big endian order.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    utf32stringbe(length, terminateValue, stripNull) {
+        return this.utf32string(length, terminateValue, stripNull, "big");
     }
     ;
     /**
@@ -7578,7 +8198,7 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     pstring1(stripNull, endian) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: endian });
+        return this.pstring(1, stripNull, endian);
     }
     ;
     /**
@@ -7589,7 +8209,7 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     pstring1le(stripNull) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "little" });
+        return this.pstring1(stripNull, "little");
     }
     ;
     /**
@@ -7600,7 +8220,7 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     pstring1be(stripNull) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "big" });
+        return this.pstring1(stripNull, "big");
     }
     ;
     /**
@@ -7612,7 +8232,7 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     pstring2(stripNull, endian) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: endian });
+        return this.pstring(2, stripNull, endian);
     }
     ;
     /**
@@ -7623,7 +8243,7 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     pstring2le(stripNull) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "little" });
+        return this.pstring2(stripNull, "little");
     }
     ;
     /**
@@ -7634,7 +8254,7 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     pstring2be(stripNull) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "big" });
+        return this.pstring2(stripNull, "big");
     }
     ;
     /**
@@ -7646,7 +8266,7 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     pstring4(stripNull, endian) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: endian });
+        return this.pstring(4, stripNull, endian);
     }
     ;
     /**
@@ -7657,7 +8277,7 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     pstring4le(stripNull) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "little" });
+        return this.pstring4(stripNull, "little");
     }
     ;
     /**
@@ -7668,11 +8288,11 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     pstring4be(stripNull) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "big" });
+        return this.pstring4(stripNull, "big");
     }
     ;
     /**
-    * Reads Wide-Pascal string.
+    * Reads Wide Pascal string.
     *
     * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
@@ -7685,7 +8305,7 @@ class BiReader extends BiBase {
     }
     ;
     /**
-    * Reads Wide-Pascal string 1 byte length read.
+    * Reads Wide Pascal string 1 byte length read.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
@@ -7693,33 +8313,33 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     wpstring1(stripNull, endian) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: endian, stripNull: stripNull });
+        return this.wpstring(1, stripNull, endian);
     }
     ;
     /**
-    * Reads Wide-Pascal string 1 byte length read in little endian order.
+    * Reads Wide Pascal string 1 byte length read in little endian order.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
     * @returns {string}
     */
     wpstring1le(stripNull) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "little", stripNull: stripNull });
+        return this.wpstring1(stripNull, "little");
     }
     ;
     /**
-    * Reads Wide-Pascal string 1 byte length read in big endian order.
+    * Reads Wide Pascal string 1 byte length read in big endian order.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
     * @returns {string}
     */
     wpstring1be(stripNull) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "big", stripNull: stripNull });
+        return this.wpstring1(stripNull, "big");
     }
     ;
     /**
-    * Reads Wide-Pascal string 2 byte length read.
+    * Reads Wide Pascal string 2 byte length read.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
@@ -7727,33 +8347,33 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     wpstring2(stripNull, endian) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: endian, stripNull: stripNull });
+        return this.wpstring(2, stripNull, endian);
     }
     ;
     /**
-    * Reads Wide-Pascal string 2 byte length read in little endian order.
+    * Reads Wide Pascal string 2 byte length read in little endian order.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
     * @returns {string}
     */
     wpstring2le(stripNull) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "little", stripNull: stripNull });
+        return this.wpstring2(stripNull, "little");
     }
     ;
     /**
-    * Reads Wide-Pascal string 2 byte length read in big endian order.
+    * Reads Wide Pascal string 2 byte length read in big endian order.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
     * @returns {string}
     */
     wpstring2be(stripNull) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "big", stripNull: stripNull });
+        return this.wpstring2(stripNull, "big");
     }
     ;
     /**
-    * Reads Wide-Pascal string 4 byte length read.
+    * Reads Wide Pascal string 4 byte length read.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
@@ -7761,29 +8381,144 @@ class BiReader extends BiBase {
     * @returns {string}
     */
     wpstring4(stripNull, endian) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: endian, stripNull: stripNull });
+        return this.wpstring(4, stripNull, endian);
     }
     ;
     /**
-    * Reads Wide-Pascal string 4 byte length read in big endian order.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    wpstring4be(stripNull) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "big", stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads Wide-Pascal string 4 byte length read in little endian order.
+    * Reads Wide Pascal string 4 byte length read in little endian order.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     *
     * @returns {string}
     */
     wpstring4le(stripNull) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "little", stripNull: stripNull });
+        return this.wpstring4(stripNull, "little");
+    }
+    ;
+    /**
+    * Reads Wide Pascal string 4 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    wpstring4be(stripNull) {
+        return this.wpstring4(stripNull, "big");
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @returns {string}
+    */
+    dwpstring(lengthReadSize, stripNull, endian) {
+        return this.string({ stringType: "double-wide-pascal", encoding: "utf-32", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 1 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @returns {string}
+    */
+    dwpstring1(stripNull, endian) {
+        return this.dwpstring(1, stripNull, endian);
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 1 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    dwpstring1le(stripNull) {
+        return this.dwpstring1(stripNull, "little");
+    }
+    ;
+    /**
+    * Reads Double WidePascal string 1 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    dwpstring1be(stripNull) {
+        return this.dwpstring1(stripNull, "big");
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 2 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @returns {string}
+    */
+    dwpstring2(stripNull, endian) {
+        return this.dwpstring(2, stripNull, endian);
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 2 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    dwpstring2le(stripNull) {
+        return this.dwpstring2(stripNull, "little");
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 2 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    dwpstring2be(stripNull) {
+        return this.dwpstring2(stripNull, "big");
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 4 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @returns {string}
+    */
+    dwpstring4(stripNull, endian) {
+        return this.dwpstring(4, stripNull, endian);
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 4 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    dwpstring4le(stripNull) {
+        return this.dwpstring4(stripNull, "little");
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 4 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    dwpstring4be(stripNull) {
+        return this.dwpstring4(stripNull, "big");
     }
     ;
 }
@@ -7796,10 +8531,9 @@ class BiReader extends BiBase {
  * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
  * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
  * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
- * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
+ * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false`` in writer)
+ * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
  *
  * @since 2.0
  */
@@ -7812,87 +8546,32 @@ class BiWriter extends BiBase {
      * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
      * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
      * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
+     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false`` in writer)
+     * @param {BiOptions["windowSize"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
      */
-    constructor(input, options = {}) {
-        super(input, options.writeable ?? true);
-        this.strict = false;
-        this.enforceBigInt = (options?.enforceBigInt) ?? hasBigInt;
-        if (options.extendBufferSize != undefined &&
-            options.extendBufferSize != 0) {
-            this.extendBufferSize = options.extendBufferSize;
-        }
+    constructor(input, options = {
+        byteOffset: 0,
+        bitOffset: 0,
+        endianness: "little",
+        strict: false,
+        growthIncrement: 0,
+        enforceBigInt: false,
+        readOnly: false
+    }) {
+        options.byteOffset = options.byteOffset ?? 0;
+        options.bitOffset = options.bitOffset ?? 0;
+        options.endianness = options.endianness ?? "little";
+        options.strict = options.strict ?? false;
+        options.growthIncrement = options.growthIncrement ?? 1048576;
+        options.enforceBigInt = options.enforceBigInt ?? false;
+        options.readOnly = options.readOnly ?? false;
+        const { growthIncrement, } = options;
         if (input == undefined) {
-            input = new Uint8Array(this.extendBufferSize);
-            console.warn(`BiWriter started without data. Creating Uint8Array with extendBufferSize.`);
+            input = new Uint8Array(growthIncrement);
+            console.warn(`BiWriter started without data. Creating Uint8Array with growthIncrement.`);
         }
-        if (options.endianness != undefined &&
-            typeof options.endianness != "string") {
-            throw new Error("endianness must be big or little.");
-        }
-        if (options.endianness != undefined &&
-            !(options.endianness == "big" || options.endianness == "little")) {
-            throw new Error("Endianness must be big or little.");
-        }
-        this.endian = options.endianness || "little";
-        if (typeof options.strict == "boolean") {
-            this.strict = options.strict;
-        }
-        else {
-            if (options.strict != undefined) {
-                throw new Error("Strict mode must be true or false.");
-            }
-        }
-        if (input == undefined) {
-            throw new Error("Data or file path required");
-        }
-        else {
-            if (typeof input == "string") {
-                this.filePath = input;
-                this.mode = "file";
-                this.offset = options.byteOffset ?? 0;
-                this.bitoffset = options.bitOffset ?? 0;
-            }
-            else if (this.isBufferOrUint8Array(input)) {
-                this.data = input;
-                this.mode = "memory";
-                this.size = this.data.length;
-                this.sizeB = this.data.length * 8;
-            }
-            else {
-                throw new Error("Write data must be Uint8Array or Buffer");
-            }
-        }
-        if (options.byteOffset != undefined || options.bitOffset != undefined) {
-            this.offset = ((Math.abs(options.byteOffset || 0)) + Math.ceil((Math.abs(options.bitOffset || 0)) / 8));
-            // Adjust byte offset based on bit overflow
-            this.offset += Math.floor((Math.abs(options.bitOffset || 0)) / 8);
-            // Adjust bit offset
-            this.bitoffset = Math.abs(normalizeBitOffset(options.bitOffset)) % 8;
-            // Ensure bit offset stays between 0-7
-            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
-            // Ensure offset doesn't go negative
-            this.offset = Math.max(this.offset, 0);
-            if (this.offset > this.size) {
-                if (this.strict == false) {
-                    if (this.extendBufferSize != 0) {
-                        this.extendArray(this.extendBufferSize);
-                    }
-                    else {
-                        this.extendArray(this.offset - this.size);
-                    }
-                }
-                else {
-                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
-                }
-            }
-        }
-        if (this.mode == "file") {
-            this.open();
-        }
+        super(input, options);
     }
     ;
     //
@@ -10542,15 +11221,6 @@ class BiWriter extends BiBase {
      *
      * @param {number} value - value as int
      */
-    set writeUInt32BE(value) {
-        this.writeInt32(value, true, "big");
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
     set uint32be(value) {
         this.writeInt32(value, true, "big");
     }
@@ -10843,25 +11513,25 @@ class BiWriter extends BiBase {
     * @param {string} string - text string
     * @param {stringOptions?} options
     * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["stringType"]?} options.stringType - ascii, utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
     * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
     * @param {stringOptions["lengthWriteSize"]?} options.lengthWriteSize - for pascal strings. 1, 2 or 4 byte length write size
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
+    * @param {stringOptions["endian"]?} options.endian - for utf-16, utf-32, wide-pascal or double-wide-pascal
     */
-    string(string, options) {
+    string(string, options = this.strDefaults) {
         return this.writeString(string, options);
     }
     ;
     /**
-    * Writes string using setting from .strSettings
+    * Writes string using setting from .strDefaults
     *
     * Default is ``utf-8``
     *
     * @param {string} string - text string
     */
     set str(string) {
-        this.writeString(string, this.strSettings);
+        this.writeString(string, this.strDefaults);
     }
     ;
     /**
@@ -10883,7 +11553,7 @@ class BiWriter extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
     cstring(string, length, terminateValue) {
-        return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
+        return this.utf8string(string, length, terminateValue);
     }
     ;
     /**
@@ -10895,6 +11565,17 @@ class BiWriter extends BiBase {
     */
     ansistring(string, length, terminateValue) {
         return this.string(string, { stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue });
+    }
+    ;
+    /**
+    * Writes latin1 string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
+    latin1string(string, length, terminateValue) {
+        return this.string(string, { stringType: "utf-8", encoding: "iso-8859-1", length: length, terminateValue: terminateValue });
     }
     ;
     /**
@@ -10918,7 +11599,7 @@ class BiWriter extends BiBase {
     * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
     */
     unistring(string, length, terminateValue, endian) {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
+        return this.utf16string(string, length, terminateValue, endian);
     }
     ;
     /**
@@ -10929,7 +11610,7 @@ class BiWriter extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
     utf16stringle(string, length, terminateValue) {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
+        return this.unistring(string, length, terminateValue, "little");
     }
     ;
     /**
@@ -10940,7 +11621,7 @@ class BiWriter extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
     unistringle(string, length, terminateValue) {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
+        return this.utf16stringle(string, length, terminateValue);
     }
     ;
     /**
@@ -10951,7 +11632,7 @@ class BiWriter extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
     utf16stringbe(string, length, terminateValue) {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
+        return this.unistring(string, length, terminateValue, "big");
     }
     ;
     /**
@@ -10962,7 +11643,41 @@ class BiWriter extends BiBase {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
     unistringbe(string, length, terminateValue) {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
+        return this.utf16stringbe(string, length, terminateValue);
+    }
+    ;
+    /**
+    * Writes UTF-32 (Unicode) string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
+    */
+    utf32string(string, length, terminateValue, endian) {
+        return this.string(string, { stringType: "utf-32", encoding: "utf-32", length: length, terminateValue: terminateValue, endian: endian });
+    }
+    ;
+    /**
+    * Writes UTF-32 (Unicode) string in little endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
+    utf32stringle(string, length, terminateValue) {
+        return this.utf32string(string, length, terminateValue, "little");
+    }
+    ;
+    /**
+    * Writes UTF-32 (Unicode) string in big endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
+    utf32stringbe(string, length, terminateValue) {
+        return this.utf32string(string, length, terminateValue, "big");
     }
     ;
     /**
@@ -10983,7 +11698,7 @@ class BiWriter extends BiBase {
     * @param {stringOptions["endian"]} endian - ``big`` or ``little`` for 2 or 4 byte length write size
     */
     pstring1(string, endian) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: endian });
+        return this.pstring(string, 1, endian);
     }
     ;
     /**
@@ -10992,7 +11707,7 @@ class BiWriter extends BiBase {
     * @param {string} string - text string
     */
     pstring1le(string) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "little" });
+        return this.pstring1(string, "little");
     }
     ;
     /**
@@ -11001,7 +11716,7 @@ class BiWriter extends BiBase {
     * @param {string} string - text string
     */
     pstring1be(string) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "big" });
+        return this.pstring1(string, "big");
     }
     ;
     /**
@@ -11011,7 +11726,7 @@ class BiWriter extends BiBase {
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     pstring2(string, endian) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: endian });
+        return this.pstring(string, 2, endian);
     }
     ;
     /**
@@ -11020,7 +11735,7 @@ class BiWriter extends BiBase {
     * @param {string} string - text string
     */
     pstring2le(string) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "little" });
+        return this.pstring2(string, "little");
     }
     ;
     /**
@@ -11029,7 +11744,7 @@ class BiWriter extends BiBase {
     * @param {string} string - text string
     */
     pstring2be(string) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "big" });
+        return this.pstring2(string, "big");
     }
     ;
     /**
@@ -11039,16 +11754,7 @@ class BiWriter extends BiBase {
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     pstring4(string, endian) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: endian });
-    }
-    ;
-    /**
-    * Writes Pascal string 4 byte length read in big endian order.
-    *
-    * @param {string} string - text string
-    */
-    pstring4be(string) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "big" });
+        return this.pstring(string, 4, endian);
     }
     ;
     /**
@@ -11057,11 +11763,20 @@ class BiWriter extends BiBase {
     * @param {string} string - text string
     */
     pstring4le(string) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "little" });
+        return this.pstring4(string, "little");
     }
     ;
     /**
-    * Writes Wide-Pascal string.
+    * Writes Pascal string 4 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
+    pstring4be(string) {
+        return this.pstring4(string, "big");
+    }
+    ;
+    /**
+    * Writes Wide Pascal string.
     *
     * @param {string} string - text string
     * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
@@ -11072,13931 +11787,269 @@ class BiWriter extends BiBase {
     }
     ;
     /**
-    * Writes Wide-Pascal string in big endian order.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
-    */
-    wpstringbe(string, lengthWriteSize) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "big" });
-    }
-    ;
-    /**
-    * Writes Wide-Pascal string in little endian order.
+    * Writes Wide Pascal string in little endian order.
     *
     * @param {string} string - text string
     * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     */
     wpstringle(string, lengthWriteSize) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "little" });
+        return this.wpstring(string, lengthWriteSize, "little");
     }
     ;
     /**
-    * Writes Wide-Pascal string.
+    * Writes Wide Pascal string in big endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    */
+    wpstringbe(string, lengthWriteSize) {
+        return this.wpstring(string, lengthWriteSize, "big");
+    }
+    ;
+    /**
+    * Writes Wide Pascal string.
     *
     * @param {string} string - text string
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     wpstring1(string, endian) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: endian });
+        return this.wpstring(string, 1, endian);
     }
     ;
     /**
-    * Writes Wide-Pascal string 1 byte length read in big endian order.
-    *
-    * @param {string} string - text string
-    */
-    wpstring1be(string) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "big" });
-    }
-    ;
-    /**
-    * Writes Wide-Pascal string 1 byte length read in little endian order.
+    * Writes Wide Pascal string 1 byte length read in little endian order.
     *
     * @param {string} string - text string
     */
     wpstring1le(string) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "little" });
+        return this.wpstring1(string, "little");
     }
     ;
     /**
-    * Writes Wide-Pascal string 2 byte length read.
+    * Writes Wide Pascal string 1 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
+    wpstring1be(string) {
+        return this.wpstring1(string, "big");
+    }
+    ;
+    /**
+    * Writes Wide Pascal string 2 byte length read.
     *
     * @param {string} string - text string
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     wpstring2(string, endian) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: endian });
+        return this.wpstring(string, 2, endian);
     }
     ;
     /**
-    * Writes Wide-Pascal string 2 byte length read in little endian order.
+    * Writes Wide Pascal string 2 byte length read in little endian order.
     *
     * @param {string} string - text string
     */
     wpstring2le(string) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "little" });
+        return this.wpstring2(string, "little");
     }
     ;
     /**
-    * Writes Wide-Pascal string 2 byte length read in big endian order.
+    * Writes Wide Pascal string 2 byte length read in big endian order.
     *
     * @param {string} string - text string
     */
     wpstring2be(string) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "big" });
+        return this.wpstring2(string, "big");
     }
     ;
     /**
-    * Writes Wide-Pascal string 4 byte length read.
+    * Writes Wide Pascal string 4 byte length read.
     *
     * @param {string} string - text string
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     wpstring4(string, endian) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: endian });
+        return this.wpstring(string, 4, endian);
     }
     ;
     /**
-    * Writes Wide-Pascal string 4 byte length read in little endian order.
+    * Writes Wide Pascal string 4 byte length read in little endian order.
     *
     * @param {string} string - text string
     */
     wpstring4le(string) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "little" });
+        return this.wpstring4(string, "little");
     }
     ;
     /**
-    * Writes Wide-Pascal string 4 byte length read in big endian order.
+    * Writes Wide Pascal string 4 byte length read in big endian order.
     *
     * @param {string} string - text string
     */
     wpstring4be(string) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "big" });
+        return this.wpstring4(string, "big");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
+    dwpstring(string, lengthWriteSize, endian) {
+        return this.string(string, { stringType: "double-wide-pascal", encoding: "utf-32", lengthWriteSize: lengthWriteSize, endian: endian });
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string in little endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    */
+    dwpstringle(string, lengthWriteSize) {
+        return this.dwpstring(string, lengthWriteSize, "little");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string in big endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    */
+    dwpstringbe(string, lengthWriteSize) {
+        return this.dwpstring(string, lengthWriteSize, "big");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
+    dwpstring1(string, endian) {
+        return this.dwpstring(string, 1, endian);
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 1 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
+    dwpstring1le(string) {
+        return this.dwpstring1(string, "little");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 1 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
+    dwpstring1be(string) {
+        return this.dwpstring1(string, "big");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 2 byte length read.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
+    dwpstring2(string, endian) {
+        return this.dwpstring(string, 2, endian);
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 2 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
+    dwpstring2le(string) {
+        return this.dwpstring2(string, "little");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 2 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
+    dwpstring2be(string) {
+        return this.dwpstring2(string, "big");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 4 byte length read.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
+    dwpstring4(string, endian) {
+        return this.dwpstring(string, 4, endian);
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 4 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
+    dwpstring4le(string) {
+        return this.dwpstring4(string, "little");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 4 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
+    dwpstring4be(string) {
+        return this.dwpstring4(string, "big");
     }
     ;
 }
 
-var _BiBaseLegacy_data;
-var bufferConstants$1 = buffer.constants;
-function MAX_LENGTH$1() {
-    return bufferConstants$1.MAX_LENGTH;
-}
-function hexDumpBase$1(ctx, options = {}) {
-    var length = options && options.length;
-    var startByte = options && options.startByte;
-    if ((startByte || 0) > ctx.size) {
-        ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
-        throw new Error("Hexdump start is outside of data size: " + startByte + " of " + ctx.size);
-    }
-    const start = startByte || ctx.offset;
-    const end = Math.min(start + (length || 192), ctx.size);
-    if (start + (length || 0) > ctx.size) {
-        throw new Error("Hexdump amount is outside of data size: " + (start + (length || 0)) + " of " + end);
-    }
-    const data = ctx.read(start, end - start, false);
-    return _hexDump(data, options, start, end);
-}
-function skip$1(ctx, bytes, bits) {
-    var new_size = (((bytes || 0) + ctx.offset) + Math.ceil((ctx.bitoffset + (bits || 0)) / 8));
-    if (bits && bits < 0) {
-        new_size = Math.floor(((((bytes || 0) + ctx.offset) * 8) + ctx.bitoffset + (bits || 0)) / 8);
-    }
-    if (new_size > ctx.size) {
-        if (ctx.strict == false) {
-            ctx.extendArray(new_size - ctx.size);
+/**
+ * @file BiReaderAsync / Writer base for working in sync Buffers or full file reads. Node and Browser.
+ */
+var _BiBaseAsync_instances, _BiBaseAsync_offset, _BiBaseAsync_insetBit, _BiBaseAsync_data, _BiBaseAsync_view, _BiBaseAsync_updateSize, _BiBaseAsync_updateView, _BiBaseAsync_initFile, _BiBaseAsync_initMemory, _BiBaseAsync_getChunkIndex, _BiBaseAsync_getNumChunks, _BiBaseAsync_preloadAllChunks, _BiBaseAsync_ensureChunkLoaded, _BiBaseAsync_performChunkLoad, _BiBaseAsync_ensureRangeLoaded, _BiBaseAsync_peekBytes, _BiBaseAsync_writeBytesAt, _BiBaseAsync_confrimSize, _BiBaseAsync_extendArray, _BiBaseAsync_setFileSize, _BiBaseAsync_invalidateFromChunk, _BiBaseAsync_shiftTailForward, _BiBaseAsync_shiftTailBackward, _BiBaseAsync_updateOffsets, _BiBaseAsync_readBytes, _BiBaseAsync_writeBytes, _BiBaseAsync_findNumber;
+// #region Imports
+var fs;
+(async function () {
+    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+        // We are in Node.js
+        try {
+            if (typeof require !== 'undefined') {
+                if (typeof fs === "undefined") {
+                    fs = require('fs/promises');
+                }
+            }
+            else {
+                if (typeof fs === "undefined") {
+                    fs = await import('fs/promises');
+                }
+            }
         }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: Seek of range of data: seek " + new_size + " of " + ctx.size);
+        catch (error) {
+            console.error('Failed to load fs module:', error);
         }
     }
-    // Adjust byte offset based on bit overflow
-    ctx.offset += Math.floor((ctx.bitoffset + (bits || 0)) / 8);
-    // Adjust bit offset
-    ctx.bitoffset = (ctx.bitoffset + normalizeBitOffset(bits)) % 8;
-    // Adjust byte offset based on byte overflow
-    ctx.offset += bytes;
-    // Ensure bit offset stays between 0-7
-    ctx.bitoffset = Math.min(Math.max(ctx.bitoffset, 0), 7);
-    // Ensure offset doesn't go negative
-    ctx.offset = Math.max(ctx.offset, 0);
-    return;
-}
-function align$1(ctx, n) {
-    const a = ctx.offset % n;
-    if (a) {
-        ctx.skip(n - a);
-    }
-}
-function alignRev$1(ctx, n) {
-    const a = ctx.offset % n;
-    if (a) {
-        ctx.skip(a * -1);
-    }
-}
-function goto$1(ctx, bytes, bits) {
-    var new_size = (((bytes || 0)) + Math.ceil(((bits || 0)) / 8));
-    if (bits && bits < 0) {
-        new_size = Math.floor(((((bytes || 0)) * 8) + (bits || 0)) / 8);
-    }
-    if (new_size > ctx.size) {
-        if (ctx.strict == false) {
-            ctx.extendArray(new_size - ctx.size);
-        }
-        else {
-            ctx.errorDump ? "\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: Goto outside of range of data: goto " + new_size + " of " + ctx.size);
-        }
-    }
-    ctx.offset = bytes;
-    // Adjust byte offset based on bit overflow
-    ctx.offset += Math.floor(((bits || 0)) / 8);
-    // Adjust bit offset
-    ctx.bitoffset = normalizeBitOffset(bits) % 8;
-    // Ensure bit offset stays between 0-7
-    ctx.bitoffset = Math.min(Math.max(ctx.bitoffset, 0), 7);
-    // Ensure offset doesn't go negative
-    ctx.offset = Math.max(ctx.offset, 0);
-    return;
-}
-function check_size$1(ctx, write_bytes, write_bit, offset) {
-    const bits = (write_bit || 0) + ctx.bitoffset;
-    var new_off = (ctx.offset);
-    var writesize = write_bytes || 0;
-    if (bits != 0) {
-        //add bits
-        writesize += Math.ceil(bits / 8);
-    }
-    // if bigger extend
-    const needed_size = new_off + writesize;
-    if (needed_size > ctx.size) {
-        const dif = needed_size - ctx.size;
-        if (ctx.strict == false) {
-            ctx.extendArray(dif);
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: ` + needed_size + " at " + ctx.offset + " of " + ctx.size);
-        }
-    }
-    //start read location
-    return new_off;
-}
-function extendarray$1(ctx, to_padd) {
-    ctx.open();
-    if (fs$1 == undefined) {
-        throw new Error("Can't use BitFile without Node.");
-    }
-    if (ctx.fd === null) {
-        throw new Error('File is not open yet.');
-    }
-    if (ctx.strict) {
-        throw new Error('File position is outside of file size while in strict mode.');
-    }
-    if (ctx.extendBufferSize != 0) {
-        if (ctx.extendBufferSize > to_padd) {
-            to_padd = ctx.extendBufferSize;
-        }
-    }
+})();
+async function _fileExists(filePath) {
     try {
-        fs$1.ftruncateSync(ctx.fd, ctx.size + to_padd);
+        await fs.access(filePath, fs.constants.F_OK);
+        return true; // File exists
     }
     catch (error) {
-        throw new Error(error);
-    }
-    ctx.updateSize();
-}
-function remove$1(ctx, startOffset, endOffset, consume, remove, fillValue) {
-    ctx.open();
-    const new_start = Math.abs(startOffset || 0);
-    const new_offset = (endOffset || ctx.offset);
-    if (fs$1 == undefined) {
-        throw new Error("Can only use BiStream in Node.");
-    }
-    if (ctx.fd == null) {
-        throw new Error("File is not open.");
-    }
-    if (new_offset > ctx.size) {
-        if (ctx.strict == false) {
-            ctx.extendArray(new_offset - ctx.size);
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + endOffset + " of " + ctx.size);
-        }
-    }
-    if (ctx.strict == true && remove == true) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + ctx.size);
-    }
-    const removedLength = new_offset - new_start;
-    if (ctx.maxFileSize && removedLength > ctx.maxFileSize) {
-        // can not return buffer, cant extract, must write new file of removed data
-        // if not removed, only fill, just creat a new file with filled data 
-        if (fillValue != undefined && remove == false) {
-            // fills current file, no need to dupe 
-            console.warn(`File size for return Buffer is larger than the max Buffer Node can handle.`);
-            var readStart = new_start;
-            var amount = removedLength;
-            const chunkSize = 64 * 1024; // 64 KB
-            const chunk = new Uint8Array(chunkSize).fill(fillValue & 0xff);
-            while (amount) {
-                const toWrite = Math.min(chunkSize, amount);
-                var bytesWritten;
-                try {
-                    bytesWritten = fs$1.readSync(ctx.fd, chunk, 0, toWrite, readStart);
-                }
-                catch (error) {
-                    throw new Error(error);
-                }
-                amount -= bytesWritten;
-                readStart += bytesWritten;
-            }
-        }
-        else if (remove) {
-            // dupe file for extract, remove data
-            const removeData = ctx.filePath + NaN + startOffset + "_" + removedLength + ".removed";
-            console.warn(`File size for removal is larger than the max Buffer Node can handle, creating new file ${removeData}`);
-            const CHUNK_SIZE = 64 * 1024;
-            // Copy removed to new file
-            var readOffset = new_start;
-            var writeOffset = 0;
-            var amount = removedLength;
-            const chunk = new Uint8Array(CHUNK_SIZE);
-            try {
-                const tempFd = fs$1.openSync(removeData, 'w+');
-                while (amount) {
-                    const toRead = Math.min(CHUNK_SIZE, amount);
-                    const bytesRead = fs$1.readSync(ctx.fd, chunk, 0, toRead, readOffset);
-                    fs$1.writeSync(tempFd, chunk, 0, bytesRead, writeOffset);
-                    amount -= bytesRead;
-                    readOffset += bytesRead;
-                    writeOffset += bytesRead;
-                }
-                fs$1.closeSync(tempFd);
-            }
-            catch (error) {
-                throw new Error(error);
-            }
-            // reorder data and trim
-            readOffset = new_start + removedLength;
-            writeOffset = new_start;
-            amount = removedLength;
-            try {
-                while (amount) {
-                    const toRead = Math.min(CHUNK_SIZE, amount);
-                    const bytesRead = fs$1.readSync(ctx.fd, chunk, 0, toRead, readOffset);
-                    fs$1.writeSync(ctx.fd, chunk, 0, bytesRead, writeOffset);
-                    amount -= bytesRead;
-                    readOffset += bytesRead;
-                    writeOffset += bytesRead;
-                }
-                fs$1.ftruncateSync(ctx.fd, ctx.size - removedLength);
-            }
-            catch (error) {
-                throw new Error(error);
-            }
-            ctx.updateSize();
-        }
-        else {
-            // no remove, can't extract
-            const removeData = ctx.filePath + NaN + startOffset + "_" + removedLength + ".removed";
-            console.warn(`File size for extract is larger than the max Buffer Node can handle, creating new file ${removeData}`);
-            const CHUNK_SIZE = 64 * 1024;
-            const chunk = new Uint8Array(CHUNK_SIZE);
-            // Copy removed to new file
-            var readOffset = new_start;
-            var writeOffset = 0;
-            var amount = removedLength;
-            try {
-                const tempFd = fs$1.openSync(removeData, 'w+');
-                while (amount) {
-                    const toRead = Math.min(CHUNK_SIZE, amount);
-                    const bytesRead = fs$1.readSync(ctx.fd, chunk, 0, toRead, readOffset);
-                    fs$1.writeSync(tempFd, chunk, 0, bytesRead, writeOffset);
-                    amount -= bytesRead;
-                    readOffset += bytesRead;
-                    writeOffset += bytesRead;
-                }
-                fs$1.closeSync(tempFd);
-            }
-            catch (error) {
-                throw new Error(error);
-            }
-        }
-        if (consume == true) {
-            if (remove != true) {
-                ctx.offset = new_offset;
-                ctx.bitoffset = 0;
-            }
-            else {
-                ctx.offset = new_start;
-                ctx.bitoffset = 0;
-            }
-        }
-        return Buffer.alloc(0);
-    }
-    else {
-        if (remove) {
-            const removedBuffer = ctx.read(new_start, removedLength, false);
-            const end = new_start + removedLength;
-            const chunkSize = 64 * 1024;
-            const buffer = new Uint8Array(chunkSize);
-            var remaining = ctx.size - end;
-            var readPos = end;
-            try {
-                while (remaining > 0) {
-                    const actualRead = Math.min(chunkSize, remaining);
-                    fs$1.readSync(ctx.fd, buffer, 0, actualRead, readPos);
-                    fs$1.writeSync(ctx.fd, buffer, 0, actualRead, readPos - removedLength);
-                    readPos += actualRead;
-                    remaining -= actualRead;
-                }
-                fs$1.ftruncateSync(ctx.fd, ctx.size - removedLength);
-            }
-            catch (error) {
-                throw new Error(error);
-            }
-            ctx.updateSize();
-            if (consume == true) {
-                if (remove != true) {
-                    ctx.offset = new_offset;
-                    ctx.bitoffset = 0;
-                }
-                else {
-                    ctx.offset = new_start;
-                    ctx.bitoffset = 0;
-                }
-            }
-            return removedBuffer;
-        }
-        else {
-            if (fillValue != undefined) {
-                const removedBuffer = new Uint8Array(removedLength);
-                removedBuffer.fill(fillValue & 0xff);
-                try {
-                    fs$1.writeSync(ctx.fd, removedBuffer, 0, removedBuffer.length, new_start);
-                }
-                catch (error) {
-                    throw new Error(error);
-                }
-                if (consume == true) {
-                    ctx.offset = new_offset;
-                    ctx.bitoffset = 0;
-                }
-                ctx.data = Buffer.from(removedBuffer);
-                ctx.updateView();
-                return ctx.data;
-            }
-            else {
-                // just copying and returning data
-                const removedBuffer = ctx.read(new_start, removedLength, false);
-                if (consume == true) {
-                    ctx.offset = new_offset;
-                    ctx.bitoffset = 0;
-                }
-                ctx.data = removedBuffer;
-                ctx.updateView();
-                return removedBuffer;
-            }
-        }
-    }
-}
-function addData$1(ctx, data, consume, offset, replace) {
-    if (ctx.strict == true) {
-        ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
-        throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Can not insert data in strict mode. Use unrestrict() to enable.`);
-    }
-    ctx.open();
-    if (fs$1 == undefined) {
-        throw new Error("Can only use BiStream in Node.");
-    }
-    if (ctx.fd == null) {
-        throw new Error("File is not open.");
-    }
-    offset = (offset || ctx.offset);
-    var newSize = offset + data.length;
-    const originalSize = ctx.size;
-    const insertLength = data.length;
-    if (data.length === 0) {
-        return;
-    }
-    if (newSize > ctx.size) {
-        if (ctx.strict == false) {
-            ctx.extendArray(newSize - ctx.size);
-        }
-        else {
-            ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + newSize + " of " + ctx.size);
-        }
-    }
-    if (!arrayBufferCheck(data)) {
-        throw new Error('Data must be a Uint8Array or Buffer');
-    }
-    if (Buffer.isBuffer(data)) {
-        data = new Uint8Array(data);
-    }
-    if (replace) {
-        // overwrite
-        try {
-            fs$1.writeSync(ctx.fd, data, 0, data.length, offset);
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-        ctx.updateSize();
-    }
-    else {
-        // insert
-        const chunkSize = 64 * 1024; // 64KB
-        const buffer = new Uint8Array(chunkSize);
-        var remaining = originalSize - offset;
-        var readPos = originalSize - chunkSize;
-        try {
-            while (remaining > 0) {
-                const actualRead = Math.min(chunkSize, remaining);
-                readPos = offset + remaining - actualRead;
-                const writePos = readPos + insertLength;
-                fs$1.readSync(ctx.fd, buffer, 0, actualRead, readPos);
-                fs$1.writeSync(ctx.fd, buffer, 0, actualRead, writePos);
-                remaining -= actualRead;
-            }
-            // Write the insert data at offset
-            fs$1.writeSync(ctx.fd, data, 0, insertLength, offset);
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-        ctx.size = newSize;
-    }
-    if (consume == true) {
-        ctx.offset = newSize;
-        ctx.bitoffset = 0;
-    }
-    return;
-}
-function AND$1(ctx, and_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            ctx.extendArray((end || 0) - ctx.size);
-        }
-        else {
-            ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    ctx.open();
-    const chunkSize = 0x2000; // 8192 bytes
-    var new_start = (start || 0);
-    const new_end = Math.min(end || ctx.size, ctx.size);
-    const previousStart = ctx.offset;
-    if (typeof and_key == "number") {
-        while (new_start <= new_end) {
-            const input = ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-            if (input.length == 0) {
-                break;
-            }
-            for (let i = 0; i < input.length; i++) {
-                input[i] = input[i] & (and_key & 0xff);
-            }
-            ctx.commit(true);
-            new_start += input.length;
-        }
-        return;
-    }
-    else {
-        if (typeof and_key == "string") {
-            and_key = Uint8Array.from(Array.from(and_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(and_key)) {
-            var keyIndex = -1;
-            while (new_start <= new_end) {
-                const input = ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                if (input.length == 0) {
-                    break;
-                }
-                for (let i = 0; i < input.length; i++) {
-                    if (keyIndex != and_key.length - 1) {
-                        keyIndex = keyIndex + 1;
-                    }
-                    else {
-                        keyIndex = 0;
-                    }
-                    input[i] = input[i] & and_key[keyIndex];
-                }
-                ctx.commit(true);
-                new_start += input.length;
-            }
-        }
-        else {
-            throw new Error("AND key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-    if (!consume) {
-        ctx.offset = previousStart;
-    }
-    return;
-}
-function OR$1(ctx, or_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            ctx.extendArray((end || 0) - ctx.size);
-        }
-        else {
-            ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    ctx.open();
-    const chunkSize = 0x2000; // 8192 bytes
-    var new_start = (start || 0);
-    const new_end = Math.min(end || ctx.size, ctx.size);
-    const previousStart = ctx.offset;
-    if (typeof or_key == "number") {
-        while (new_start <= new_end) {
-            const input = ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-            if (input.length == 0) {
-                break;
-            }
-            for (let i = 0; i < input.length; i++) {
-                input[i] = input[i] | (or_key & 0xff);
-            }
-            ctx.commit(true);
-            new_start += input.length;
-        }
-    }
-    else {
-        if (typeof or_key == "string") {
-            or_key = Uint8Array.from(Array.from(or_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(or_key)) {
-            var number = -1;
-            while (new_start <= new_end) {
-                const input = ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                if (input.length == 0) {
-                    break;
-                }
-                for (let i = 0; i < input.length; i++) {
-                    if (number != or_key.length - 1) {
-                        number = number + 1;
-                    }
-                    else {
-                        number = 0;
-                    }
-                    input[i] = input[i] | or_key[number];
-                }
-                ctx.commit(true);
-                new_start += input.length;
-            }
-        }
-        else {
-            throw new Error("OR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-    if (!consume) {
-        ctx.offset = previousStart;
-    }
-    return;
-}
-function XOR$1(ctx, xor_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            ctx.extendArray((end || 0) - ctx.size);
-        }
-        else {
-            ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    ctx.open();
-    const chunkSize = 0x2000; // 8192 bytes
-    var new_start = (start || 0);
-    const new_end = Math.min(end || ctx.size, ctx.size);
-    const previousStart = ctx.offset;
-    if (typeof xor_key == "number") {
-        while (new_start <= new_end) {
-            const input = ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-            if (input.length == 0) {
-                break;
-            }
-            for (let i = 0; i < input.length; i++) {
-                input[i] = input[i] ^ (xor_key & 0xff);
-            }
-            ctx.commit(true);
-            new_start += input.length;
-        }
-    }
-    else {
-        if (typeof xor_key == "string") {
-            xor_key = Uint8Array.from(Array.from(xor_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(xor_key)) {
-            var keyIndex = -1;
-            while (new_start <= new_end) {
-                const input = ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                if (input.length == 0) {
-                    break;
-                }
-                for (let i = 0; i < input.length; i++) {
-                    if (keyIndex != xor_key.length - 1) {
-                        keyIndex = keyIndex + 1;
-                    }
-                    else {
-                        keyIndex = 0;
-                    }
-                    input[i] = input[i] ^ xor_key[keyIndex];
-                }
-                ctx.commit(true);
-                new_start += input.length;
-            }
-        }
-        else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-    if (!consume) {
-        ctx.offset = previousStart;
-    }
-    return;
-}
-function NOT$1(ctx, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            ctx.extendArray((end || 0) - ctx.size);
-        }
-        else {
-            ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    ctx.open();
-    const chunkSize = 0x2000; // 8192 bytes
-    var new_start = (start || 0);
-    const new_end = Math.min(end || ctx.size, ctx.size);
-    const previousStart = ctx.offset;
-    while (new_start <= new_end) {
-        const input = ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-        if (input.length == 0) {
-            break;
-        }
-        for (let i = 0; i < input.length; i++) {
-            input[i] = ~input[i];
-        }
-        ctx.commit(true);
-        new_start += input.length;
-    }
-    if (!consume) {
-        ctx.offset = previousStart;
-    }
-    return;
-}
-function LSHIFT$1(ctx, shift_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            ctx.extendArray((end || 0) - ctx.size);
-        }
-        else {
-            ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    ctx.open();
-    const chunkSize = 0x2000; // 8192 bytes
-    var new_start = (start || 0);
-    const new_end = Math.min(end || ctx.size, ctx.size);
-    const previousStart = ctx.offset;
-    if (typeof shift_key == "number") {
-        while (new_start <= new_end) {
-            const input = ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-            if (input.length == 0) {
-                break;
-            }
-            for (let i = 0; i < input.length; i++) {
-                input[i] = input[i] << shift_key;
-            }
-            ctx.commit(true);
-            new_start += input.length;
-        }
-    }
-    else {
-        if (typeof shift_key == "string") {
-            shift_key = Uint8Array.from(Array.from(shift_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(shift_key)) {
-            let keyIndex = -1;
-            while (new_start <= new_end) {
-                const input = ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                if (input.length == 0) {
-                    break;
-                }
-                for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                    if (keyIndex != shift_key.length - 1) {
-                        keyIndex = keyIndex + 1;
-                    }
-                    else {
-                        keyIndex = 0;
-                    }
-                    input[i] = input[i] << shift_key[keyIndex];
-                }
-                ctx.commit(true);
-                new_start += input.length;
-            }
-        }
-        else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-    if (!consume) {
-        ctx.offset = previousStart;
-    }
-    return;
-}
-function RSHIFT$1(ctx, shift_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            ctx.extendArray((end || 0) - ctx.size);
-        }
-        else {
-            ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    ctx.open();
-    const chunkSize = 0x2000; // 8192 bytes
-    var new_start = (start || 0);
-    const new_end = Math.min(end || ctx.size, ctx.size);
-    const previousStart = ctx.offset;
-    if (typeof shift_key == "number") {
-        while (new_start <= new_end) {
-            const input = ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-            if (input.length == 0) {
-                break;
-            }
-            for (let i = 0; i < input.length; i++) {
-                input[i] = input[i] >> shift_key;
-            }
-            ctx.commit(true);
-            new_start += input.length;
-        }
-        return;
-    }
-    else {
-        if (typeof shift_key == "string") {
-            shift_key = Uint8Array.from(Array.from(shift_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(shift_key)) {
-            var keyIndex = -1;
-            while (new_start <= new_end) {
-                const input = ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                if (input.length == 0) {
-                    break;
-                }
-                for (let i = 0; i < input.length; i++) {
-                    if (keyIndex != shift_key.length - 1) {
-                        keyIndex = keyIndex + 1;
-                    }
-                    else {
-                        keyIndex = 0;
-                    }
-                    input[i] = input[i] >> shift_key[keyIndex];
-                }
-                ctx.commit(true);
-                new_start += input.length;
-            }
-        }
-        else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-    if (!consume) {
-        ctx.offset = previousStart;
-    }
-    return;
-}
-function ADD$1(ctx, add_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            ctx.extendArray((end || 0) - ctx.size);
-        }
-        else {
-            ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    ctx.open();
-    const chunkSize = 0x2000; // 8192 bytes
-    var new_start = (start || 0);
-    const new_end = Math.min(end || ctx.size, ctx.size);
-    const previousStart = ctx.offset;
-    if (typeof add_key == "number") {
-        while (new_start <= new_end) {
-            const input = ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-            if (input.length == 0) {
-                break;
-            }
-            for (let i = 0; i < input.length; i++) {
-                input[i] = input[i] + add_key;
-            }
-            ctx.commit(true);
-            new_start += input.length;
-        }
-    }
-    else {
-        if (typeof add_key == "string") {
-            add_key = Uint8Array.from(Array.from(add_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(add_key)) {
-            var keyIndex = -1;
-            while (new_start <= new_end) {
-                const input = ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                if (input.length == 0) {
-                    break;
-                }
-                for (let i = 0; i < input.length; i++) {
-                    if (keyIndex != add_key.length - 1) {
-                        keyIndex = keyIndex + 1;
-                    }
-                    else {
-                        keyIndex = 0;
-                    }
-                    input[i] = input[i] + add_key[keyIndex];
-                }
-                ctx.commit(true);
-                new_start += input.length;
-            }
-        }
-        else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-    if (!consume) {
-        ctx.offset = previousStart;
-    }
-    return;
-}
-function fString$1(ctx, searchString) {
-    ctx.open();
-    const chunkSize = 0x2000; // 8192 bytes
-    var lastChunk = new Uint8Array(0);
-    const searchStringBuffer = new TextEncoder().encode(searchString);
-    var start = ctx.offset;
-    const strict_saver = ctx.strict;
-    ctx.strict = true;
-    while (start < ctx.size) {
-        const currentChunk = ctx.read(start, Math.min(chunkSize, ctx.size - start), false);
-        if (currentChunk.length === 0) { // No more data to read
-            break;
-        }
-        // Concatenate the last part of the previous chunk with the current chunk
-        const combinedBuffer = Buffer.concat([lastChunk, new Uint8Array(currentChunk)]);
-        // Search for the string in the combined buffer
-        var offset = 0;
-        while (offset <= combinedBuffer.length - searchStringBuffer.length) {
-            const index = combinedBuffer.indexOf(searchStringBuffer, offset);
-            if (index === -1) {
-                break;
-            }
-            // Found the search string
-            ctx.strict = strict_saver;
-            return start + index - lastChunk.length;
-        }
-        // Update the last chunk for the next iteration
-        lastChunk = new Uint8Array(currentChunk.subarray(-searchStringBuffer.length + 1));
-        start += currentChunk.length;
-    }
-    ctx.strict = strict_saver;
-    return -1;
-}
-function fNumber$1(ctx, targetNumber, bits, unsigned, endian) {
-    ctx.open();
-    const chunkSize = 0x2000; // 8192 bytes
-    let lastChunk = new Uint8Array(0);
-    const totalBits = Math.floor(bits / 8);
-    var start = ctx.offset;
-    while (start < ctx.size) {
-        const currentChunk = ctx.read(start, Math.min(chunkSize, ctx.size - start), false);
-        if (currentChunk.length === 0) { // No more data to read
-            break;
-        }
-        // Concatenate the last part of the previous chunk with the current chunk
-        const combinedBuffer = Buffer.concat([lastChunk, new Uint8Array(currentChunk)]);
-        // Process the combined buffer to find the target number
-        for (let z = 0; z <= combinedBuffer.length - totalBits; z++) {
-            var value = 0;
-            var off_in_bits = 0;
-            for (let i = 0; i < bits;) {
-                const remaining = bits - i;
-                const bitOffset = off_in_bits & 7;
-                const currentByte = combinedBuffer[z + (off_in_bits >> 3)];
-                const read = Math.min(remaining, 8 - bitOffset);
-                if ((endian !== undefined ? endian : ctx.endian) === "big") {
-                    let mask = ~(0xFF << read);
-                    let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
-                    value <<= read;
-                    value |= readBits;
-                }
-                else {
-                    let mask = ~(0xFF << read);
-                    let readBits = (currentByte >> bitOffset) & mask;
-                    value |= readBits << i;
-                }
-                off_in_bits += read;
-                i += read;
-            }
-            if (unsigned === true || bits <= 7) {
-                value = value >>> 0;
-            }
-            else {
-                if (bits !== 32 && (value & (1 << (bits - 1)))) {
-                    value |= -1 ^ ((1 << bits) - 1);
-                }
-            }
-            if (value === targetNumber) {
-                return start + z - lastChunk.length; // Found the byte, return the index from current
-            }
-        }
-        // Update the last chunk for the next iteration
-        lastChunk = new Uint8Array(combinedBuffer.subarray(-totalBits + 1));
-        start += currentChunk.length;
-    }
-    return -1; // number not found
-}
-function fHalfFloat$1(ctx, targetNumber, endian) {
-    ctx.open();
-    const chunkSize = 0x2000; // 8192 bytes
-    let size = 2;
-    for (let position = 0; position <= ctx.size - size;) {
-        const buffer = ctx.read(position, Math.min(chunkSize, ctx.size - position), false);
-        if (buffer.length == 0) {
-            break;
-        }
-        const data = new Uint8Array(buffer);
-        for (let z = 0; z <= data.length - size; z++) {
-            var value = 0;
-            if ((endian !== undefined ? endian : ctx.endian) === "little") {
-                value = (data[z + 1] << 8) | data[z];
-            }
-            else {
-                value = (data[z] << 8) | data[z + 1];
-            }
-            const sign = (value & 0x8000) >> 15;
-            const exponent = (value & 0x7C00) >> 10;
-            const fraction = value & 0x03FF;
-            var floatValue;
-            if (exponent === 0) {
-                if (fraction === 0) {
-                    floatValue = (sign === 0) ? 0 : -0; // +/-0
-                }
-                else {
-                    // Denormalized number
-                    floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, -14) * (fraction / 0x0400);
-                }
-            }
-            else if (exponent === 0x1F) {
-                if (fraction === 0) {
-                    floatValue = (sign === 0) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-                }
-                else {
-                    floatValue = Number.NaN;
-                }
-            }
-            else {
-                // Normalized number
-                floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x0400);
-            }
-            if (floatValue === targetNumber) {
-                return position + z; // Found the number, return the index
-            }
-        }
-        position += buffer.length;
-    }
-    return -1; // number not found
-}
-function fFloat$1(ctx, targetNumber, endian) {
-    ctx.open();
-    const chunkSize = 0x2000; // 8192 bytes
-    const size = 4; // Size of float in bytes
-    for (let position = 0; position <= ctx.size - size;) {
-        const buffer = ctx.read(position, Math.min(chunkSize, ctx.size - position));
-        if (buffer.length == 0) {
-            break;
-        }
-        const data = new Uint8Array(buffer);
-        for (let z = 0; z <= data.length - size; z++) {
-            var value = 0;
-            if ((endian !== undefined ? endian : ctx.endian) === "little") {
-                value = (data[z + 3] << 24) | (data[z + 2] << 16) | (data[z + 1] << 8) | data[z];
-            }
-            else {
-                value = (data[z] << 24) | (data[z + 1] << 16) | (data[z + 2] << 8) | data[z + 3];
-            }
-            const isNegative = (value & 0x80000000) !== 0 ? 1 : 0;
-            // Extract the exponent and fraction parts
-            const exponent = (value >> 23) & 0xFF;
-            const fraction = value & 0x7FFFFF;
-            // Calculate the float value
-            var floatValue;
-            if (exponent === 0) {
-                // Denormalized number (exponent is 0)
-                floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
-            }
-            else if (exponent === 0xFF) {
-                // Infinity or NaN (exponent is 255)
-                floatValue = fraction === 0 ? (isNegative ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : Number.NaN;
-            }
-            else {
-                // Normalized number
-                floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
-            }
-            if (floatValue === targetNumber) {
-                return position + z; // Found the number, return the index
-            }
-        }
-        position += buffer.length;
-    }
-    return -1; // number not found
-}
-function fBigInt$1(ctx, targetNumber, unsigned, endian) {
-    if (!hasBigInt) {
-        throw new Error("System doesn't support BigInt values.");
-    }
-    ctx.open();
-    const chunkSize = 0x2000; // 8192 bytes
-    let lastChunk = new Uint8Array(0);
-    const targetBigInt = BigInt(targetNumber);
-    while (ctx.offset < ctx.size) {
-        const currentChunk = ctx.read(ctx.offset, Math.min(chunkSize, ctx.size - ctx.offset), false);
-        // No more data to read
-        if (currentChunk.length === 0) {
-            break;
-        }
-        // Concatenate the last part of the previous chunk with the current chunk
-        const combinedBuffer = Buffer.concat([lastChunk, new Uint8Array(currentChunk)]);
-        // Process the combined buffer to find the target BigInt
-        for (let z = 0; z <= combinedBuffer.length - 8; z++) {
-            var value = BigInt(0);
-            if ((endian !== undefined ? endian : ctx.endian) === "little") {
-                for (let i = 0; i < 8; i++) {
-                    value = value | (BigInt(combinedBuffer[z + i] & 0xFF)) << BigInt(8 * i);
-                }
-            }
-            else {
-                for (let i = 0; i < 8; i++) {
-                    value = (value << BigInt(8)) | BigInt(combinedBuffer[z + i] & 0xFF);
-                }
-            }
-            if (unsigned === undefined || unsigned === false) {
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-            }
-            if (value === targetBigInt) {
-                return ctx.offset + z - lastChunk.length; // Found the byte, return the index from current
-            }
-        }
-        // Update the last chunk for the next iteration
-        lastChunk = new Uint8Array(combinedBuffer.subarray(-8 + 1));
-        ctx.offset += currentChunk.length;
-    }
-    return -1; // number not found
-}
-function fDoubleFloat$1(ctx, targetNumber, endian) {
-    if (!hasBigInt) {
-        throw new Error("System doesn't support BigInt values.");
-    }
-    ctx.open();
-    const chunkSize = 0x2000; // 8192 bytes
-    const size = 8; // Size of double float in bytes
-    for (let position = 0; position <= ctx.size - size;) {
-        const buffer = ctx.read(position, Math.min(chunkSize, ctx.size - position));
-        if (buffer.length == 0) {
-            break;
-        }
-        const data = new Uint8Array(buffer);
-        for (let z = 0; z <= data.length - size; z++) {
-            var value = BigInt(0);
-            if ((endian !== undefined ? endian : ctx.endian) === "little") {
-                for (let i = 0; i < size; i++) {
-                    value = value | BigInt(data[z + i] & 0xFF) << BigInt(8 * i);
-                }
-            }
-            else {
-                for (let i = 0; i < size; i++) {
-                    value = (value << BigInt(8)) | BigInt(data[z + i] & 0xFF);
-                }
-            }
-            const sign = (value & BigInt("9223372036854775808")) >> BigInt(63);
-            const exponent = Number((value & BigInt("9218868437227405312")) >> BigInt(52)) - 1023;
-            const fraction = Number(value & BigInt("4503599627370495")) / Math.pow(2, 52);
-            let floatValue;
-            if (exponent === -1023) {
-                if (fraction === 0) {
-                    floatValue = (sign === BigInt(0)) ? 0 : -0; // +/-0
-                }
-                else {
-                    // Denormalized number
-                    floatValue = (sign === BigInt(0) ? 1 : -1) * Math.pow(2, -1022) * fraction;
-                }
-            }
-            else if (exponent === 1024) {
-                if (fraction === 0) {
-                    floatValue = (sign === BigInt(0)) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-                }
-                else {
-                    floatValue = Number.NaN;
-                }
-            }
-            else {
-                // Normalized number
-                floatValue = (sign === BigInt(0) ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
-            }
-            if (floatValue === targetNumber) {
-                return position + z; // Found the number, return the index
-            }
-        }
-        position += buffer.length;
-    }
-    return -1; // number not found
-}
-function wbit$1(ctx, value, bits, unsigned, endian) {
-    ctx.open();
-    if (value == undefined) {
-        throw new Error('Must supply value.');
-    }
-    if (bits == undefined) {
-        throw new Error("Enter number of bits to write");
-    }
-    if (bits == 0) {
-        return;
-    }
-    if (bits <= 0 || bits > 32) {
-        throw new Error('Bit length must be between 1 and 32. Got ' + bits);
-    }
-    if (unsigned == true || bits == 1) {
-        if (value < 0 || value > Math.pow(2, bits)) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-            throw new Error(`Value is out of range for the specified ${bits}bit length.` + " min: " + 0 + " max: " + Math.pow(2, bits) + " value: " + value);
-        }
-    }
-    else {
-        const maxValue = Math.pow(2, bits - 1) - 1;
-        const minValue = -maxValue - 1;
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-            throw new Error(`Value is out of range for the specified ${bits}bit length.` + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-    if (unsigned == true || bits == 1) {
-        const maxValue = Math.pow(2, bits) - 1;
-        value = value & maxValue;
-    }
-    const size_needed = ((((bits - 1) + ctx.bitoffset) / 8) + ctx.offset);
-    if (size_needed > ctx.size) {
-        //add size
-        ctx.extendArray(size_needed - ctx.size);
-    }
-    var off_in_bits = (ctx.offset * 8) + ctx.bitoffset;
-    for (var i = 0; i < bits;) {
-        const remaining = bits - i;
-        const bitOffset = off_in_bits & 7;
-        const byteOffset = off_in_bits >> 3;
-        const written = Math.min(remaining, 8 - bitOffset);
-        const input = ctx.read(byteOffset, Math.min(1, ctx.size - ctx.offset), false);
-        if (input.length == 0) {
-            break;
-        }
-        if ((endian != undefined ? endian : ctx.endian) == "big") {
-            let mask = ~(-1 << written);
-            let writeBits = (value >> (bits - i - written)) & mask;
-            var destShift = 8 - bitOffset - written;
-            let destMask = ~(mask << destShift);
-            input[0] = (input[0] & destMask) | (writeBits << destShift);
-        }
-        else {
-            let mask = ~(0xFF << written);
-            let writeBits = value & mask;
-            value >>= written;
-            let destMask = ~(mask << bitOffset);
-            input[0] = (input[0] & destMask) | (writeBits << bitOffset);
-        }
-        off_in_bits += written;
-        i += written;
-        ctx.commit(false);
-    }
-    ctx.offset = ctx.offset + Math.floor(((bits) + ctx.bitoffset) / 8); //end byte
-    ctx.bitoffset = ((bits) + ctx.bitoffset) % 8;
-}
-function rbit$1(ctx, bits, unsigned, endian) {
-    ctx.open();
-    if (bits == undefined || typeof bits != "number") {
-        throw new Error("Enter number of bits to read");
-    }
-    if (bits == 0) {
-        return 0;
-    }
-    if (bits <= 0 || bits > 32) {
-        throw new Error('Bit length must be between 1 and 32. Got ' + bits);
-    }
-    const size_needed = ((((bits - 1) + ctx.bitoffset) / 8) + ctx.offset);
-    if (bits <= 0 || size_needed > ctx.size) {
-        ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-        throw new Error("Invalid number of bits to read: " + size_needed + " of " + ctx.size);
-    }
-    var off_in_bits = (ctx.offset * 8) + ctx.bitoffset;
-    var value = 0;
-    for (var i = 0; i < bits;) {
-        var remaining = bits - i;
-        var bitOffset = off_in_bits & 7;
-        const currentByte = ctx.read(off_in_bits >> 3, Math.min(1, ctx.size - off_in_bits >> 3), false);
-        if (currentByte.length == 0) {
-            break;
-        }
-        var read = Math.min(remaining, 8 - bitOffset);
-        if ((endian != undefined ? endian : ctx.endian) == "big") {
-            let mask = ~(0xFF << read);
-            let readBits = (currentByte[0] >> (8 - read - bitOffset)) & mask;
-            value <<= read;
-            value |= readBits;
-        }
-        else {
-            let mask = ~(0xFF << read);
-            let readBits = (currentByte[0] >> bitOffset) & mask;
-            value |= readBits << i;
-        }
-        off_in_bits += read;
-        i += read;
-    }
-    ctx.offset = ctx.offset + Math.floor(((bits) + ctx.bitoffset) / 8); //end byte
-    ctx.bitoffset = ((bits) + ctx.bitoffset) % 8;
-    if (unsigned == true || bits <= 7) {
-        return value >>> 0;
-    }
-    if (bits !== 32 && value & (1 << (bits - 1))) {
-        value |= -1 ^ ((1 << bits) - 1);
-    }
-    return value;
-}
-function wbyte$1(ctx, value, unsigned) {
-    ctx.open();
-    check_size$1(ctx, 1, 0);
-    if (unsigned == true) {
-        if (value < 0 || value > 255) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-            throw new Error('Value is out of range for the specified 8bit length.' + " min: " + 0 + " max: " + 255 + " value: " + value);
-        }
-    }
-    else {
-        const maxValue = Math.pow(2, 8 - 1) - 1;
-        const minValue = -maxValue - 1;
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-            throw new Error('Value is out of range for the specified 8bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-    const data = ctx.read(ctx.offset, 1, false);
-    const view = new DataView(data.buffer, data.byteOffset);
-    if (canInt8) {
-        if ((unsigned == undefined || unsigned == false)) {
-            view.setInt8(0, value);
-        }
-        else {
-            view.setUint8(0, value);
-        }
-    }
-    else {
-        data[0] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-    }
-    ctx.commit(false);
-    ctx.offset += 1;
-    ctx.bitoffset = 0;
-    return;
-}
-function rbyte$1(ctx, unsigned) {
-    ctx.open();
-    check_size$1(ctx, 1);
-    const data = ctx.read(ctx.offset, 1, false);
-    const view = new DataView(data.buffer, data.byteOffset);
-    if (canInt8) {
-        var read;
-        if ((unsigned == undefined || unsigned == false)) {
-            read = view.getInt8(0);
-        }
-        else {
-            read = view.getUint8(0);
-        }
-        ctx.offset += 1;
-        ctx.bitoffset = 0;
-        return read;
-    }
-    ctx.offset += 1;
-    ctx.bitoffset = 0;
-    if (unsigned == true) {
-        return data[0] & 0xFF;
-    }
-    else {
-        return data[0] > 127 ? data[0] - 256 : data[0];
-    }
-}
-function wint16$1(ctx, value, unsigned, endian) {
-    ctx.open();
-    check_size$1(ctx, 2, 0);
-    if (unsigned == true) {
-        if (value < 0 || value > 65535) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-            throw new Error('Value is out of range for the specified 16bit length.' + " min: " + 0 + " max: " + 65535 + " value: " + value);
-        }
-    }
-    else {
-        const maxValue = Math.pow(2, 16 - 1) - 1;
-        const minValue = -maxValue - 1;
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-            throw new Error('Value is out of range for the specified 16bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-    const data = ctx.read(ctx.offset, 2, false);
-    const view = new DataView(data.buffer, data.byteOffset);
-    if (canInt16) {
-        if ((unsigned == undefined || unsigned == false)) {
-            view.setInt16(0, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            view.setUint16(0, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-    }
-    else {
-        if ((endian != undefined ? endian : ctx.endian) == "little") {
-            data[0] = (unsigned == undefined || unsigned == false) ? value : value & 0xff;
-            data[1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff;
-        }
-        else {
-            data[0] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff;
-            data[1] = (unsigned == undefined || unsigned == false) ? value : value & 0xff;
-        }
-    }
-    ctx.commit(false);
-    ctx.offset += 2;
-    ctx.bitoffset = 0;
-    return;
-}
-function rint16$1(ctx, unsigned, endian) {
-    ctx.open();
-    check_size$1(ctx, 2);
-    const data = ctx.read(ctx.offset, 2, false);
-    const view = new DataView(data.buffer, data.byteOffset);
-    var read;
-    if (canInt16) {
-        if (unsigned == undefined || unsigned == false) {
-            read = view.getInt16(0, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            read = view.getUint16(0, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        ctx.offset += 2;
-        ctx.bitoffset = 0;
-        return read;
-    }
-    else {
-        if ((endian != undefined ? endian : ctx.endian) == "little") {
-            read = ((data[1] & 0xFFFF) << 8) | (data[0] & 0xFFFF);
-        }
-        else {
-            read = ((data[0] & 0xFFFF) << 8) | (data[1] & 0xFFFF);
-        }
-    }
-    ctx.offset += 2;
-    ctx.bitoffset = 0;
-    if (unsigned == undefined || unsigned == false) {
-        return read & 0x8000 ? -(0x10000 - read) : read;
-    }
-    else {
-        return read & 0xFFFF;
-    }
-}
-function rhalffloat$1(ctx, endian) {
-    if (canFloat16) {
-        ctx.open();
-        check_size$1(ctx, 2);
-        const data = ctx.read(ctx.offset, 2, false);
-        const view = new DataView(data.buffer, data.byteOffset);
-        const float16Value = view.getFloat16(0, endian != undefined ? endian == "little" : ctx.endian == "little");
-        ctx.offset += 2;
-        ctx.bitoffset = 0;
-        return float16Value;
-    }
-    const uint16Value = ctx.readInt16(true, (endian != undefined ? endian : ctx.endian));
-    const sign = (uint16Value & 0x8000) >> 15;
-    const exponent = (uint16Value & 0x7C00) >> 10;
-    const fraction = uint16Value & 0x03FF;
-    var floatValue;
-    if (exponent === 0) {
-        if (fraction === 0) {
-            floatValue = (sign === 0) ? 0 : -0; // +/-0
-        }
-        else {
-            // Denormalized number
-            floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, -14) * (fraction / 0x0400);
-        }
-    }
-    else if (exponent === 0x1F) {
-        if (fraction === 0) {
-            floatValue = (sign === 0) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-        }
-        else {
-            floatValue = Number.NaN;
-        }
-    }
-    else {
-        // Normalized number
-        floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x0400);
-    }
-    return floatValue;
-}
-function whalffloat$1(ctx, value, endian) {
-    ctx.open();
-    check_size$1(ctx, 2, 0);
-    const maxValue = 65504;
-    const minValue = 5.96e-08;
-    if (value < minValue || value > maxValue) {
-        ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-        throw new Error('Value is out of range for the specified half float length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-    }
-    if (canFloat16) {
-        const data = ctx.read(ctx.offset, 2, false);
-        const view = new DataView(data.buffer, data.byteOffset);
-        view.setFloat16(0, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        ctx.commit(false);
-        ctx.offset += 2;
-        ctx.bitoffset = 0;
-        return;
-    }
-    const floatView = new Float32Array(1);
-    const intView = new Uint32Array(floatView.buffer);
-    floatView[0] = value;
-    const x = intView[0];
-    const sign = (x >> 31) & 0x1;
-    var exponent = (x >> 23) & 0xff;
-    var mantissa = x & 0x7fffff;
-    var halfFloatBits;
-    if (exponent === 0xff) {
-        // NaN or Infinity
-        halfFloatBits = (sign << 15) | (0x1f << 10) | (mantissa ? 0x200 : 0);
-    }
-    else if (exponent > 142) {
-        // Overflow → Infinity
-        halfFloatBits = (sign << 15) | (0x1f << 10);
-    }
-    else if (exponent < 113) {
-        // Subnormal or zero
-        if (exponent < 103) {
-            halfFloatBits = sign << 15;
-        }
-        else {
-            mantissa |= 0x800000;
-            const shift = 125 - exponent;
-            mantissa = mantissa >> shift;
-            halfFloatBits = (sign << 15) | (mantissa >> 13);
-        }
-    }
-    else {
-        // Normalized
-        exponent = exponent - 112;
-        mantissa = mantissa >> 13;
-        halfFloatBits = (sign << 15) | (exponent << 10) | mantissa;
-    }
-    const data = ctx.read(ctx.offset, 2, false);
-    // Write bytes based on endianness
-    if ((endian == undefined ? ctx.endian : endian) == "little") {
-        data[0] = halfFloatBits & 0xFF;
-        data[1] = (halfFloatBits >> 8) & 0xFF;
-    }
-    else {
-        data[0] = (halfFloatBits >> 8) & 0xFF;
-        data[1] = halfFloatBits & 0xFF;
-    }
-    ctx.commit(false);
-    ctx.offset += 2;
-    ctx.bitoffset = 0;
-}
-function wint32$1(ctx, value, unsigned, endian) {
-    ctx.open();
-    check_size$1(ctx, 4, 0);
-    if (unsigned == true) {
-        if (value < 0 || value > 4294967295) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-            throw new Error('Value is out of range for the specified 32bit length.' + " min: " + 0 + " max: " + 4294967295 + " value: " + value);
-        }
-    }
-    else {
-        const maxValue = Math.pow(2, 32 - 1) - 1;
-        const minValue = -maxValue - 1;
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-            throw new Error('Value is out of range for the specified 32bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-    const data = ctx.read(ctx.offset, 4, false);
-    const view = new DataView(data.buffer, data.byteOffset);
-    if (canInt32) {
-        if ((unsigned == undefined || unsigned == false)) {
-            view.setInt32(0, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            view.setUint32(0, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-    }
-    else {
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            data[0] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-            data[1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
-            data[2] = (unsigned == undefined || unsigned == false) ? (value >> 16) : (value >> 16) & 0xFF;
-            data[3] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
-        }
-        else {
-            data[0] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
-            data[1] = (unsigned == undefined || unsigned == false) ? (value >> 16) : (value >> 16) & 0xFF;
-            data[2] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
-            data[3] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-        }
-    }
-    ctx.commit(false);
-    ctx.offset += 4;
-    ctx.bitoffset = 0;
-}
-function rint32$1(ctx, unsigned, endian) {
-    ctx.open();
-    check_size$1(ctx, 4);
-    const data = ctx.read(ctx.offset, 4, false);
-    const view = new DataView(data.buffer, data.byteOffset);
-    var read;
-    if (canInt32) {
-        if ((unsigned == undefined || unsigned == false)) {
-            read = view.getInt32(0, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            read = view.getUint32(0, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        ctx.offset += 4;
-        ctx.bitoffset = 0;
-        return read;
-    }
-    if ((endian != undefined ? endian : ctx.endian) == "little") {
-        read = (((data[3] & 0xFF) << 24) | ((data[2] & 0xFF) << 16) | ((data[1] & 0xFF) << 8) | (data[0] & 0xFF));
-    }
-    else {
-        read = ((data[0] & 0xFF) << 24) | ((data[1] & 0xFF) << 16) | ((data[2] & 0xFF) << 8) | (data[3] & 0xFF);
-    }
-    ctx.offset += 4;
-    ctx.bitoffset = 0;
-    if (unsigned == undefined || unsigned == false) {
-        return read;
-    }
-    else {
-        return read >>> 0;
-    }
-}
-function rfloat$1(ctx, endian) {
-    if (canFloat32) {
-        ctx.open();
-        check_size$1(ctx, 4);
-        const data = ctx.read(ctx.offset, 4, false);
-        const view = new DataView(data.buffer, data.byteOffset);
-        var float32Value = view.getFloat32(0, endian != undefined ? endian == "little" : ctx.endian == "little");
-        ctx.offset += 4;
-        ctx.bitoffset = 0;
-        return float32Value;
-    }
-    const uint32Value = ctx.readInt32(true, (endian == undefined ? ctx.endian : endian));
-    // Check if the value is negative (i.e., the most significant bit is set)
-    const isNegative = (uint32Value & 0x80000000) !== 0 ? 1 : 0;
-    // Extract the exponent and fraction parts
-    const exponent = (uint32Value >> 23) & 0xFF;
-    const fraction = uint32Value & 0x7FFFFF;
-    // Calculate the float value
-    var floatValue;
-    if (exponent === 0) {
-        // Denormalized number (exponent is 0)
-        floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
-    }
-    else if (exponent === 0xFF) {
-        // Infinity or NaN (exponent is 255)
-        floatValue = fraction === 0 ? (isNegative ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : Number.NaN;
-    }
-    else {
-        // Normalized number
-        floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
-    }
-    return floatValue;
-}
-function wfloat$1(ctx, value, endian) {
-    ctx.open();
-    check_size$1(ctx, 4, 0);
-    const MIN_POSITIVE_FLOAT32 = Number.MIN_VALUE;
-    const MAX_POSITIVE_FLOAT32 = 3.4028235e+38;
-    const MIN_NEGATIVE_FLOAT32 = -34028235e31;
-    const MAX_NEGATIVE_FLOAT32 = -Number.MIN_VALUE;
-    if (!((value === 0) ||
-        (value >= MIN_POSITIVE_FLOAT32 && value <= MAX_POSITIVE_FLOAT32) ||
-        (value >= MIN_NEGATIVE_FLOAT32 && value <= MAX_NEGATIVE_FLOAT32))) {
-        ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-        throw new Error('Value is out of range for the specified float length.' + " min: " + MIN_NEGATIVE_FLOAT32 + " max: " + MAX_POSITIVE_FLOAT32 + " value: " + value);
-    }
-    const data = ctx.read(ctx.offset, 4, false);
-    const view = new DataView(data.buffer, data.byteOffset);
-    if (canFloat32) {
-        view.setFloat32(0, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-    }
-    else {
-        const arrayFloat = new Float32Array(1);
-        arrayFloat[0] = value;
-        if (endian != undefined ? endian == "little" : ctx.endian == "little") {
-            data[0] = arrayFloat.buffer[0];
-            data[1] = arrayFloat.buffer[1];
-            data[2] = arrayFloat.buffer[2];
-            data[3] = arrayFloat.buffer[3];
-        }
-        else {
-            data[0] = arrayFloat.buffer[3];
-            data[1] = arrayFloat.buffer[2];
-            data[2] = arrayFloat.buffer[1];
-            data[3] = arrayFloat.buffer[0];
-        }
-    }
-    ctx.commit(false);
-    ctx.offset += 4;
-    ctx.bitoffset = 0;
-}
-function rint64$1(ctx, unsigned, endian) {
-    if (!hasBigInt) {
-        throw new Error("System doesn't support BigInt values.");
-    }
-    ctx.open();
-    check_size$1(ctx, 8);
-    const data = ctx.read(ctx.offset, 8, false);
-    const view = new DataView(data.buffer, data.byteOffset);
-    var value = BigInt(0);
-    if (canBigInt64) {
-        if (unsigned == undefined || unsigned == false) {
-            value = view.getBigInt64(0, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            value = view.getBigUint64(0, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        ctx.offset += 8;
-    }
-    else {
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            for (let i = 0; i < 8; i++) {
-                value = value | BigInt((data[i] & 0xFF)) << BigInt(8 * i);
-                ctx.offset += 1;
-            }
-            if (unsigned == undefined || unsigned == false) {
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-            }
-        }
-        else {
-            for (let i = 0; i < 8; i++) {
-                value = (value << BigInt(8)) | BigInt((data[i] & 0xFF));
-                ctx.offset += 1;
-            }
-            if (unsigned == undefined || unsigned == false) {
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-            }
-        }
-    }
-    ctx.bitoffset = 0;
-    if (ctx.enforceBigInt) {
-        return value;
-    }
-    else {
-        if (isSafeInt64(value)) {
-            return Number(value);
-        }
-        else {
-            throw new Error("Value is outside of number range and enforceBigInt is set to false. " + value);
-        }
-    }
-}
-function wint64$1(ctx, value, unsigned, endian) {
-    if (!hasBigInt) {
-        throw new Error("System doesn't support BigInt values.");
-    }
-    ctx.open();
-    check_size$1(ctx, 8, 0);
-    if (unsigned == true) {
-        if (value < 0 || value > Math.pow(2, 64) - 1) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-            throw new Error('Value is out of range for the specified 64bit length.' + " min: " + 0 + " max: " + (Math.pow(2, 64) - 1) + " value: " + value);
-        }
-    }
-    else {
-        const maxValue = Math.pow(2, 63) - 1;
-        const minValue = -Math.pow(2, 63);
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-            throw new Error('Value is out of range for the specified 64bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-    const data = ctx.read(ctx.offset, 8, false);
-    const view = new DataView(data.buffer, data.byteOffset);
-    if (canBigInt64) {
-        if (unsigned == undefined || unsigned == false) {
-            view.setBigInt64(0, BigInt(value), endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            view.setBigUint64(0, BigInt(value), endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-    }
-    else {
-        // Convert the BigInt to a 64-bit signed integer
-        const bigIntArray = new BigInt64Array(1);
-        bigIntArray[0] = BigInt(value);
-        // Use two 32-bit views to write the Int64
-        const int32Array = new Int32Array(bigIntArray.buffer);
-        for (let i = 0; i < 2; i++) {
-            if ((endian == undefined ? ctx.endian : endian) == "little") {
-                if (unsigned == undefined || unsigned == false) {
-                    data[i * 4 + 0] = int32Array[i];
-                    data[i * 4 + 1] = (int32Array[i] >> 8);
-                    data[i * 4 + 2] = (int32Array[i] >> 16);
-                    data[i * 4 + 3] = (int32Array[i] >> 24);
-                }
-                else {
-                    data[i * 4 + 0] = int32Array[i] & 0xFF;
-                    data[i * 4 + 1] = (int32Array[i] >> 8) & 0xFF;
-                    data[i * 4 + 2] = (int32Array[i] >> 16) & 0xFF;
-                    data[i * 4 + 3] = (int32Array[i] >> 24) & 0xFF;
-                }
-            }
-            else {
-                if (unsigned == undefined || unsigned == false) {
-                    data[(1 - i) * 4 + 3] = int32Array[i];
-                    data[(1 - i) * 4 + 2] = (int32Array[i] >> 8);
-                    data[(1 - i) * 4 + 1] = (int32Array[i] >> 16);
-                    data[(1 - i) * 4 + 0] = (int32Array[i] >> 24);
-                }
-                else {
-                    data[(1 - i) * 4 + 3] = int32Array[i] & 0xFF;
-                    data[(1 - i) * 4 + 2] = (int32Array[i] >> 8) & 0xFF;
-                    data[(1 - i) * 4 + 1] = (int32Array[i] >> 16) & 0xFF;
-                    data[(1 - i) * 4 + 0] = (int32Array[i] >> 24) & 0xFF;
-                }
-            }
-        }
-    }
-    ctx.commit(false);
-    ctx.offset += 8;
-    ctx.bitoffset = 0;
-}
-function wdfloat$1(ctx, value, endian) {
-    ctx.open();
-    check_size$1(ctx, 8, 0);
-    const MIN_POSITIVE_FLOAT64 = 2.2250738585072014e-308;
-    const MAX_POSITIVE_FLOAT64 = Number.MAX_VALUE;
-    const MIN_NEGATIVE_FLOAT64 = -Number.MAX_VALUE;
-    const MAX_NEGATIVE_FLOAT64 = -22250738585072014e-324;
-    if (!((value === 0) ||
-        (value >= MIN_POSITIVE_FLOAT64 && value <= MAX_POSITIVE_FLOAT64) ||
-        (value >= MIN_NEGATIVE_FLOAT64 && value <= MAX_NEGATIVE_FLOAT64))) {
-        ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-        throw new Error('Value is out of range for the specified 64bit length.' + " min: " + MIN_NEGATIVE_FLOAT64 + " max: " + MAX_POSITIVE_FLOAT64 + " value: " + value);
-    }
-    const data = ctx.read(ctx.offset, 8, false);
-    const view = new DataView(data.buffer, data.byteOffset);
-    if (canFloat64) {
-        view.setFloat64(0, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-    }
-    else {
-        const intArray = new Int32Array(2);
-        const floatArray = new Float64Array(intArray.buffer);
-        floatArray[0] = value;
-        const bytes = new Uint8Array(intArray.buffer);
-        for (let i = 0; i < 8; i++) {
-            if ((endian == undefined ? ctx.endian : endian) == "little") {
-                data[i] = bytes[i];
-            }
-            else {
-                data[(7 - i)] = bytes[i];
-            }
-        }
-    }
-    ctx.commit(false);
-    ctx.offset += 8;
-    ctx.bitoffset = 0;
-}
-function rdfloat$1(ctx, endian) {
-    if (canFloat64) {
-        ctx.open();
-        check_size$1(ctx, 8);
-        const data = ctx.read(ctx.offset, 8, false);
-        const view = new DataView(data.buffer, data.byteOffset);
-        const floatValue = view.getFloat64(0, endian != undefined ? endian == "little" : ctx.endian == "little");
-        ctx.offset += 8;
-        ctx.bitoffset = 0;
-        return floatValue;
-    }
-    endian = (endian == undefined ? ctx.endian : endian);
-    var uint64Value = ctx.readInt64(true /*unsigned*/, endian);
-    const sign = (BigInt(uint64Value) & BigInt("9223372036854775808")) >> BigInt(63);
-    const exponent = Number((BigInt(uint64Value) & BigInt("9218868437227405312")) >> BigInt(52)) - 1023;
-    const fraction = Number(BigInt(uint64Value) & BigInt("4503599627370495")) / Math.pow(2, 52);
-    var floatValue;
-    if (exponent == -1023) {
-        if (fraction == 0) {
-            floatValue = (sign == BigInt(0)) ? 0 : -0; // +/-0
-        }
-        else {
-            // Denormalized number
-            floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, -1022) * fraction;
-        }
-    }
-    else if (exponent == 1024) {
-        if (fraction == 0) {
-            floatValue = (sign == BigInt(0)) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-        }
-        else {
-            floatValue = Number.NaN;
-        }
-    }
-    else {
-        // Normalized number
-        floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
-    }
-    return floatValue;
-}
-function rstring$1(ctx, options) {
-    ctx.open();
-    var length = options && options.length;
-    var stringType = options && options.stringType || 'utf-8';
-    var terminateValue = options && options.terminateValue;
-    var lengthReadSize = options && options.lengthReadSize || 1;
-    var stripNull = options && options.stripNull || true;
-    var encoding = options && options.encoding || 'utf-8';
-    var endian = options && options.endian || ctx.endian;
-    var terminate = terminateValue;
-    if (length != undefined) {
-        check_size$1(ctx, length);
-    }
-    if (typeof terminateValue == "number") {
-        terminate = terminateValue & 0xFF;
-    }
-    else {
-        if (terminateValue != undefined) {
-            throw new Error("terminateValue must be a number");
-        }
-    }
-    if (stringType == 'utf-8' || stringType == 'utf-16') {
-        if (encoding == undefined) {
-            if (stringType == 'utf-8') {
-                encoding = 'utf-8';
-            }
-            if (stringType == 'utf-16') {
-                encoding = 'utf-16';
-            }
-        }
-        // Read the string as UTF-8 encoded untill 0 or terminateValue
-        const encodedBytes = [];
-        if (length == undefined && terminateValue == undefined) {
-            terminate = 0;
-        }
-        var read_length = 0;
-        if (length != undefined) {
-            read_length = length;
-        }
-        else {
-            read_length = ctx.size - ctx.offset;
-        }
-        for (let i = 0; i < read_length; i++) {
-            if (stringType === 'utf-8') {
-                var read = ctx.readUByte();
-                if (read == terminate) {
-                    break;
-                }
-                else {
-                    if (!(stripNull == true && read == 0)) {
-                        encodedBytes.push(read);
-                    }
-                }
-            }
-            else {
-                const read = ctx.readInt16(true, endian);
-                const read1 = read & 0xFF;
-                const read2 = (read >> 8) & 0xFF;
-                if (read == terminate) {
-                    break;
-                }
-                else {
-                    if (!(stripNull == true && read == 0)) {
-                        encodedBytes.push(read1);
-                        encodedBytes.push(read2);
-                    }
-                }
-            }
-        }
-        return new TextDecoder(encoding).decode(new Uint8Array(encodedBytes));
-    }
-    else if (stringType == 'pascal' || stringType == 'wide-pascal') {
-        if (encoding == undefined) {
-            if (stringType == 'pascal') {
-                encoding = 'utf-8';
-            }
-            if (stringType == 'wide-pascal') {
-                encoding = 'utf-16';
-            }
-        }
-        var maxBytes;
-        if (lengthReadSize == 1) {
-            maxBytes = ctx.readUByte();
-        }
-        else if (lengthReadSize == 2) {
-            maxBytes = ctx.readInt16(true, endian);
-        }
-        else if (lengthReadSize == 4) {
-            maxBytes = ctx.readInt32(true, endian);
-        }
-        else {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-            throw new Error("Invalid length read size: " + lengthReadSize);
-        }
-        // Read the string as Pascal or Delphi encoded
-        const encodedBytes = [];
-        for (let i = 0; i < maxBytes; i++) {
-            if (stringType == 'wide-pascal') {
-                const read = ctx.readInt16(true, endian);
-                i++;
-                if (!(stripNull == true && read == 0)) {
-                    encodedBytes.push(read);
-                }
-            }
-            else {
-                const read = ctx.readUByte();
-                if (!(stripNull == true && read == 0)) {
-                    encodedBytes.push(read);
-                }
-            }
-        }
-        var str_return;
-        if (stringType == 'wide-pascal') {
-            const strBuffer = new Uint16Array(encodedBytes);
-            str_return = new TextDecoder().decode(strBuffer.buffer);
-        }
-        else {
-            const strBuffer = new Uint8Array(encodedBytes);
-            str_return = new TextDecoder(encoding).decode(strBuffer);
-        }
-        return str_return;
-    }
-    else {
-        throw new Error('Unsupported string type: ' + stringType);
-    }
-}
-function wstring$1(ctx, string, options) {
-    ctx.open();
-    var length = options && options.length;
-    var stringType = options && options.stringType || 'utf-8';
-    var terminateValue = options && options.terminateValue;
-    var lengthWriteSize = options && options.lengthWriteSize || 1;
-    options && options.encoding || 'utf-8';
-    var endian = options && options.endian || ctx.endian;
-    if (stringType === 'utf-8' || stringType === 'utf-16') {
-        const encoder = new TextEncoder();
-        const encodedString = encoder.encode(string);
-        if (length == undefined && terminateValue == undefined) {
-            terminateValue = 0;
-        }
-        var totalLength = (length || encodedString.byteLength) + (terminateValue != undefined ? 1 : 0);
-        if (stringType == 'utf-16') {
-            totalLength = (length || encodedString.byteLength) + (terminateValue != undefined ? 2 : 0);
-        }
-        check_size$1(ctx, totalLength, 0);
-        const data = ctx.read(ctx.offset, totalLength, false);
-        // Write the string bytes to the Uint8Array
-        for (let i = 0; i < encodedString.length; i++) {
-            if (stringType === 'utf-16') {
-                const charCode = encodedString[i];
-                if (endian == "little") {
-                    data[i * 2] = charCode & 0xFF;
-                    data[i * 2 + 1] = (charCode >> 8) & 0xFF;
-                }
-                else {
-                    data[i * 2 + 1] = charCode & 0xFF;
-                    data[i * 2] = (charCode >> 8) & 0xFF;
-                }
-            }
-            else {
-                data[i] = encodedString[i];
-            }
-        }
-        if (terminateValue != undefined) {
-            if (stringType === 'utf-16') {
-                data[totalLength - 1] = terminateValue & 0xFF;
-                data[totalLength] = (terminateValue >> 8) & 0xFF;
-            }
-            else {
-                data[totalLength] = terminateValue;
-            }
-        }
-        ctx.commit(false);
-        ctx.offset += totalLength;
-        ctx.bitoffset = 0;
-    }
-    else if (stringType == 'pascal' || stringType == 'wide-pascal') {
-        const encoder = new TextEncoder();
-        // Calculate the length of the string based on the specified max length
-        var maxLength;
-        // Encode the string in the specified encoding
-        if (lengthWriteSize == 1) {
-            maxLength = 255;
-        }
-        else if (lengthWriteSize == 2) {
-            maxLength = 65535;
-        }
-        else if (lengthWriteSize == 4) {
-            maxLength = 4294967295;
-        }
-        else {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-            throw new Error("Invalid length write size: " + lengthWriteSize);
-        }
-        if (string.length > maxLength || (length || 0) > maxLength) {
-            ctx.errorDump ? "[Error], hexdump:\n" + ctx.hexdump() : "";
-            throw new Error("String outsize of max write length: " + maxLength);
-        }
-        const maxBytes = Math.min(string.length, maxLength);
-        const encodedString = encoder.encode(string.substring(0, maxBytes));
-        var totalLength = (length || encodedString.byteLength);
-        if (lengthWriteSize == 1) {
-            ctx.writeUByte(totalLength);
-        }
-        else if (lengthWriteSize == 2) {
-            ctx.writeUInt16(totalLength, endian);
-        }
-        else if (lengthWriteSize == 4) {
-            ctx.writeUInt32(totalLength, endian);
-        }
-        check_size$1(ctx, totalLength, 0);
-        const data = ctx.read(ctx.offset, totalLength, false);
-        // Write the string bytes to the Uint8Array
-        for (let i = 0; i < totalLength; i++) {
-            if (stringType == 'wide-pascal') {
-                if (endian == "little") {
-                    data[i] = encodedString[i];
-                    data[i + 1] = encodedString[i + 1];
-                }
-                else {
-                    data[i + 1] = encodedString[i];
-                    data[i] = encodedString[i + 1];
-                }
-                i++;
-            }
-            else {
-                data[i] = encodedString[i];
-            }
-        }
-        ctx.commit(false);
-        ctx.offset += totalLength;
-        ctx.bitoffset = 0;
-    }
-    else {
-        throw new Error('Unsupported string type: ' + stringType);
-    }
-}
-/**
- * Base class for BiReaderLegacy and BiWriterLegacy
- */
-class BiBaseLegacy {
-    /**
-     * Get the current buffer data.
-     *
-     * @type {Buffer}
-     */
-    get data() {
-        return __classPrivateFieldGet(this, _BiBaseLegacy_data, "f");
-    }
-    ;
-    /**
-     * Set the current buffer data.
-     *
-     * @param {Buffer} data
-     */
-    set data(data) {
-        if (Buffer.isBuffer(data)) {
-            __classPrivateFieldSet(this, _BiBaseLegacy_data, data, "f");
-            this.updateView();
-        }
-    }
-    ;
-    constructor(filePath, readwrite) {
-        /**
-         * Endianness of default read.
-         *
-         * @type {endian}
-         */
-        this.endian = "little";
-        /**
-         * Current read byte location.
-         */
-        this.offset = 0;
-        /**
-         * Current read byte's bit location.
-         */
-        this.bitoffset = 0;
-        /**
-         * Size in bytes of the current file.
-         */
-        this.size = 0;
-        /**
-         * Size in bits of the current file.
-         */
-        this.sizeB = 0;
-        /**
-         * Allows the file to extend reading or writing outside of current size
-         */
-        this.strict = false;
-        /**
-         * Console log a hexdump on error.
-         */
-        this.errorDump = false;
-        /**
-         * Current buffer chunk.
-         *
-         * @type {Buffer|null}
-         */
-        _BiBaseLegacy_data.set(this, null);
-        /**
-         * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
-         *
-         * Otherwise it extends just the amount of the next written value.
-         *
-         * This can greatly speed up data writes when large files are being written.
-         *
-         * NOTE: Using ``BiWriterLegacy.get`` or ``BiWriterLegacy.return`` will now remove all data after the current write position. Use ``BiWriterLegacy.data`` to get the full buffer instead.
-         */
-        this.extendBufferSize = 0;
-        this.fd = null;
-        this.filePath = null;
-        this.fsMode = "r";
-        /**
-         * The settings that used when using the .str getter / setter
-         */
-        this.strDefaults = { stringType: "utf-8", terminateValue: 0x0 };
-        this.maxFileSize = null;
-        this.enforceBigInt = null;
-        this.view = null;
-        this.mode = 'file';
-        if (typeof Buffer === 'undefined' || typeof fs$1 == "undefined") {
-            throw new Error("Need node to read or write files.");
-        }
-        this.filePath = filePath;
-        this.mode = "file";
-        if (this.maxFileSize == null) {
-            this.maxFileSize = MAX_LENGTH$1();
-        }
-        if (readwrite) {
-            this.fsMode = "w+";
-        }
-    }
-    ;
-    /**
-     * Settings for when using .str
-     *
-     * @param {stringOptions} settings options to use with .str
-     */
-    set strSettings(settings) {
-        this.strDefaults.encoding = settings.encoding;
-        this.strDefaults.endian = settings.endian;
-        this.strDefaults.length = settings.length;
-        this.strDefaults.lengthReadSize = settings.lengthReadSize;
-        this.strDefaults.lengthWriteSize = settings.lengthWriteSize;
-        this.strDefaults.stringType = settings.stringType;
-        this.strDefaults.stripNull = settings.stripNull;
-        this.strDefaults.terminateValue = settings.terminateValue;
-    }
-    ;
-    /**
-     * Enabling write mode in reader.
-     *
-     * @param {boolean} writeMode - Enabling write mode in reader.
-     */
-    writeMode(writeMode) {
-        if (writeMode) {
-            this.fsMode = "w+";
-            this.close();
-            this.open();
-            return;
-        }
-        else {
-            this.fsMode = "r";
-            this.close();
-            this.open();
-            return;
-        }
-    }
-    ;
-    /**
-     * Opens the file. Must be run before reading or writing.
-     *
-     * @returns {number} file size
-     */
-    open() {
-        if (this.fd != null) {
-            return this.size;
-        }
-        if (bufferConstants$1 == undefined || fs$1 == undefined) {
-            throw new Error("Can't use BitFile without Node.");
-        }
-        if (this.maxFileSize == null) {
-            this.maxFileSize = MAX_LENGTH$1();
-        }
-        try {
-            this.fd = fs$1.openSync(this.filePath, this.fsMode);
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-        this.updateSize();
-        if (this.offset != undefined || this.bitoffset != undefined) {
-            this.offset = ((Math.abs(this.offset || 0)) + Math.ceil((Math.abs(this.bitoffset || 0)) / 8));
-            // Adjust byte offset based on bit overflow
-            this.offset += Math.floor((Math.abs(this.bitoffset || 0)) / 8);
-            // Adjust bit offset
-            this.bitoffset = Math.abs(normalizeBitOffset(this.bitoffset)) % 8;
-            // Ensure bit offset stays between 0-7
-            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
-            // Ensure offset doesn't go negative
-            this.offset = Math.max(this.offset, 0);
-            if (this.offset > this.size) {
-                if (this.strict == false) {
-                    this.extendArray(this.offset - this.size);
-                }
-                else {
-                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
-                }
-            }
-        }
-        return this.size;
-    }
-    ;
-    /**
-     * Internal update size
-     */
-    updateSize() {
-        if (fs$1 == undefined) {
-            throw new Error("Can't use BitFile without Node.");
-        }
-        if (this.fd !== null) {
-            try {
-                const stat = fs$1.fstatSync(this.fd);
-                this.size = stat.size;
-                this.sizeB = this.size * 8;
-            }
-            catch (error) {
-                throw new Error(error);
-            }
-        }
-    }
-    ;
-    /**
-     * Closes the file.
-     *
-     * @returns {void}
-     */
-    close() {
-        if (this.fd === null) {
-            return; // Already closed / or not open
-        }
-        if (fs$1 == undefined) {
-            throw new Error("Can't use BitFile without Node.");
-        }
-        try {
-            fs$1.closeSync(this.fd);
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-        this.fd = null;
-        return;
-    }
-    ;
-    /**
-     * Internal reader
-     *
-     * @param start this.offset
-     * @param length
-     * @param consume
-     * @returns
-     */
-    read(start, length, consume = false) {
-        this.open();
-        if (fs$1 == undefined) {
-            throw new Error("Can't use BitFile without Node.");
-        }
-        if (this.fd === null) {
-            throw new Error('File is not open yet.');
-        }
-        if (length < 1) {
-            return Buffer.alloc(0);
-        }
-        const end = start + length;
-        if (length > this.maxFileSize) {
-            throw new Error("File read is greater than Node's max buffer size: " + this.maxFileSize);
-        }
-        if (end > this.size) {
-            if (this.strict == false) {
-                this.extendArray(length);
-            }
-            else {
-                throw new Error('File read is outside data size while in strict mode.');
-            }
-        }
-        const data = Buffer.alloc(length);
-        try {
-            const bytesRead = fs$1.readSync(this.fd, data, 0, data.length, start);
-            if (bytesRead != length) {
-                throw new Error("Didn't read the amount needed for value: " + bytesRead + " of " + length);
-            }
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-        this.data = data;
-        if (consume) {
-            this.offset = start + data.length;
-            this.bitoffset = 0;
-        }
-        return this.data;
-    }
-    ;
-    /**
-     * Internal writer
-     *
-     * @param start - likely this.offset
-     * @param data
-     * @param consume
-     * @returns {number}
-     */
-    write(start, data, consume = false) {
-        this.open();
-        if (fs$1 == undefined) {
-            throw new Error("Can't use BitFile without Node.");
-        }
-        if (this.fd === null) {
-            throw new Error('File is not open yet.');
-        }
-        if (data.length < 1) {
-            return 0;
-        }
-        const end = start + data.length;
-        if (end > this.size) {
-            if (this.strict == false) {
-                this.extendArray(data.length);
-            }
-            else {
-                throw new Error('File write is outside of data size while in strict mode.');
-            }
-        }
-        var bytesWritten;
-        try {
-            bytesWritten = fs$1.writeSync(this.fd, new Uint8Array(data), 0, data.length, start);
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-        this.updateSize();
-        if (consume) {
-            this.offset = start + bytesWritten;
-        }
-        return bytesWritten;
-    }
-    ;
-    /**
-     * internal write commit
-     *
-     * @param consume
-     * @returns {number}
-     */
-    commit(consume = true) {
-        this.open();
-        if (!Buffer.isBuffer(this.data)) {
-            var data = Buffer.from(this.data);
-            return this.write(this.offset, data, consume);
-        }
-        else if (this.data === null) {
-            throw new Error("No data to write.");
-        }
-        return this.write(this.offset, this.data, consume);
-    }
-    ;
-    /**
-     * syncs the data to file
-     */
-    flush() {
-        if (this.fd) {
-            this.commit();
-        }
-    }
-    ;
-    /**
-     * Renames the file you are working on.
-     *
-     * Must be full file path and file name.
-     *
-     * Keeps write / read position.
-     *
-     * Note: This is permanent and can't be undone.
-     *
-     * @param {string} newFilePath - New full file path and name.
-     */
-    renameFile(newFilePath) {
-        try {
-            fs$1.closeSync(this.fd);
-            this.fd = null;
-            fs$1.renameSync(this.filePath, newFilePath);
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-        this.filePath = newFilePath;
-        this.open();
-    }
-    ;
-    /**
-     * Deletes the working file.
-     *
-     * Note: This is permanentand can't be undone.
-     *
-     * It doesn't send the file to the recycling bin for recovery.
-     */
-    deleteFile() {
-        try {
-            fs$1.closeSync(this.fd);
-            this.fd = null;
-            fs$1.unlinkSync(this.filePath);
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-    }
-    ;
-    /**
-     * internal extend
-     *
-     * @param length amount needed
-     * @returns {void}
-     */
-    extendArray(length) {
-        return extendarray$1(this, length);
-    }
-    ;
-    isBufferOrUint8Array(obj) {
-        return arrayBufferCheck(obj);
-    }
-    ;
-    /**
-     * Call this after everytime we set/replace `this.data`
-     */
-    updateView() {
-        if (this.data) {
-            this.view = new DataView(this.data.buffer, this.data.byteOffset ?? 0, this.data.byteLength);
-        }
-    }
-    ;
-    ///////////////////////////////
-    //         ENDIANNESS        //
-    ///////////////////////////////
-    /**
-     *
-     * Change endian, defaults to little.
-     *
-     * Can be changed at any time, doesn't loose position.
-     *
-     * @param {endian} endian - endianness ``big`` or ``little``
-     */
-    endianness(endian) {
-        if (endian == undefined || typeof endian != "string") {
-            throw new Error("Endian must be big or little");
-        }
-        if (endian != undefined && !(endian == "big" || endian == "little")) {
-            throw new Error("Endian must be big or little");
-        }
-        this.endian = endian;
-    }
-    ;
-    /**
-     * Sets endian to big.
-     */
-    bigEndian() {
-        this.endianness("big");
-    }
-    ;
-    /**
-     * Sets endian to big.
-     */
-    big() {
-        this.endianness("big");
-    }
-    ;
-    /**
-     * Sets endian to big.
-     */
-    be() {
-        this.endianness("big");
-    }
-    ;
-    /**
-     * Sets endian to little.
-     */
-    littleEndian() {
-        this.endianness("little");
-    }
-    ;
-    /**
-     * Sets endian to little.
-     */
-    little() {
-        this.endianness("little");
-    }
-    ;
-    /**
-     * Sets endian to little.
-     */
-    le() {
-        this.endianness("little");
-    }
-    ;
-    ///////////////////////////////
-    //            SIZE           //
-    ///////////////////////////////
-    /**
-     * Size in bytes of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get length() {
-        return this.size;
-    }
-    ;
-    /**
-     * Size in bytes of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get len() {
-        return this.size;
-    }
-    ;
-    /**
-     * Size in bytes of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get FileSize() {
-        return this.size;
-    }
-    ;
-    /**
-     * Size in bits of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get lengthB() {
-        return this.sizeB;
-    }
-    ;
-    /**
-     * Size in bits of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get FileSizeB() {
-        return this.sizeB;
-    }
-    ;
-    /**
-     * Size in bits of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get lenb() {
-        return this.sizeB;
-    }
-    ;
-    ///////////////////////////////
-    //         POSITION          //
-    ///////////////////////////////
-    /**
-     * Get the current byte position.
-     *
-     * @returns {number} current byte position
-     */
-    get tell() {
-        return this.offset;
-    }
-    ;
-    /**
-     * Get the current byte position.
-     *
-     * @returns {number} current byte position
-     */
-    get FTell() {
-        return this.offset;
-    }
-    ;
-    /**
-     * Get the current byte position.
-     *
-     * @returns {number} current byte position
-     */
-    get getOffset() {
-        return this.offset;
-    }
-    ;
-    /**
-     * Get the current byte position;
-     *
-     * @returns {number} current byte position
-     */
-    get saveOffset() {
-        return this.offset;
-    }
-    ;
-    /**
-     * Get the current byte position;
-     *
-     * @returns {number} current byte position
-     */
-    get off() {
-        return this.offset;
-    }
-    ;
-    /**
-     * Get the current bit position (0-7).
-     *
-     * @returns {number} current bit position
-     */
-    get getOffsetBit() {
-        return this.bitoffset;
-    }
-    ;
-    /**
-     * Get the current bit position (0-7).
-     *
-     * @returns {number} current bit position
-     */
-    get tellB() {
-        return this.bitoffset;
-    }
-    ;
-    /**
-     * Get the current bit position (0-7).
-     *
-     * @returns {number} current bit position
-     */
-    get FTellB() {
-        return this.bitoffset;
-    }
-    ;
-    /**
-     * Get the current bit position (0-7).
-     *
-     * @returns {number} current bit position
-     */
-    get offb() {
-        return this.bitoffset;
-    }
-    ;
-    /**
-     * Get the current absolute bit position (from start of data).
-     *
-     * @returns {number} current absolute bit position
-     */
-    get getOffsetAbsBit() {
-        return (this.offset * 8) + this.bitoffset;
-    }
-    ;
-    /**
-     * Get the current absolute bit position (from start of data).
-     *
-     * @returns {number} current bit position
-     */
-    get saveOffsetAbsBit() {
-        return (this.offset * 8) + this.bitoffset;
-    }
-    ;
-    /**
-     * Get the current absolute bit position (from start of data).
-     *
-     * @returns {number} current absolute bit position
-     */
-    get tellAbsB() {
-        return (this.offset * 8) + this.bitoffset;
-    }
-    ;
-    /**
-     * Get the current absolute bit position (from start of data).
-     *
-     * @returns {number} current absolute bit position
-     */
-    get saveOffsetBit() {
-        return (this.offset * 8) + this.bitoffset;
-    }
-    ;
-    /**
-     * Get the current absolute bit position (from start of data).
-     *
-     * @returns {number} current absolute bit position
-     */
-    get offab() {
-        return (this.offset * 8) + this.bitoffset;
-    }
-    ;
-    /**
-     * Size in bytes of current read position to the end
-     *
-     * @returns {number} size
-     */
-    get remain() {
-        return this.size - this.offset;
-    }
-    ;
-    /**
-     * Size in bytes of current read position to the end
-     *
-     * @returns {number} size
-     */
-    get FEoF() {
-        return this.size - this.offset;
-    }
-    ;
-    /**
-     * Size in bits of current read position to the end
-     *
-     * @returns {number} size
-     */
-    get remainB() {
-        return (this.size * 8) - this.saveOffsetAbsBit;
-    }
-    ;
-    /**
-     * Size in bits of current read position to the end
-     *
-     * @returns {number} size
-     */
-    get FEoFB() {
-        return (this.size * 8) - this.saveOffsetAbsBit;
-    }
-    ;
-    /**
-     * Row line of the file (16 bytes per row).
-     *
-     * @returns {number} size
-     */
-    get getLine() {
-        return Math.abs(Math.floor((this.offset - 1) / 16));
-    }
-    ;
-    /**
-     * Row line of the file (16 bytes per row).
-     *
-     * @returns {number} size
-     */
-    get row() {
-        return Math.abs(Math.floor((this.offset - 1) / 16));
-    }
-    ;
-    ///////////////////////////////
-    //        FINISHING          //
-    ///////////////////////////////
-    /**
-     * Returns current data.
-     *
-     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
-     *
-     * Use ``.data`` instead if you want the full buffer data.
-     *
-     * @returns {Buffer} ``Buffer``
-     */
-    get() {
-        if (this.extendBufferSize != 0) {
-            this.trim();
-        }
-        return this.data || Buffer.alloc(0);
-    }
-    ;
-    /**
-     * Returns current data.
-     *
-     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
-     *
-     * Use ``.data`` instead if you want the full buffer data.
-     *
-     * @returns {Buffer} ``Buffer``
-     */
-    return() {
-        return this.get();
-    }
-    ;
-    /**
-     * Creates hex dump string. Will console log or return string if set in options.
-     *
-     * @param {object} options
-     * @param {hexdumpOptions?} options - hex dump options
-     * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
-     * @param {number?} options.startByte - byte to start dump (default ``0``)
-     * @param {boolean?} options.suppressUnicode - Suppress unicode character preview for even columns.
-     * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
-     */
-    hexdump(options = {}) {
-        return hexDumpBase$1(this, options);
-    }
-    ;
-    /**
-     * Turn hexdump on error off (default on).
-     */
-    errorDumpOff() {
-        this.errorDump = false;
-    }
-    ;
-    /**
-     * Turn hexdump on error on (default on).
-     */
-    errorDumpOn() {
-        this.errorDump = true;
-    }
-    ;
-    ///////////////////////////////
-    //       STRICTMODE          //
-    ///////////////////////////////
-    /**
-     * Disallows extending data if position is outside of max size.
-     */
-    restrict() {
-        this.strict = true;
-    }
-    ;
-    /**
-     * Allows extending data if position is outside of max size.
-     */
-    unrestrict() {
-        this.strict = false;
-    }
-    ;
-    /**
-     * removes data.
-     */
-    end() {
-        this.data = null;
-        this.view = undefined;
-    }
-    ;
-    /**
-     * removes data.
-     */
-    done() {
-        this.end();
-    }
-    ;
-    /**
-     * removes data.
-     */
-    finished() {
-        this.end();
-    }
-    ;
-    ///////////////////////////////
-    //          FIND             //
-    ///////////////////////////////
-    /**
-     * Searches for byte position of string from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {string} string - String to search for.
-     */
-    findString(string) {
-        return fString$1(this, string);
-    }
-    ;
-    /**
-     * Searches for byte value (can be signed or unsigned) position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findByte(value, unsigned, endian) {
-        return fNumber$1(this, value, 8, unsigned == undefined ? true : unsigned, endian);
-    }
-    ;
-    /**
-     * Searches for short value (can be signed or unsigned) position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findShort(value, unsigned, endian) {
-        return fNumber$1(this, value, 16, unsigned == undefined ? true : unsigned, endian);
-    }
-    ;
-    /**
-     * Searches for integer value (can be signed or unsigned) position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findInt(value, unsigned, endian) {
-        return fNumber$1(this, value, 32, unsigned == undefined ? true : unsigned, endian);
-    }
-    ;
-    /**
-     * Searches for 64 bit value (can be signed or unsigned) position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {BigValue} value - Number to search for.
-     * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findInt64(value, unsigned, endian) {
-        return fBigInt$1(this, value, unsigned == undefined ? true : unsigned, endian);
-    }
-    ;
-    /**
-     * Searches for half float value position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findHalfFloat(value, endian) {
-        return fHalfFloat$1(this, value, endian);
-    }
-    ;
-    /**
-     * Searches for float value position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findFloat(value, endian) {
-        return fFloat$1(this, value, endian);
-    }
-    ;
-    /**
-     * Searches for double float value position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findDoubleFloat(value, endian) {
-        return fDoubleFloat$1(this, value, endian);
-    }
-    ;
-    ///////////////////////////////
-    //        MOVE TO            //
-    ///////////////////////////////
-    /**
-     * Aligns current byte position.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} number - Byte to align
-     */
-    align(number) {
-        return align$1(this, number);
-    }
-    ;
-    /**
-     * Reverse aligns current byte position.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} number - Byte to align
-     */
-    alignRev(number) {
-        return alignRev$1(this, number);
-    }
-    ;
-    /**
-     * Offset current byte or bit position.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} bytes - Bytes to skip
-     * @param {number} bits - Bits to skip
-     */
-    skip(bytes, bits) {
-        return skip$1(this, bytes, bits);
-    }
-    ;
-    /**
-    * Offset current byte or bit position.
-    *
-    * Note: Will extend array if strict mode is off and outside of max size.
-    *
-    * @param {number} bytes - Bytes to skip
-    * @param {number} bits - Bits to skip
-    */
-    jump(bytes, bits) {
-        this.skip(bytes, bits);
-    }
-    ;
-    /**
-     * Change position directly to address.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
-     */
-    FSeek(byte, bit) {
-        return goto$1(this, byte, bit);
-    }
-    ;
-    /**
-     * Offset current byte or bit position.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} bytes - Bytes to skip
-     * @param {number} bits - Bits to skip
-     */
-    seek(bytes, bits) {
-        return this.skip(bytes, bits);
-    }
-    ;
-    /**
-     * Change position directly to address.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
-     */
-    goto(byte, bit) {
-        return goto$1(this, byte, bit);
-    }
-    ;
-    /**
-     * Change position directly to address.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
-     */
-    pointer(byte, bit) {
-        return this.goto(byte, bit);
-    }
-    ;
-    /**
-     * Change position directly to address.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
-     */
-    warp(byte, bit) {
-        return this.goto(byte, bit);
-    }
-    ;
-    /**
-     * Set byte and bit position to start of data.
-     */
-    rewind() {
-        this.offset = 0;
-        this.bitoffset = 0;
-    }
-    ;
-    /**
-     * Set byte and bit position to start of data.
-     */
-    gotoStart() {
-        return this.rewind();
-    }
-    ;
-    /**
-     * Set current byte and bit position to end of data.
-     */
-    last() {
-        this.offset = this.size;
-        this.bitoffset = 0;
-    }
-    ;
-    /**
-     * Set current byte and bit position to end of data.
-     */
-    gotoEnd() {
-        this.last();
-    }
-    ;
-    /**
-     * Set byte and bit position to start of data.
-     */
-    EoF() {
-        this.last();
-    }
-    ;
-    ///////////////////////////////
-    //         REMOVE            //
-    ///////////////////////////////
-    /**
-     * Deletes part of data from start to current byte position unless supplied, returns removed.
-     *
-     * Note: Errors in strict mode.
-     *
-     * @param {number} startOffset - Start location (default 0)
-     * @param {number} endOffset - End location (default current position)
-     * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {Buffer} Removed data as ``Buffer``
-     */
-    delete(startOffset, endOffset, consume) {
-        return remove$1(this, startOffset || 0, endOffset || this.offset, consume || false, true);
-    }
-    ;
-    /**
-     * Deletes part of data from current byte position to end, returns removed.
-     *
-     * Note: Errors in strict mode.
-     *
-     * @returns {Buffer} Removed data as ``Buffer``
-     */
-    clip() {
-        return remove$1(this, this.offset, this.size, false, true);
-    }
-    ;
-    /**
-     * Deletes part of data from current byte position to end, returns removed.
-     *
-     * Note: Errors in strict mode.
-     *
-     * @returns {Buffer} Removed data as ``Buffer``
-     */
-    trim() {
-        return remove$1(this, this.offset, this.size, false, true);
-    }
-    ;
-    /**
-     * Deletes part of data from current byte position to supplied length, returns removed.
-     *
-     * Note: Errors in strict mode.
-     *
-     * @param {number} length - Length of data in bytes to remove
-     * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {Buffer} Removed data as ``Buffer``
-     */
-    crop(length, consume) {
-        return remove$1(this, this.offset, this.offset + (length || 0), consume || false, true);
-    }
-    ;
-    /**
-     * Deletes part of data from current position to supplied length, returns removed.
-     *
-     * Note: Only works in strict mode.
-     *
-     * @param {number} length - Length of data in bytes to remove
-     * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {Buffer} Removed data as ``Buffer``
-     */
-    drop(length, consume) {
-        return remove$1(this, this.offset, this.offset + (length || 0), consume || false, true);
-    }
-    ;
-    /**
-     * Replaces data in data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
-     * @param {boolean} consume - Move current byte position to end of data (default false)
-     * @param {number} offset - Offset to add it at (defaults to current position)
-     */
-    replace(data, consume, offset) {
-        return addData$1(this, data, consume || false, offset || this.offset, true);
-    }
-    ;
-    /**
-     * Replaces data in data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to replace in data
-     * @param {boolean} consume - Move current byte position to end of data (default false)
-     * @param {number} offset - Offset to add it at (defaults to current position)
-     */
-    overwrite(data, consume, offset) {
-        return addData$1(this, data, consume || false, offset || this.offset, true);
-    }
-    ;
-    ///////////////////////////////
-    //        COPY OUT           //
-    ///////////////////////////////
-    /**
-     * Returns part of data from current byte position to end of data unless supplied.
-     *
-     * @param {number} startOffset - Start location (default current position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move position to end of lifted data (default false)
-     * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {Buffer} Selected data as ``Buffer``
-     */
-    lift(startOffset, endOffset, consume, fillValue) {
-        return remove$1(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
-    }
-    ;
-    /**
-     * Returns part of data from current byte position to end of data unless supplied.
-     *
-     * @param {number} startOffset - Start location (default current position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move position to end of lifted data (default false)
-     * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {Buffer} Selected data as ``Buffer``
-     */
-    fill(startOffset, endOffset, consume, fillValue) {
-        return remove$1(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
-    }
-    ;
-    /**
-     * Extract data from current position to length supplied.
-     *
-     * Note: Does not affect supplied data.
-     *
-     * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
-     * @returns {Buffer} Selected data as ``Buffer``
-     */
-    extract(length, consume) {
-        return remove$1(this, this.offset, this.offset + (length || 0), consume || false, false);
-    }
-    ;
-    /**
-     * Extract data from current position to length supplied.
-     *
-     * Note: Does not affect supplied data.
-     *
-     * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
-     * @returns {Buffer} Selected data as ``Buffer``
-     */
-    slice(length, consume) {
-        return remove$1(this, this.offset, this.offset + (length || 0), consume || false, false);
-    }
-    ;
-    /**
-     * Extract data from current position to length supplied.
-     *
-     * Note: Does not affect supplied data.
-     *
-     * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
-     * @returns {Buffer|Uint8Array} Selected data or ``Buffer``
-     */
-    wrap(length, consume) {
-        return remove$1(this, this.offset, this.offset + (length || 0), consume || false, false);
-    }
-    ;
-    ///////////////////////////////
-    //          INSERT           //
-    ///////////////////////////////
-    /**
-     * Inserts data into data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current byte position to end of data (default false)
-     * @param {number} offset - Byte position to add at (defaults to current position)
-     */
-    insert(data, consume, offset) {
-        return addData$1(this, data, consume || false, offset || this.offset, false);
-    }
-    ;
-    /**
-     * Inserts data into data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current byte position to end of data (default false)
-     * @param {number} offset - Byte position to add at (defaults to current position)
-     */
-    place(data, consume, offset) {
-        return addData$1(this, data, consume || false, offset || this.offset, false);
-    }
-    ;
-    /**
-     * Adds data to start of supplied data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current write position to end of data (default false)
-     */
-    unshift(data, consume) {
-        return addData$1(this, data, consume || false, 0, false);
-    }
-    ;
-    /**
-     * Adds data to start of supplied data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current write position to end of data (default false)
-     */
-    prepend(data, consume) {
-        return addData$1(this, data, consume || false, 0, false);
-    }
-    ;
-    /**
-     * Adds data to end of supplied data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current write position to end of data (default false)
-     */
-    push(data, consume) {
-        return addData$1(this, data, consume || false, this.size, false);
-    }
-    ;
-    /**
-     * Adds data to end of supplied data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {Buffer|Uint8Array} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current write position to end of data (default false)
-     */
-    append(data, consume) {
-        return addData$1(this, data, consume || false, this.size, false);
-    }
-    ;
-    ///////////////////////////////
-    //          MATH             //
-    ///////////////////////////////
-    /**
-     * XOR data.
-     *
-     * @param {number|string|Uint8Array|Buffer} xorKey - Value, string or array to XOR
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    xor(xorKey, startOffset, endOffset, consume) {
-        var XORKey = xorKey;
-        if (typeof xorKey == "string") {
-            xorKey = new TextEncoder().encode(xorKey);
-        }
-        else if (!(this.isBufferOrUint8Array(XORKey) || typeof xorKey == "number")) {
-            throw new Error("XOR must be a number, string, Uint8Array or Buffer");
-        }
-        return XOR$1(this, xorKey, startOffset || this.offset, endOffset || this.size, consume || false);
-    }
-    ;
-    /**
-     * XOR data.
-     *
-     * @param {number|string|Uint8Array|Buffer} xorKey - Value, string or array to XOR
-     * @param {number} length - Length in bytes to XOR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    xorThis(xorKey, length, consume) {
-        var Length = length || 1;
-        var XORKey = xorKey;
-        if (typeof xorKey == "number") {
-            Length = length || 1;
-        }
-        else if (typeof xorKey == "string") {
-            const encoder = new TextEncoder().encode(xorKey);
-            XORKey = encoder;
-            Length = length || encoder.length;
-        }
-        else if (this.isBufferOrUint8Array(XORKey)) {
-            Length = length || xorKey.length;
-        }
-        else {
-            throw new Error("XOR must be a number, string, Uint8Array or Buffer");
-        }
-        return XOR$1(this, XORKey, this.offset, this.offset + Length, consume || false);
-    }
-    ;
-    /**
-     * OR data
-     *
-     * @param {number|string|Uint8Array|Buffer} orKey - Value, string or array to OR
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    or(orKey, startOffset, endOffset, consume) {
-        var ORKey = orKey;
-        if (typeof orKey == "string") {
-            orKey = new TextEncoder().encode(orKey);
-        }
-        else if (!(this.isBufferOrUint8Array(ORKey) || typeof orKey == "number")) {
-            throw new Error("OR must be a number, string, Uint8Array or Buffer");
-        }
-        return OR$1(this, orKey, startOffset || this.offset, endOffset || this.size, consume || false);
-    }
-    ;
-    /**
-     * OR data.
-     *
-     * @param {number|string|Uint8Array|Buffer} orKey - Value, string or array to OR
-     * @param {number} length - Length in bytes to OR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    orThis(orKey, length, consume) {
-        var Length = length || 1;
-        var ORKey = orKey;
-        if (typeof orKey == "number") {
-            Length = length || 1;
-        }
-        else if (typeof orKey == "string") {
-            const encoder = new TextEncoder().encode(orKey);
-            ORKey = encoder;
-            Length = length || encoder.length;
-        }
-        else if (this.isBufferOrUint8Array(ORKey)) {
-            Length = length || orKey.length;
-        }
-        else {
-            throw new Error("OR must be a number, string, Uint8Array or Buffer");
-        }
-        return OR$1(this, ORKey, this.offset, this.offset + Length, consume || false);
-    }
-    ;
-    /**
-     * AND data.
-     *
-     * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    and(andKey, startOffset, endOffset, consume) {
-        var ANDKey = andKey;
-        if (typeof ANDKey == "string") {
-            ANDKey = new TextEncoder().encode(ANDKey);
-        }
-        else if (!(typeof ANDKey == "object" || typeof ANDKey == "number")) {
-            throw new Error("AND must be a number, string, number array or Buffer");
-        }
-        return AND$1(this, andKey, startOffset || this.offset, endOffset || this.size, consume || false);
-    }
-    ;
-    /**
-     * AND data.
-     *
-     * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
-     * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    andThis(andKey, length, consume) {
-        var Length = length || 1;
-        var ANDKey = andKey;
-        if (typeof andKey == "number") {
-            Length = length || 1;
-        }
-        else if (typeof andKey == "string") {
-            const encoder = new TextEncoder().encode(andKey);
-            ANDKey = encoder;
-            Length = length || encoder.length;
-        }
-        else if (typeof andKey == "object") {
-            Length = length || andKey.length;
-        }
-        else {
-            throw new Error("AND must be a number, string, number array or Buffer");
-        }
-        return AND$1(this, ANDKey, this.offset, this.offset + Length, consume || false);
-    }
-    ;
-    /**
-     * Add value to data.
-     *
-     * @param {number|string|Uint8Array|Buffer} addKey - Value, string or array to add to data
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    add(addKey, startOffset, endOffset, consume) {
-        var addedKey = addKey;
-        if (typeof addedKey == "string") {
-            addedKey = new TextEncoder().encode(addedKey);
-        }
-        else if (!(typeof addedKey == "object" || typeof addedKey == "number")) {
-            throw new Error("Add key must be a number, string, number array or Buffer");
-        }
-        return ADD$1(this, addedKey, startOffset || this.offset, endOffset || this.size, consume || false);
-    }
-    ;
-    /**
-     * Add value to data.
-     *
-     * @param {number|string|Uint8Array|Buffer} addKey - Value, string or array to add to data
-     * @param {number} length - Length in bytes to add from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    addThis(addKey, length, consume) {
-        var Length = length || 1;
-        var AddedKey = addKey;
-        if (typeof AddedKey == "number") {
-            Length = length || 1;
-        }
-        else if (typeof AddedKey == "string") {
-            const encoder = new TextEncoder().encode(AddedKey);
-            AddedKey = encoder;
-            Length = length || encoder.length;
-        }
-        else if (typeof AddedKey == "object") {
-            Length = length || AddedKey.length;
-        }
-        else {
-            throw new Error("Add key must be a number, string, number array or Buffer");
-        }
-        return ADD$1(this, AddedKey, this.offset, this.offset + Length, consume || false);
-    }
-    ;
-    /**
-     * Not data.
-     *
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    not(startOffset, endOffset, consume) {
-        return NOT$1(this, startOffset || this.offset, endOffset || this.size, consume || false);
-    }
-    ;
-    /**
-     * Not data.
-     *
-     * @param {number} length - Length in bytes to NOT from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    notThis(length, consume) {
-        return NOT$1(this, this.offset, this.offset + (length || 1), consume || false);
-    }
-    ;
-    /**
-     * Left shift data.
-     *
-     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to left shift data
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    lShift(shiftKey, startOffset, endOffset, consume) {
-        var lShiftKey = shiftKey;
-        if (typeof lShiftKey == "string") {
-            lShiftKey = new TextEncoder().encode(lShiftKey);
-        }
-        else if (!(typeof lShiftKey == "object" || typeof lShiftKey == "number")) {
-            throw new Error("Left shift must be a number, string, number array or Buffer");
-        }
-        return LSHIFT$1(this, lShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
-    }
-    ;
-    /**
-     * Left shift data.
-     *
-     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to left shift data
-     * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    lShiftThis(shiftKey, length, consume) {
-        var Length = length || 1;
-        var lShiftKey = shiftKey;
-        if (typeof lShiftKey == "number") {
-            Length = length || 1;
-        }
-        else if (typeof lShiftKey == "string") {
-            const encoder = new TextEncoder().encode(lShiftKey);
-            lShiftKey = encoder;
-            Length = length || encoder.length;
-        }
-        else if (typeof lShiftKey == "object") {
-            Length = length || lShiftKey.length;
-        }
-        else {
-            throw new Error("Left shift must be a number, string, number array or Buffer");
-        }
-        return LSHIFT$1(this, shiftKey, this.offset, this.offset + Length, consume || false);
-    }
-    ;
-    /**
-     * Right shift data.
-     *
-     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to right shift data
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    rShift(shiftKey, startOffset, endOffset, consume) {
-        var rShiftKey = shiftKey;
-        if (typeof rShiftKey == "string") {
-            rShiftKey = new TextEncoder().encode(rShiftKey);
-        }
-        else if (!(typeof rShiftKey == "object" || typeof rShiftKey == "number")) {
-            throw new Error("Right shift must be a number, string, number array or Buffer");
-        }
-        return RSHIFT$1(this, rShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
-    }
-    ;
-    /**
-     * Right shift data.
-     *
-     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to right shift data
-     * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    rShiftThis(shiftKey, length, consume) {
-        var Length = length || 1;
-        var lShiftKey = shiftKey;
-        if (typeof lShiftKey == "number") {
-            Length = length || 1;
-        }
-        else if (typeof lShiftKey == "string") {
-            const encoder = new TextEncoder().encode(lShiftKey);
-            lShiftKey = encoder;
-            Length = length || encoder.length;
-        }
-        else if (typeof lShiftKey == "object") {
-            Length = length || lShiftKey.length;
-        }
-        else {
-            throw new Error("Right shift must be a number, string, number array or Buffer");
-        }
-        return RSHIFT$1(this, lShiftKey, this.offset, this.offset + Length, consume || false);
-    }
-    ;
-    ///////////////////////////////
-    //        BIT READER         //
-    ///////////////////////////////
-    /**
-     *
-     * Write bits, must have at least value and number of bits.
-     *
-     * ``Note``: When returning to a byte write, remaining bits are skipped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - number of bits to write
-     * @param {boolean} unsigned - if value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeBit(value, bits, unsigned, endian) {
-        return wbit$1(this, value, bits, unsigned, endian);
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @returns number
-     */
-    writeUBitBE(value, bits) {
-        return wbit$1(this, value, bits, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns number
-     */
-    writeBitBE(value, bits, unsigned) {
-        return wbit$1(this, value, bits, unsigned, "big");
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @returns number
-     */
-    writeUBitLE(value, bits) {
-        return wbit$1(this, value, bits, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns number
-     */
-    writeBitLE(value, bits, unsigned) {
-        return wbit$1(this, value, bits, unsigned, "little");
-    }
-    ;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
-     */
-    readBit(bits, unsigned, endian) {
-        return rbit$1(this, bits, unsigned, endian);
-    }
-    ;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @returns {number}
-     */
-    readUBitBE(bits) {
-        return this.readBit(bits, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
-     */
-    readBitBE(bits, unsigned) {
-        return this.readBit(bits, unsigned, "big");
-    }
-    ;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @returns {number}
-     */
-    readUBitLE(bits) {
-        return this.readBit(bits, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
-     */
-    readBitLE(bits, unsigned) {
-        return this.readBit(bits, unsigned, "little");
-    }
-    ;
-    /**
-     * Read byte.
-     *
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @returns {number}
-     */
-    readByte(unsigned) {
-        return rbyte$1(this, unsigned);
-    }
-    ;
-    /**
-     * Read multiple bytes.
-     *
-     * @param {number} amount - amount of bytes to read
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @returns {number[]}
-     */
-    readBytes(amount, unsigned) {
-        return Array.from({ length: amount }, () => rbyte$1(this, unsigned));
-    }
-    ;
-    /**
-     * Write byte.
-     *
-     * @param {number} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
-     */
-    writeByte(value, unsigned) {
-        return wbyte$1(this, value, unsigned);
-    }
-    ;
-    /**
-     * Write multiple bytes.
-     *
-     * @param {number[]} values - array of values as int
-     * @param {boolean} unsigned - if the value is unsigned
-     */
-    writeBytes(values, unsigned) {
-        for (let i = 0; i < values.length; i++) {
-            wbyte$1(this, values[i], unsigned);
-        }
-    }
-    ;
-    /**
-     * Write unsigned byte.
-     *
-     * @param {number} value - value as int
-     */
-    writeUByte(value) {
-        return wbyte$1(this, value, true);
-    }
-    ;
-    /**
-     * Read unsigned byte.
-     *
-     * @returns {number}
-     */
-    readUByte() {
-        return this.readByte(true);
-    }
-    ;
-    /**
-     * Read short.
-     *
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
-     */
-    readInt16(unsigned, endian) {
-        return rint16$1(this, unsigned, endian);
-    }
-    ;
-    /**
-     * Write int16.
-     *
-     * @param {number} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeInt16(value, unsigned, endian) {
-        return wint16$1(this, value, unsigned, endian);
-    }
-    ;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt16(value, endian) {
-        return wint16$1(this, value, true, endian);
-    }
-    ;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    writeUInt16BE(value) {
-        return this.writeInt16(value, true, "big");
-    }
-    ;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    writeUInt16LE(value) {
-        return this.writeInt16(value, true, "little");
-    }
-    ;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    writeInt16LE(value) {
-        return this.writeInt16(value, false, "little");
-    }
-    ;
-    /**
-     * Read unsigned short.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     *
-     * @returns {number}
-     */
-    readUInt16(endian) {
-        return this.readInt16(true, endian);
-    }
-    ;
-    /**
-     * Read unsigned short in little endian.
-     *
-     * @returns {number}
-     */
-    readUInt16LE() {
-        return this.readInt16(true, "little");
-    }
-    ;
-    /**
-     * Read signed short in little endian.
-     *
-     * @returns {number}
-     */
-    readInt16LE() {
-        return this.readInt16(false, "little");
-    }
-    ;
-    /**
-     * Read unsigned short in big endian.
-     *
-     * @returns {number}
-     */
-    readUInt16BE() {
-        return this.readInt16(true, "big");
-    }
-    ;
-    /**
-    * Read signed short in big endian.
-    *
-    * @returns {number}
-    */
-    readInt16BE() {
-        return this.readInt16(false, "big");
-    }
-    ;
-    /**
-     * Read half float.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
-     */
-    readHalfFloat(endian) {
-        return rhalffloat$1(this, endian);
-    }
-    ;
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeHalfFloat(value, endian) {
-        return whalffloat$1(this, value, endian);
-    }
-    ;
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    writeHalfFloatBE(value) {
-        return this.writeHalfFloat(value, "big");
-    }
-    ;
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    writeHalfFloatLE(value) {
-        return this.writeHalfFloat(value, "little");
-    }
-    ;
-    /**
-    * Read half float.
-    *
-    * @returns {number}
-    */
-    readHalfFloatBE() {
-        return this.readHalfFloat("big");
-    }
-    ;
-    /**
-     * Read half float.
-     *
-     * @returns {number}
-     */
-    readHalfFloatLE() {
-        return this.readHalfFloat("little");
-    }
-    ;
-    /**
-     * Read 32 bit integer.
-     *
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
-     */
-    readInt32(unsigned, endian) {
-        return rint32$1(this, unsigned, endian);
-    }
-    ;
-    /**
-     * Write int32.
-     *
-     * @param {number} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeInt32(value, unsigned, endian) {
-        return wint32$1(this, value, unsigned, endian);
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt32(value, endian) {
-        return wint32$1(this, value, true, endian);
-    }
-    ;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    writeInt32LE(value) {
-        return this.writeInt32(value, false, "little");
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    writeUInt32LE(value) {
-        return this.writeInt32(value, true, "little");
-    }
-    ;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    writeInt32BE(value) {
-        return this.writeInt32(value, false, "big");
-    }
-    ;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    readInt32BE() {
-        return this.readInt32(false, "big");
-    }
-    ;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    readUInt32BE() {
-        return this.readInt32(true, "big");
-    }
-    ;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    readInt32LE() {
-        return this.readInt32(false, "little");
-    }
-    ;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    readUInt32LE() {
-        return this.readInt32(true, "little");
-    }
-    ;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    readUInt() {
-        return this.readInt32(true);
-    }
-    ;
-    /**
-     * Read float.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
-     */
-    readFloat(endian) {
-        return rfloat$1(this, endian);
-    }
-    ;
-    /**
-     * Write float.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeFloat(value, endian) {
-        return wfloat$1(this, value, endian);
-    }
-    ;
-    /**
-     * Write float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloatLE(value) {
-        return this.writeFloat(value, "little");
-    }
-    ;
-    /**
-     * Write float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloatBE(value) {
-        return this.writeFloat(value, "big");
-    }
-    ;
-    /**
-     * Read float.
-     *
-     * @returns {number}
-     */
-    readFloatBE() {
-        return this.readFloat("big");
-    }
-    ;
-    /**
-     * Read float.
-     *
-     * @returns {number}
-     */
-    readFloatLE() {
-        return this.readFloat("little");
-    }
-    ;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @param {endian?} endian - ``big`` or ``little``
-     */
-    readInt64(unsigned, endian) {
-        return rint64$1(this, unsigned, endian);
-    }
-    ;
-    /**
-     * Write 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeInt64(value, unsigned, endian) {
-        return wint64$1(this, value, unsigned, endian);
-    }
-    ;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt64(value, endian) {
-        return this.writeInt64(value, true, endian);
-    }
-    ;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeInt64LE(value) {
-        return this.writeInt64(value, false, "little");
-    }
-    ;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeUInt64LE(value) {
-        return this.writeInt64(value, true, "little");
-    }
-    ;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeInt64BE(value) {
-        return this.writeInt64(value, false, "big");
-    }
-    ;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeUInt64BE(value) {
-        return this.writeInt64(value, true, "big");
-    }
-    ;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    readUInt64() {
-        return this.readInt64(true);
-    }
-    ;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    readInt64BE() {
-        return this.readInt64(false, "big");
-    }
-    ;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    readUInt64BE() {
-        return this.readInt64(true, "big");
-    }
-    ;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    readInt64LE() {
-        return this.readInt64(false, "little");
-    }
-    ;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    readUInt64LE() {
-        return this.readInt64(true, "little");
-    }
-    ;
-    /**
-     * Read double float.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
-     */
-    readDoubleFloat(endian) {
-        return rdfloat$1(this, endian);
-    }
-    ;
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeDoubleFloat(value, endian) {
-        return wdfloat$1(this, value, endian);
-    }
-    ;
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    writeDoubleFloatBE(value) {
-        return this.writeDoubleFloat(value, "big");
-    }
-    ;
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    writeDoubleFloatLE(value) {
-        return this.writeDoubleFloat(value, "little");
-    }
-    ;
-    /**
-     * Read double float.
-     *
-     * @returns {number}
-     */
-    readDoubleFloatBE() {
-        return this.readDoubleFloat("big");
-    }
-    ;
-    /**
-     * Read double float.
-     *
-     * @returns {number}
-     */
-    readDoubleFloatLE() {
-        return this.readDoubleFloat("little");
-    }
-    ;
-    /**
-    * Reads string, use options object for different types.
-    *
-    * @param {stringOptions} options
-    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
-    * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
-    * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
-    * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
-    * @returns {Promise<string>}
-    */
-    readString(options) {
-        return rstring$1(this, options);
-    }
-    ;
-    /**
-    * Writes string, use options object for different types.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions?} options
-    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
-    * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
-    * @param {stringOptions["lengthWriteSize"]?} options.lengthWriteSize - for pascal strings. 1, 2 or 4 byte length write size
-    * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
-    */
-    writeString(string, options) {
-        return wstring$1(this, string, options);
-    }
-    ;
-}
-_BiBaseLegacy_data = new WeakMap();
-
-/**
- * Read large files in older version of Node.js
- *
- * Binary reader, includes bitfields and strings.
- *
- * @param {string} filePath - Path to file
- * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
- * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
- *
- * @since 4.0
- */
-class BiReaderLegacy extends BiBaseLegacy {
-    /**
-     * Read large files in older version of Node.js
-     *
-     * Binary reader, includes bitfields and strings.
-     *
-     * @param {string} filePath - Path to file
-     * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
-     */
-    constructor(filePath, options = {}) {
-        super(filePath, options.writeable ?? false);
-        if (filePath == undefined) {
-            throw new Error("Can not start BiReaderLegacy without file path.");
-        }
-        this.strict = true;
-        this.enforceBigInt = (options?.enforceBigInt) ?? hasBigInt;
-        if (options.extendBufferSize != undefined &&
-            options.extendBufferSize != 0) {
-            this.extendBufferSize = options.extendBufferSize;
-        }
-        if (options.endianness != undefined &&
-            typeof options.endianness != "string") {
-            throw new Error("Endian must be big or little");
-        }
-        if (options.endianness != undefined &&
-            !(options.endianness == "big" || options.endianness == "little")) {
-            throw new Error("Byte order must be big or little");
-        }
-        this.endian = options.endianness || "little";
-        if (typeof options.strict == "boolean") {
-            this.strict = options.strict;
-        }
-        else {
-            if (options.strict != undefined) {
-                throw new Error("Strict mode must be true or false");
-            }
-        }
-        this.offset = options.byteOffset ?? 0;
-        this.bitoffset = options.bitOffset ?? 0;
-        if (options.byteOffset != undefined || options.bitOffset != undefined) {
-            this.offset = ((Math.abs(options.byteOffset || 0)) + Math.ceil((Math.abs(options.bitOffset || 0)) / 8));
-            // Adjust byte offset based on bit overflow
-            this.offset += Math.floor((Math.abs(options.bitOffset || 0)) / 8);
-            // Adjust bit offset
-            this.bitoffset = Math.abs(normalizeBitOffset(options.bitOffset)) % 8;
-            // Ensure bit offset stays between 0-7
-            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
-            // Ensure offset doesn't go negative
-            this.offset = Math.max(this.offset, 0);
-            if (this.offset > this.size) {
-                if (this.strict == false) {
-                    if (this.extendBufferSize != 0) {
-                        this.extendArray(this.extendBufferSize);
-                    }
-                    else {
-                        this.extendArray(this.offset - this.size);
-                    }
-                }
-                else {
-                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
-                }
-            }
-        }
-        this.open();
-    }
-    ;
-    //
-    // Bit Aliases
-    //
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
-     */
-    bit(bits, unsigned, endian) {
-        return this.readBit(bits, unsigned, endian);
-    }
-    ;
-    /**
-     * Bit field reader. Unsigned read.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
-     */
-    ubit(bits, endian) {
-        return this.readBit(bits, true, endian);
-    }
-    ;
-    /**
-     * Bit field reader. Unsigned big endian read.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @returns {number}
-     */
-    ubitbe(bits) {
-        return this.bit(bits, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Big endian read.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
-     */
-    bitbe(bits, unsigned) {
-        return this.bit(bits, unsigned, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Unsigned little endian read.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @returns {number}
-     */
-    ubitle(bits) {
-        return this.bit(bits, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Little endian read.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
-     */
-    bitle(bits, unsigned) {
-        return this.bit(bits, unsigned, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit1() {
-        return this.bit(1);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit1le() {
-        return this.bit(1, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit1be() {
-        return this.bit(1, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit1() {
-        return this.bit(1, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit1le() {
-        return this.bit(1, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit1be() {
-        return this.bit(1, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit2() {
-        return this.bit(2);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit2le() {
-        return this.bit(2, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit2be() {
-        return this.bit(2, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit2() {
-        return this.bit(2, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit2le() {
-        return this.bit(2, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit2be() {
-        return this.bit(2, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit3() {
-        return this.bit(3);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit3le() {
-        return this.bit(3, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit3be() {
-        return this.bit(3, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit3() {
-        return this.bit(3, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit3le() {
-        return this.bit(3, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit3be() {
-        return this.bit(3, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit4() {
-        return this.bit(4);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit4le() {
-        return this.bit(4, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit4be() {
-        return this.bit(4, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit4() {
-        return this.bit(4, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit4le() {
-        return this.bit(4, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit4be() {
-        return this.bit(4, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit5() {
-        return this.bit(5);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit5le() {
-        return this.bit(5, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit5be() {
-        return this.bit(5, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit5() {
-        return this.bit(5, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit5le() {
-        return this.bit(5, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit5be() {
-        return this.bit(5, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit6() {
-        return this.bit(6);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit6le() {
-        return this.bit(6, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit6be() {
-        return this.bit(6, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit6() {
-        return this.bit(6, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit6le() {
-        return this.bit(6, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit6be() {
-        return this.bit(6, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit7() {
-        return this.bit(7);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit7le() {
-        return this.bit(7, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit7be() {
-        return this.bit(7, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit7() {
-        return this.bit(7, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit7le() {
-        return this.bit(7, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit7be() {
-        return this.bit(7, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit8() {
-        return this.bit(8);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit8le() {
-        return this.bit(8, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit8be() {
-        return this.bit(8, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit8() {
-        return this.bit(8, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit8le() {
-        return this.bit(8, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit8be() {
-        return this.bit(8, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit9() {
-        return this.bit(9);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit9le() {
-        return this.bit(9, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit9be() {
-        return this.bit(9, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit9() {
-        return this.bit(9, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit9le() {
-        return this.bit(9, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit9be() {
-        return this.bit(9, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit10() {
-        return this.bit(10);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit10le() {
-        return this.bit(10, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit10be() {
-        return this.bit(10, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit10() {
-        return this.bit(10, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit10le() {
-        return this.bit(10, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit10be() {
-        return this.bit(10, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit11() {
-        return this.bit(11);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit11le() {
-        return this.bit(11, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit11be() {
-        return this.bit(11, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit11() {
-        return this.bit(11, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit11le() {
-        return this.bit(11, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit11be() {
-        return this.bit(11, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit12() {
-        return this.bit(12);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit12le() {
-        return this.bit(12, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit12be() {
-        return this.bit(12, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit12() {
-        return this.bit(12, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit12le() {
-        return this.bit(12, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit12be() {
-        return this.bit(12, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit13() {
-        return this.bit(13);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit13le() {
-        return this.bit(13, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit13be() {
-        return this.bit(13, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit13() {
-        return this.bit(13, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit13le() {
-        return this.bit(13, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit13be() {
-        return this.bit(13, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit14() {
-        return this.bit(14);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit14le() {
-        return this.bit(14, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit14be() {
-        return this.bit(14, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit14() {
-        return this.bit(14, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit14le() {
-        return this.bit(14, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit14be() {
-        return this.bit(14, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit15() {
-        return this.bit(15);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit15le() {
-        return this.bit(15, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit15be() {
-        return this.bit(15, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit15() {
-        return this.bit(15, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit15le() {
-        return this.bit(15, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit15be() {
-        return this.bit(15, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit16() {
-        return this.bit(16);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit16le() {
-        return this.bit(16, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit16be() {
-        return this.bit(16, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit16() {
-        return this.bit(16, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit16le() {
-        return this.bit(16, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit16be() {
-        return this.bit(16, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit17() {
-        return this.bit(17);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit17le() {
-        return this.bit(17, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit17be() {
-        return this.bit(17, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit17() {
-        return this.bit(17, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit17le() {
-        return this.bit(17, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit17be() {
-        return this.bit(17, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit18() {
-        return this.bit(18);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit18le() {
-        return this.bit(18, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit18be() {
-        return this.bit(18, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit18() {
-        return this.bit(18, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit18le() {
-        return this.bit(18, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit18be() {
-        return this.bit(18, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit19() {
-        return this.bit(19);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit19le() {
-        return this.bit(19, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit19be() {
-        return this.bit(19, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit19() {
-        return this.bit(19, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit19le() {
-        return this.bit(19, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit19be() {
-        return this.bit(19, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit20() {
-        return this.bit(20);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit20le() {
-        return this.bit(20, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit20be() {
-        return this.bit(20, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit20() {
-        return this.bit(20, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit20le() {
-        return this.bit(20, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit20be() {
-        return this.bit(20, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit21() {
-        return this.bit(21);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit21le() {
-        return this.bit(21, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit21be() {
-        return this.bit(21, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit21() {
-        return this.bit(21, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit21le() {
-        return this.bit(21, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit21be() {
-        return this.bit(21, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit22() {
-        return this.bit(22);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit22le() {
-        return this.bit(22, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit22be() {
-        return this.bit(22, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit22() {
-        return this.bit(22, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit22le() {
-        return this.bit(22, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit22be() {
-        return this.bit(22, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit23() {
-        return this.bit(23);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit23le() {
-        return this.bit(23, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit23be() {
-        return this.bit(23, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit23() {
-        return this.bit(23, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit23le() {
-        return this.bit(23, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit23be() {
-        return this.bit(23, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit24() {
-        return this.bit(24);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit24le() {
-        return this.bit(24, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit24be() {
-        return this.bit(24, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit24() {
-        return this.bit(24, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit24le() {
-        return this.bit(24, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit24be() {
-        return this.bit(24, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit25() {
-        return this.bit(25);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit25le() {
-        return this.bit(25, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit25be() {
-        return this.bit(25, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit25() {
-        return this.bit(25, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit25le() {
-        return this.bit(25, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit25be() {
-        return this.bit(25, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit26() {
-        return this.bit(26);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit26le() {
-        return this.bit(26, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit26be() {
-        return this.bit(26, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit26() {
-        return this.bit(26, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit26le() {
-        return this.bit(26, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit26be() {
-        return this.bit(26, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit27() {
-        return this.bit(27);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit27le() {
-        return this.bit(27, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit27be() {
-        return this.bit(27, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit27() {
-        return this.bit(27, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit27le() {
-        return this.bit(27, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit27be() {
-        return this.bit(27, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit28() {
-        return this.bit(28);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit28le() {
-        return this.bit(28, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit28be() {
-        return this.bit(28, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit28() {
-        return this.bit(28, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit28le() {
-        return this.bit(28, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit28be() {
-        return this.bit(28, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit29() {
-        return this.bit(29);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit29le() {
-        return this.bit(29, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit29be() {
-        return this.bit(29, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit29() {
-        return this.bit(29, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit29le() {
-        return this.bit(29, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit29be() {
-        return this.bit(29, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit30() {
-        return this.bit(30);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit30le() {
-        return this.bit(30, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit30be() {
-        return this.bit(30, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit30() {
-        return this.bit(30, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit30le() {
-        return this.bit(30, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit30be() {
-        return this.bit(30, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit31() {
-        return this.bit(31);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit31le() {
-        return this.bit(31, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit31be() {
-        return this.bit(31, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit31() {
-        return this.bit(31, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit31le() {
-        return this.bit(31, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit31be() {
-        return this.bit(31, true, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit32() {
-        return this.bit(32);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit32le() {
-        return this.bit(32, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit32be() {
-        return this.bit(32, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit32() {
-        return this.bit(32, true);
-    }
-    ;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit32le() {
-        return this.bit(32, true, "little");
-    }
-    ;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit32be() {
-        return this.bit(32, true, "big");
-    }
-    ;
-    //
-    // byte read
-    //
-    /**
-     * Read byte.
-     *
-     * @returns {number}
-     */
-    get byte() {
-        return this.readByte();
-    }
-    ;
-    /**
-     * Read byte.
-     *
-     * @returns {number}
-     */
-    get int8() {
-        return this.readByte();
-    }
-    ;
-    /**
-     * Read unsigned byte.
-     *
-     * @returns {number}
-     */
-    get uint8() {
-        return this.readByte(true);
-    }
-    ;
-    /**
-     * Read unsigned byte.
-     *
-     * @returns {number}
-     */
-    get ubyte() {
-        return this.readByte(true);
-    }
-    ;
-    //
-    //short16 read
-    //
-    /**
-     * Read short.
-     *
-     * @returns {number}
-     */
-    get int16() {
-        return this.readInt16();
-    }
-    ;
-    /**
-     * Read short.
-     *
-     * @returns {number}
-     */
-    get short() {
-        return this.readInt16();
-    }
-    ;
-    /**
-     * Read short.
-     *
-     * @returns {number}
-     */
-    get word() {
-        return this.readInt16();
-    }
-    ;
-    /**
-     * Read unsigned short.
-     *
-     * @returns {number}
-     */
-    get uint16() {
-        return this.readInt16(true);
-    }
-    ;
-    /**
-     * Read unsigned short.
-     *
-     * @returns {number}
-     */
-    get ushort() {
-        return this.readInt16(true);
-    }
-    ;
-    /**
-     * Read unsigned short.
-     *
-     * @returns {number}
-     */
-    get uword() {
-        return this.readInt16(true);
-    }
-    ;
-    /**
-     * Read unsigned short in little endian.
-     *
-     * @returns {number}
-     */
-    get uint16le() {
-        return this.readInt16(true, "little");
-    }
-    ;
-    /**
-     * Read unsigned short in little endian.
-     *
-     * @returns {number}
-     */
-    get ushortle() {
-        return this.readInt16(true, "little");
-    }
-    ;
-    /**
-     * Read unsigned short in little endian.
-     *
-     * @returns {number}
-     */
-    get uwordle() {
-        return this.readInt16(true, "little");
-    }
-    ;
-    /**
-     * Read signed short in little endian.
-     *
-     * @returns {number}
-     */
-    get int16le() {
-        return this.readInt16(false, "little");
-    }
-    ;
-    /**
-     * Read signed short in little endian.
-     *
-     * @returns {number}
-     */
-    get shortle() {
-        return this.readInt16(false, "little");
-    }
-    ;
-    /**
-     * Read signed short in little endian.
-     *
-     * @returns {number}
-     */
-    get wordle() {
-        return this.readInt16(false, "little");
-    }
-    ;
-    /**
-     * Read unsigned short in big endian.
-     *
-     * @returns {number}
-     */
-    get uint16be() {
-        return this.readInt16(true, "big");
-    }
-    ;
-    /**
-     * Read unsigned short in big endian.
-     *
-     * @returns {number}
-     */
-    get ushortbe() {
-        return this.readInt16(true, "big");
-    }
-    ;
-    /**
-     * Read unsigned short in big endian.
-     *
-     * @returns {number}
-     */
-    get uwordbe() {
-        return this.readInt16(true, "big");
-    }
-    ;
-    /**
-     * Read signed short in big endian.
-     *
-     * @returns {number}
-     */
-    get int16be() {
-        return this.readInt16(false, "big");
-    }
-    ;
-    /**
-     * Read signed short in big endian.
-     *
-     * @returns {number}
-     */
-    get shortbe() {
-        return this.readInt16(false, "big");
-    }
-    ;
-    /**
-     * Read signed short in big endian.
-     *
-     * @returns {number}
-     */
-    get wordbe() {
-        return this.readInt16(false, "big");
-    }
-    ;
-    //
-    //half float read
-    //
-    /**
-     * Read half float.
-     *
-     * @returns {number}
-     */
-    get halffloat() {
-        return this.readHalfFloat();
-    }
-    ;
-    /**
-     * Read half float
-     *
-     * @returns {number}
-     */
-    get half() {
-        return this.readHalfFloat();
-    }
-    ;
-    /**
-     * Read half float.
-     *
-     * @returns {number}
-     */
-    get halffloatbe() {
-        return this.readHalfFloat("big");
-    }
-    ;
-    /**
-     * Read half float.
-     *
-     * @returns {number}
-     */
-    get halfbe() {
-        return this.readHalfFloat("big");
-    }
-    ;
-    /**
-     * Read half float.
-     *
-     * @returns {number}
-     */
-    get halffloatle() {
-        return this.readHalfFloat("little");
-    }
-    ;
-    /**
-     * Read half float.
-     *
-     * @returns {number}
-     */
-    get halfle() {
-        return this.readHalfFloat("little");
-    }
-    ;
-    //
-    //int read
-    //
-    /**
-     * Read 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get int() {
-        return this.readInt32();
-    }
-    ;
-    /**
-     * Read 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get double() {
-        return this.readInt32();
-    }
-    ;
-    /**
-     * Read 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get int32() {
-        return this.readInt32();
-    }
-    ;
-    /**
-     * Read 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get long() {
-        return this.readInt32();
-    }
-    ;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get uint() {
-        return this.readInt32(true);
-    }
-    ;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get udouble() {
-        return this.readInt32(true);
-    }
-    ;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get uint32() {
-        return this.readInt32(true);
-    }
-    ;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get ulong() {
-        return this.readInt32(true);
-    }
-    ;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get intbe() {
-        return this.readInt32(false, "big");
-    }
-    ;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get doublebe() {
-        return this.readInt32(false, "big");
-    }
-    ;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get int32be() {
-        return this.readInt32(false, "big");
-    }
-    ;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get longbe() {
-        return this.readInt32(false, "big");
-    }
-    ;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get uintbe() {
-        return this.readInt32(true, "big");
-    }
-    ;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get udoublebe() {
-        return this.readInt32(true, "big");
-    }
-    ;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get uint32be() {
-        return this.readInt32(true, "big");
-    }
-    ;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get ulongbe() {
-        return this.readInt32(true, "big");
-    }
-    ;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get intle() {
-        return this.readInt32(false, "little");
-    }
-    ;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get doublele() {
-        return this.readInt32(false, "little");
-    }
-    ;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get int32le() {
-        return this.readInt32(false, "little");
-    }
-    ;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get longle() {
-        return this.readInt32(false, "little");
-    }
-    ;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get uintle() {
-        return this.readInt32(true, "little");
-    }
-    ;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get udoublele() {
-        return this.readInt32(true, "little");
-    }
-    ;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get uint32le() {
-        return this.readInt32(true, "little");
-    }
-    ;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get ulongle() {
-        return this.readInt32(true, "little");
-    }
-    ;
-    //
-    //float read
-    //
-    /**
-     * Read float.
-     *
-     * @returns {number}
-     */
-    get float() {
-        return this.readFloat();
-    }
-    ;
-    /**
-     * Read float.
-     *
-     * @returns {number}
-     */
-    get floatbe() {
-        return this.readFloat("big");
-    }
-    ;
-    /**
-     * Read float.
-     *
-     * @returns {number}
-     */
-    get floatle() {
-        return this.readFloat("little");
-    }
-    ;
-    //
-    //int64 reader
-    //
-    /**
-     * Read signed 64 bit integer
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get int64() {
-        return this.readInt64();
-    }
-    ;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get bigint() {
-        return this.readInt64();
-    }
-    ;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get quad() {
-        return this.readInt64();
-    }
-    ;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get uint64() {
-        return this.readInt64(true);
-    }
-    ;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get ubigint() {
-        return this.readInt64(true);
-    }
-    ;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get uquad() {
-        return this.readInt64(true);
-    }
-    ;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get int64be() {
-        return this.readInt64(false, "big");
-    }
-    ;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get bigintbe() {
-        return this.readInt64(false, "big");
-    }
-    ;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get quadbe() {
-        return this.readInt64(false, "big");
-    }
-    ;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get uint64be() {
-        return this.readInt64(true, "big");
-    }
-    ;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get ubigintbe() {
-        return this.readInt64(true, "big");
-    }
-    ;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get uquadbe() {
-        return this.readInt64(true, "big");
-    }
-    ;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get int64le() {
-        return this.readInt64(false, "little");
-    }
-    ;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get bigintle() {
-        return this.readInt64(false, "little");
-    }
-    ;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get quadle() {
-        return this.readInt64(false, "little");
-    }
-    ;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get uint64le() {
-        return this.readInt64(true, "little");
-    }
-    ;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get ubigintle() {
-        return this.readInt64(true, "little");
-    }
-    ;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get uquadle() {
-        return this.readInt64(true, "little");
-    }
-    ;
-    //
-    //doublefloat reader
-    //
-    /**
-     * Read double float.
-     *
-     * @returns {number}
-     */
-    get doublefloat() {
-        return this.readDoubleFloat();
-    }
-    ;
-    /**
-     * Read double float.
-     *
-     * @returns {number}
-     */
-    get dfloat() {
-        return this.readDoubleFloat();
-    }
-    ;
-    /**
-     * Read double float.
-     *
-     * @returns {number}
-     */
-    get dfloatbe() {
-        return this.readDoubleFloat("big");
-    }
-    ;
-    /**
-     * Read double float.
-     *
-     * @returns {number}
-     */
-    get doublefloatbe() {
-        return this.readDoubleFloat("big");
-    }
-    ;
-    /**
-     * Read double float.
-     *
-     * @returns {number}
-     */
-    get dfloatle() {
-        return this.readDoubleFloat("little");
-    }
-    ;
-    /**
-     * Read double float.
-     *
-     * @returns {number}
-     */
-    get doublefloatle() {
-        return this.readDoubleFloat("little");
-    }
-    ;
-    //
-    //string reader
-    //
-    /**
-    * Reads string, use options object for different types.
-    *
-    * @param {stringOptions} options
-    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
-    * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
-    * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
-    * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
-    * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
-    * @returns {string}
-    */
-    string(options) {
-        return this.readString(options);
-    }
-    ;
-    /**
-    * Reads string using setting from .strSettings
-    *
-    * Default is ``utf-8``
-    *
-    * @returns {string}
-    */
-    get str() {
-        return this.readString(this.strSettings);
-    }
-    ;
-    /**
-    * Reads UTF-8 (C) string.
-    *
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    utf8string(length, terminateValue, stripNull) {
-        return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads UTF-8 (C) string.
-    *
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    cstring(length, terminateValue, stripNull) {
-        return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads ANSI string.
-    *
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    ansistring(length, terminateValue, stripNull) {
-        return this.string({ stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue, stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads UTF-16 (Unicode) string.
-    *
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    *
-    * @returns {string}
-    */
-    utf16string(length, terminateValue, stripNull, endian) {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads UTF-16 (Unicode) string.
-    *
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    *
-    * @returns {string}
-    */
-    unistring(length, terminateValue, stripNull, endian) {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads UTF-16 (Unicode) string in little endian order.
-    *
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    utf16stringle(length, terminateValue, stripNull) {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads UTF-16 (Unicode) string in little endian order.
-    *
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    unistringle(length, terminateValue, stripNull) {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads UTF-16 (Unicode) string in big endian order.
-    *
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    utf16stringbe(length, terminateValue, stripNull) {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads UTF-16 (Unicode) string in big endian order.
-    *
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    unistringbe(length, terminateValue, stripNull) {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads Pascal string.
-    *
-    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    *
-    * @returns {string}
-    */
-    pstring(lengthReadSize, stripNull, endian) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
-    }
-    ;
-    /**
-    * Reads Pascal string 1 byte length read.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    *
-    * @returns {string}
-    */
-    pstring1(stripNull, endian) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: endian });
-    }
-    ;
-    /**
-    * Reads Pascal string 1 byte length read in little endian order.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    pstring1le(stripNull) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "little" });
-    }
-    ;
-    /**
-    * Reads Pascal string 1 byte length read in big endian order.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    pstring1be(stripNull) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "big" });
-    }
-    ;
-    /**
-    * Reads Pascal string 2 byte length read.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    *
-    * @returns {string}
-    */
-    pstring2(stripNull, endian) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: endian });
-    }
-    ;
-    /**
-    * Reads Pascal string 2 byte length read in little endian order.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    pstring2le(stripNull) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "little" });
-    }
-    ;
-    /**
-    * Reads Pascal string 2 byte length read in big endian order.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    pstring2be(stripNull) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "big" });
-    }
-    ;
-    /**
-    * Reads Pascal string 4 byte length read.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    *
-    * @returns {string}
-    */
-    pstring4(stripNull, endian) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: endian });
-    }
-    ;
-    /**
-    * Reads Pascal string 4 byte length read in little endian order.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    pstring4le(stripNull) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "little" });
-    }
-    ;
-    /**
-    * Reads Pascal string 4 byte length read in big endian order.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    pstring4be(stripNull) {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "big" });
-    }
-    ;
-    /**
-    * Reads Wide-Pascal string.
-    *
-    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    *
-    * @returns {string}
-    */
-    wpstring(lengthReadSize, stripNull, endian) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: lengthReadSize, endian: endian, stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads Wide-Pascal string 1 byte length read.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    *
-    * @returns {string}
-    */
-    wpstring1(stripNull, endian) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: endian, stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads Wide-Pascal string 1 byte length read in little endian order.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    wpstring1le(stripNull) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "little", stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads Wide-Pascal string 1 byte length read in big endian order.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    wpstring1be(stripNull) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "big", stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads Wide-Pascal string 2 byte length read.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    *
-    * @returns {string}
-    */
-    wpstring2(stripNull, endian) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: endian, stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads Wide-Pascal string 2 byte length read in little endian order.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    wpstring2le(stripNull) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "little", stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads Wide-Pascal string 2 byte length read in big endian order.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    wpstring2be(stripNull) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "big", stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads Wide-Pascal string 4 byte length read.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    *
-    * @returns {string}
-    */
-    wpstring4(stripNull, endian) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: endian, stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads Wide-Pascal string 4 byte length read in big endian order.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    wpstring4be(stripNull) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "big", stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads Wide-Pascal string 4 byte length read in little endian order.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {string}
-    */
-    wpstring4le(stripNull) {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "little", stripNull: stripNull });
-    }
-    ;
-}
-
-/**
- * Write large files in older version of Node.js
- *
- * Binary writer, includes bitfields and strings.
- *
- * Note: Must start with .open() before writing.
- *
- * @param {string} filePath - Path to file
- * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
- * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
- *
- * @since 4.0
- */
-class BiWriterLegacy extends BiBaseLegacy {
-    /**
-     * Write large files in older version of Node.js
-     *
-     * Binary writer, includes bitfields and strings.
-     *
-     * Note: Must start with .open() before writing.
-     *
-     * @param {string} filePath - Path to file
-     * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
-     */
-    constructor(filePath, options = {}) {
-        super(filePath, options.writeable ?? true);
-        this.strict = false;
-        if (filePath == undefined) {
-            throw new Error("Can not start BiWriterLegacy without file path.");
-        }
-        if (options.extendBufferSize != undefined &&
-            options.extendBufferSize != 0) {
-            this.extendBufferSize = options.extendBufferSize;
-        }
-        this.enforceBigInt = (options?.enforceBigInt) ?? hasBigInt;
-        if (typeof options.strict == "boolean") {
-            this.strict = options.strict;
-        }
-        else {
-            if (options.strict != undefined) {
-                throw new Error("Strict mode must be true or false.");
-            }
-        }
-        this.endian = options.endianness || "little";
-        if (options.endianness != undefined && typeof options.endianness != "string") {
-            throw new Error("endianness must be big or little.");
-        }
-        if (options.endianness != undefined &&
-            !(options.endianness == "big" || options.endianness == "little")) {
-            throw new Error("Endianness must be big or little.");
-        }
-        this.offset = options.byteOffset ?? 0;
-        this.bitoffset = options.bitOffset ?? 0;
-        if (options.byteOffset != undefined || options.bitOffset != undefined) {
-            this.offset = ((Math.abs(options.byteOffset || 0)) + Math.ceil((Math.abs(options.bitOffset || 0)) / 8));
-            // Adjust byte offset based on bit overflow
-            this.offset += Math.floor((Math.abs(options.bitOffset || 0)) / 8);
-            // Adjust bit offset
-            this.bitoffset = Math.abs(normalizeBitOffset(options.bitOffset)) % 8;
-            // Ensure bit offset stays between 0-7
-            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
-            // Ensure offset doesn't go negative
-            this.offset = Math.max(this.offset, 0);
-            if (this.offset > this.size) {
-                if (this.strict == false) {
-                    if (this.extendBufferSize != 0) {
-                        this.extendArray(this.extendBufferSize);
-                    }
-                    else {
-                        this.extendArray(this.offset - this.size);
-                    }
-                }
-                else {
-                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
-                }
-            }
-        }
-        this.open();
-    }
-    ;
-    //
-    // Bit Aliases
-    //
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
-     */
-    bit(value, bits, unsigned, endian) {
-        return this.writeBit(value, bits, unsigned, endian);
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
-     */
-    ubit(value, bits, endian) {
-        return this.writeBit(value, bits, true, endian);
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
-     */
-    bitbe(value, bits, unsigned) {
-        return this.bit(value, bits, unsigned, "big");
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @returns {number}
-     */
-    ubitbe(value, bits) {
-        return this.bit(value, bits, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @returns {number}
-     */
-    ubitle(value, bits) {
-        return this.bit(value, bits, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
-     */
-    bitle(value, bits, unsigned) {
-        return this.bit(value, bits, unsigned, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit1(value) {
-        this.bit(value, 1);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit1le(value) {
-        this.bit(value, 1, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit1be(value) {
-        this.bit(value, 1, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit1(value) {
-        this.bit(value, 1, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit1le(value) {
-        this.bit(value, 1, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit1be(value) {
-        this.bit(value, 1, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit2(value) {
-        this.bit(value, 2);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit2le(value) {
-        this.bit(value, 2, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit2be(value) {
-        this.bit(value, 2, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit2(value) {
-        this.bit(value, 2, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit2le(value) {
-        this.bit(value, 2, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit2be(value) {
-        this.bit(value, 2, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit3(value) {
-        this.bit(value, 3);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit3le(value) {
-        this.bit(value, 3, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit3be(value) {
-        this.bit(value, 3, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit3(value) {
-        this.bit(value, 3, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit3le(value) {
-        this.bit(value, 3, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit3be(value) {
-        this.bit(value, 3, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit4(value) {
-        this.bit(value, 4);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit4le(value) {
-        this.bit(value, 4, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit4be(value) {
-        this.bit(value, 4, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit4(value) {
-        this.bit(value, 4, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit4le(value) {
-        this.bit(value, 4, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit4be(value) {
-        this.bit(value, 4, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit5(value) {
-        this.bit(value, 5);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit5le(value) {
-        this.bit(value, 5, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit5be(value) {
-        this.bit(value, 5, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit5(value) {
-        this.bit(value, 5, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit5le(value) {
-        this.bit(value, 5, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit5be(value) {
-        this.bit(value, 5, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit6(value) {
-        this.bit(value, 6);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit6le(value) {
-        this.bit(value, 6, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit6be(value) {
-        this.bit(value, 6, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit6(value) {
-        this.bit(value, 6, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit6le(value) {
-        this.bit(value, 6, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit6be(value) {
-        this.bit(value, 6, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit7(value) {
-        this.bit(value, 7);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit7le(value) {
-        this.bit(value, 7, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit7be(value) {
-        this.bit(value, 7, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit7(value) {
-        this.bit(value, 7, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit7le(value) {
-        this.bit(value, 7, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit7be(value) {
-        this.bit(value, 7, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit8(value) {
-        this.bit(value, 8);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit8le(value) {
-        this.bit(value, 8, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit8be(value) {
-        this.bit(value, 8, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit8(value) {
-        this.bit(value, 8, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit8le(value) {
-        this.bit(value, 8, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit8be(value) {
-        this.bit(value, 8, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit9(value) {
-        this.bit(value, 9);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit9le(value) {
-        this.bit(value, 9, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit9be(value) {
-        this.bit(value, 9, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit9(value) {
-        this.bit(value, 9, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit9le(value) {
-        this.bit(value, 9, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit9be(value) {
-        this.bit(value, 9, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit10(value) {
-        this.bit(value, 10);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit10le(value) {
-        this.bit(value, 10, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit10be(value) {
-        this.bit(value, 10, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit10(value) {
-        this.bit(value, 10, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit10le(value) {
-        this.bit(value, 10, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit10be(value) {
-        this.bit(value, 10, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit11(value) {
-        this.bit(value, 11);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit11le(value) {
-        this.bit(value, 11, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit11be(value) {
-        this.bit(value, 11, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit11(value) {
-        this.bit(value, 11, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit11le(value) {
-        this.bit(value, 11, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit11be(value) {
-        this.bit(value, 11, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit12(value) {
-        this.bit(value, 12);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit12le(value) {
-        this.bit(value, 12, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit12be(value) {
-        this.bit(value, 12, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit12(value) {
-        this.bit(value, 12, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit12le(value) {
-        this.bit(value, 12, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit12be(value) {
-        this.bit(value, 12, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit13(value) {
-        this.bit(value, 13);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit13le(value) {
-        this.bit(value, 13, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit13be(value) {
-        this.bit(value, 13, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit13(value) {
-        this.bit(value, 13, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit13le(value) {
-        this.bit(value, 13, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit13be(value) {
-        this.bit(value, 13, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit14(value) {
-        this.bit(value, 14);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit14le(value) {
-        this.bit(value, 14, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit14be(value) {
-        this.bit(value, 14, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit14(value) {
-        this.bit(value, 14, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit14le(value) {
-        this.bit(value, 14, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit14be(value) {
-        this.bit(value, 14, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit15(value) {
-        this.bit(value, 15);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit15le(value) {
-        this.bit(value, 15, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit15be(value) {
-        this.bit(value, 15, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit15(value) {
-        this.bit(value, 15, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit15le(value) {
-        this.bit(value, 15, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit15be(value) {
-        this.bit(value, 15, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit16(value) {
-        this.bit(value, 16);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit16le(value) {
-        this.bit(value, 16, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit16be(value) {
-        this.bit(value, 16, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit16(value) {
-        this.bit(value, 16, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit16le(value) {
-        this.bit(value, 16, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit16be(value) {
-        this.bit(value, 16, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit17(value) {
-        this.bit(value, 17);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit17le(value) {
-        this.bit(value, 17, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit17be(value) {
-        this.bit(value, 17, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit17(value) {
-        this.bit(value, 17, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit17le(value) {
-        this.bit(value, 17, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit17be(value) {
-        this.bit(value, 17, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit18(value) {
-        this.bit(value, 18);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit18le(value) {
-        this.bit(value, 18, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit18be(value) {
-        this.bit(value, 18, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit18(value) {
-        this.bit(value, 18, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit18le(value) {
-        this.bit(value, 18, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit18be(value) {
-        this.bit(value, 18, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit19(value) {
-        this.bit(value, 19);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit19le(value) {
-        this.bit(value, 19, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit19be(value) {
-        this.bit(value, 19, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit19(value) {
-        this.bit(value, 19, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit19le(value) {
-        this.bit(value, 19, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit19be(value) {
-        this.bit(value, 19, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit20(value) {
-        this.bit(value, 20);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit20le(value) {
-        this.bit(value, 20, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit20be(value) {
-        this.bit(value, 20, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit20(value) {
-        this.bit(value, 20, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit20le(value) {
-        this.bit(value, 20, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit20be(value) {
-        this.bit(value, 20, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit21(value) {
-        this.bit(value, 21);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit21le(value) {
-        this.bit(value, 21, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit21be(value) {
-        this.bit(value, 21, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit21(value) {
-        this.bit(value, 21, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit21le(value) {
-        this.bit(value, 21, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit21be(value) {
-        this.bit(value, 21, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit22(value) {
-        this.bit(value, 22);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit22le(value) {
-        this.bit(value, 22, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit22be(value) {
-        this.bit(value, 22, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit22(value) {
-        this.bit(value, 22, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit22le(value) {
-        this.bit(value, 22, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit22be(value) {
-        this.bit(value, 22, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit23(value) {
-        this.bit(value, 23);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit23le(value) {
-        this.bit(value, 23, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit23be(value) {
-        this.bit(value, 23, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit23(value) {
-        this.bit(value, 23, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit23le(value) {
-        this.bit(value, 23, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit23be(value) {
-        this.bit(value, 23, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit24(value) {
-        this.bit(value, 24);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit24le(value) {
-        this.bit(value, 24, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit24be(value) {
-        this.bit(value, 24, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit24(value) {
-        this.bit(value, 24, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit24le(value) {
-        this.bit(value, 24, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit24be(value) {
-        this.bit(value, 24, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit25(value) {
-        this.bit(value, 25);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit25le(value) {
-        this.bit(value, 25, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit25be(value) {
-        this.bit(value, 25, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit25(value) {
-        this.bit(value, 25, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit25le(value) {
-        this.bit(value, 25, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit25be(value) {
-        this.bit(value, 25, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit26(value) {
-        this.bit(value, 26);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit26le(value) {
-        this.bit(value, 26, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit26be(value) {
-        this.bit(value, 26, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit26(value) {
-        this.bit(value, 26, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit26le(value) {
-        this.bit(value, 26, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit26be(value) {
-        this.bit(value, 26, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit27(value) {
-        this.bit(value, 27);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit27le(value) {
-        this.bit(value, 27, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit27be(value) {
-        this.bit(value, 27, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit27(value) {
-        this.bit(value, 27, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit27le(value) {
-        this.bit(value, 27, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit27be(value) {
-        this.bit(value, 27, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit28(value) {
-        this.bit(value, 28);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit28le(value) {
-        this.bit(value, 28, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit28be(value) {
-        this.bit(value, 28, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit28(value) {
-        this.bit(value, 28, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit28le(value) {
-        this.bit(value, 28, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit28be(value) {
-        this.bit(value, 28, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit29(value) {
-        this.bit(value, 29);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit29le(value) {
-        this.bit(value, 29, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit29be(value) {
-        this.bit(value, 29, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit29(value) {
-        this.bit(value, 29, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit29le(value) {
-        this.bit(value, 29, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit29be(value) {
-        this.bit(value, 29, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit30(value) {
-        this.bit(value, 30);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit30le(value) {
-        this.bit(value, 30, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit30be(value) {
-        this.bit(value, 30, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit30(value) {
-        this.bit(value, 30, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit30le(value) {
-        this.bit(value, 30, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit30be(value) {
-        this.bit(value, 30, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit31(value) {
-        this.bit(value, 31);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit31le(value) {
-        this.bit(value, 31, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit31be(value) {
-        this.bit(value, 31, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit31(value) {
-        this.bit(value, 31, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit31le(value) {
-        this.bit(value, 31, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit31be(value) {
-        this.bit(value, 31, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit32(value) {
-        this.bit(value, 32);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit32le(value) {
-        this.bit(value, 32, undefined, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit32be(value) {
-        this.bit(value, 32, undefined, "big");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit32(value) {
-        this.bit(value, 32, true);
-    }
-    ;
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit32le(value) {
-        this.bit(value, 32, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit32be(value) {
-        this.bit(value, 32, true, "big");
-    }
-    ;
-    //
-    // byte write
-    //
-    /**
-     * Write byte.
-     *
-     * @param {number} value - value as int
-     */
-    set byte(value) {
-        this.writeByte(value);
-    }
-    ;
-    /**
-     * Write byte.
-     *
-     * @param {number} value - value as int
-     */
-    set int8(value) {
-        this.writeByte(value);
-    }
-    ;
-    /**
-     * Write unsigned byte.
-     *
-     * @param {number} value - value as int
-     */
-    set uint8(value) {
-        this.writeByte(value, true);
-    }
-    ;
-    /**
-     * Write unsigned byte.
-     *
-     * @param {number} value - value as int
-     */
-    set ubyte(value) {
-        this.writeByte(value, true);
-    }
-    ;
-    //
-    // short writes
-    //
-    /**
-     * Write int16.
-     *
-     * @param {number} value - value as int
-     */
-    set int16(value) {
-        this.writeInt16(value);
-    }
-    ;
-    /**
-     * Write int16.
-     *
-     * @param {number} value - value as int
-     */
-    set short(value) {
-        this.writeInt16(value);
-    }
-    ;
-    /**
-     * Write int16.
-     *
-     * @param {number} value - value as int
-     */
-    set word(value) {
-        this.writeInt16(value);
-    }
-    ;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    set uint16(value) {
-        this.writeInt16(value, true);
-    }
-    ;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    set ushort(value) {
-        this.writeInt16(value, true);
-    }
-    ;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    set uword(value) {
-        this.writeInt16(value, true);
-    }
-    ;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    set int16be(value) {
-        this.writeInt16(value, false, "big");
-    }
-    ;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    set shortbe(value) {
-        this.writeInt16(value, false, "big");
-    }
-    ;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    set wordbe(value) {
-        this.writeInt16(value, false, "big");
-    }
-    ;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    set uint16be(value) {
-        this.writeInt16(value, true, "big");
-    }
-    ;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    set ushortbe(value) {
-        this.writeInt16(value, true, "big");
-    }
-    ;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    set uwordbe(value) {
-        this.writeInt16(value, true, "big");
-    }
-    ;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    set int16le(value) {
-        this.writeInt16(value, false, "little");
-    }
-    ;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    set shortle(value) {
-        this.writeInt16(value, false, "little");
-    }
-    ;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    set wordle(value) {
-        this.writeInt16(value, false, "little");
-    }
-    ;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    set uint16le(value) {
-        this.writeInt16(value, true, "little");
-    }
-    ;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    set ushortle(value) {
-        this.writeInt16(value, true, "little");
-    }
-    ;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    set uwordle(value) {
-        this.writeInt16(value, true, "little");
-    }
-    ;
-    //
-    // half float
-    //
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    set half(value) {
-        this.writeHalfFloat(value);
-    }
-    ;
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    set halffloat(value) {
-        this.writeHalfFloat(value);
-    }
-    ;
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    set halffloatbe(value) {
-        this.writeHalfFloat(value, "big");
-    }
-    ;
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    set halfbe(value) {
-        this.writeHalfFloat(value, "big");
-    }
-    ;
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    set halffloatle(value) {
-        this.writeHalfFloat(value, "little");
-    }
-    ;
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    set halfle(value) {
-        this.writeHalfFloat(value, "little");
-    }
-    ;
-    //
-    // int32 write
-    //
-    /**
-     * Write int32.
-     *
-     * @param {number} value - value as int
-     */
-    set int(value) {
-        this.writeInt32(value);
-    }
-    ;
-    /**
-    * Write int32.
-    *
-    * @param {number} value - value as int
-    */
-    set int32(value) {
-        this.writeInt32(value);
-    }
-    ;
-    /**
-     * Write int32.
-     *
-     * @param {number} value - value as int
-     */
-    set double(value) {
-        this.writeInt32(value);
-    }
-    ;
-    /**
-     * Write int32.
-     *
-     * @param {number} value - value as int
-     */
-    set long(value) {
-        this.writeInt32(value);
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set uint32(value) {
-        this.writeInt32(value, true);
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set uint(value) {
-        this.writeInt32(value, true);
-    }
-    ;
-    /**
-    * Write unsigned int32.
-    *
-    * @param {number} value - value as int
-    */
-    set udouble(value) {
-        this.writeInt32(value, true);
-    }
-    ;
-    /**
-    * Write unsigned int32.
-    *
-    * @param {number} value - value as int
-    */
-    set ulong(value) {
-        this.writeInt32(value, true);
-    }
-    ;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    set int32le(value) {
-        this.writeInt32(value, false, "little");
-    }
-    ;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    set intle(value) {
-        this.writeInt32(value, false, "little");
-    }
-    ;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    set doublele(value) {
-        this.writeInt32(value, false, "little");
-    }
-    ;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    set longle(value) {
-        this.writeInt32(value, false, "little");
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set uint32le(value) {
-        this.writeInt32(value, true, "little");
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set uintle(value) {
-        this.writeInt32(value, true, "little");
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set udoublele(value) {
-        this.writeInt32(value, true, "little");
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set ulongle(value) {
-        this.writeInt32(value, true, "little");
-    }
-    ;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    set intbe(value) {
-        this.writeInt32(value, false, "big");
-    }
-    ;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    set int32be(value) {
-        this.writeInt32(value, false, "big");
-    }
-    ;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    set doublebe(value) {
-        this.writeInt32(value, false, "big");
-    }
-    ;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    set longbe(value) {
-        this.writeInt32(value, false, "big");
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set writeUInt32BE(value) {
-        this.writeInt32(value, true, "big");
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set uint32be(value) {
-        this.writeInt32(value, true, "big");
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set uintbe(value) {
-        this.writeInt32(value, true, "big");
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set udoublebe(value) {
-        this.writeInt32(value, true, "big");
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set ulongbe(value) {
-        this.writeInt32(value, true, "big");
-    }
-    ;
-    //
-    // float write
-    //
-    /**
-    * Write float.
-    *
-    * @param {number} value - value as int
-    */
-    set float(value) {
-        this.writeFloat(value);
-    }
-    ;
-    /**
-     * Write float.
-     *
-     * @param {number} value - value as int
-     */
-    set floatle(value) {
-        this.writeFloat(value, "little");
-    }
-    ;
-    /**
-    * Write float.
-    *
-    * @param {number} value - value as int
-    */
-    set floatbe(value) {
-        this.writeFloat(value, "big");
-    }
-    ;
-    //
-    // int64 write
-    //
-    /**
-     * Write 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set int64(value) {
-        this.writeInt64(value);
-    }
-    ;
-    /**
-    * Write 64 bit integer.
-    *
-    * @param {BigValue} value - value as int
-    */
-    set quad(value) {
-        this.writeInt64(value);
-    }
-    ;
-    /**
-     * Write 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set bigint(value) {
-        this.writeInt64(value);
-    }
-    ;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set uint64(value) {
-        this.writeInt64(value, true);
-    }
-    ;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set ubigint(value) {
-        this.writeInt64(value, true);
-    }
-    ;
-    /**
-    * Write unsigned 64 bit integer.
-    *
-    * @param {BigValue} value - value as int
-    */
-    set uquad(value) {
-        this.writeInt64(value, true);
-    }
-    ;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set int64le(value) {
-        this.writeInt64(value, false, "little");
-    }
-    ;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set bigintle(value) {
-        this.writeInt64(value, false, "little");
-    }
-    ;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set quadle(value) {
-        this.writeInt64(value, false, "little");
-    }
-    ;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set uint64le(value) {
-        this.writeInt64(value, true, "little");
-    }
-    ;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set ubigintle(value) {
-        this.writeInt64(value, true, "little");
-    }
-    ;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set uquadle(value) {
-        this.writeInt64(value, true, "little");
-    }
-    ;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set int64be(value) {
-        this.writeInt64(value, false, "big");
-    }
-    ;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set bigintbe(value) {
-        this.writeInt64(value, false, "big");
-    }
-    ;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set quadbe(value) {
-        this.writeInt64(value, false, "big");
-    }
-    ;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set uint64be(value) {
-        this.writeInt64(value, true, "big");
-    }
-    ;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set ubigintbe(value) {
-        this.writeInt64(value, true, "big");
-    }
-    ;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    set uquadbe(value) {
-        this.writeInt64(value, true, "big");
-    }
-    ;
-    //
-    // doublefloat
-    //
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    set doublefloat(value) {
-        this.writeDoubleFloat(value);
-    }
-    ;
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    set dfloat(value) {
-        this.writeDoubleFloat(value);
-    }
-    ;
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    set dfloatbe(value) {
-        this.writeDoubleFloat(value, "big");
-    }
-    ;
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    set doublefloatbe(value) {
-        this.writeDoubleFloat(value, "big");
-    }
-    ;
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    set dfloatle(value) {
-        this.writeDoubleFloat(value, "little");
-    }
-    ;
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    set doublefloatle(value) {
-        this.writeDoubleFloat(value, "little");
-    }
-    ;
-    //
-    // string
-    //
-    /**
-    * Writes string, use options object for different types.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions?} options
-    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
-    * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
-    * @param {stringOptions["lengthWriteSize"]?} options.lengthWriteSize - for pascal strings. 1, 2 or 4 byte length write size
-    * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
-    */
-    string(string, options) {
-        return this.writeString(string, options);
-    }
-    ;
-    /**
-    * Writes string using setting from .strSettings
-    *
-    * Default is ``utf-8``
-    *
-    * @param {string} string - text string
-    */
-    set str(string) {
-        this.writeString(string, this.strSettings);
-    }
-    ;
-    /**
-    * Writes UTF-8 (C) string.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    */
-    utf8string(string, length, terminateValue) {
-        return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
-    }
-    ;
-    /**
-    * Writes UTF-8 (C) string.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    */
-    cstring(string, length, terminateValue) {
-        return this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
-    }
-    ;
-    /**
-    * Writes ANSI string.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    */
-    ansistring(string, length, terminateValue) {
-        return this.string(string, { stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue });
-    }
-    ;
-    /**
-    * Writes UTF-16 (Unicode) string.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
-    */
-    utf16string(string, length, terminateValue, endian) {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
-    }
-    ;
-    /**
-    * Writes UTF-16 (Unicode) string.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
-    */
-    unistring(string, length, terminateValue, endian) {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
-    }
-    ;
-    /**
-    * Writes UTF-16 (Unicode) string in little endian order.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    */
-    utf16stringle(string, length, terminateValue) {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
-    }
-    ;
-    /**
-    * Writes UTF-16 (Unicode) string in little endian order.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    */
-    unistringle(string, length, terminateValue) {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
-    }
-    ;
-    /**
-    * Writes UTF-16 (Unicode) string in big endian order.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    */
-    utf16stringbe(string, length, terminateValue) {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
-    }
-    ;
-    /**
-    * Writes UTF-16 (Unicode) string in big endian order.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    */
-    unistringbe(string, length, terminateValue) {
-        return this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
-    }
-    ;
-    /**
-    * Writes Pascal string.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little`` for 2 or 4 byte length write size
-    */
-    pstring(string, lengthWriteSize, endian) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: lengthWriteSize, endian: endian });
-    }
-    ;
-    /**
-    * Writes Pascal string 1 byte length read.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little`` for 2 or 4 byte length write size
-    */
-    pstring1(string, endian) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: endian });
-    }
-    ;
-    /**
-    * Writes Pascal string 1 byte length read in little endian order.
-    *
-    * @param {string} string - text string
-    */
-    pstring1le(string) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "little" });
-    }
-    ;
-    /**
-    * Writes Pascal string 1 byte length read in big endian order.
-    *
-    * @param {string} string - text string
-    */
-    pstring1be(string) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "big" });
-    }
-    ;
-    /**
-    * Writes Pascal string 2 byte length read.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    */
-    pstring2(string, endian) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: endian });
-    }
-    ;
-    /**
-    * Writes Pascal string 2 byte length read in little endian order.
-    *
-    * @param {string} string - text string
-    */
-    pstring2le(string) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "little" });
-    }
-    ;
-    /**
-    * Writes Pascal string 2 byte length read in big endian order.
-    *
-    * @param {string} string - text string
-    */
-    pstring2be(string) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "big" });
-    }
-    ;
-    /**
-    * Writes Pascal string 4 byte length read.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    */
-    pstring4(string, endian) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: endian });
-    }
-    ;
-    /**
-    * Writes Pascal string 4 byte length read in big endian order.
-    *
-    * @param {string} string - text string
-    */
-    pstring4be(string) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "big" });
-    }
-    ;
-    /**
-    * Writes Pascal string 4 byte length read in little endian order.
-    *
-    * @param {string} string - text string
-    */
-    pstring4le(string) {
-        return this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "little" });
-    }
-    ;
-    /**
-    * Writes Wide-Pascal string.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    */
-    wpstring(string, lengthWriteSize, endian) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: endian });
-    }
-    ;
-    /**
-    * Writes Wide-Pascal string in big endian order.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
-    */
-    wpstringbe(string, lengthWriteSize) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "big" });
-    }
-    ;
-    /**
-    * Writes Wide-Pascal string in little endian order.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
-    */
-    wpstringle(string, lengthWriteSize) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "little" });
-    }
-    ;
-    /**
-    * Writes Wide-Pascal string.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    */
-    wpstring1(string, endian) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: endian });
-    }
-    ;
-    /**
-    * Writes Wide-Pascal string 1 byte length read in big endian order.
-    *
-    * @param {string} string - text string
-    */
-    wpstring1be(string) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "big" });
-    }
-    ;
-    /**
-    * Writes Wide-Pascal string 1 byte length read in little endian order.
-    *
-    * @param {string} string - text string
-    */
-    wpstring1le(string) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "little" });
-    }
-    ;
-    /**
-    * Writes Wide-Pascal string 2 byte length read.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    */
-    wpstring2(string, endian) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: endian });
-    }
-    ;
-    /**
-    * Writes Wide-Pascal string 2 byte length read in little endian order.
-    *
-    * @param {string} string - text string
-    */
-    wpstring2le(string) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "little" });
-    }
-    ;
-    /**
-    * Writes Wide-Pascal string 2 byte length read in big endian order.
-    *
-    * @param {string} string - text string
-    */
-    wpstring2be(string) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "big" });
-    }
-    ;
-    /**
-    * Writes Wide-Pascal string 4 byte length read.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    */
-    wpstring4(string, endian) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: endian });
-    }
-    ;
-    /**
-    * Writes Wide-Pascal string 4 byte length read in little endian order.
-    *
-    * @param {string} string - text string
-    */
-    wpstring4le(string) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "little" });
-    }
-    ;
-    /**
-    * Writes Wide-Pascal string 4 byte length read in big endian order.
-    *
-    * @param {string} string - text string
-    */
-    wpstring4be(string) {
-        return this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "big" });
-    }
-    ;
-}
-
-var _BiBaseAsync_data;
-var bufferConstants = buffer.constants;
-function MAX_LENGTH() {
-    return bufferConstants.MAX_LENGTH;
-}
-async function hexDumpBase(ctx, options = {}) {
-    var length = options && options.length;
-    var startByte = options && options.startByte;
-    if ((startByte || 0) > ctx.size) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error("Hexdump start is outside of data size: " + startByte + " of " + ctx.size);
-    }
-    const start = startByte || ctx.offset;
-    const end = Math.min(start + (length || 192), ctx.size);
-    if (start + (length || 0) > ctx.size) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error("Hexdump amount is outside of data size: " + (start + (length || 0)) + " of " + end);
-    }
-    var data = ctx.data;
-    if (ctx.mode == "file") {
-        data = await ctx.read(start, end - start, false);
-    }
-    return _hexDump(data, options, start, end);
-}
-// #region Movement
-async function skip(ctx, bytes, bits) {
-    var new_size = (((bytes || 0) + ctx.offset) + Math.ceil((ctx.bitoffset + (bits || 0)) / 8));
-    if (bits && bits < 0) {
-        new_size = Math.floor(((((bytes || 0) + ctx.offset) * 8) + ctx.bitoffset + (bits || 0)) / 8);
-    }
-    if (new_size > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                await ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                await ctx.extendArray(new_size - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: Seek of range of data: seek " + new_size + " of " + ctx.size);
-        }
-    }
-    // Adjust byte offset based on bit overflow
-    ctx.offset += Math.floor((ctx.bitoffset + (bits || 0)) / 8);
-    // Adjust bit offset
-    ctx.bitoffset = (ctx.bitoffset + normalizeBitOffset(bits)) % 8;
-    // Adjust byte offset based on byte overflow
-    ctx.offset += bytes;
-    // Ensure bit offset stays between 0-7
-    ctx.bitoffset = Math.min(Math.max(ctx.bitoffset, 0), 7);
-    // Ensure offset doesn't go negative
-    ctx.offset = Math.max(ctx.offset, 0);
-    return;
-}
-function align(ctx, n) {
-    const a = ctx.offset % n;
-    if (a) {
-        ctx.skip(n - a);
-    }
-}
-function alignRev(ctx, n) {
-    const a = ctx.offset % n;
-    if (a) {
-        ctx.skip(a * -1);
-    }
-}
-async function goto(ctx, bytes, bits) {
-    var new_size = (((bytes || 0)) + Math.ceil(((bits || 0)) / 8));
-    if (bits && bits < 0) {
-        new_size = Math.floor(((((bytes || 0)) * 8) + (bits || 0)) / 8);
-    }
-    if (new_size > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                await ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                await ctx.extendArray(new_size - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: Goto outside of range of data: goto " + new_size + " of " + ctx.size);
-        }
-    }
-    ctx.offset = bytes;
-    // Adjust byte offset based on bit overflow
-    ctx.offset += Math.floor(((bits || 0)) / 8);
-    // Adjust bit offset
-    ctx.bitoffset = normalizeBitOffset(bits) % 8;
-    // Ensure bit offset stays between 0-7
-    ctx.bitoffset = Math.min(Math.max(ctx.bitoffset, 0), 7);
-    // Ensure offset doesn't go negative
-    ctx.offset = Math.max(ctx.offset, 0);
-    return;
-}
-// #region Manipulation
-async function check_size(ctx, write_bytes, write_bit, offset) {
-    const bits = (write_bit || 0) + ctx.bitoffset;
-    var new_off = (offset || ctx.offset);
-    var writesize = write_bytes || 0;
-    if (bits != 0) {
-        //add bits
-        writesize += Math.ceil(bits / 8);
-    }
-    //if bigger extend
-    const needed_size = new_off + writesize;
-    if (needed_size > ctx.size) {
-        const dif = needed_size - ctx.size;
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                await ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                await ctx.extendArray(dif);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: ` + needed_size + " at " + ctx.offset + " of " + ctx.size);
-        }
-    }
-    //start read location
-    return new_off;
-}
-async function extendarray(ctx, to_padd) {
-    await ctx.open();
-    if (ctx.strict) {
-        throw new Error('File position is outside of file size while in strict mode.');
-    }
-    if (ctx.size + to_padd > ctx.maxFileSize) {
-        throw new Error("buffer extend outside of max: " + (ctx.size + to_padd) + " to " + ctx.maxFileSize);
-    }
-    if (ctx.mode == "file") {
-        if (ctx.extendBufferSize != 0) {
-            if (ctx.extendBufferSize > to_padd) {
-                to_padd = ctx.extendBufferSize;
-            }
-        }
-        try {
-            await ctx.fh.truncate(ctx.size + to_padd);
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-        await ctx.updateSize();
-        return;
-    }
-    var paddbuffer = Buffer.alloc(to_padd);
-    ctx.data = Buffer.concat([ctx.data, paddbuffer]);
-    ctx.size = ctx.data.length;
-    ctx.sizeB = ctx.data.length * 8;
-    return;
-}
-async function remove(ctx, startOffset, endOffset, consume, remove, fillValue) {
-    await ctx.open();
-    const new_start = Math.abs(startOffset || 0);
-    const new_offset = (endOffset || ctx.offset);
-    if (new_offset > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                await ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                await ctx.extendArray(new_offset - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + endOffset + " of " + ctx.size);
-        }
-    }
-    if (ctx.strict == true && remove == true) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + ctx.size);
-    }
-    const removedLength = new_offset - new_start;
-    if (ctx.mode == "file") {
-        if (ctx.maxFileSize && removedLength > ctx.maxFileSize) {
-            // can not return buffer, cant extract, must write new file of removed data
-            // if not removed, only fill, just creat a new file with filled data 
-            if (fillValue != undefined && remove == false) {
-                // fills current file, no need to dupe 
-                console.warn(`File size for return Buffer is larger than the max Buffer Node can handle.`);
-                var readStart = new_start;
-                var amount = removedLength;
-                const chunkSize = 64 * 1024; // 64 KB
-                const chunk = new Uint8Array(chunkSize).fill(fillValue & 0xff);
-                while (amount) {
-                    const toWrite = Math.min(chunkSize, amount);
-                    var bytesWritten;
-                    try {
-                        await ctx.fh.read(chunk, 0, toWrite, readStart);
-                    }
-                    catch (error) {
-                        throw new Error(error);
-                    }
-                    amount -= bytesWritten;
-                    readStart += bytesWritten;
-                }
-            }
-            else if (remove) {
-                // dupe file for extract, remove data
-                const removeData = ctx.filePath + NaN + startOffset + "_" + removedLength + ".removed";
-                console.warn(`File size for removal is larger than the max Buffer Node can handle, creating new file ${removeData}`);
-                const CHUNK_SIZE = 64 * 1024;
-                // Copy removed to new file
-                var readOffset = new_start;
-                var writeOffset = 0;
-                var amount = removedLength;
-                const chunk = new Uint8Array(CHUNK_SIZE);
-                try {
-                    const tempFd = await fs$2.open(removeData, 'w+');
-                    while (amount) {
-                        const toRead = Math.min(CHUNK_SIZE, amount);
-                        const { bytesRead } = await ctx.fh.read(chunk, 0, toRead, readOffset);
-                        await tempFd.write(chunk, 0, bytesRead, writeOffset);
-                        amount -= bytesRead;
-                        readOffset += bytesRead;
-                        writeOffset += bytesRead;
-                    }
-                    await tempFd.close();
-                }
-                catch (error) {
-                    throw new Error(error);
-                }
-                // reorder data and trim
-                readOffset = new_start + removedLength;
-                writeOffset = new_start;
-                amount = removedLength;
-                try {
-                    while (amount) {
-                        const toRead = Math.min(CHUNK_SIZE, amount);
-                        const { bytesRead } = await ctx.fh.read(chunk, 0, toRead, readOffset);
-                        await ctx.fh.write(chunk, 0, bytesRead, writeOffset);
-                        amount -= bytesRead;
-                        readOffset += bytesRead;
-                        writeOffset += bytesRead;
-                    }
-                    await ctx.fh.truncate(ctx.size - removedLength);
-                }
-                catch (error) {
-                    throw new Error(error);
-                }
-                await ctx.updateSize();
-            }
-            else {
-                // no remove, can't extract
-                const removeData = ctx.filePath + NaN + startOffset + "_" + removedLength + ".removed";
-                console.warn(`File size for extract is larger than the max Buffer Node can handle, creating new file ${removeData}`);
-                const CHUNK_SIZE = 64 * 1024;
-                const chunk = new Uint8Array(CHUNK_SIZE);
-                // Copy removed to new file
-                var readOffset = new_start;
-                var writeOffset = 0;
-                var amount = removedLength;
-                try {
-                    const tempFd = await fs$2.open(removeData, 'w+');
-                    while (amount) {
-                        const toRead = Math.min(CHUNK_SIZE, amount);
-                        const { bytesRead } = await ctx.fh.read(chunk, 0, toRead, readOffset);
-                        await tempFd.write(chunk, 0, bytesRead, writeOffset);
-                        amount -= bytesRead;
-                        readOffset += bytesRead;
-                        writeOffset += bytesRead;
-                    }
-                    await tempFd.close();
-                }
-                catch (error) {
-                    throw new Error(error);
-                }
-            }
-            if (consume == true) {
-                if (remove != true) {
-                    ctx.offset = new_offset;
-                    ctx.bitoffset = 0;
-                }
-                else {
-                    ctx.offset = new_start;
-                    ctx.bitoffset = 0;
-                }
-            }
-            return Buffer.alloc(0);
-        }
-        else {
-            if (remove) {
-                const removedBuffer = await ctx.read(new_start, removedLength, false);
-                const end = new_start + removedLength;
-                const chunkSize = 64 * 1024;
-                const buffer = new Uint8Array(chunkSize);
-                var remaining = ctx.size - end;
-                var readPos = end;
-                try {
-                    while (remaining > 0) {
-                        const actualRead = Math.min(chunkSize, remaining);
-                        const { bytesRead } = await ctx.fh.read(buffer, 0, actualRead, readPos);
-                        await ctx.fh.write(buffer, 0, bytesRead, readPos - removedLength);
-                        readPos += bytesRead;
-                        remaining -= bytesRead;
-                    }
-                    await ctx.fh.truncate(ctx.size - removedLength);
-                }
-                catch (error) {
-                    throw new Error(error);
-                }
-                await ctx.updateSize();
-                if (consume == true) {
-                    if (remove != true) {
-                        ctx.offset = new_offset;
-                        ctx.bitoffset = 0;
-                    }
-                    else {
-                        ctx.offset = new_start;
-                        ctx.bitoffset = 0;
-                    }
-                }
-                return removedBuffer;
-            }
-            else {
-                if (fillValue != undefined) {
-                    const removedBuffer = new Uint8Array(removedLength);
-                    removedBuffer.fill(fillValue & 0xff);
-                    try {
-                        await ctx.fh.write(removedBuffer, 0, removedBuffer.length, new_start);
-                    }
-                    catch (error) {
-                        throw new Error(error);
-                    }
-                    if (consume == true) {
-                        ctx.offset = new_offset;
-                        ctx.bitoffset = 0;
-                    }
-                    ctx.data = Buffer.from(removedBuffer);
-                    ctx.updateView();
-                    return ctx.data;
-                }
-                else {
-                    // just copying and returning data
-                    const removedBuffer = await ctx.read(new_start, removedLength, false);
-                    if (consume == true) {
-                        ctx.offset = new_offset;
-                        ctx.bitoffset = 0;
-                    }
-                    ctx.data = removedBuffer;
-                    ctx.updateView();
-                    return removedBuffer;
-                }
-            }
-        }
-    }
-    const data_removed = ctx.data.subarray(new_start, new_offset);
-    if (remove) {
-        const part1 = ctx.data.subarray(0, new_start);
-        const part2 = ctx.data.subarray(new_offset, ctx.size);
-        ctx.data = Buffer.concat([part1, part2]);
-        ctx.size = ctx.data.length;
-        ctx.sizeB = ctx.data.length * 8;
-    }
-    if (fillValue != undefined && remove == false) {
-        const part1 = ctx.data.subarray(0, new_start);
-        const part2 = ctx.data.subarray(new_offset, ctx.size);
-        const replacement = new Array(data_removed.length).fill(fillValue & 0xff);
-        const buff_placement = Buffer.from(replacement);
-        ctx.data = Buffer.concat([part1, buff_placement, part2]);
-        ctx.size = ctx.data.length;
-        ctx.sizeB = ctx.data.length * 8;
-    }
-    if (consume == true) {
-        if (remove != true) {
-            ctx.offset = new_offset;
-            ctx.bitoffset = 0;
-        }
-        else {
-            ctx.offset = new_start;
-            ctx.bitoffset = 0;
-        }
-    }
-    return data_removed;
-}
-async function addData(ctx, data, consume, offset, replace) {
-    if (ctx.strict == true) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Can not insert data in strict mode. Use unrestrict() to enable.`);
-    }
-    await ctx.open();
-    if (ctx.mode == "file") {
-        offset = (offset || ctx.offset);
-        var newSize = offset + data.length;
-        const originalSize = ctx.size;
-        const insertLength = data.length;
-        if (data.length === 0) {
-            return;
-        }
-        if (newSize > ctx.size) {
-            if (ctx.strict == false) {
-                if (ctx.extendBufferSize != 0) {
-                    await ctx.extendArray(ctx.extendBufferSize);
-                }
-                else {
-                    await ctx.extendArray(newSize - ctx.size);
-                }
-            }
-            else {
-                ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
-                throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + newSize + " of " + ctx.size);
-            }
-        }
-        if (!arrayBufferCheck(data)) {
-            throw new Error('Data must be a Uint8Array or Buffer');
-        }
-        if (Buffer.isBuffer(data)) {
-            data = new Uint8Array(data);
-        }
-        if (replace) {
-            // overwrite
-            try {
-                await ctx.fh.write(data, 0, data.length, offset);
-            }
-            catch (error) {
-                throw new Error(error);
-            }
-            await ctx.updateSize();
-        }
-        else {
-            // insert
-            const chunkSize = 64 * 1024; // 64KB
-            const buffer = new Uint8Array(chunkSize);
-            var remaining = originalSize - offset;
-            var readPos = originalSize - chunkSize;
-            try {
-                while (remaining > 0) {
-                    const actualRead = Math.min(chunkSize, remaining);
-                    readPos = offset + remaining - actualRead;
-                    const writePos = readPos + insertLength;
-                    const { bytesRead } = await ctx.fh.read(buffer, 0, actualRead, readPos);
-                    await ctx.fh.write(buffer, 0, bytesRead, writePos);
-                    remaining -= actualRead;
-                }
-                // Write the insert data at offset
-                await ctx.fh.write(data, 0, insertLength, offset);
-            }
-            catch (error) {
-                throw new Error(error);
-            }
-            ctx.size = newSize;
-        }
-        if (consume == true) {
-            ctx.offset = newSize;
-            ctx.bitoffset = 0;
-        }
-        return;
-    }
-    if (isBuffer(data) && !isBuffer(ctx.data)) {
-        data = Buffer.from(data);
-    }
-    var needed_size = offset || ctx.offset;
-    if (replace) {
-        needed_size = (offset || ctx.offset) + data.length;
-        const part1 = ctx.data.subarray(0, needed_size - data.length);
-        const part2 = ctx.data.subarray(needed_size, ctx.size);
-        ctx.data = Buffer.concat([part1, data, part2]);
-        ctx.size = ctx.data.length;
-        ctx.sizeB = ctx.data.length * 8;
-    }
-    else {
-        const part1 = ctx.data.subarray(0, needed_size);
-        const part2 = ctx.data.subarray(needed_size, ctx.size);
-        ctx.data = Buffer.concat([part1, data, part2]);
-        ctx.size = ctx.data.length;
-        ctx.sizeB = ctx.data.length * 8;
-    }
-    if (consume) {
-        ctx.offset = (offset || ctx.offset) + data.length;
-        ctx.bitoffset = 0;
-    }
-    return;
-}
-// #region Math
-async function AND(ctx, and_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                await ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                await ctx.extendArray((end || 0) - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    await ctx.open();
-    if (ctx.mode == "file") {
-        const chunkSize = 0x2000; // 8192 bytes
-        var new_start = (start || 0);
-        const new_end = Math.min(end || ctx.size, ctx.size);
-        const previousStart = ctx.offset;
-        if (typeof and_key == "number") {
-            while (new_start <= new_end) {
-                const input = await ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                if (input.length == 0) {
-                    break;
-                }
-                for (let i = 0; i < input.length; i++) {
-                    input[i] = input[i] & (and_key & 0xff);
-                }
-                await ctx.commit(true);
-                new_start += input.length;
-            }
-            return;
-        }
-        else {
-            if (typeof and_key == "string") {
-                and_key = Uint8Array.from(Array.from(and_key).map(letter => letter.charCodeAt(0)));
-            }
-            if (arrayBufferCheck(and_key)) {
-                var keyIndex = -1;
-                while (new_start <= new_end) {
-                    const input = await ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                    if (input.length == 0) {
-                        break;
-                    }
-                    for (let i = 0; i < input.length; i++) {
-                        if (keyIndex != and_key.length - 1) {
-                            keyIndex = keyIndex + 1;
-                        }
-                        else {
-                            keyIndex = 0;
-                        }
-                        input[i] = input[i] & and_key[keyIndex];
-                    }
-                    await ctx.commit(true);
-                    new_start += input.length;
-                }
-            }
-            else {
-                throw new Error("AND key must be a byte value, string, Uint8Array or Buffer");
-            }
-        }
-        if (!consume) {
-            ctx.offset = previousStart;
-        }
-        return;
-    }
-    if (typeof and_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] & (and_key & 0xff);
-            if (consume) {
-                ctx.offset = i;
-                ctx.bitoffset = 0;
-            }
-        }
-    }
-    else {
-        if (typeof and_key == "string") {
-            and_key = Uint8Array.from(Array.from(and_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(and_key)) {
-            var number = -1;
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != and_key.length - 1) {
-                    number = number + 1;
-                }
-                else {
-                    number = 0;
-                }
-                ctx.data[i] = ctx.data[i] & and_key[number];
-                if (consume) {
-                    ctx.offset = i;
-                    ctx.bitoffset = 0;
-                }
-            }
-        }
-        else {
-            throw new Error("AND key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-}
-async function OR(ctx, or_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                await ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                await ctx.extendArray((end || 0) - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    await ctx.open();
-    if (ctx.mode == "file") {
-        const chunkSize = 0x2000; // 8192 bytes
-        var new_start = (start || 0);
-        const new_end = Math.min(end || ctx.size, ctx.size);
-        const previousStart = ctx.offset;
-        if (typeof or_key == "number") {
-            while (new_start <= new_end) {
-                const input = await ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                if (input.length == 0) {
-                    break;
-                }
-                for (let i = 0; i < input.length; i++) {
-                    input[i] = input[i] | (or_key & 0xff);
-                }
-                await ctx.commit(true);
-                new_start += input.length;
-            }
-        }
-        else {
-            if (typeof or_key == "string") {
-                or_key = Uint8Array.from(Array.from(or_key).map(letter => letter.charCodeAt(0)));
-            }
-            if (arrayBufferCheck(or_key)) {
-                var number = -1;
-                while (new_start <= new_end) {
-                    const input = await ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                    if (input.length == 0) {
-                        break;
-                    }
-                    for (let i = 0; i < input.length; i++) {
-                        if (number != or_key.length - 1) {
-                            number = number + 1;
-                        }
-                        else {
-                            number = 0;
-                        }
-                        input[i] = input[i] | or_key[number];
-                    }
-                    await ctx.commit(true);
-                    new_start += input.length;
-                }
-            }
-            else {
-                throw new Error("OR key must be a byte value, string, Uint8Array or Buffer");
-            }
-        }
-        if (!consume) {
-            ctx.offset = previousStart;
-        }
-        return;
-    }
-    if (typeof or_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] | (or_key & 0xff);
-            if (consume) {
-                ctx.offset = i;
-                ctx.bitoffset = 0;
-            }
-        }
-    }
-    else {
-        if (typeof or_key == "string") {
-            or_key = Uint8Array.from(Array.from(or_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(or_key)) {
-            var number = -1;
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != or_key.length - 1) {
-                    number = number + 1;
-                }
-                else {
-                    number = 0;
-                }
-                ctx.data[i] = ctx.data[i] | or_key[number];
-                if (consume) {
-                    ctx.offset = i;
-                    ctx.bitoffset = 0;
-                }
-            }
-        }
-        else {
-            throw new Error("OR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-}
-async function XOR(ctx, xor_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                await ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                await ctx.extendArray((end || 0) - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    await ctx.open();
-    if (ctx.mode == "file") {
-        const chunkSize = 0x2000; // 8192 bytes
-        var new_start = (start || 0);
-        const new_end = Math.min(end || ctx.size, ctx.size);
-        const previousStart = ctx.offset;
-        if (typeof xor_key == "number") {
-            while (new_start <= new_end) {
-                const input = await ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                if (input.length == 0) {
-                    break;
-                }
-                for (let i = 0; i < input.length; i++) {
-                    input[i] = input[i] ^ (xor_key & 0xff);
-                }
-                await ctx.commit(true);
-                new_start += input.length;
-            }
-        }
-        else {
-            if (typeof xor_key == "string") {
-                xor_key = Uint8Array.from(Array.from(xor_key).map(letter => letter.charCodeAt(0)));
-            }
-            if (arrayBufferCheck(xor_key)) {
-                var keyIndex = -1;
-                while (new_start <= new_end) {
-                    const input = await ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                    if (input.length == 0) {
-                        break;
-                    }
-                    for (let i = 0; i < input.length; i++) {
-                        if (keyIndex != xor_key.length - 1) {
-                            keyIndex = keyIndex + 1;
-                        }
-                        else {
-                            keyIndex = 0;
-                        }
-                        input[i] = input[i] ^ xor_key[keyIndex];
-                    }
-                    await ctx.commit(true);
-                    new_start += input.length;
-                }
-            }
-            else {
-                throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-            }
-        }
-        if (!consume) {
-            ctx.offset = previousStart;
-        }
-        return;
-    }
-    if (typeof xor_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] ^ (xor_key & 0xff);
-            if (consume) {
-                ctx.offset = i;
-                ctx.bitoffset = 0;
-            }
-        }
-    }
-    else {
-        if (typeof xor_key == "string") {
-            xor_key = Uint8Array.from(Array.from(xor_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(xor_key)) {
-            let number = -1;
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != xor_key.length - 1) {
-                    number = number + 1;
-                }
-                else {
-                    number = 0;
-                }
-                ctx.data[i] = ctx.data[i] ^ xor_key[number];
-                if (consume) {
-                    ctx.offset = i;
-                    ctx.bitoffset = 0;
-                }
-            }
-        }
-        else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-}
-async function NOT(ctx, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                await ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                await ctx.extendArray((end || 0) - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    await ctx.open();
-    if (ctx.mode == "file") {
-        const chunkSize = 0x2000; // 8192 bytes
-        var new_start = (start || 0);
-        const new_end = Math.min(end || ctx.size, ctx.size);
-        const previousStart = ctx.offset;
-        while (new_start <= new_end) {
-            const input = await ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-            if (input.length == 0) {
-                break;
-            }
-            for (let i = 0; i < input.length; i++) {
-                input[i] = ~input[i];
-            }
-            await ctx.commit(true);
-            new_start += input.length;
-        }
-        if (!consume) {
-            ctx.offset = previousStart;
-        }
-        return;
-    }
-    for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-        ctx.data[i] = ~ctx.data[i];
-        if (consume) {
-            ctx.offset = i;
-            ctx.bitoffset = 0;
-        }
-    }
-    return;
-}
-async function LSHIFT(ctx, shift_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                await ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                await ctx.extendArray((end || 0) - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    await ctx.open();
-    if (ctx.mode == "file") {
-        const chunkSize = 0x2000; // 8192 bytes
-        var new_start = (start || 0);
-        const new_end = Math.min(end || ctx.size, ctx.size);
-        const previousStart = ctx.offset;
-        if (typeof shift_key == "number") {
-            while (new_start <= new_end) {
-                const input = await ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                if (input.length == 0) {
-                    break;
-                }
-                for (let i = 0; i < input.length; i++) {
-                    input[i] = input[i] << shift_key;
-                }
-                await ctx.commit(true);
-                new_start += input.length;
-            }
-        }
-        else {
-            if (typeof shift_key == "string") {
-                shift_key = Uint8Array.from(Array.from(shift_key).map(letter => letter.charCodeAt(0)));
-            }
-            if (arrayBufferCheck(shift_key)) {
-                let keyIndex = -1;
-                while (new_start <= new_end) {
-                    const input = await ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                    if (input.length == 0) {
-                        break;
-                    }
-                    for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                        if (keyIndex != shift_key.length - 1) {
-                            keyIndex = keyIndex + 1;
-                        }
-                        else {
-                            keyIndex = 0;
-                        }
-                        input[i] = input[i] << shift_key[keyIndex];
-                    }
-                    await ctx.commit(true);
-                    new_start += input.length;
-                }
-            }
-            else {
-                throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-            }
-        }
-        if (!consume) {
-            ctx.offset = previousStart;
-        }
-        return;
-    }
-    if (typeof shift_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] << shift_key;
-            if (consume) {
-                ctx.offset = i;
-                ctx.bitoffset = 0;
-            }
-        }
-    }
-    else {
-        if (typeof shift_key == "string") {
-            shift_key = Uint8Array.from(Array.from(shift_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(shift_key)) {
-            var number = -1;
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != shift_key.length - 1) {
-                    number = number + 1;
-                }
-                else {
-                    number = 0;
-                }
-                ctx.data[i] = ctx.data[i] << shift_key[number];
-                if (consume) {
-                    ctx.offset = i;
-                    ctx.bitoffset = 0;
-                }
-            }
-        }
-        else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-    return;
-}
-async function RSHIFT(ctx, shift_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                await ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                await ctx.extendArray((end || 0) - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    await ctx.open();
-    if (ctx.mode == "file") {
-        const chunkSize = 0x2000; // 8192 bytes
-        var new_start = (start || 0);
-        const new_end = Math.min(end || ctx.size, ctx.size);
-        const previousStart = ctx.offset;
-        if (typeof shift_key == "number") {
-            while (new_start <= new_end) {
-                const input = await ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                if (input.length == 0) {
-                    break;
-                }
-                for (let i = 0; i < input.length; i++) {
-                    input[i] = input[i] >> shift_key;
-                }
-                await ctx.commit(true);
-                new_start += input.length;
-            }
-            return;
-        }
-        else {
-            if (typeof shift_key == "string") {
-                shift_key = Uint8Array.from(Array.from(shift_key).map(letter => letter.charCodeAt(0)));
-            }
-            if (arrayBufferCheck(shift_key)) {
-                var keyIndex = -1;
-                while (new_start <= new_end) {
-                    const input = await ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                    if (input.length == 0) {
-                        break;
-                    }
-                    for (let i = 0; i < input.length; i++) {
-                        if (keyIndex != shift_key.length - 1) {
-                            keyIndex = keyIndex + 1;
-                        }
-                        else {
-                            keyIndex = 0;
-                        }
-                        input[i] = input[i] >> shift_key[keyIndex];
-                    }
-                    await ctx.commit(true);
-                    new_start += input.length;
-                }
-            }
-            else {
-                throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-            }
-        }
-        if (!consume) {
-            ctx.offset = previousStart;
-        }
-        return;
-    }
-    if (typeof shift_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] >> shift_key;
-            if (consume) {
-                ctx.offset = i;
-                ctx.bitoffset = 0;
-            }
-        }
-    }
-    else {
-        if (typeof shift_key == "string") {
-            shift_key = Uint8Array.from(Array.from(shift_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(shift_key)) {
-            var number = -1;
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != shift_key.length - 1) {
-                    number = number + 1;
-                }
-                else {
-                    number = 0;
-                }
-                ctx.data[i] = ctx.data[i] >> shift_key[number];
-                if (consume) {
-                    ctx.offset = i;
-                    ctx.bitoffset = 0;
-                }
-            }
-        }
-        else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-    return;
-}
-async function ADD(ctx, add_key, start, end, consume) {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                await ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                await ctx.extendArray((end || 0) - ctx.size);
-            }
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-    await ctx.open();
-    if (ctx.mode == "file") {
-        const chunkSize = 0x2000; // 8192 bytes
-        var new_start = (start || 0);
-        const new_end = Math.min(end || ctx.size, ctx.size);
-        const previousStart = ctx.offset;
-        if (typeof add_key == "number") {
-            while (new_start <= new_end) {
-                const input = await ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                if (input.length == 0) {
-                    break;
-                }
-                for (let i = 0; i < input.length; i++) {
-                    input[i] = input[i] + add_key;
-                }
-                await ctx.commit(true);
-                new_start += input.length;
-            }
-        }
-        else {
-            if (typeof add_key == "string") {
-                add_key = Uint8Array.from(Array.from(add_key).map(letter => letter.charCodeAt(0)));
-            }
-            if (arrayBufferCheck(add_key)) {
-                var keyIndex = -1;
-                while (new_start <= new_end) {
-                    const input = await ctx.read(new_start, Math.min(chunkSize, new_end - new_start), false);
-                    if (input.length == 0) {
-                        break;
-                    }
-                    for (let i = 0; i < input.length; i++) {
-                        if (keyIndex != add_key.length - 1) {
-                            keyIndex = keyIndex + 1;
-                        }
-                        else {
-                            keyIndex = 0;
-                        }
-                        input[i] = input[i] + add_key[keyIndex];
-                    }
-                    await ctx.commit(true);
-                    new_start += input.length;
-                }
-            }
-            else {
-                throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-            }
-        }
-        if (!consume) {
-            ctx.offset = previousStart;
-        }
-        return;
-    }
-    if (typeof add_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] + add_key;
-            if (consume) {
-                ctx.offset = i;
-                ctx.bitoffset = 0;
-            }
-        }
-    }
-    else {
-        if (typeof add_key == "string") {
-            add_key = Uint8Array.from(Array.from(add_key).map(letter => letter.charCodeAt(0)));
-        }
-        if (arrayBufferCheck(add_key)) {
-            var number = -1;
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != add_key.length - 1) {
-                    number = number + 1;
-                }
-                else {
-                    number = 0;
-                }
-                ctx.data[i] = ctx.data[i] + add_key[number];
-                if (consume) {
-                    ctx.offset = i;
-                    ctx.bitoffset = 0;
-                }
-            }
-        }
-        else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-    return;
-}
-// #region Search
-async function fString(ctx, searchString) {
-    await ctx.open();
-    if (ctx.mode == "file") {
-        const chunkSize = 0x2000; // 8192 bytes
-        var lastChunk = new Uint8Array(0);
-        const searchStringBuffer = new TextEncoder().encode(searchString);
-        var start = ctx.offset;
-        const strict_saver = ctx.strict;
-        ctx.strict = true;
-        while (start < ctx.size) {
-            const currentChunk = await ctx.read(start, Math.min(chunkSize, ctx.size - start), false);
-            if (currentChunk.length === 0) { // No more data to read
-                break;
-            }
-            // Concatenate the last part of the previous chunk with the current chunk
-            const combinedBuffer = Buffer.concat([lastChunk, new Uint8Array(currentChunk)]);
-            // Search for the string in the combined buffer
-            var offset = 0;
-            while (offset <= combinedBuffer.length - searchStringBuffer.length) {
-                const index = combinedBuffer.indexOf(searchStringBuffer, offset);
-                if (index === -1) {
-                    break;
-                }
-                // Found the search string
-                ctx.strict = strict_saver;
-                return start + index - lastChunk.length;
-            }
-            // Update the last chunk for the next iteration
-            lastChunk = new Uint8Array(currentChunk.subarray(-searchStringBuffer.length + 1));
-            start += currentChunk.length;
-        }
-        ctx.strict = strict_saver;
-        return -1;
-    }
-    // Convert the searchString to Uint8Array
-    const searchArray = new TextEncoder().encode(searchString);
-    for (let i = ctx.offset; i <= ctx.size - searchArray.length; i++) {
-        var match = true;
-        for (let j = 0; j < searchArray.length; j++) {
-            if (ctx.data[i + j] !== searchArray[j]) {
-                match = false;
-                break;
-            }
-        }
-        if (match) {
-            return i; // Found the string, return the index
-        }
-    }
-    return -1; // String not found
-}
-async function fNumber(ctx, targetNumber, bits, unsigned, endian) {
-    await ctx.open();
-    if (ctx.mode == "file") {
-        const chunkSize = 0x2000; // 8192 bytes
-        let lastChunk = new Uint8Array(0);
-        const totalBits = Math.floor(bits / 8);
-        var start = ctx.offset;
-        while (start < ctx.size) {
-            const currentChunk = await ctx.read(start, Math.min(chunkSize, ctx.size - start), false);
-            if (currentChunk.length === 0) { // No more data to read
-                break;
-            }
-            // Concatenate the last part of the previous chunk with the current chunk
-            const combinedBuffer = Buffer.concat([lastChunk, new Uint8Array(currentChunk)]);
-            // Process the combined buffer to find the target number
-            for (let z = 0; z <= combinedBuffer.length - totalBits; z++) {
-                var value = 0;
-                var off_in_bits = 0;
-                for (let i = 0; i < bits;) {
-                    const remaining = bits - i;
-                    const bitOffset = off_in_bits & 7;
-                    const currentByte = combinedBuffer[z + (off_in_bits >> 3)];
-                    const read = Math.min(remaining, 8 - bitOffset);
-                    if ((endian !== undefined ? endian : ctx.endian) === "big") {
-                        let mask = ~(0xFF << read);
-                        let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
-                        value <<= read;
-                        value |= readBits;
-                    }
-                    else {
-                        let mask = ~(0xFF << read);
-                        let readBits = (currentByte >> bitOffset) & mask;
-                        value |= readBits << i;
-                    }
-                    off_in_bits += read;
-                    i += read;
-                }
-                if (unsigned === true || bits <= 7) {
-                    value = value >>> 0;
-                }
-                else {
-                    if (bits !== 32 && (value & (1 << (bits - 1)))) {
-                        value |= -1 ^ ((1 << bits) - 1);
-                    }
-                }
-                if (value === targetNumber) {
-                    return start + z - lastChunk.length; // Found the byte, return the index from current
-                }
-            }
-            // Update the last chunk for the next iteration
-            lastChunk = new Uint8Array(combinedBuffer.subarray(-totalBits + 1));
-            start += currentChunk.length;
-        }
-        return -1; // number not found
-    }
-    await check_size(ctx, Math.floor(bits / 8), 0);
-    for (let z = ctx.offset; z <= (ctx.size - (bits / 8)); z++) {
-        var off_in_bits = 0;
-        var value = 0;
-        for (var i = 0; i < bits;) {
-            const remaining = bits - i;
-            const bitOffset = off_in_bits & 7;
-            const currentByte = ctx.data[z + (off_in_bits >> 3)];
-            const read = Math.min(remaining, 8 - bitOffset);
-            if ((endian != undefined ? endian : ctx.endian) == "big") {
-                let mask = ~(0xFF << read);
-                let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
-                value <<= read;
-                value |= readBits;
-            }
-            else {
-                let mask = ~(0xFF << read);
-                let readBits = (currentByte >> bitOffset) & mask;
-                value |= readBits << i;
-            }
-            off_in_bits += read;
-            i += read;
-        }
-        if (unsigned == true || bits <= 7) {
-            value = value >>> 0;
-        }
-        else {
-            if (bits !== 32 && value & (1 << (bits - 1))) {
-                value |= -1 ^ ((1 << bits) - 1);
-            }
-        }
-        if (value === targetNumber) {
-            return z - ctx.offset; // Found the byte, return the index from current
-        }
-    }
-    return -1; // number not found
-}
-async function fHalfFloat(ctx, targetNumber, endian) {
-    await ctx.open();
-    if (ctx.mode == "file") {
-        const chunkSize = 0x2000; // 8192 bytes
-        let size = 2;
-        for (let position = 0; position <= ctx.size - size;) {
-            const buffer = await ctx.read(position, Math.min(chunkSize, ctx.size - position), false);
-            if (buffer.length == 0) {
-                break;
-            }
-            const data = new Uint8Array(buffer);
-            for (let z = 0; z <= data.length - size; z++) {
-                var value = 0;
-                if ((endian !== undefined ? endian : ctx.endian) === "little") {
-                    value = (data[z + 1] << 8) | data[z];
-                }
-                else {
-                    value = (data[z] << 8) | data[z + 1];
-                }
-                const sign = (value & 0x8000) >> 15;
-                const exponent = (value & 0x7C00) >> 10;
-                const fraction = value & 0x03FF;
-                var floatValue;
-                if (exponent === 0) {
-                    if (fraction === 0) {
-                        floatValue = (sign === 0) ? 0 : -0; // +/-0
-                    }
-                    else {
-                        // Denormalized number
-                        floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, -14) * (fraction / 0x0400);
-                    }
-                }
-                else if (exponent === 0x1F) {
-                    if (fraction === 0) {
-                        floatValue = (sign === 0) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-                    }
-                    else {
-                        floatValue = Number.NaN;
-                    }
-                }
-                else {
-                    // Normalized number
-                    floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x0400);
-                }
-                if (floatValue === targetNumber) {
-                    return position + z; // Found the number, return the index
-                }
-            }
-            position += buffer.length;
-        }
-        return -1; // number not found
-    }
-    await check_size(ctx, 2, 0);
-    for (let z = ctx.offset; z <= (ctx.size - 2); z++) {
-        var value = 0;
-        if ((endian != undefined ? endian : ctx.endian) == "little") {
-            value = ((ctx.data[z + 1] & 0xFFFF) << 8) | (ctx.data[z] & 0xFFFF);
-        }
-        else {
-            value = ((ctx.data[z] & 0xFFFF) << 8) | (ctx.data[z + 1] & 0xFFFF);
-        }
-        const sign = (value & 0x8000) >> 15;
-        const exponent = (value & 0x7C00) >> 10;
-        const fraction = value & 0x03FF;
-        var floatValue;
-        if (exponent === 0) {
-            if (fraction === 0) {
-                floatValue = (sign === 0) ? 0 : -0; // +/-0
-            }
-            else {
-                // Denormalized number
-                floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, -14) * (fraction / 0x0400);
-            }
-        }
-        else if (exponent === 0x1F) {
-            if (fraction === 0) {
-                floatValue = (sign === 0) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-            }
-            else {
-                floatValue = Number.NaN;
-            }
-        }
-        else {
-            // Normalized number
-            floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x0400);
-        }
-        if (floatValue === targetNumber) {
-            return z; // Found the number, return the index
-        }
-    }
-    return -1; // number not found
-}
-async function fFloat(ctx, targetNumber, endian) {
-    await ctx.open();
-    if (ctx.mode == "file") {
-        const chunkSize = 0x2000; // 8192 bytes
-        const size = 4; // Size of float in bytes
-        for (let position = 0; position <= ctx.size - size;) {
-            const buffer = await ctx.read(position, Math.min(chunkSize, ctx.size - position));
-            if (buffer.length == 0) {
-                break;
-            }
-            const data = new Uint8Array(buffer);
-            for (let z = 0; z <= data.length - size; z++) {
-                var value = 0;
-                if ((endian !== undefined ? endian : ctx.endian) === "little") {
-                    value = (data[z + 3] << 24) | (data[z + 2] << 16) | (data[z + 1] << 8) | data[z];
-                }
-                else {
-                    value = (data[z] << 24) | (data[z + 1] << 16) | (data[z + 2] << 8) | data[z + 3];
-                }
-                const isNegative = (value & 0x80000000) !== 0 ? 1 : 0;
-                // Extract the exponent and fraction parts
-                const exponent = (value >> 23) & 0xFF;
-                const fraction = value & 0x7FFFFF;
-                // Calculate the float value
-                var floatValue;
-                if (exponent === 0) {
-                    // Denormalized number (exponent is 0)
-                    floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
-                }
-                else if (exponent === 0xFF) {
-                    // Infinity or NaN (exponent is 255)
-                    floatValue = fraction === 0 ? (isNegative ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : Number.NaN;
-                }
-                else {
-                    // Normalized number
-                    floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
-                }
-                if (floatValue === targetNumber) {
-                    return position + z; // Found the number, return the index
-                }
-            }
-            position += buffer.length;
-        }
-        return -1; // number not found
-    }
-    await check_size(ctx, 4, 0);
-    for (let z = ctx.offset; z <= (ctx.size - 4); z++) {
-        var value = 0;
-        if ((endian != undefined ? endian : ctx.endian) == "little") {
-            value = ((ctx.data[z + 3] & 0xFF) << 24) |
-                ((ctx.data[z + 2] & 0xFF) << 16) |
-                ((ctx.data[z + 1] & 0xFF) << 8) |
-                (ctx.data[z] & 0xFF);
-        }
-        else {
-            value = ((ctx.data[z] & 0xFF) << 24) |
-                ((ctx.data[z + 1] & 0xFF) << 16) |
-                ((ctx.data[z + 2] & 0xFF) << 8) |
-                (ctx.data[z + 3] & 0xFF);
-        }
-        const isNegative = (value & 0x80000000) !== 0 ? 1 : 0;
-        // Extract the exponent and fraction parts
-        const exponent = (value >> 23) & 0xFF;
-        const fraction = value & 0x7FFFFF;
-        // Calculate the float value
-        var floatValue;
-        if (exponent === 0) {
-            // Denormalized number (exponent is 0)
-            floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
-        }
-        else if (exponent === 0xFF) {
-            // Infinity or NaN (exponent is 255)
-            floatValue = fraction === 0 ? (isNegative ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : Number.NaN;
-        }
-        else {
-            // Normalized number
-            floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
-        }
-        if (floatValue === targetNumber) {
-            return z; // Found the number, return the index
-        }
-    }
-    return -1; // number not found
-}
-async function fBigInt(ctx, targetNumber, unsigned, endian) {
-    if (!hasBigInt) {
-        throw new Error("System doesn't support BigInt values.");
-    }
-    await ctx.open();
-    if (ctx.mode == "file") {
-        const chunkSize = 0x2000; // 8192 bytes
-        let lastChunk = new Uint8Array(0);
-        const targetBigInt = BigInt(targetNumber);
-        while (ctx.offset < ctx.size) {
-            const currentChunk = await ctx.read(ctx.offset, Math.min(chunkSize, ctx.size - ctx.offset), false);
-            // No more data to read
-            if (currentChunk.length === 0) {
-                break;
-            }
-            // Concatenate the last part of the previous chunk with the current chunk
-            const combinedBuffer = Buffer.concat([lastChunk, new Uint8Array(currentChunk)]);
-            // Process the combined buffer to find the target BigInt
-            for (let z = 0; z <= combinedBuffer.length - 8; z++) {
-                var value = BigInt(0);
-                if ((endian !== undefined ? endian : ctx.endian) === "little") {
-                    for (let i = 0; i < 8; i++) {
-                        value = value | (BigInt(combinedBuffer[z + i] & 0xFF)) << BigInt(8 * i);
-                    }
-                }
-                else {
-                    for (let i = 0; i < 8; i++) {
-                        value = (value << BigInt(8)) | BigInt(combinedBuffer[z + i] & 0xFF);
-                    }
-                }
-                if (unsigned === undefined || unsigned === false) {
-                    if (value & (BigInt(1) << BigInt(63))) {
-                        value -= BigInt(1) << BigInt(64);
-                    }
-                }
-                if (value === targetBigInt) {
-                    return ctx.offset + z - lastChunk.length; // Found the byte, return the index from current
-                }
-            }
-            // Update the last chunk for the next iteration
-            lastChunk = new Uint8Array(combinedBuffer.subarray(-8 + 1));
-            ctx.offset += currentChunk.length;
-        }
-        return -1; // number not found
-    }
-    await check_size(ctx, 8, 0);
-    for (let z = ctx.offset; z <= (ctx.size - 8); z++) {
-        var value = BigInt(0);
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            for (let i = 0; i < 8; i++) {
-                value = value | BigInt((ctx.data[z + i] & 0xFF)) << BigInt(8 * i);
-            }
-            if (unsigned == undefined || unsigned == false) {
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-            }
-        }
-        else {
-            for (let i = 0; i < 8; i++) {
-                value = (value << BigInt(8)) | BigInt((ctx.data[z + i] & 0xFF));
-            }
-            if (unsigned == undefined || unsigned == false) {
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-            }
-        }
-        if (value == BigInt(targetNumber)) {
-            return z;
-        }
-    }
-    return -1; // number not found
-}
-async function fDoubleFloat(ctx, targetNumber, endian) {
-    if (!hasBigInt) {
-        throw new Error("System doesn't support BigInt values.");
-    }
-    await ctx.open();
-    if (ctx.mode == "file") {
-        const chunkSize = 0x2000; // 8192 bytes
-        const size = 8; // Size of double float in bytes
-        for (let position = 0; position <= ctx.size - size;) {
-            const buffer = await ctx.read(position, Math.min(chunkSize, ctx.size - position));
-            if (buffer.length == 0) {
-                break;
-            }
-            const data = new Uint8Array(buffer);
-            for (let z = 0; z <= data.length - size; z++) {
-                var value = BigInt(0);
-                if ((endian !== undefined ? endian : ctx.endian) === "little") {
-                    for (let i = 0; i < size; i++) {
-                        value = value | BigInt(data[z + i] & 0xFF) << BigInt(8 * i);
-                    }
-                }
-                else {
-                    for (let i = 0; i < size; i++) {
-                        value = (value << BigInt(8)) | BigInt(data[z + i] & 0xFF);
-                    }
-                }
-                const sign = (value & BigInt("9223372036854775808")) >> BigInt(63);
-                const exponent = Number((value & BigInt("9218868437227405312")) >> BigInt(52)) - 1023;
-                const fraction = Number(value & BigInt("4503599627370495")) / Math.pow(2, 52);
-                let floatValue;
-                if (exponent === -1023) {
-                    if (fraction === 0) {
-                        floatValue = (sign === BigInt(0)) ? 0 : -0; // +/-0
-                    }
-                    else {
-                        // Denormalized number
-                        floatValue = (sign === BigInt(0) ? 1 : -1) * Math.pow(2, -1022) * fraction;
-                    }
-                }
-                else if (exponent === 1024) {
-                    if (fraction === 0) {
-                        floatValue = (sign === BigInt(0)) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-                    }
-                    else {
-                        floatValue = Number.NaN;
-                    }
-                }
-                else {
-                    // Normalized number
-                    floatValue = (sign === BigInt(0) ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
-                }
-                if (floatValue === targetNumber) {
-                    return position + z; // Found the number, return the index
-                }
-            }
-            position += buffer.length;
-        }
-        return -1; // number not found
-    }
-    await check_size(ctx, 8, 0);
-    for (let z = ctx.offset; z <= (ctx.size - 8); z++) {
-        var value = BigInt(0);
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            for (let i = 0; i < 8; i++) {
-                value = value | BigInt((ctx.data[z + i] & 0xFF)) << BigInt(8 * i);
-            }
-        }
-        else {
-            for (let i = 0; i < 8; i++) {
-                value = (value << BigInt(8)) | BigInt((ctx.data[z + i] & 0xFF));
-            }
-        }
-        const sign = (value & BigInt("9223372036854775808")) >> BigInt(63);
-        const exponent = Number((value & BigInt("9218868437227405312")) >> BigInt(52)) - 1023;
-        const fraction = Number(value & BigInt("4503599627370495")) / Math.pow(2, 52);
-        var floatValue;
-        if (exponent == -1023) {
-            if (fraction == 0) {
-                floatValue = (sign == BigInt(0)) ? 0 : -0; // +/-0
-            }
-            else {
-                // Denormalized number
-                floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, -1022) * fraction;
-            }
-        }
-        else if (exponent == 1024) {
-            if (fraction == 0) {
-                floatValue = (sign == BigInt(0)) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-            }
-            else {
-                floatValue = Number.NaN;
-            }
-        }
-        else {
-            // Normalized number
-            floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
-        }
-        if (floatValue == targetNumber) {
-            return z;
-        }
-    }
-    return -1; // number not found
-}
-// #region Write / Read Bits
-async function wbit(ctx, value, bits, unsigned, endian) {
-    await ctx.open();
-    if (value == undefined) {
-        throw new Error('Must supply value.');
-    }
-    if (bits == undefined) {
-        throw new Error("Enter number of bits to write");
-    }
-    if (bits == 0) {
-        return;
-    }
-    if (bits <= 0 || bits > 32) {
-        throw new Error('Bit length must be between 1 and 32. Got ' + bits);
-    }
-    if (unsigned == true || bits == 1) {
-        if (value < 0 || value > Math.pow(2, bits)) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error(`Value is out of range for the specified ${bits}bit length.` + " min: " + 0 + " max: " + Math.pow(2, bits) + " value: " + value);
-        }
-    }
-    else {
-        const maxValue = Math.pow(2, bits - 1) - 1;
-        const minValue = -maxValue - 1;
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error(`Value is out of range for the specified ${bits}bit length.` + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-    if (unsigned == true || bits == 1) {
-        const maxValue = Math.pow(2, bits) - 1;
-        value = value & maxValue;
-    }
-    const size_needed = ((((bits - 1) + ctx.bitoffset) / 8) + ctx.offset);
-    if (size_needed > ctx.size) {
-        //add size
-        if (ctx.extendBufferSize != 0) {
-            await ctx.extendArray(ctx.extendBufferSize);
-        }
-        else {
-            await ctx.extendArray(size_needed - ctx.size);
-        }
-    }
-    var off_in_bits = (ctx.offset * 8) + ctx.bitoffset;
-    for (var i = 0; i < bits;) {
-        const remaining = bits - i;
-        const bitOffset = off_in_bits & 7;
-        const byteOffset = off_in_bits >> 3;
-        const written = Math.min(remaining, 8 - bitOffset);
-        var input = ctx.data;
-        var bOff = byteOffset;
-        if (ctx.mode == "file") {
-            input = await ctx.read(byteOffset, Math.min(1, ctx.size - ctx.offset), false);
-            bOff = 0;
-        }
-        if ((endian != undefined ? endian : ctx.endian) == "big") {
-            let mask = ~(-1 << written);
-            let writeBits = (value >> (bits - i - written)) & mask;
-            var destShift = 8 - bitOffset - written;
-            let destMask = ~(mask << destShift);
-            input[bOff] = (input[bOff] & destMask) | (writeBits << destShift);
-        }
-        else {
-            let mask = ~(0xFF << written);
-            let writeBits = value & mask;
-            value >>= written;
-            let destMask = ~(mask << bitOffset);
-            input[bOff] = (input[bOff] & destMask) | (writeBits << bitOffset);
-        }
-        off_in_bits += written;
-        i += written;
-        await ctx.commit(false);
-    }
-    ctx.offset = ctx.offset + Math.floor(((bits) + ctx.bitoffset) / 8); //end byte
-    ctx.bitoffset = ((bits) + ctx.bitoffset) % 8;
-}
-async function rbit(ctx, bits, unsigned, endian) {
-    await ctx.open();
-    if (bits == undefined || typeof bits != "number") {
-        throw new Error("Enter number of bits to read");
-    }
-    if (bits == 0) {
-        return 0;
-    }
-    if (bits <= 0 || bits > 32) {
-        throw new Error('Bit length must be between 1 and 32. Got ' + bits);
-    }
-    const size_needed = ((((bits - 1) + ctx.bitoffset) / 8) + ctx.offset);
-    if (bits <= 0 || size_needed > ctx.size) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error("Invalid number of bits to read: " + size_needed + " of " + ctx.size);
-    }
-    var off_in_bits = (ctx.offset * 8) + ctx.bitoffset;
-    var value = 0;
-    for (var i = 0; i < bits;) {
-        const remaining = bits - i;
-        const bitOffset = off_in_bits & 7;
-        var currentByte = ctx.data[off_in_bits >> 3];
-        if (ctx.mode == "file") {
-            currentByte = await ctx.read(off_in_bits >> 3, Math.min(1, ctx.size - off_in_bits >> 3), false)[0];
-        }
-        const read = Math.min(remaining, 8 - bitOffset);
-        if ((endian != undefined ? endian : ctx.endian) == "big") {
-            let mask = ~(0xFF << read);
-            let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
-            value <<= read;
-            value |= readBits;
-        }
-        else {
-            let mask = ~(0xFF << read);
-            let readBits = (currentByte >> bitOffset) & mask;
-            value |= readBits << i;
-        }
-        off_in_bits += read;
-        i += read;
-    }
-    ctx.offset = ctx.offset + Math.floor(((bits) + ctx.bitoffset) / 8); //end byte
-    ctx.bitoffset = ((bits) + ctx.bitoffset) % 8;
-    if (unsigned == true || bits <= 7) {
-        return value >>> 0;
-    }
-    if (bits !== 32 && value & (1 << (bits - 1))) {
-        value |= -1 ^ ((1 << bits) - 1);
-    }
-    return value;
-}
-// #region Write / Read Bytes
-async function wbyte(ctx, value, unsigned) {
-    await ctx.open();
-    await check_size(ctx, 1, 0);
-    if (unsigned == true) {
-        if (value < 0 || value > 255) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 8bit length.' + " min: " + 0 + " max: " + 255 + " value: " + value);
-        }
-    }
-    else {
-        const maxValue = Math.pow(2, 8 - 1) - 1;
-        const minValue = -maxValue - 1;
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 8bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-    var data = ctx.data;
-    var view = ctx.view;
-    var offset = ctx.offset;
-    if (ctx.mode == "file") {
-        data = await ctx.read(ctx.offset, 1, false);
-        view = new DataView(data.buffer, data.byteOffset);
-        offset = 0;
-    }
-    if (canInt8) {
-        if ((unsigned == undefined || unsigned == false)) {
-            view.setInt8(offset, value);
-        }
-        else {
-            view.setUint8(offset, value);
-        }
-    }
-    else {
-        data[offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-    }
-    await ctx.commit(false);
-    ctx.offset += 1;
-    ctx.bitoffset = 0;
-    return;
-}
-async function rbyte(ctx, unsigned) {
-    await ctx.open();
-    await check_size(ctx, 1);
-    var read;
-    var data = ctx.data;
-    var view = ctx.view;
-    var offset = ctx.offset;
-    if (ctx.mode == "file") {
-        data = await ctx.read(ctx.offset, 1, false);
-        view = new DataView(data.buffer, data.byteOffset);
-        offset = 0;
-    }
-    if (canInt8) {
-        if ((unsigned == undefined || unsigned == false)) {
-            read = view.getInt8(offset);
-        }
-        else {
-            read = view.getUint8(offset);
-        }
-        ctx.offset += 1;
-        ctx.bitoffset = 0;
-        return read;
-    }
-    read = data[offset];
-    ctx.offset += 1;
-    ctx.bitoffset = 0;
-    if (unsigned == true) {
-        return read & 0xFF;
-    }
-    else {
-        return read > 127 ? read - 256 : read;
-    }
-}
-// #region Write / Read Int16
-async function wint16(ctx, value, unsigned, endian) {
-    await ctx.open();
-    await check_size(ctx, 2, 0);
-    if (unsigned == true) {
-        if (value < 0 || value > 65535) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 16bit length.' + " min: " + 0 + " max: " + 65535 + " value: " + value);
-        }
-    }
-    else {
-        const maxValue = Math.pow(2, 16 - 1) - 1;
-        const minValue = -maxValue - 1;
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 16bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-    var data = ctx.data;
-    var view = ctx.view;
-    var offset = ctx.offset;
-    if (ctx.mode == "file") {
-        data = await ctx.read(ctx.offset, 2, false);
-        view = new DataView(data.buffer, data.byteOffset);
-        offset = 0;
-    }
-    if (canInt16) {
-        if ((unsigned == undefined || unsigned == false)) {
-            view.setInt16(offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            view.setUint16(offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-    }
-    else {
-        if ((endian != undefined ? endian : ctx.endian) == "little") {
-            data[offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xff;
-            data[offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff;
-        }
-        else {
-            data[offset] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff;
-            data[offset + 1] = (unsigned == undefined || unsigned == false) ? value : value & 0xff;
-        }
-    }
-    await ctx.commit(false);
-    ctx.offset += 2;
-    ctx.bitoffset = 0;
-}
-async function rint16(ctx, unsigned, endian) {
-    await ctx.open();
-    await check_size(ctx, 2);
-    var read;
-    var data = ctx.data;
-    var view = ctx.view;
-    var offset = ctx.offset;
-    if (ctx.mode == "file") {
-        data = await ctx.read(ctx.offset, 2, false);
-        view = new DataView(data.buffer, data.byteOffset);
-        offset = 0;
-    }
-    if (canInt16) {
-        if (unsigned == undefined || unsigned == false) {
-            read = view.getInt16(offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            read = view.getUint16(offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        ctx.offset += 2;
-        ctx.bitoffset = 0;
-        return read;
-    }
-    else {
-        if ((endian != undefined ? endian : ctx.endian) == "little") {
-            read = ((data[offset + 1] & 0xFFFF) << 8) | (data[offset] & 0xFFFF);
-        }
-        else {
-            read = ((data[offset] & 0xFFFF) << 8) | (data[offset + 1] & 0xFFFF);
-        }
-    }
-    ctx.offset += 2;
-    ctx.bitoffset = 0;
-    if (unsigned == undefined || unsigned == false) {
-        return read & 0x8000 ? -(0x10000 - read) : read;
-    }
-    else {
-        return read & 0xFFFF;
-    }
-}
-// #region Write / Read Float16
-async function rhalffloat(ctx, endian) {
-    if (canFloat16) {
-        await ctx.open();
-        await check_size(ctx, 2);
-        var data = ctx.data;
-        var view = ctx.view;
-        var offset = ctx.offset;
-        if (ctx.mode == "file") {
-            data = await ctx.read(ctx.offset, 2, false);
-            view = new DataView(data.buffer, data.byteOffset);
-            offset = 0;
-        }
-        const float16Value = view.getFloat16(offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        ctx.offset += 2;
-        ctx.bitoffset = 0;
-        return float16Value;
-    }
-    var uint16Value = await ctx.readInt16(true, (endian != undefined ? endian : ctx.endian));
-    const sign = (uint16Value & 0x8000) >> 15;
-    const exponent = (uint16Value & 0x7C00) >> 10;
-    const fraction = uint16Value & 0x03FF;
-    var floatValue;
-    if (exponent === 0) {
-        if (fraction === 0) {
-            floatValue = (sign === 0) ? 0 : -0; // +/-0
-        }
-        else {
-            // Denormalized number
-            floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, -14) * (fraction / 0x0400);
-        }
-    }
-    else if (exponent === 0x1F) {
-        if (fraction === 0) {
-            floatValue = (sign === 0) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-        }
-        else {
-            floatValue = Number.NaN;
-        }
-    }
-    else {
-        // Normalized number
-        floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x0400);
-    }
-    return floatValue;
-}
-async function whalffloat(ctx, value, endian) {
-    await ctx.open();
-    await check_size(ctx, 2, 0);
-    const maxValue = 65504;
-    const minValue = 5.96e-08;
-    if (value < minValue || value > maxValue) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error('Value is out of range for the specified half float length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-    }
-    if (canFloat16) {
-        var data = ctx.data;
-        var view = ctx.view;
-        var offset = ctx.offset;
-        if (ctx.mode == "file") {
-            data = await ctx.read(ctx.offset, 2, false);
-            view = new DataView(data.buffer, data.byteOffset);
-            offset = 0;
-        }
-        view.setFloat16(offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        await ctx.commit(false);
-        ctx.offset += 2;
-        ctx.bitoffset = 0;
-        return;
-    }
-    const floatView = new Float32Array(1);
-    const intView = new Uint32Array(floatView.buffer);
-    floatView[0] = value;
-    const x = intView[0];
-    const sign = (x >> 31) & 0x1;
-    var exponent = (x >> 23) & 0xff;
-    var mantissa = x & 0x7fffff;
-    var halfFloatBits;
-    if (exponent === 0xff) {
-        // NaN or Infinity
-        halfFloatBits = (sign << 15) | (0x1f << 10) | (mantissa ? 0x200 : 0);
-    }
-    else if (exponent > 142) {
-        // Overflow → Infinity
-        halfFloatBits = (sign << 15) | (0x1f << 10);
-    }
-    else if (exponent < 113) {
-        // Subnormal or zero
-        if (exponent < 103) {
-            halfFloatBits = sign << 15;
-        }
-        else {
-            mantissa |= 0x800000;
-            const shift = 125 - exponent;
-            mantissa = mantissa >> shift;
-            halfFloatBits = (sign << 15) | (mantissa >> 13);
-        }
-    }
-    else {
-        // Normalized
-        exponent = exponent - 112;
-        mantissa = mantissa >> 13;
-        halfFloatBits = (sign << 15) | (exponent << 10) | mantissa;
-    }
-    var data = ctx.data;
-    var offset = ctx.offset;
-    if (ctx.mode == "file") {
-        data = await ctx.read(ctx.offset, 2, false);
-        offset = 0;
-    }
-    // Write bytes based on endianness
-    if ((endian == undefined ? ctx.endian : endian) == "little") {
-        data[offset] = halfFloatBits & 0xFF;
-        data[offset + 1] = (halfFloatBits >> 8) & 0xFF;
-    }
-    else {
-        data[offset] = (halfFloatBits >> 8) & 0xFF;
-        data[offset + 1] = halfFloatBits & 0xFF;
-    }
-    await ctx.commit(false);
-    ctx.offset += 2;
-    ctx.bitoffset = 0;
-}
-// #region Write / Read Int32
-async function wint32(ctx, value, unsigned, endian) {
-    await ctx.open();
-    await check_size(ctx, 4, 0);
-    if (unsigned == true) {
-        if (value < 0 || value > 4294967295) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 32bit length.' + " min: " + 0 + " max: " + 4294967295 + " value: " + value);
-        }
-    }
-    else {
-        const maxValue = Math.pow(2, 32 - 1) - 1;
-        const minValue = -maxValue - 1;
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 32bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-    var data = ctx.data;
-    var view = ctx.view;
-    var offset = ctx.offset;
-    if (ctx.mode == "file") {
-        data = await ctx.read(ctx.offset, 4, false);
-        view = new DataView(data.buffer, data.byteOffset);
-        offset = 0;
-    }
-    if (canInt32) {
-        if ((unsigned == undefined || unsigned == false)) {
-            view.setInt32(offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            view.setUint32(offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-    }
-    else {
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            data[offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-            data[offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
-            data[offset + 2] = (unsigned == undefined || unsigned == false) ? (value >> 16) : (value >> 16) & 0xFF;
-            data[offset + 3] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
-        }
-        else {
-            data[offset] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
-            data[offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 16) : (value >> 16) & 0xFF;
-            data[offset + 2] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
-            data[offset + 3] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-        }
-    }
-    await ctx.commit(false);
-    ctx.offset += 4;
-    ctx.bitoffset = 0;
-}
-async function rint32(ctx, unsigned, endian) {
-    await ctx.open();
-    await check_size(ctx, 4);
-    var read;
-    var data = ctx.data;
-    var view = ctx.view;
-    var offset = ctx.offset;
-    if (ctx.mode == "file") {
-        data = await ctx.read(ctx.offset, 4, false);
-        view = new DataView(data.buffer, data.byteOffset);
-        offset = 0;
-    }
-    if (canInt32) {
-        if ((unsigned == undefined || unsigned == false)) {
-            read = view.getInt32(offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            read = view.getUint32(offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        ctx.offset += 4;
-        ctx.bitoffset = 0;
-        return read;
-    }
-    if ((endian != undefined ? endian : ctx.endian) == "little") {
-        read = ((data[offset + 3] & 0xFF) << 24) |
-            ((data[offset + 2] & 0xFF) << 16) |
-            ((data[offset + 1] & 0xFF) << 8) |
-            (data[offset] & 0xFF);
-    }
-    else {
-        read = ((data[offset] & 0xFF) << 24) |
-            ((data[offset + 1] & 0xFF) << 16) |
-            ((data[offset + 2] & 0xFF) << 8) |
-            (data[offset + 3] & 0xFF);
-    }
-    ctx.offset += 4;
-    ctx.bitoffset = 0;
-    if (unsigned == undefined || unsigned == false) {
-        return read;
-    }
-    else {
-        return read >>> 0;
-    }
-}
-// #region Write / Read Float32
-async function rfloat(ctx, endian) {
-    if (canFloat32) {
-        await ctx.open();
-        await check_size(ctx, 4);
-        var data = ctx.data;
-        var view = ctx.view;
-        var offset = ctx.offset;
-        if (ctx.mode == "file") {
-            data = await ctx.read(ctx.offset, 4, false);
-            view = new DataView(data.buffer, data.byteOffset);
-            offset = 0;
-        }
-        const float32Value = view.getFloat32(offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        ctx.offset += 4;
-        ctx.bitoffset = 0;
-        return float32Value;
-    }
-    const uint32Value = await ctx.readInt32(true, (endian == undefined ? ctx.endian : endian));
-    // Check if the value is negative (i.e., the most significant bit is set)
-    const isNegative = (uint32Value & 0x80000000) !== 0 ? 1 : 0;
-    // Extract the exponent and fraction parts
-    const exponent = (uint32Value >> 23) & 0xFF;
-    const fraction = uint32Value & 0x7FFFFF;
-    // Calculate the float value
-    var floatValue;
-    if (exponent === 0) {
-        // Denormalized number (exponent is 0)
-        floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
-    }
-    else if (exponent === 0xFF) {
-        // Infinity or NaN (exponent is 255)
-        floatValue = fraction === 0 ? (isNegative ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : Number.NaN;
-    }
-    else {
-        // Normalized number
-        floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
-    }
-    return floatValue;
-}
-async function wfloat(ctx, value, endian) {
-    await ctx.open();
-    await check_size(ctx, 4, 0);
-    const MIN_POSITIVE_FLOAT32 = Number.MIN_VALUE;
-    const MAX_POSITIVE_FLOAT32 = 3.4028235e+38;
-    const MIN_NEGATIVE_FLOAT32 = -34028235e31;
-    const MAX_NEGATIVE_FLOAT32 = -Number.MIN_VALUE;
-    if (!((value === 0) ||
-        (value >= MIN_POSITIVE_FLOAT32 && value <= MAX_POSITIVE_FLOAT32) ||
-        (value >= MIN_NEGATIVE_FLOAT32 && value <= MAX_NEGATIVE_FLOAT32))) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error('Value is out of range for the specified float length.' + " min: " + MIN_NEGATIVE_FLOAT32 + " max: " + MAX_POSITIVE_FLOAT32 + " value: " + value);
-    }
-    var data = ctx.data;
-    var view = ctx.view;
-    var offset = ctx.offset;
-    if (ctx.mode == "file") {
-        data = await ctx.read(ctx.offset, 4, false);
-        view = new DataView(data.buffer, data.byteOffset);
-        offset = 0;
-    }
-    if (canFloat32) {
-        view.setFloat32(offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-    }
-    else {
-        const arrayFloat = new Float32Array(1);
-        arrayFloat[0] = value;
-        if (endian != undefined ? endian == "little" : ctx.endian == "little") {
-            data[offset] = arrayFloat.buffer[0];
-            data[offset + 1] = arrayFloat.buffer[1];
-            data[offset + 2] = arrayFloat.buffer[2];
-            data[offset + 3] = arrayFloat.buffer[3];
-        }
-        else {
-            data[offset] = arrayFloat.buffer[3];
-            data[offset + 1] = arrayFloat.buffer[2];
-            data[offset + 2] = arrayFloat.buffer[1];
-            data[offset + 3] = arrayFloat.buffer[0];
-        }
-    }
-    await ctx.commit(false);
-    ctx.offset += 4;
-    ctx.bitoffset = 0;
-}
-// #region Write / Read Int64
-async function rint64(ctx, unsigned, endian) {
-    if (!hasBigInt) {
-        throw new Error("System doesn't support BigInt values.");
-    }
-    await ctx.open();
-    await check_size(ctx, 8);
-    var value = BigInt(0);
-    var data = ctx.data;
-    var view = ctx.view;
-    var offset = ctx.offset;
-    if (ctx.mode == "file") {
-        data = await ctx.read(ctx.offset, 8, false);
-        view = new DataView(data.buffer, data.byteOffset);
-        offset = 0;
-    }
-    if (canBigInt64) {
-        if (unsigned == undefined || unsigned == false) {
-            value = view.getBigInt64(offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            value = view.getBigUint64(offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        ctx.offset += 8;
-    }
-    else {
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            for (let i = 0; i < 8; i++) {
-                value = value | BigInt((data[offset] & 0xFF)) << BigInt(8 * i);
-                ctx.offset += 1;
-            }
-            if (unsigned == undefined || unsigned == false) {
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-            }
-        }
-        else {
-            for (let i = 0; i < 8; i++) {
-                value = (value << BigInt(8)) | BigInt((data[offset] & 0xFF));
-                ctx.offset += 1;
-            }
-            if (unsigned == undefined || unsigned == false) {
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-            }
-        }
-    }
-    ctx.bitoffset = 0;
-    if (ctx.enforceBigInt) {
-        return value;
-    }
-    else {
-        if (isSafeInt64(value)) {
-            return Number(value);
-        }
-        else {
-            throw new Error("Value is outside of number range and enforceBigInt is set to false. " + value);
-        }
-    }
-}
-async function wint64(ctx, value, unsigned, endian) {
-    if (!hasBigInt) {
-        throw new Error("System doesn't support BigInt values.");
-    }
-    await ctx.open();
-    await check_size(ctx, 8, 0);
-    if (unsigned == true) {
-        if (value < 0 || value > Math.pow(2, 64) - 1) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 64bit length.' + " min: " + 0 + " max: " + (Math.pow(2, 64) - 1) + " value: " + value);
-        }
-    }
-    else {
-        const maxValue = Math.pow(2, 63) - 1;
-        const minValue = -Math.pow(2, 63);
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error('Value is out of range for the specified 64bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-    var data = ctx.data;
-    var view = ctx.view;
-    var offset = ctx.offset;
-    if (ctx.mode == "file") {
-        data = await ctx.read(ctx.offset, 8, false);
-        view = new DataView(data.buffer, data.byteOffset);
-        offset = 0;
-    }
-    if (canBigInt64) {
-        if (unsigned == undefined || unsigned == false) {
-            view.setBigInt64(offset, BigInt(value), endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-        else {
-            view.setBigUint64(offset, BigInt(value), endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-    }
-    else {
-        // Convert the BigInt to a 64-bit signed integer
-        const bigIntArray = new BigInt64Array(1);
-        bigIntArray[0] = BigInt(value);
-        // Use two 32-bit views to write the Int64
-        const int32Array = new Int32Array(bigIntArray.buffer);
-        for (let i = 0; i < 2; i++) {
-            if ((endian == undefined ? ctx.endian : endian) == "little") {
-                if (unsigned == undefined || unsigned == false) {
-                    data[offset + i * 4 + 0] = int32Array[i];
-                    data[offset + i * 4 + 1] = (int32Array[i] >> 8);
-                    data[offset + i * 4 + 2] = (int32Array[i] >> 16);
-                    data[offset + i * 4 + 3] = (int32Array[i] >> 24);
-                }
-                else {
-                    data[offset + i * 4 + 0] = int32Array[i] & 0xFF;
-                    data[offset + i * 4 + 1] = (int32Array[i] >> 8) & 0xFF;
-                    data[offset + i * 4 + 2] = (int32Array[i] >> 16) & 0xFF;
-                    data[offset + i * 4 + 3] = (int32Array[i] >> 24) & 0xFF;
-                }
-            }
-            else {
-                if (unsigned == undefined || unsigned == false) {
-                    data[offset + (1 - i) * 4 + 3] = int32Array[i];
-                    data[offset + (1 - i) * 4 + 2] = (int32Array[i] >> 8);
-                    data[offset + (1 - i) * 4 + 1] = (int32Array[i] >> 16);
-                    data[offset + (1 - i) * 4 + 0] = (int32Array[i] >> 24);
-                }
-                else {
-                    data[offset + (1 - i) * 4 + 3] = int32Array[i] & 0xFF;
-                    data[offset + (1 - i) * 4 + 2] = (int32Array[i] >> 8) & 0xFF;
-                    data[offset + (1 - i) * 4 + 1] = (int32Array[i] >> 16) & 0xFF;
-                    data[offset + (1 - i) * 4 + 0] = (int32Array[i] >> 24) & 0xFF;
-                }
-            }
-        }
-    }
-    await ctx.commit(false);
-    ctx.offset += 8;
-    ctx.bitoffset = 0;
-}
-// #region Write / Read Float64
-async function wdfloat(ctx, value, endian) {
-    await ctx.open();
-    await check_size(ctx, 8, 0);
-    const MIN_POSITIVE_FLOAT64 = 2.2250738585072014e-308;
-    const MAX_POSITIVE_FLOAT64 = Number.MAX_VALUE;
-    const MIN_NEGATIVE_FLOAT64 = -Number.MAX_VALUE;
-    const MAX_NEGATIVE_FLOAT64 = -22250738585072014e-324;
-    if (!((value === 0) ||
-        (value >= MIN_POSITIVE_FLOAT64 && value <= MAX_POSITIVE_FLOAT64) ||
-        (value >= MIN_NEGATIVE_FLOAT64 && value <= MAX_NEGATIVE_FLOAT64))) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-        throw new Error('Value is out of range for the specified 64bit length.' + " min: " + MIN_NEGATIVE_FLOAT64 + " max: " + MAX_POSITIVE_FLOAT64 + " value: " + value);
-    }
-    var data = ctx.data;
-    var view = ctx.view;
-    var offset = ctx.offset;
-    if (ctx.mode == "file") {
-        data = await ctx.read(ctx.offset, 8, false);
-        view = new DataView(data.buffer, data.byteOffset);
-        offset = 0;
-    }
-    if (canFloat64) {
-        view.setFloat64(offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-    }
-    else {
-        const intArray = new Int32Array(2);
-        const floatArray = new Float64Array(intArray.buffer);
-        floatArray[0] = value;
-        const bytes = new Uint8Array(intArray.buffer);
-        for (let i = 0; i < 8; i++) {
-            if ((endian == undefined ? ctx.endian : endian) == "little") {
-                data[offset + i] = bytes[i];
-            }
-            else {
-                data[offset + (7 - i)] = bytes[i];
-            }
-        }
-    }
-    await ctx.commit(false);
-    ctx.offset += 8;
-    ctx.bitoffset = 0;
-}
-async function rdfloat(ctx, endian) {
-    if (canFloat64) {
-        await ctx.open();
-        await check_size(ctx, 8, 0);
-        const floatValue = ctx.view.getFloat64(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        ctx.offset += 8;
-        ctx.bitoffset = 0;
-        return floatValue;
-    }
-    endian = (endian == undefined ? ctx.endian : endian);
-    var uint64Value = await ctx.readInt64(true, endian);
-    const sign = (BigInt(uint64Value) & BigInt("9223372036854775808")) >> BigInt(63);
-    const exponent = Number((BigInt(uint64Value) & BigInt("9218868437227405312")) >> BigInt(52)) - 1023;
-    const fraction = Number(BigInt(uint64Value) & BigInt("4503599627370495")) / Math.pow(2, 52);
-    var floatValue;
-    if (exponent == -1023) {
-        if (fraction == 0) {
-            floatValue = (sign == BigInt(0)) ? 0 : -0; // +/-0
-        }
-        else {
-            // Denormalized number
-            floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, -1022) * fraction;
-        }
-    }
-    else if (exponent == 1024) {
-        if (fraction == 0) {
-            floatValue = (sign == BigInt(0)) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-        }
-        else {
-            floatValue = Number.NaN;
-        }
-    }
-    else {
-        // Normalized number
-        floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
-    }
-    return floatValue;
-}
-// #region Write / Read Strings
-async function rstring(ctx, options) {
-    await ctx.open();
-    var length = options && options.length;
-    var stringType = options && options.stringType || 'utf-8';
-    var terminateValue = options && options.terminateValue;
-    var lengthReadSize = options && options.lengthReadSize || 1;
-    var stripNull = options && options.stripNull || true;
-    var encoding = options && options.encoding || 'utf-8';
-    var endian = options && options.endian || ctx.endian;
-    var terminate = terminateValue;
-    if (length != undefined) {
-        await check_size(ctx, length);
-    }
-    if (typeof terminateValue == "number") {
-        terminate = terminateValue & 0xFF;
-    }
-    else {
-        if (terminateValue != undefined) {
-            throw new Error("terminateValue must be a number");
-        }
-    }
-    if (stringType == 'utf-8' || stringType == 'utf-16') {
-        if (encoding == undefined) {
-            if (stringType == 'utf-8') {
-                encoding = 'utf-8';
-            }
-            if (stringType == 'utf-16') {
-                encoding = 'utf-16';
-            }
-        }
-        // Read the string as UTF-8 encoded untill 0 or terminateValue
-        const encodedBytes = [];
-        if (length == undefined && terminateValue == undefined) {
-            terminate = 0;
-        }
-        var read_length = 0;
-        if (length != undefined) {
-            read_length = length;
-        }
-        else {
-            read_length = ctx.data.length - ctx.offset;
-        }
-        for (let i = 0; i < read_length; i++) {
-            if (stringType === 'utf-8') {
-                var read = await ctx.readUByte();
-                if (read == terminate) {
-                    break;
-                }
-                else {
-                    if (!(stripNull == true && read == 0)) {
-                        encodedBytes.push(read);
-                    }
-                }
-            }
-            else {
-                var read = await ctx.readInt16(true, endian);
-                var read1 = read & 0xFF;
-                var read2 = (read >> 8) & 0xFF;
-                if (read == terminate) {
-                    break;
-                }
-                else {
-                    if (!(stripNull == true && read == 0)) {
-                        encodedBytes.push(read1);
-                        encodedBytes.push(read2);
-                    }
-                }
-            }
-        }
-        return new TextDecoder(encoding).decode(new Uint8Array(encodedBytes));
-    }
-    else if (stringType == 'pascal' || stringType == 'wide-pascal') {
-        if (encoding == undefined) {
-            if (stringType == 'pascal') {
-                encoding = 'utf-8';
-            }
-            if (stringType == 'wide-pascal') {
-                encoding = 'utf-16';
-            }
-        }
-        var maxBytes;
-        if (lengthReadSize == 1) {
-            maxBytes = await ctx.readUByte();
-        }
-        else if (lengthReadSize == 2) {
-            maxBytes = await ctx.readInt16(true, endian);
-        }
-        else if (lengthReadSize == 4) {
-            maxBytes = await ctx.readInt32(true, endian);
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("Invalid length read size: " + lengthReadSize);
-        }
-        // Read the string as Pascal or Delphi encoded
-        const encodedBytes = [];
-        for (let i = 0; i < maxBytes; i++) {
-            if (stringType == 'wide-pascal') {
-                const read = await ctx.readInt16(true, endian);
-                i++;
-                if (!(stripNull == true && read == 0)) {
-                    encodedBytes.push(read);
-                }
-            }
-            else {
-                const read = await ctx.readUByte();
-                if (!(stripNull == true && read == 0)) {
-                    encodedBytes.push(read);
-                }
-            }
-        }
-        var str_return;
-        if (stringType == 'wide-pascal') {
-            const strBuffer = new Uint16Array(encodedBytes);
-            str_return = new TextDecoder().decode(strBuffer.buffer);
-        }
-        else {
-            const strBuffer = new Uint8Array(encodedBytes);
-            str_return = new TextDecoder(encoding).decode(strBuffer);
-        }
-        return str_return;
-    }
-    else {
-        throw new Error('Unsupported string type: ' + stringType);
-    }
-}
-async function wstring(ctx, string, options) {
-    await ctx.open();
-    var length = options && options.length;
-    var stringType = options && options.stringType || 'utf-8';
-    var terminateValue = options && options.terminateValue;
-    var lengthWriteSize = options && options.lengthWriteSize || 1;
-    options && options.encoding || 'utf-8';
-    var endian = options && options.endian || ctx.endian;
-    if (stringType === 'utf-8' || stringType === 'utf-16') {
-        const encoder = new TextEncoder();
-        const encodedString = encoder.encode(string);
-        if (length == undefined && terminateValue == undefined) {
-            terminateValue = 0;
-        }
-        var totalLength = (length || encodedString.byteLength) + (terminateValue != undefined ? 1 : 0);
-        if (stringType == 'utf-16') {
-            totalLength = (length || encodedString.byteLength) + (terminateValue != undefined ? 2 : 0);
-        }
-        await check_size(ctx, totalLength, 0);
-        var data = ctx.data;
-        var offset = ctx.offset;
-        if (ctx.mode == "file") {
-            data = await ctx.read(ctx.offset, 8, false);
-            offset = 0;
-        }
-        // Write the string bytes to the Uint8Array
-        for (let i = 0; i < encodedString.length; i++) {
-            if (stringType === 'utf-16') {
-                const charCode = encodedString[i];
-                if (endian == "little") {
-                    data[offset + i * 2] = charCode & 0xFF;
-                    data[offset + i * 2 + 1] = (charCode >> 8) & 0xFF;
-                }
-                else {
-                    data[offset + i * 2 + 1] = charCode & 0xFF;
-                    data[offset + i * 2] = (charCode >> 8) & 0xFF;
-                }
-            }
-            else {
-                data[offset + i] = encodedString[i];
-            }
-        }
-        if (terminateValue != undefined) {
-            if (stringType === 'utf-16') {
-                data[offset + totalLength - 1] = terminateValue & 0xFF;
-                data[offset + totalLength] = (terminateValue >> 8) & 0xFF;
-            }
-            else {
-                data[offset + totalLength] = terminateValue;
-            }
-        }
-        await ctx.commit(false);
-        ctx.offset += totalLength;
-        ctx.bitoffset = 0;
-    }
-    else if (stringType == 'pascal' || stringType == 'wide-pascal') {
-        const encoder = new TextEncoder();
-        // Calculate the length of the string based on the specified max length
-        var maxLength;
-        // Encode the string in the specified encoding
-        if (lengthWriteSize == 1) {
-            maxLength = 255;
-        }
-        else if (lengthWriteSize == 2) {
-            maxLength = 65535;
-        }
-        else if (lengthWriteSize == 4) {
-            maxLength = 4294967295;
-        }
-        else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("Invalid length write size: " + lengthWriteSize);
-        }
-        if (string.length > maxLength || (length || 0) > maxLength) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error("String outsize of max write length: " + maxLength);
-        }
-        const maxBytes = Math.min(string.length, maxLength);
-        const encodedString = encoder.encode(string.substring(0, maxBytes));
-        var totalLength = (length || encodedString.byteLength);
-        if (lengthWriteSize == 1) {
-            await ctx.writeUByte(totalLength);
-        }
-        else if (lengthWriteSize == 2) {
-            await ctx.writeUInt16(totalLength, endian);
-        }
-        else if (lengthWriteSize == 4) {
-            await ctx.writeUInt32(totalLength, endian);
-        }
-        await check_size(ctx, totalLength, 0);
-        var data = ctx.data;
-        var offset = ctx.offset;
-        if (ctx.mode == "file") {
-            data = await ctx.read(ctx.offset, 8, false);
-            offset = 0;
-        }
-        // Write the string bytes to the Uint8Array
-        for (let i = 0; i < totalLength; i++) {
-            if (stringType == 'wide-pascal') {
-                if (endian == "little") {
-                    data[offset + i] = encodedString[i];
-                    data[offset + i + 1] = encodedString[i + 1];
-                }
-                else {
-                    data[offset + i + 1] = encodedString[i];
-                    data[offset + i] = encodedString[i + 1];
-                }
-                i++;
-            }
-            else {
-                data[offset + i] = encodedString[i];
-            }
-        }
-        await ctx.commit(false);
-        ctx.offset += totalLength;
-        ctx.bitoffset = 0;
-    }
-    else {
-        throw new Error('Unsupported string type: ' + stringType);
-    }
-}
-// #region Class
+        // @ts-ignore
+        return false;
+    }
+}
+// #region Buffer Dummies
+const buff2ByteDummy = new Uint8Array(2);
+const view2ByteDummy = new DataView(buff2ByteDummy.buffer, buff2ByteDummy.byteOffset, buff2ByteDummy.byteLength);
+const buff4ByteDummy = new Uint8Array(4);
+const view4ByteDummy = new DataView(buff4ByteDummy.buffer, buff4ByteDummy.byteOffset, buff4ByteDummy.byteLength);
+const buff8ByteDummy = new Uint8Array(8);
+const view8ByteDummy = new DataView(buff8ByteDummy.buffer, buff8ByteDummy.byteOffset, buff8ByteDummy.byteLength);
 /**
  * Base class for BiReader and BiWriter
  */
@@ -25004,25 +12057,37 @@ class BiBaseAsync {
     /**
      * Get the current buffer data.
      *
-     * @type {DataType}
+     * Use async {@link getData} while in file mode!
      */
     get data() {
         return __classPrivateFieldGet(this, _BiBaseAsync_data, "f");
     }
     ;
     /**
-     * Set the current buffer data.
-     *
-     * @param {DataType} data
+     * Get the current buffer data.
      */
-    set data(data) {
+    async getData() {
+        return await this.get();
+    }
+    ;
+    set setData(data) {
         if (this.isBufferOrUint8Array(data)) {
             __classPrivateFieldSet(this, _BiBaseAsync_data, data, "f");
-            this.updateView();
+            __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_updateView).call(this);
+            this.size = __classPrivateFieldGet(this, _BiBaseAsync_data, "f").length;
+            this.bitSize = this.size * 8;
         }
     }
     ;
-    constructor(input, writeable) {
+    /**
+     * Get the DataView of current buffer data.
+     */
+    get view() {
+        return __classPrivateFieldGet(this, _BiBaseAsync_view, "f");
+    }
+    ;
+    constructor(input, options = {}) {
+        _BiBaseAsync_instances.add(this);
         /**
          * Endianness of default read.
          * @type {endian}
@@ -25031,11 +12096,11 @@ class BiBaseAsync {
         /**
          * Current read byte location.
          */
-        this.offset = 0;
+        _BiBaseAsync_offset.set(this, 0);
         /**
-         * Current read byte's bit location.
+         * Current read byte's bit location. 0 - 7
          */
-        this.bitoffset = 0;
+        _BiBaseAsync_insetBit.set(this, 0);
         /**
          * Size in bytes of the current buffer.
          */
@@ -25043,7 +12108,7 @@ class BiBaseAsync {
         /**
          * Size in bits of the current buffer.
          */
-        this.sizeB = 0;
+        this.bitSize = 0;
         /**
          * Allows the buffer to extend reading or writing outside of current size
          */
@@ -25052,7 +12117,14 @@ class BiBaseAsync {
          * Console log a hexdump on error.
          */
         this.errorDump = false;
+        /**
+         * Master Buffer
+         */
         _BiBaseAsync_data.set(this, null);
+        /**
+         * DataView of master Buffer
+         */
+        _BiBaseAsync_view.set(this, null);
         /**
          * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
          *
@@ -25060,44 +12132,95 @@ class BiBaseAsync {
          *
          * This can greatly speed up data writes when large files are being written.
          *
-         * NOTE: Using ``BiWriter.get`` or ``BiWriter.return`` will now remove all data after the current write position. Use ``BiWriter.data`` to get the full buffer instead.
+         * NOTE: Using ``BiWriterAsync.get`` or ``BiWriterAsync.return`` will now remove all data after the current write position. Use ``BiWriterAsync.data`` to get the full buffer instead.
          */
-        this.extendBufferSize = 0;
-        this.fh = null;
-        this.filePath = null;
+        this.growthIncrement = 1048576;
+        /**
+         * Open file handle
+         */
+        this.fd = null;
+        /**
+         * File write mode
+         */
         this.fsMode = "r";
-        this.isWriter = false;
-        this.directWrite = false;
         /**
          * The settings that used when using the .str getter / setter
          */
         this.strDefaults = { stringType: "utf-8", terminateValue: 0x0 };
         /**
-         * Window size of the file data (largest amount it can read)
+         * All int64 reads will return as bigint type
          */
-        this.maxFileSize = null;
         this.enforceBigInt = null;
-        this.mode = 'memory';
-        if (typeof input == "string") {
-            if (typeof Buffer === 'undefined' || typeof fs$2 == "undefined") {
-                throw new Error("Need node to read or write files.");
+        /**
+         * Not using a file reader.
+         */
+        this.isMemoryMode = false;
+        this.wasExpanded = false;
+        // ASYNC ONLY
+        /**
+         * array of loaded data chunks
+         */
+        this.chunks = [];
+        /**
+         * Promises for data chunks
+         */
+        this.chunkPromises = [];
+        /**
+         * Edited data chunks
+         */
+        this.dirtyChunks = new Set();
+        /**
+         * The amount of data to "chunk" and read a time from the file
+         *
+         * When set to 0, reads whole file at once.
+         */
+        this.windowSize = 4096;
+        /**
+         * Data is finished loading
+         */
+        this.isFullyLoaded = false;
+        /**
+         * Array of all chunks to quickly load all parts
+         */
+        this.loadAllPromise = null;
+        const { byteOffset, bitOffset, endianness, strict, growthIncrement, enforceBigInt, readOnly, windowSize, } = options;
+        if (typeof strict != "boolean") {
+            throw new TypeError("Strict mode must be true or false");
+        }
+        __classPrivateFieldSet(this, _BiBaseAsync_offset, byteOffset, "f");
+        if ((bitOffset ?? 0) != 0) {
+            __classPrivateFieldSet(this, _BiBaseAsync_offset, Math.floor(byteOffset / 8), "f");
+            __classPrivateFieldSet(this, _BiBaseAsync_insetBit, byteOffset % 8, "f");
+        }
+        this.windowSize = windowSize;
+        this.readOnly = !!readOnly;
+        this.strict = this.readOnly ? true : strict;
+        this.fsMode = this.readOnly ? 'r' : 'r+';
+        this.enforceBigInt = !!enforceBigInt;
+        if (this.enforceBigInt && !hasBigInt) {
+            this.enforceBigInt = false;
+        }
+        this.growthIncrement = growthIncrement;
+        if (typeof endianness != "string" || !(endianness == "big" || endianness == "little")) {
+            throw new TypeError("Endian must be big or little");
+        }
+        this.endian = endianness;
+        if (typeof input === 'string') {
+            if (typeof Buffer === 'undefined' || typeof fs === "undefined") {
+                throw new Error("Can't load file outside of Node.");
             }
             this.filePath = input;
-            this.mode = "file";
+            this.isMemoryMode = false;
+        }
+        else if (this.isBufferOrUint8Array(input)) {
+            this.setData = input;
+            this.isMemoryMode = true;
+            this.filePath = null;
+            this.windowSize = 0;
+            __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_initMemory).call(this);
         }
         else {
-            this.mode = "memory";
-        }
-        if (this.maxFileSize == null) {
-            this.maxFileSize = MAX_LENGTH();
-        }
-        if (writeable != undefined) {
-            if (writeable == true) {
-                this.fsMode = "w+";
-            }
-            else {
-                this.fsMode = "r";
-            }
+            throw new TypeError('Source must be a file path (string) or Uint8Array/Buffer');
         }
     }
     ;
@@ -25117,265 +12240,139 @@ class BiBaseAsync {
         this.strDefaults.terminateValue = settings.terminateValue;
     }
     ;
+    ///////////////////////////////
+    // #region INTERNALS
+    ///////////////////////////////
     /**
-     * Enables expanding in reader (changes strict)
-     *
-     * @param {boolean} mode - Enable expanding in reader (changes strict)
+     * Checks if obj is an Uint8Array or a Buffer
      */
-    async writeMode(mode) {
+    isBufferOrUint8Array(obj) {
+        return isBufferOrUint8Array(obj);
+    }
+    ;
+    /**
+     * Checks if obj is a Buffer
+     */
+    isBuffer(obj) {
+        return isBuffer(obj);
+    }
+    ;
+    /**
+     * Checks if obj is an Uint8Array
+     */
+    isUint8Array(obj) {
+        return isUint8Array(obj);
+    }
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ;
+    ///////////////////////////////
+    // #region FILE MODE
+    ///////////////////////////////
+    /**
+     * Enables writing and expanding (changes strict AND readOnly)
+     *
+     * @param {boolean} mode - True to enable writing and expanding (changes strict AND readOnly)
+     */
+    async writeMode(mode = true) {
         if (mode) {
             this.strict = false;
-            if (this.mode == "file") {
-                this.fsMode = "w+";
-                await this.close();
-                await this.open();
-            }
-            return;
+            this.readOnly = false;
+            this.fsMode = "r+";
         }
         else {
             this.strict = true;
-            if (this.mode == "file") {
-                this.fsMode = "r";
-                await this.close();
-                await this.open();
-            }
-            return;
+            this.readOnly = true;
+            this.fsMode = "r";
+        }
+        if (!this.isMemoryMode) {
+            await this.close();
+            await this.open();
         }
     }
     ;
     /**
      * Opens the file in `file` mode. Must be run before reading or writing.
      *
-     * @returns {Promise<number>} file size
+     * Can be used to pass new data to a loaded class, shifting to memory mode.
      */
-    async open() {
-        if (this.mode == "memory") {
-            return this.size;
+    async open(data) {
+        if (!this.isMemoryMode) {
+            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_initFile).call(this);
         }
-        if (this.fh != null) {
-            return this.size;
-        }
-        if (fs$2 == undefined) {
-            throw new Error("Can't load file without Node.");
-        }
-        if (this.maxFileSize == null) {
-            this.maxFileSize = MAX_LENGTH();
-        }
-        try {
-            this.fh = await fs$2.open(this.filePath, this.fsMode);
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-        await this.updateSize();
-        if (this.offset != undefined || this.bitoffset != undefined) {
-            this.offset = ((Math.abs(this.offset || 0)) + Math.ceil((Math.abs(this.bitoffset || 0)) / 8));
-            // Adjust byte offset based on bit overflow
-            this.offset += Math.floor((Math.abs(this.bitoffset || 0)) / 8);
-            // Adjust bit offset
-            this.bitoffset = Math.abs(normalizeBitOffset(this.bitoffset)) % 8;
-            // Ensure bit offset stays between 0-7
-            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
-            // Ensure offset doesn't go negative
-            this.offset = Math.max(this.offset, 0);
-            if (this.offset > this.size) {
-                if (this.strict == false) {
-                    if (this.extendBufferSize != 0) {
-                        await this.extendArray(this.extendBufferSize);
-                    }
-                    else {
-                        await this.extendArray(this.offset - this.size);
-                    }
-                }
-                else {
-                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
-                }
+        else {
+            if (this.isBufferOrUint8Array(data)) {
+                this.setData = data;
             }
-        }
-        return this.size;
-    }
-    ;
-    /**
-     * Internal update size
-     */
-    async updateSize() {
-        if (this.mode == "memory") {
-            return;
-        }
-        if (fs$2 == undefined) {
-            throw new Error("Can't read file without Node.");
-        }
-        if (this.fh !== null) {
-            try {
-                const stat = await this.fh.stat();
-                this.size = stat.size;
-                this.sizeB = this.size * 8;
-            }
-            catch (error) {
-                throw new Error(error);
-            }
-            if (this.size > this.maxFileSize) {
-                throw new Error("File too large to load.");
-            }
+            __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_initMemory).call(this);
         }
     }
     ;
     /**
-     * Closes the file.
-     *
-     * @returns {Promise<void>}
+     * commit data and removes it.
      */
     async close() {
-        if (this.mode == "memory") {
-            __classPrivateFieldSet(this, _BiBaseAsync_data, undefined, "f");
-            this.view = undefined;
-            return;
-        }
         await this.open();
-        if (this.fh === null) {
-            return; // Already closed / or not open
+        if (!this.readOnly && this.dirtyChunks.size > 0) {
+            await this.flush();
         }
-        if (fs$2 == undefined) {
-            throw new Error("Can't use BitFile without Node.");
+        if (this.loadAllPromise && !this.isFullyLoaded) {
+            await this.loadAllPromise;
         }
-        try {
-            await this.fh.close();
+        if (!this.isMemoryMode && this.fd) {
+            const data = await this.getData();
+            await this.fd.close();
+            this.fd = null;
+            return data;
         }
-        catch (error) {
-            throw new Error(error);
+        if (this.isMemoryMode) {
+            return this.data;
         }
-        this.fh = null;
-        return;
-    }
-    ;
-    /**
-     * Internal reader
-     *
-     * @param start this.offset
-     * @param length
-     * @param consume
-     * @returns {Promise<DataType>}
-     */
-    async read(start, length, consume = false) {
-        if (this.mode == "memory") {
-            return this.lift(start, start + length, consume);
-        }
-        await this.open();
-        if (this.fh === null) {
-            throw new Error('File is not open yet.');
-        }
-        if (length < 1) {
-            return Buffer.alloc(0);
-        }
-        const end = start + length;
-        if (length > this.maxFileSize) {
-            throw new Error("File read is greater than Node's max buffer size: " + this.maxFileSize);
-        }
-        if (end > this.size) {
-            if (this.strict == false) {
-                if (this.extendBufferSize != 0) {
-                    await this.extendArray(this.extendBufferSize);
-                }
-                else {
-                    await this.extendArray(length);
-                }
-            }
-            else {
-                throw new Error('File read is outside data size while in strict mode.');
-            }
-        }
-        const data = Buffer.alloc(length);
-        try {
-            const { bytesRead } = await this.fh.read(data, 0, data.length, start);
-            if (bytesRead != length) {
-                throw new Error("Didn't read the amount needed for value: " + bytesRead + " of " + length);
-            }
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-        this.data = data;
-        if (consume) {
-            this.offset = start + data.length;
-            this.bitoffset = 0;
-        }
-        return this.data;
-    }
-    ;
-    /**
-     * Write buffer to data
-     *
-     * @param {DataType} data
-     * @param {boolean} consume
-     * @param {number} start - likely this.offset
-     * @returns {Promise<number>}
-     */
-    async write(data, consume = false, start = this.offset) {
-        if (this.mode == "memory") {
-            await this.insert(data, consume, start);
-            return data.length;
-        }
-        await this.open();
-        if (fs$2 == undefined) {
-            throw new Error("Can't use BitFile without Node.");
-        }
-        if (this.fh === null) {
-            throw new Error('File is not open yet.');
-        }
-        if (data.length < 1) {
-            return 0;
-        }
-        const end = start + data.length;
-        if (end > this.size) {
-            if (this.strict == false) {
-                if (this.extendBufferSize != 0) {
-                    await this.extendArray(this.extendBufferSize);
-                }
-                else {
-                    await this.extendArray(data.length);
-                }
-            }
-            else {
-                throw new Error('File write is outside of data size while in strict mode.');
-            }
-        }
-        var bytesWritten;
-        try {
-            const written = await this.fh.write(data, 0, data.length, start);
-            bytesWritten = written.bytesWritten;
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-        await this.updateSize();
-        if (consume) {
-            this.offset = start + bytesWritten;
-        }
-        return bytesWritten;
     }
     ;
     /**
      * Write data buffer back to file
-     *
-     * @returns {Promise<Buffer>}
      */
-    async commit(consume = true) {
-        if (this.mode == "memory") {
-            return this.data.length;
+    async commit() {
+        if (this.readOnly || this.dirtyChunks.size === 0 || this.isMemoryMode || !this.fd) {
+            return;
         }
-        await this.open();
-        if (this.data === null) {
-            throw new Error("No data to write.");
-        }
-        return await this.write(this.data, consume, this.offset);
+        const promises = [...this.dirtyChunks].map(i => {
+            const chunk = this.chunks[i];
+            if (!chunk) {
+                return null;
+            }
+            return this.fd.write(chunk, 0, chunk.length, Math.min(i * this.windowSize, this.size));
+        }).filter(Boolean);
+        await Promise.all(promises);
+        this.dirtyChunks.clear();
     }
     ;
     /**
-     * syncs the data to file
+     * Write data buffer back to file
      */
     async flush() {
-        if (this.fh) {
-            await this.fh.sync();
+        if (this.fd) {
+            await this.commit();
         }
     }
     ;
@@ -25391,13 +12388,15 @@ class BiBaseAsync {
      * @param {string} newFilePath - New full file path and name.
      */
     async renameFile(newFilePath) {
-        if (this.mode == "memory") {
+        if (this.isMemoryMode) {
             return;
         }
         try {
-            await this.fh.close();
-            this.fh = null;
-            await fs$2.rename(this.filePath, newFilePath);
+            await this.close();
+            this.fd = null;
+            __classPrivateFieldSet(this, _BiBaseAsync_data, null, "f");
+            __classPrivateFieldSet(this, _BiBaseAsync_view, null, "f");
+            await fs.rename(this.filePath, newFilePath);
         }
         catch (error) {
             throw new Error(error);
@@ -25409,39 +12408,26 @@ class BiBaseAsync {
     /**
      * Deletes the working file.
      *
-     * Note: This is permanentand can't be undone.
+     * Note: This is permanent and can't be undone.
      *
      * It doesn't send the file to the recycling bin for recovery.
      */
     async deleteFile() {
-        if (this.mode == "memory") {
+        if (this.isMemoryMode) {
             return;
         }
+        if (this.readOnly) {
+            throw new Error("Can't delete file in readOnly mode!");
+        }
+        // this.mode == "file"
         try {
-            await this.fh.close();
-            this.fh = null;
-            await fs$2.unlink(this.filePath);
+            this.close();
+            await fs.unlink(this.filePath);
         }
         catch (error) {
             throw new Error(error);
         }
-    }
-    ;
-    async extendArray(to_padd) {
-        return await extendarray(this, to_padd);
-    }
-    ;
-    isBufferOrUint8Array(obj) {
-        return arrayBufferCheck(obj);
-    }
-    ;
-    /**
-     * Call this after everytime we set/replace `this.data`
-     */
-    updateView() {
-        if (__classPrivateFieldGet(this, _BiBaseAsync_data, "f")) {
-            this.view = new DataView(__classPrivateFieldGet(this, _BiBaseAsync_data, "f").buffer, __classPrivateFieldGet(this, _BiBaseAsync_data, "f").byteOffset ?? 0, __classPrivateFieldGet(this, _BiBaseAsync_data, "f").byteLength);
-        }
+        this.filePath = null;
     }
     ;
     ///////////////////////////////
@@ -25457,10 +12443,10 @@ class BiBaseAsync {
      */
     endianness(endian) {
         if (endian == undefined || typeof endian != "string") {
-            throw new Error("Endian must be big or little");
+            throw new TypeError("Endian must be big or little");
         }
         if (endian != undefined && !(endian == "big" || endian == "little")) {
-            throw new Error("Endian must be big or little");
+            throw new TypeError("Endian must be big or little");
         }
         this.endian = endian;
     }
@@ -25529,6 +12515,24 @@ class BiBaseAsync {
     }
     ;
     /**
+     * Size in bits of the current buffer.
+     *
+     * @returns {number} size
+     */
+    get sizeBits() {
+        return this.bitSize;
+    }
+    ;
+    /**
+     * Size in bytes of the current buffer.
+     *
+     *  @returns {number} size
+     */
+    get fileSize() {
+        return this.size;
+    }
+    ;
+    /**
      * Size in bytes of the current buffer.
      *
      * @returns {number} size
@@ -25542,8 +12546,8 @@ class BiBaseAsync {
      *
      * @returns {number} size
      */
-    get lengthB() {
-        return this.sizeB;
+    get lengthBits() {
+        return this.bitSize;
     }
     ;
     /**
@@ -25551,8 +12555,17 @@ class BiBaseAsync {
      *
      * @returns {number} size
      */
-    get FileSizeB() {
-        return this.sizeB;
+    get fileBitSize() {
+        return this.bitSize;
+    }
+    ;
+    /**
+     * Size in bytes of the current buffer.
+     *
+     *  @returns {number} size
+     */
+    get fileSizeBits() {
+        return this.bitSize;
     }
     ;
     /**
@@ -25560,8 +12573,8 @@ class BiBaseAsync {
      *
      * @returns {number} size
      */
-    get lenb() {
-        return this.sizeB;
+    get lenBits() {
+        return this.bitSize;
     }
     ;
     ///////////////////////////////
@@ -25572,17 +12585,8 @@ class BiBaseAsync {
      *
      * @returns {number} current byte position
      */
-    get tell() {
-        return this.offset;
-    }
-    ;
-    /**
-     * Get the current byte position.
-     *
-     * @returns {number} current byte position
-     */
-    get FTell() {
-        return this.offset;
+    get offset() {
+        return __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
     }
     ;
     /**
@@ -25595,12 +12599,30 @@ class BiBaseAsync {
     }
     ;
     /**
+     * Get the current byte position.
+     *
+     * @returns {number} current byte position
+     */
+    get tell() {
+        return __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+    }
+    ;
+    /**
+     * Get the current byte position.
+     *
+     * @returns {number} current byte position
+     */
+    get FTell() {
+        return __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+    }
+    ;
+    /**
      * Get the current byte position;
      *
      * @returns {number} current byte position
      */
     get saveOffset() {
-        return this.offset;
+        return __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
     }
     ;
     /**
@@ -25609,124 +12631,207 @@ class BiBaseAsync {
      * @returns {number} current byte position
      */
     get off() {
+        return __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+    }
+    ;
+    /**
+     * Get the current byte position;
+     *
+     * @returns {number} current byte position
+     */
+    get byteOffset() {
         return this.offset;
     }
     ;
     /**
+     * Set the current byte position.
+     *
+     * same as {@link goto}
+     */
+    async setOffset(value) {
+        await this.goto(value);
+    }
+    ;
+    /**
+     * Set the current byte position.
+     *
+     * same as {@link goto}
+     */
+    async setByteOffset(value) {
+        await this.setOffset(value);
+    }
+    ;
+    /**
+     * Get the current bit position.
+     *
+     * @returns {number} current bit position
+     */
+    get bitOffset() {
+        return (__classPrivateFieldGet(this, _BiBaseAsync_offset, "f") * 8) + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
+    }
+    ;
+    /**
+     * Get the current bit position.
+     *
+     * @returns {number} current bit position
+     */
+    get offsetBits() {
+        return this.bitOffset;
+    }
+    /**
+     * Get the current bit position.
+     *
+     * @returns {number} current bit position
+     */
+    get getBitOffset() {
+        return this.bitOffset;
+    }
+    ;
+    /**
+     * Get the current bit position.
+     *
+     * @returns {number} current bit position
+     */
+    get saveBitOffset() {
+        return this.bitOffset;
+    }
+    ;
+    /**
+     * Get the current bit position.
+     *
+     * @returns {number} current bit position
+     */
+    get FTellBits() {
+        return this.bitOffset;
+    }
+    ;
+    /**
      * Get the current bit position (0-7).
      *
      * @returns {number} current bit position
      */
-    get getOffsetBit() {
-        return this.bitoffset;
+    get tellBits() {
+        return __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
     }
     ;
     /**
-     * Get the current bit position (0-7).
+     * Get the current bit position.
      *
      * @returns {number} current bit position
      */
-    get tellB() {
-        return this.bitoffset;
+    get offBits() {
+        return this.bitOffset;
     }
     ;
     /**
-     * Get the current bit position (0-7).
+     * Set the current bit position.
+     */
+    async setOffsetBits(value) {
+        await this.goto(value - (value % 8), value % 8);
+    }
+    ;
+    /**
+     * Set the current bit position.
+     */
+    async setBitOffset(value) {
+        await this.setOffsetBits(value);
+    }
+    ;
+    /**
+     * Get the current bit position with in the current byte (0-7).
      *
      * @returns {number} current bit position
      */
-    get FTellB() {
-        return this.bitoffset;
+    get insetBit() {
+        return __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
     }
     ;
     /**
-     * Get the current bit position (0-7).
+     * Get the current bit position with in the current byte (0-7).
      *
      * @returns {number} current bit position
      */
-    get offb() {
-        return this.bitoffset;
+    get saveInsetBit() {
+        return this.insetBit;
     }
     ;
     /**
-     * Get the current absolute bit position (from start of data).
-     *
-     * @returns {number} current absolute bit position
-     */
-    get getOffsetAbsBit() {
-        return (this.offset * 8) + this.bitoffset;
-    }
-    ;
-    /**
-     * Get the current absolute bit position (from start of data).
+     * Get the current bit position with in the current byte (0-7).
      *
      * @returns {number} current bit position
      */
-    get saveOffsetAbsBit() {
-        return (this.offset * 8) + this.bitoffset;
+    get inBit() {
+        return this.insetBit;
     }
     ;
     /**
-     * Get the current absolute bit position (from start of data).
+     * Get the current bit position with in the current byte (0-7).
      *
-     * @returns {number} current absolute bit position
+     * @returns {number} current bit position
      */
-    get tellAbsB() {
-        return (this.offset * 8) + this.bitoffset;
+    get bitTell() {
+        return this.insetBit;
     }
     ;
     /**
-     * Get the current absolute bit position (from start of data).
+     * Get the current bit position with in the current byte (0-7).
      *
-     * @returns {number} current absolute bit position
+     * @returns {number} current bit position
      */
-    get saveOffsetBit() {
-        return (this.offset * 8) + this.bitoffset;
+    get getInsetBit() {
+        return this.insetBit;
     }
     ;
     /**
-     * Get the current absolute bit position (from start of data).
-     *
-     * @returns {number} current absolute bit position
+     * Set the current bit position with in the current byte (0-7).
      */
-    get offab() {
-        return (this.offset * 8) + this.bitoffset;
+    async setInsetBit(value) {
+        await this.goto(this.offset, value % 8);
     }
     ;
     /**
-     * Size in bytes of current read position to the end
+     * Size in bytes of current read position to the end of the data.
      *
      * @returns {number} size
      */
     get remain() {
-        return this.size - this.offset;
+        return this.size - __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
     }
     ;
     /**
-     * Size in bytes of current read position to the end
+     * Size in bytes of current read position to the end of the data.
+     *
+     * @returns {number} size
+     */
+    get remainBytes() {
+        return this.remain;
+    }
+    ;
+    /**
+     * Size in bytes of current read position to the end of the data.
      *
      * @returns {number} size
      */
     get FEoF() {
-        return this.size - this.offset;
+        return this.remainBytes;
     }
     ;
     /**
-     * Size in bits of current read position to the end
+     * Size in bits of current read position to the end of the data.
      *
      * @returns {number} size
      */
-    get remainB() {
-        return (this.size * 8) - this.saveOffsetAbsBit;
+    get remainBits() {
+        return (this.size * 8) - this.bitOffset;
     }
     ;
     /**
-     * Size in bits of current read position to the end
+     * Size in bits of current read position to the end of the data.
      *
      * @returns {number} size
      */
-    get FEoFB() {
-        return (this.size * 8) - this.saveOffsetAbsBit;
+    get FEoFBits() {
+        return this.remainBits;
     }
     ;
     /**
@@ -25735,7 +12840,7 @@ class BiBaseAsync {
      * @returns {number} size
      */
     get getLine() {
-        return Math.abs(Math.floor((this.offset - 1) / 16));
+        return Math.abs(Math.floor((__classPrivateFieldGet(this, _BiBaseAsync_offset, "f") - 1) / 16));
     }
     ;
     /**
@@ -25744,7 +12849,7 @@ class BiBaseAsync {
      * @returns {number} size
      */
     get row() {
-        return Math.abs(Math.floor((this.offset - 1) / 16));
+        return this.getLine;
     }
     ;
     ///////////////////////////////
@@ -25753,44 +12858,112 @@ class BiBaseAsync {
     /**
      * Returns current data.
      *
-     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
-     *
-     * Use ``.data`` instead if you want the full buffer data.
-     *
-     * @returns {DataType} ``Buffer``
+     * Note: Will remove all data after current position if ``growthIncrement`` was set.
      */
     async get() {
-        if (this.extendBufferSize != 0) {
+        await this.open();
+        // Commit every pending change
+        if (!this.readOnly && this.dirtyChunks.size > 0) {
+            await this.flush();
+        }
+        // Make sure everything is loaded (works with windowSize=0 too)
+        if (this.loadAllPromise && !this.isFullyLoaded) {
+            await this.loadAllPromise;
+        }
+        if (this.growthIncrement != 0 && this.wasExpanded) {
             await this.trim();
         }
-        return this.data;
+        if (this.isMemoryMode) {
+            return __classPrivateFieldGet(this, _BiBaseAsync_data, "f");
+        }
+        const chunks = [];
+        for (let i = 0; i < __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getNumChunks).call(this); i++) {
+            const chunk = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_ensureChunkLoaded).call(this, i);
+            chunks.push(chunk);
+        }
+        if (this.growthIncrement != 0) {
+            return Buffer.concat(chunks).subarray(0, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"));
+        }
+        return Buffer.concat(chunks);
     }
     ;
     /**
      * Returns current data.
      *
-     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
+     * Note: Will remove all data after current position if ``growthIncrement`` was set and you expanded data past the end once.
      *
      * Use ``.data`` instead if you want the full buffer data.
+     */
+    async getFullBuffer() {
+        return await this.get();
+    }
+    ;
+    /**
+     * Returns current data.
      *
-     * @returns {Promise<DataType>} ``Buffer``
+     * Note: Will remove all data after current position if ``growthIncrement`` was set.
      */
     async return() {
         return await this.get();
     }
     ;
     /**
+     * Removes data.
+     *
+     * Commits any changes to file when editing a file.
+     */
+    async end() {
+        if (this.isMemoryMode) {
+            __classPrivateFieldSet(this, _BiBaseAsync_data, null, "f");
+            __classPrivateFieldSet(this, _BiBaseAsync_view, null, "f");
+            return;
+        }
+        await this.commit();
+        return;
+    }
+    ;
+    /**
+     * Removes data.
+     *
+     * Commits any changes to file when editing a file.
+     */
+    async done() {
+        return await this.end();
+    }
+    ;
+    /**
+     * Removes data.
+     *
+     * Commits any changes to file when editing a file.
+     */
+    async finished() {
+        return await this.end();
+    }
+    ;
+    ///////////////////////////////
+    // #region HEX DUMP
+    ///////////////////////////////
+    /**
     * Creates hex dump string. Will console log or return string if set in options.
     *
     * @param {object} options
     * @param {hexdumpOptions?} options - hex dump options
-    * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
-    * @param {number?} options.startByte - byte to start dump (default ``0``)
-    * @param {boolean?} options.suppressUnicode - Suppress unicode character preview for even columns.
-    * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
+    * @param {hexdumpOptions["length"]} options.length - number of bytes to log, default ``192`` or end of data
+    * @param {hexdumpOptions["startByte"]} options.startByte - byte to start dump (default ``0``)
+    * @param {hexdumpOptions["suppressUnicode"]} options.suppressUnicode - Suppress unicode character preview for even columns.
+    * @param {hexdumpOptions["returnString"]} options.returnString - Returns the hex dump string instead of logging it.
     */
     async hexdump(options = {}) {
-        return await hexDumpBase(this, options);
+        await this.open();
+        const length = options?.length ?? 192;
+        const startByte = options?.startByte ?? __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+        const endByte = Math.min(startByte + length, this.size);
+        const newSize = endByte - startByte;
+        if (startByte > this.size || endByte > this.size) {
+            throw new RangeError("Hexdump amount is outside of data size: " + newSize + " of " + endByte);
+        }
+        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, startByte, Math.min(endByte, this.size) - startByte);
+        return _hexDump(data, options, startByte, endByte);
     }
     ;
     /**
@@ -25824,42 +12997,46 @@ class BiBaseAsync {
         this.strict = false;
     }
     ;
-    /**
-     * removes data.
-     *
-     * Commits any changes to file when editing a file.
-     */
-    async end() {
-        if (this.mode == "memory") {
-            __classPrivateFieldSet(this, _BiBaseAsync_data, undefined, "f");
-            this.view = undefined;
-            return;
-        }
-        await this.commit();
-        return;
-    }
-    ;
-    /**
-     * removes data.
-     *
-     * Commits any changes to file when editing a file.
-     */
-    async done() {
-        return await this.end();
-    }
-    ;
-    /**
-     * removes data.
-     *
-     * Commits any changes to file when editing a file.
-     */
-    async finished() {
-        return await this.end();
-    }
-    ;
     ///////////////////////////////
     // #region   FIND 
     ///////////////////////////////
+    /**
+     * Searches for position of array of byte values from current read position.
+     *
+     * Returns -1 if not found.
+     *
+     * Does not change current read position.
+     *
+     * @param {Uint8Array | Buffer | Array<number>} bytesToFind
+     */
+    async findBytes(bytesToFind) {
+        if (Array.isArray(bytesToFind)) {
+            bytesToFind = new Uint8Array(bytesToFind);
+        }
+        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
+        if (this.isBuffer(data)) {
+            var offset = data.subarray(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), this.size).indexOf(bytesToFind);
+            if (offset == -1) {
+                return -1;
+            }
+            return offset + __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+        }
+        // data = Uint8Array
+        for (let i = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"); i <= this.size - bytesToFind.length; i++) {
+            var match = true;
+            for (let j = 0; j < bytesToFind.length; j++) {
+                if (data[i + j] !== bytesToFind[j]) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                return i; // Found the string, return the index
+            }
+        }
+        return -1; // String not found
+    }
+    ;
     /**
      * Searches for byte position of string from current read position.
      *
@@ -25868,9 +13045,11 @@ class BiBaseAsync {
      * Does not change current read position.
      *
      * @param {string} string - String to search for.
+     * @param {1|2|4} bytesPerChar - how many bytes each character should take up
      */
-    async findString(string) {
-        return await fString(this, string);
+    async findString(string, bytesPerChar = 1) {
+        const encoded = textEncode(string, bytesPerChar);
+        return await this.findBytes(encoded);
     }
     ;
     /**
@@ -25884,8 +13063,9 @@ class BiBaseAsync {
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    async findByte(value, unsigned, endian) {
-        return await fNumber(this, value, 8, unsigned == undefined ? true : unsigned, endian);
+    async findByte(value, unsigned = true, endian = this.endian) {
+        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
+        return __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_findNumber).call(this, data, value, 8, unsigned, endian);
     }
     ;
     /**
@@ -25899,8 +13079,9 @@ class BiBaseAsync {
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    async findShort(value, unsigned, endian) {
-        return await fNumber(this, value, 16, unsigned == undefined ? true : unsigned, endian);
+    async findShort(value, unsigned = true, endian = this.endian) {
+        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
+        return __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_findNumber).call(this, data, value, 16, unsigned, endian);
     }
     ;
     /**
@@ -25914,8 +13095,9 @@ class BiBaseAsync {
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    async findInt(value, unsigned, endian) {
-        return await fNumber(this, value, 32, unsigned == undefined ? true : unsigned, endian);
+    async findInt(value, unsigned = true, endian = this.endian) {
+        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
+        return __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_findNumber).call(this, data, value, 32, unsigned, endian);
     }
     ;
     /**
@@ -25929,8 +13111,38 @@ class BiBaseAsync {
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    async findInt64(value, unsigned, endian) {
-        return await fBigInt(this, value, unsigned == undefined ? true : unsigned, endian);
+    async findInt64(value, unsigned = true, endian = this.endian) {
+        if (!hasBigInt) {
+            throw new Error("System doesn't support BigInt values.");
+        }
+        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
+        for (let z = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"); z <= (this.size - 8); z++) {
+            var currentValue = BigInt(0);
+            if (endian == "little") {
+                for (let i = 0; i < 8; i++) {
+                    currentValue = currentValue | BigInt((data[z + i] & 0xFF)) << BigInt(8 * i);
+                }
+                if (unsigned == undefined || unsigned == false) {
+                    if (currentValue & (BigInt(1) << BigInt(63))) {
+                        currentValue -= BigInt(1) << BigInt(64);
+                    }
+                }
+            }
+            else {
+                for (let i = 0; i < 8; i++) {
+                    currentValue = (currentValue << BigInt(8)) | BigInt((data[z + i] & 0xFF));
+                }
+                if (unsigned == undefined || unsigned == false) {
+                    if (currentValue & (BigInt(1) << BigInt(63))) {
+                        currentValue -= BigInt(1) << BigInt(64);
+                    }
+                }
+            }
+            if (currentValue == BigInt(value)) {
+                return z;
+            }
+        }
+        return -1; // number not found
     }
     ;
     /**
@@ -25943,8 +13155,46 @@ class BiBaseAsync {
      * @param {number} value - Number to search for.
      * @param {endian} endian - endianness of value (default set endian).
      */
-    async findHalfFloat(value, endian) {
-        return await fHalfFloat(this, value, endian);
+    async findHalfFloat(value, endian = this.endian) {
+        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
+        for (let z = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"); z <= (this.size - 2); z++) {
+            var currentValue = 0;
+            if (endian == "little") {
+                currentValue = ((data[z + 1] & 0xFFFF) << 8) | (data[z] & 0xFFFF);
+            }
+            else {
+                currentValue = ((data[z] & 0xFFFF) << 8) | (data[z + 1] & 0xFFFF);
+            }
+            const sign = (currentValue & 0x8000) >> 15;
+            const exponent = (currentValue & 0x7C00) >> 10;
+            const fraction = currentValue & 0x03FF;
+            var floatValue;
+            if (exponent === 0) {
+                if (fraction === 0) {
+                    floatValue = (sign === 0) ? 0 : -0; // +/-0
+                }
+                else {
+                    // Denormalized number
+                    floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, -14) * (fraction / 0x0400);
+                }
+            }
+            else if (exponent === 0x1F) {
+                if (fraction === 0) {
+                    floatValue = (sign === 0) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+                }
+                else {
+                    floatValue = Number.NaN;
+                }
+            }
+            else {
+                // Normalized number
+                floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x0400);
+            }
+            if (floatValue === value) {
+                return z; // Found the number, return the index
+            }
+        }
+        return -1; // number not found
     }
     ;
     /**
@@ -25957,8 +13207,45 @@ class BiBaseAsync {
      * @param {number} value - Number to search for.
      * @param {endian} endian - endianness of value (default set endian).
      */
-    async findFloat(value, endian) {
-        return await fFloat(this, value, endian);
+    async findFloat(value, endian = this.endian) {
+        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
+        for (let z = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"); z <= (this.size - 4); z++) {
+            var currentValue = 0;
+            if (endian == "little") {
+                currentValue = ((data[z + 3] & 0xFF) << 24) |
+                    ((data[z + 2] & 0xFF) << 16) |
+                    ((data[z + 1] & 0xFF) << 8) |
+                    (data[z] & 0xFF);
+            }
+            else {
+                currentValue = ((data[z] & 0xFF) << 24) |
+                    ((data[z + 1] & 0xFF) << 16) |
+                    ((data[z + 2] & 0xFF) << 8) |
+                    (data[z + 3] & 0xFF);
+            }
+            const isNegative = (currentValue & 0x80000000) !== 0 ? 1 : 0;
+            // Extract the exponent and fraction parts
+            const exponent = (currentValue >> 23) & 0xFF;
+            const fraction = currentValue & 0x7FFFFF;
+            // Calculate the float value
+            var floatValue;
+            if (exponent === 0) {
+                // Denormalized number (exponent is 0)
+                floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
+            }
+            else if (exponent === 0xFF) {
+                // Infinity or NaN (exponent is 255)
+                floatValue = fraction === 0 ? (isNegative ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : Number.NaN;
+            }
+            else {
+                // Normalized number
+                floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
+            }
+            if (floatValue === value) {
+                return z; // Found the number, return the index
+            }
+        }
+        return -1; // number not found
     }
     ;
     /**
@@ -25971,8 +13258,53 @@ class BiBaseAsync {
      * @param {number} value - Number to search for.
      * @param {endian} endian - endianness of value (default set endian).
      */
-    async findDoubleFloat(value, endian) {
-        return await fDoubleFloat(this, value, endian);
+    async findDoubleFloat(value, endian = this.endian) {
+        if (!hasBigInt) {
+            throw new Error("System doesn't support BigInt values.");
+        }
+        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
+        for (let z = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"); z <= (this.size - 8); z++) {
+            var currentValue = BigInt(0);
+            if (endian == "little") {
+                for (let i = 0; i < 8; i++) {
+                    currentValue = currentValue | BigInt((data[z + i] & 0xFF)) << BigInt(8 * i);
+                }
+            }
+            else {
+                for (let i = 0; i < 8; i++) {
+                    currentValue = (currentValue << BigInt(8)) | BigInt((data[z + i] & 0xFF));
+                }
+            }
+            const sign = (currentValue & BigInt("9223372036854775808")) >> BigInt(63);
+            const exponent = Number((currentValue & BigInt("9218868437227405312")) >> BigInt(52)) - 1023;
+            const fraction = Number(currentValue & BigInt("4503599627370495")) / Math.pow(2, 52);
+            var floatValue;
+            if (exponent == -1023) {
+                if (fraction == 0) {
+                    floatValue = (sign == BigInt(0)) ? 0 : -0; // +/-0
+                }
+                else {
+                    // Denormalized number
+                    floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, -1022) * fraction;
+                }
+            }
+            else if (exponent == 1024) {
+                if (fraction == 0) {
+                    floatValue = (sign == BigInt(0)) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+                }
+                else {
+                    floatValue = Number.NaN;
+                }
+            }
+            else {
+                // Normalized number
+                floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
+            }
+            if (floatValue == value) {
+                return z;
+            }
+        }
+        return -1; // number not found
     }
     ;
     ///////////////////////////////
@@ -25985,8 +13317,11 @@ class BiBaseAsync {
      *
      * @param {number} number - Byte to align
      */
-    align(number) {
-        return align(this, number);
+    async align(number) {
+        const a = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") % number;
+        if (a) {
+            await this.skip(number - a);
+        }
     }
     ;
     /**
@@ -25996,8 +13331,11 @@ class BiBaseAsync {
      *
      * @param {number} number - Byte to align
      */
-    alignRev(number) {
-        return alignRev(this, number);
+    async alignRev(number) {
+        const a = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") % number;
+        if (a) {
+            await this.skip(a * -1);
+        }
     }
     ;
     /**
@@ -26008,8 +13346,13 @@ class BiBaseAsync {
      * @param {number} bytes - Bytes to skip
      * @param {number} bits - Bits to skip
      */
-    async skip(bytes, bits) {
-        return await skip(this, bytes, bits);
+    async skip(bytes = 0, bits = 0) {
+        await this.open();
+        var newOffset = ((bytes + __classPrivateFieldGet(this, _BiBaseAsync_offset, "f")) + Math.ceil((__classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f") + bits) / 8));
+        if (bits && bits < 0) {
+            newOffset = Math.floor((((bytes + __classPrivateFieldGet(this, _BiBaseAsync_offset, "f")) * 8) + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f") + bits) / 8);
+        }
+        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_updateOffsets).call(this, newOffset, bytes, bits);
     }
     ;
     /**
@@ -26033,7 +13376,7 @@ class BiBaseAsync {
      * @param {number} bit - bit to set to
      */
     async FSeek(byte, bit) {
-        return await goto(this, byte, bit);
+        await this.goto(byte, bit);
     }
     ;
     /**
@@ -26045,7 +13388,7 @@ class BiBaseAsync {
      * @param {number} bits - Bits to skip
      */
     async seek(bytes, bits) {
-        return await this.skip(bytes, bits);
+        await this.skip(bytes, bits);
     }
     ;
     /**
@@ -26056,8 +13399,10 @@ class BiBaseAsync {
      * @param {number} byte - byte to set to
      * @param {number} bit - bit to set to
      */
-    async goto(byte, bit) {
-        return await goto(this, byte, bit);
+    async goto(byte = 0, bit = 0) {
+        await this.open();
+        var newOffset = byte + Math.ceil(bit / 8);
+        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_updateOffsets).call(this, newOffset, byte, bit);
     }
     ;
     /**
@@ -26069,7 +13414,7 @@ class BiBaseAsync {
      * @param {number} bit - bit to set to
      */
     async pointer(byte, bit) {
-        return await this.goto(byte, bit);
+        await this.goto(byte, bit);
     }
     ;
     /**
@@ -26081,30 +13426,30 @@ class BiBaseAsync {
      * @param {number} bit - bit to set to
      */
     async warp(byte, bit) {
-        return await this.goto(byte, bit);
+        await this.goto(byte, bit);
     }
     ;
     /**
      * Set byte and bit position to start of data.
      */
     rewind() {
-        this.offset = 0;
-        this.bitoffset = 0;
+        __classPrivateFieldSet(this, _BiBaseAsync_offset, 0, "f");
+        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
     }
     ;
     /**
      * Set byte and bit position to start of data.
      */
     gotoStart() {
-        return this.rewind();
+        this.rewind();
     }
     ;
     /**
      * Set current byte and bit position to end of data.
      */
     last() {
-        this.offset = this.size;
-        this.bitoffset = 0;
+        __classPrivateFieldSet(this, _BiBaseAsync_offset, this.size, "f");
+        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
     }
     ;
     /**
@@ -26132,32 +13477,58 @@ class BiBaseAsync {
      * @param {number} startOffset - Start location (default 0)
      * @param {number} endOffset - End location (default current position)
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {Promise<DataType>} Removed data as ``Buffer``
      */
-    async delete(startOffset, endOffset, consume) {
-        return await remove(this, startOffset || 0, endOffset || this.offset, consume || false, true);
+    async delete(startOffset = 0, endOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), consume = false) {
+        if (this.readOnly || this.strict) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + this.size);
+        }
+        await this.open();
+        const removeLen = endOffset - startOffset;
+        if (startOffset < 0 || endOffset > this.size) {
+            throw new RangeError('Remove range out of bounds');
+        }
+        if (removeLen <= 0) {
+            if (this.isMemoryMode) {
+                if (this.isBuffer(this.data)) {
+                    return Buffer.alloc(0);
+                }
+                else {
+                    return new Uint8Array(0);
+                }
+            }
+            else {
+                return Buffer.alloc(0);
+            }
+        }
+        if (this.readOnly || this.strict) {
+            throw new Error('Cannot modify readOnly data');
+        }
+        const removed = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, startOffset, removeLen);
+        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_shiftTailBackward).call(this, startOffset, removeLen, consume);
+        const newSize = this.size - removeLen;
+        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_setFileSize).call(this, newSize);
+        const startChunk = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getChunkIndex).call(this, startOffset);
+        __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_invalidateFromChunk).call(this, startChunk);
+        return removed;
     }
     ;
     /**
      * Deletes part of data from current byte position to end, returns removed.
      *
      * Note: Errors in strict mode.
-     *
-     * @returns {Promise<DataType>} Removed data as ``Buffer``
      */
     async clip() {
-        return await remove(this, this.offset, this.size, false, true);
+        return await this.delete(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), this.size, false);
     }
     ;
     /**
      * Deletes part of data from current byte position to end, returns removed.
      *
      * Note: Errors in strict mode.
-     *
-     * @returns {Promise<DataType>} Removed data as ``Buffer``
      */
     async trim() {
-        return await remove(this, this.offset, this.size, false, true);
+        return await this.delete(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), this.size, false);
     }
     ;
     /**
@@ -26167,10 +13538,9 @@ class BiBaseAsync {
      *
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {Promise<DataType>} Removed data as ``Buffer```
      */
-    async crop(length, consume) {
-        return await remove(this, this.offset, this.offset + (length || 0), consume || false, true);
+    async crop(length = 0, consume = false) {
+        return await this.delete(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
     }
     ;
     /**
@@ -26180,10 +13550,9 @@ class BiBaseAsync {
      *
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {Promise<DataType>} Removed data as ``Buffer``
      */
-    async drop(length, consume) {
-        return await remove(this, this.offset, this.offset + (length || 0), consume || false, true);
+    async drop(length = 0, consume = false) {
+        return await this.delete(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
     }
     ;
     /**
@@ -26191,12 +13560,57 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Buffer`` to replace in data
-     * @param {boolean} consume - Move current byte position to end of data (default false)
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
+     * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    async replace(data, consume, offset) {
-        return await addData(this, data, consume || false, offset || this.offset, true);
+    async replace(data, offset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), consume = false) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't replace data in readOnly mode!");
+        }
+        await this.open();
+        if (this.isMemoryMode) {
+            if (this.isBuffer(data)) {
+                if (this.isUint8Array(this.data)) {
+                    // source is Uint8Array
+                    data = new Uint8Array(data);
+                }
+            }
+            else {
+                // input is Uint8Array
+                if (this.isBuffer(this.data)) {
+                    // source is Buffer
+                    data = Buffer.from(data);
+                }
+            }
+        }
+        else {
+            if (!this.isBuffer(data)) {
+                data = Buffer.from(data);
+            }
+        }
+        const insertLen = data?.length ?? 0;
+        if (insertLen === 0) {
+            return;
+        }
+        if (offset + insertLen > this.size) {
+            if (this.strict || this.readOnly) {
+                throw new Error('Growing requires strict: false');
+            }
+            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_confrimSize).call(this, offset + insertLen);
+        }
+        const savedOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+        const savedBitOffset = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
+        __classPrivateFieldSet(this, _BiBaseAsync_offset, offset, "f");
+        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
+        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, data, consume);
+        const tailStartChunk = Math.floor((offset + insertLen) / this.windowSize);
+        __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_invalidateFromChunk).call(this, tailStartChunk);
+        if (!consume) {
+            __classPrivateFieldSet(this, _BiBaseAsync_offset, savedOffset, "f");
+            __classPrivateFieldSet(this, _BiBaseAsync_insetBit, savedBitOffset, "f");
+        }
     }
     ;
     /**
@@ -26204,12 +13618,12 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Buffer`` to replace in data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Offset to add it at (defaults to current position)
      */
-    async overwrite(data, consume, offset) {
-        return await addData(this, data, consume || false, offset || this.offset, true);
+    async overwrite(data, consume = false, offset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f")) {
+        return await this.replace(data, offset, consume);
     }
     ;
     ///////////////////////////////
@@ -26222,10 +13636,64 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {Promise<DataType>} Selected data as ``Buffer``
      */
-    async lift(startOffset, endOffset, consume, fillValue) {
-        return await remove(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
+    async fill(startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false, fillValue) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't remove data in readOnly mode!");
+        }
+        await this.open();
+        if (startOffset < 0 || endOffset > this.size) {
+            throw new RangeError('Remove range out of bounds');
+        }
+        const removeLen = endOffset - startOffset;
+        if (removeLen <= 0) {
+            if (this.isMemoryMode) {
+                if (this.isBuffer(this.data)) {
+                    return Buffer.alloc(0);
+                }
+                else {
+                    return new Uint8Array(0);
+                }
+            }
+            else {
+                return Buffer.alloc(0);
+            }
+        }
+        if (endOffset > this.size && this.strict) {
+            throw new Error('Cannot extend data while in strict mode. Use unrestrict() to enable.');
+        }
+        const dataRemoved = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, startOffset, removeLen);
+        if (fillValue != undefined) {
+            var replacement;
+            if (this.isMemoryMode) {
+                if (this.isBuffer(this.data)) {
+                    replacement = Buffer.alloc(removeLen, fillValue);
+                }
+                else {
+                    replacement = new Uint8Array(removeLen).fill(fillValue & 0xff);
+                }
+            }
+            else {
+                replacement = Buffer.alloc(removeLen, fillValue);
+            }
+            const offsetSaver = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+            const offsetBitSaver = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
+            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, replacement, consume);
+            if (!consume) {
+                __classPrivateFieldSet(this, _BiBaseAsync_offset, offsetSaver, "f");
+                __classPrivateFieldSet(this, _BiBaseAsync_insetBit, offsetBitSaver, "f");
+            }
+            return replacement;
+        }
+        else {
+            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_shiftTailBackward).call(this, startOffset, removeLen, consume);
+            const newSize = this.size - removeLen;
+            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_setFileSize).call(this, newSize);
+            const startChunk = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getChunkIndex).call(this, startOffset);
+            __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_invalidateFromChunk).call(this, startChunk);
+        }
+        return dataRemoved;
     }
     ;
     /**
@@ -26235,10 +13703,9 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {Promise<DataType>} Selected data as ``Buffer``
      */
-    async fill(startOffset, endOffset, consume, fillValue) {
-        return await remove(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
+    async lift(startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false, fillValue) {
+        return await this.fill(startOffset, endOffset, consume, fillValue);
     }
     ;
     /**
@@ -26248,10 +13715,9 @@ class BiBaseAsync {
      *
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length
-     * @returns {Promise<DataType>} Selected data as ``Buffer``
      */
-    async extract(length, consume) {
-        return await remove(this, this.offset, this.offset + (length || 0), consume || false, false);
+    async extract(length = 0, consume = false) {
+        return await this.fill(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
     }
     ;
     /**
@@ -26261,10 +13727,9 @@ class BiBaseAsync {
      *
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length
-     * @returns {Promise<DataType>} Selected data as ``Buffer``
      */
-    async slice(length, consume) {
-        return await remove(this, this.offset, this.offset + (length || 0), consume || false, false);
+    async slice(length = 0, consume = false) {
+        return await this.fill(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
     }
     ;
     /**
@@ -26274,10 +13739,9 @@ class BiBaseAsync {
      *
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length
-     * @returns {Promise<DataType>} Selected data as ``Buffer``
      */
-    async wrap(length, consume) {
-        return await remove(this, this.offset, this.offset + (length || 0), consume || false, false);
+    async wrap(length = 0, consume = false) {
+        return await this.fill(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
     }
     ;
     ///////////////////////////////
@@ -26288,12 +13752,64 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Buffer`` to add to data
-     * @param {boolean} consume - Move current byte position to end of data (default false)
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {number} offset - Byte position to add at (defaults to current position)
+     * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    async insert(data, consume, offset) {
-        return await addData(this, data, consume || false, offset || this.offset, false);
+    async insert(data, offset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), consume = true) {
+        if (this.readOnly || this.strict) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Can not insert data in strict mode. Use unrestrict() to enable.`);
+        }
+        if (!this.strict) {
+            if (offset < 0 || offset > this.size) {
+                throw new RangeError('Insert offset out of bounds');
+            }
+        }
+        await this.open();
+        if (this.isMemoryMode) {
+            if (this.isBuffer(data)) {
+                if (this.isUint8Array(this.data)) {
+                    // source is Uint8Array
+                    data = new Uint8Array(data);
+                }
+            }
+            else {
+                // input is Uint8Array
+                if (this.isBuffer(this.data)) {
+                    // source is Buffer
+                    data = Buffer.from(data);
+                }
+            }
+        }
+        else {
+            if (!this.isBuffer(data)) {
+                data = Buffer.from(data);
+            }
+        }
+        const insertLen = data?.length ?? 0;
+        if (insertLen === 0) {
+            return;
+        }
+        const oldSize = this.size;
+        if (offset + insertLen > this.size) {
+            if (this.strict || this.readOnly) {
+                throw new Error('Growing requires strict: false');
+            }
+            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_confrimSize).call(this, offset + insertLen);
+        }
+        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_shiftTailForward).call(this, offset, insertLen, oldSize, false);
+        const savedOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+        const savedBitOffset = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
+        __classPrivateFieldSet(this, _BiBaseAsync_offset, offset, "f");
+        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
+        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, data, consume);
+        const tailStartChunk = Math.floor((offset + insertLen) / this.windowSize);
+        __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_invalidateFromChunk).call(this, tailStartChunk);
+        if (!consume) {
+            __classPrivateFieldSet(this, _BiBaseAsync_offset, savedOffset, "f");
+            __classPrivateFieldSet(this, _BiBaseAsync_insetBit, savedBitOffset, "f");
+        }
     }
     ;
     /**
@@ -26301,12 +13817,12 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Buffer`` to add to data
-     * @param {boolean} consume - Move current byte position to end of data (default false)
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {number} offset - Byte position to add at (defaults to current position)
+     * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    async place(data, consume, offset) {
-        return await addData(this, data, consume || false, offset || this.offset, false);
+    async place(data, offset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), consume = true) {
+        return await this.insert(data, offset, consume);
     }
     ;
     /**
@@ -26314,11 +13830,11 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    async unshift(data, consume) {
-        return await addData(this, data, consume || false, 0, false);
+    async unshift(data, consume = false) {
+        return await this.insert(data, 0, consume);
     }
     ;
     /**
@@ -26326,11 +13842,11 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    async prepend(data, consume) {
-        return await addData(this, data, consume || false, 0, false);
+    async prepend(data, consume = false) {
+        return await this.unshift(data, consume);
     }
     ;
     /**
@@ -26338,11 +13854,11 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    async push(data, consume) {
-        return await addData(this, data, consume || false, this.size, false);
+    async push(data, consume = false) {
+        return await this.insert(data, this.size, consume);
     }
     ;
     /**
@@ -26350,11 +13866,11 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Buffer`` to add to data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    async append(data, consume) {
-        return await addData(this, data, consume || false, this.size, false);
+    async append(data, consume = false) {
+        return await this.push(data, consume);
     }
     ;
     ///////////////////////////////
@@ -26368,15 +13884,19 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async xor(xorKey, startOffset, endOffset, consume) {
-        var XORKey = xorKey;
+    async xor(xorKey, startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
+        }
         if (typeof xorKey == "string") {
             xorKey = new TextEncoder().encode(xorKey);
         }
-        else if (!(this.isBufferOrUint8Array(XORKey) || typeof xorKey == "number")) {
+        else if (!(this.isBufferOrUint8Array(xorKey) || typeof xorKey == "number")) {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
-        return await XOR(this, xorKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        const bytes = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        _XOR(bytes, 0, bytes.length, xorKey);
+        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, startOffset, bytes);
     }
     ;
     /**
@@ -26386,24 +13906,24 @@ class BiBaseAsync {
      * @param {number} length - Length in bytes to XOR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async xorThis(xorKey, length, consume) {
-        var Length = length || 1;
-        var XORKey = xorKey;
+    async xorThis(xorKey, length, consume = false) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
+        }
         if (typeof xorKey == "number") {
-            Length = length || 1;
+            length = length ?? 1;
         }
         else if (typeof xorKey == "string") {
-            const encoder = new TextEncoder().encode(xorKey);
-            XORKey = encoder;
-            Length = length || encoder.length;
+            xorKey = new TextEncoder().encode(xorKey);
+            length = length ?? xorKey.length;
         }
-        else if (this.isBufferOrUint8Array(XORKey)) {
-            Length = length || xorKey.length;
+        else if (this.isBufferOrUint8Array(xorKey)) {
+            length = length ?? xorKey.length;
         }
         else {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
-        return await XOR(this, XORKey, this.offset, this.offset + Length, consume || false);
+        return await this.xor(xorKey, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
     }
     ;
     /**
@@ -26414,15 +13934,19 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async or(orKey, startOffset, endOffset, consume) {
-        var ORKey = orKey;
+    async or(orKey, startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
+        }
         if (typeof orKey == "string") {
             orKey = new TextEncoder().encode(orKey);
         }
-        else if (!(this.isBufferOrUint8Array(ORKey) || typeof orKey == "number")) {
+        else if (!(this.isBufferOrUint8Array(orKey) || typeof orKey == "number")) {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
-        return await OR(this, orKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        const bytes = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        _OR(bytes, 0, bytes.length, orKey);
+        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, startOffset, bytes);
     }
     ;
     /**
@@ -26433,23 +13957,23 @@ class BiBaseAsync {
      * @param {boolean} consume - Move current position to end of data (default false)
      */
     async orThis(orKey, length, consume) {
-        var Length = length || 1;
-        var ORKey = orKey;
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
+        }
         if (typeof orKey == "number") {
-            Length = length || 1;
+            length = length ?? 1;
         }
         else if (typeof orKey == "string") {
-            const encoder = new TextEncoder().encode(orKey);
-            ORKey = encoder;
-            Length = length || encoder.length;
+            orKey = new TextEncoder().encode(orKey);
+            length = length ?? orKey.length;
         }
-        else if (this.isBufferOrUint8Array(ORKey)) {
-            Length = length || orKey.length;
+        else if (this.isBufferOrUint8Array(orKey)) {
+            length = length ?? orKey.length;
         }
         else {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
-        return await OR(this, ORKey, this.offset, this.offset + Length, consume || false);
+        return await this.or(orKey, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume || false);
     }
     ;
     /**
@@ -26460,15 +13984,19 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async and(andKey, startOffset, endOffset, consume) {
-        var ANDKey = andKey;
-        if (typeof ANDKey == "string") {
-            ANDKey = new TextEncoder().encode(ANDKey);
+    async and(andKey, startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
         }
-        else if (!(typeof ANDKey == "object" || typeof ANDKey == "number")) {
+        if (typeof andKey == "string") {
+            andKey = new TextEncoder().encode(andKey);
+        }
+        else if (!(typeof andKey == "object" || typeof andKey == "number")) {
             throw new Error("AND must be a number, string, number array or Buffer");
         }
-        return await AND(this, andKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        const bytes = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        _AND(bytes, 0, bytes.length, andKey);
+        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, startOffset, bytes);
     }
     ;
     /**
@@ -26478,24 +14006,24 @@ class BiBaseAsync {
      * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async andThis(andKey, length, consume) {
-        var Length = length || 1;
-        var ANDKey = andKey;
+    async andThis(andKey, length, consume = false) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
+        }
         if (typeof andKey == "number") {
-            Length = length || 1;
+            length = length ?? 1;
         }
         else if (typeof andKey == "string") {
-            const encoder = new TextEncoder().encode(andKey);
-            ANDKey = encoder;
-            Length = length || encoder.length;
+            andKey = new TextEncoder().encode(andKey);
+            length = length ?? andKey.length;
         }
-        else if (typeof andKey == "object") {
-            Length = length || andKey.length;
+        else if (this.isBufferOrUint8Array(andKey)) {
+            length = length ?? andKey.length;
         }
         else {
-            throw new Error("AND must be a number, string, number array or Buffer");
+            throw new Error("AND must be a number, string, Uint8Array or Buffer");
         }
-        return await AND(this, ANDKey, this.offset, this.offset + Length, consume || false);
+        return await this.and(andKey, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
     }
     ;
     /**
@@ -26506,15 +14034,19 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async add(addKey, startOffset, endOffset, consume) {
-        var addedKey = addKey;
-        if (typeof addedKey == "string") {
-            addedKey = new TextEncoder().encode(addedKey);
+    async add(addKey, startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
         }
-        else if (!(typeof addedKey == "object" || typeof addedKey == "number")) {
+        if (typeof addKey == "string") {
+            addKey = new TextEncoder().encode(addKey);
+        }
+        else if (!(typeof addKey == "object" || typeof addKey == "number")) {
             throw new Error("Add key must be a number, string, number array or Buffer");
         }
-        return await ADD(this, addedKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        const bytes = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        _ADD(bytes, 0, bytes.length, addKey);
+        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, startOffset, bytes);
     }
     ;
     /**
@@ -26524,24 +14056,24 @@ class BiBaseAsync {
      * @param {number} length - Length in bytes to add from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async addThis(addKey, length, consume) {
-        var Length = length || 1;
-        var AddedKey = addKey;
-        if (typeof AddedKey == "number") {
-            Length = length || 1;
+    async addThis(addKey, length, consume = false) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
         }
-        else if (typeof AddedKey == "string") {
-            const encoder = new TextEncoder().encode(AddedKey);
-            AddedKey = encoder;
-            Length = length || encoder.length;
+        if (typeof addKey == "number") {
+            length = length ?? 1;
         }
-        else if (typeof AddedKey == "object") {
-            Length = length || AddedKey.length;
+        else if (typeof addKey == "string") {
+            addKey = new TextEncoder().encode(addKey);
+            length = length ?? addKey.length;
+        }
+        else if (this.isBufferOrUint8Array(addKey)) {
+            length = length ?? addKey.length;
         }
         else {
-            throw new Error("Add key must be a number, string, number array or Buffer");
+            throw new Error("ADD must be a number, string, Uint8Array or Buffer");
         }
-        return await ADD(this, AddedKey, this.offset, this.offset + Length, consume || false);
+        return await this.add(addKey, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
     }
     ;
     /**
@@ -26551,8 +14083,13 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async not(startOffset, endOffset, consume) {
-        return await NOT(this, startOffset || this.offset, endOffset || this.size, consume || false);
+    async not(startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
+        }
+        const bytes = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        _NOT(bytes, 0, bytes.length);
+        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, startOffset, bytes);
     }
     ;
     /**
@@ -26561,8 +14098,8 @@ class BiBaseAsync {
      * @param {number} length - Length in bytes to NOT from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async notThis(length, consume) {
-        return await NOT(this, this.offset, this.offset + (length || 1), consume || false);
+    async notThis(length = 1, consume = false) {
+        return await this.not(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
     }
     ;
     /**
@@ -26573,15 +14110,19 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async lShift(shiftKey, startOffset, endOffset, consume) {
-        var lShiftKey = shiftKey;
-        if (typeof lShiftKey == "string") {
-            lShiftKey = new TextEncoder().encode(lShiftKey);
+    async lShift(shiftKey, startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
         }
-        else if (!(typeof lShiftKey == "object" || typeof lShiftKey == "number")) {
+        if (typeof shiftKey == "string") {
+            shiftKey = new TextEncoder().encode(shiftKey);
+        }
+        else if (!(typeof shiftKey == "object" || typeof shiftKey == "number")) {
             throw new Error("Left shift must be a number, string, number array or Buffer");
         }
-        return await LSHIFT(this, lShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        const bytes = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        _LSHIFT(bytes, 0, bytes.length, shiftKey);
+        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, startOffset, bytes);
     }
     ;
     /**
@@ -26591,24 +14132,24 @@ class BiBaseAsync {
      * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async lShiftThis(shiftKey, length, consume) {
-        var Length = length || 1;
-        var lShiftKey = shiftKey;
-        if (typeof lShiftKey == "number") {
-            Length = length || 1;
+    async lShiftThis(shiftKey, length, consume = false) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
         }
-        else if (typeof lShiftKey == "string") {
-            const encoder = new TextEncoder().encode(lShiftKey);
-            lShiftKey = encoder;
-            Length = length || encoder.length;
+        if (typeof shiftKey == "number") {
+            length = length ?? 1;
         }
-        else if (typeof lShiftKey == "object") {
-            Length = length || lShiftKey.length;
+        else if (typeof shiftKey == "string") {
+            shiftKey = new TextEncoder().encode(shiftKey);
+            length = length ?? shiftKey.length;
+        }
+        else if (this.isBufferOrUint8Array(shiftKey)) {
+            length = length ?? shiftKey.length;
         }
         else {
-            throw new Error("Left shift must be a number, string, number array or Buffer");
+            throw new Error("Left shift must be a number, string, Uint8Array or Buffer");
         }
-        return await LSHIFT(this, shiftKey, this.offset, this.offset + Length, consume || false);
+        return await this.lShift(shiftKey, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
     }
     ;
     /**
@@ -26619,15 +14160,19 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async rShift(shiftKey, startOffset, endOffset, consume) {
-        var rShiftKey = shiftKey;
-        if (typeof rShiftKey == "string") {
-            rShiftKey = new TextEncoder().encode(rShiftKey);
+    async rShift(shiftKey, startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
         }
-        else if (!(typeof rShiftKey == "object" || typeof rShiftKey == "number")) {
+        if (typeof shiftKey == "string") {
+            shiftKey = new TextEncoder().encode(shiftKey);
+        }
+        else if (!(typeof shiftKey == "object" || typeof shiftKey == "number")) {
             throw new Error("Right shift must be a number, string, number array or Buffer");
         }
-        return await RSHIFT(this, rShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        const bytes = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        _RSHIFT(bytes, 0, bytes.length, shiftKey);
+        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, startOffset, bytes);
     }
     ;
     /**
@@ -26637,96 +14182,63 @@ class BiBaseAsync {
      * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async rShiftThis(shiftKey, length, consume) {
-        var Length = length || 1;
-        var lShiftKey = shiftKey;
-        if (typeof lShiftKey == "number") {
-            Length = length || 1;
+    async rShiftThis(shiftKey, length, consume = false) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
         }
-        else if (typeof lShiftKey == "string") {
-            const encoder = new TextEncoder().encode(lShiftKey);
-            lShiftKey = encoder;
-            Length = length || encoder.length;
+        if (typeof shiftKey == "number") {
+            length = length ?? 1;
         }
-        else if (typeof lShiftKey == "object") {
-            Length = length || lShiftKey.length;
+        else if (typeof shiftKey == "string") {
+            shiftKey = new TextEncoder().encode(shiftKey);
+            length = length ?? shiftKey.length;
+        }
+        else if (this.isBufferOrUint8Array(shiftKey)) {
+            length = length ?? shiftKey.length;
         }
         else {
-            throw new Error("Right shift must be a number, string, number array or Buffer");
+            throw new Error("right shift must be a number, string, Uint8Array or Buffer");
         }
-        return await RSHIFT(this, lShiftKey, this.offset, this.offset + Length, consume || false);
+        return await this.rShift(shiftKey, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
     }
     ;
     ///////////////////////////////
     // #region BIT READER
     ///////////////////////////////
     /**
+     * Bit field reader.
      *
-     * Write bits, must have at least value and number of bits.
+     * Note: When returning to a byte read, remaining bits are dropped.
      *
-     * ``Note``: When returning to a byte write, remaining bits are skipped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - number of bits to write
-     * @param {boolean} unsigned - if value is unsigned
+     * @param {number} bits - bits to read
+     * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
      */
-    async writeBit(value, bits, unsigned, endian) {
-        return await wbit(this, value, bits, unsigned, endian);
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @returns {Promise<number>}
-     */
-    async writeUBitBE(value, bits) {
-        return await wbit(this, value, bits, true, "big");
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns {Promise<void>}
-     */
-    async writeBitBE(value, bits, unsigned) {
-        return await wbit(this, value, bits, unsigned, "big");
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @returns {Promise<void>}
-     */
-    async writeUBitLE(value, bits) {
-        return await wbit(this, value, bits, true, "little");
-    }
-    ;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns {Promise<void>}
-     */
-    async writeBitLE(value, bits, unsigned) {
-        return await wbit(this, value, bits, unsigned, "little");
+    async readBit(bits, unsigned = false, endian = this.endian, consume = true) {
+        await this.open();
+        if (typeof bits != "number") {
+            throw new TypeError("Enter number of bits to read");
+        }
+        if (bits == 0) {
+            return 0;
+        }
+        if (bits <= 0 || bits > 32) {
+            throw new Error('Bit length must be between 1 and 32. Got ' + bits);
+        }
+        const byteEnd = Math.ceil((((bits - 1) + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f")) / 8) + __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"));
+        if (byteEnd > this.size) {
+            throw new Error(`Not enough bytes in file (need ${byteEnd}, have ${this.size})`);
+        }
+        const bitStart = (__classPrivateFieldGet(this, _BiBaseAsync_offset, "f") * 8) + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
+        const byteStart = Math.floor(((__classPrivateFieldGet(this, _BiBaseAsync_offset, "f") * 8) + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f")) / 8);
+        const temp = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, byteStart, byteEnd - byteStart);
+        const value = _rbit(temp, bits, bitStart % 8, endian, unsigned);
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBaseAsync_offset, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + Math.floor((bits + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f")) / 8), "f"); //end byte
+            __classPrivateFieldSet(this, _BiBaseAsync_insetBit, (bits + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f")) % 8, "f");
+        }
+        return value;
     }
     ;
     /**
@@ -26735,21 +14247,6 @@ class BiBaseAsync {
      * Note: When returning to a byte read, remaining bits are dropped.
      *
      * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {Promise<number>}
-     */
-    async readBit(bits, unsigned, endian) {
-        return await rbit(this, bits, unsigned, endian);
-    }
-    ;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @returns {Promise<number>}
      */
     async readUBitBE(bits) {
         return await this.readBit(bits, true, "big");
@@ -26761,20 +14258,6 @@ class BiBaseAsync {
      * Note: When returning to a byte read, remaining bits are dropped.
      *
      * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
-     */
-    async readBitBE(bits, unsigned) {
-        return await this.readBit(bits, unsigned, "big");
-    }
-    ;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @returns {Promise<number>}
      */
     async readUBitLE(bits) {
         return await this.readBit(bits, true, "little");
@@ -26787,10 +14270,110 @@ class BiBaseAsync {
      *
      * @param {number} bits - bits to read
      * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
+     */
+    async readBitBE(bits, unsigned) {
+        return await this.readBit(bits, unsigned, "big");
+    }
+    ;
+    /**
+     * Bit field reader.
+     *
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @param {number} bits - bits to read
+     * @param {boolean} unsigned - if the value is unsigned
      */
     async readBitLE(bits, unsigned) {
         return await this.readBit(bits, unsigned, "little");
+    }
+    ;
+    /**
+     *
+     * Write bits, must have at least value and number of bits.
+     *
+     * ``Note``: When returning to a byte write, remaining bits are skipped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - number of bits to write
+     * @param {boolean} unsigned - if value is unsigned
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
+     */
+    async writeBit(value, bits, unsigned = false, endian = this.endian, consume = true) {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error("Can't write data in readOnly mode!");
+        }
+        await this.open();
+        if (bits <= 0) {
+            return;
+        }
+        if (bits <= 0 || bits > 32) {
+            throw new Error('Bit length must be between 1 and 32. Got ' + bits);
+        }
+        value = numberSafe(value, bits, unsigned);
+        const endOffset = Math.ceil((((bits - 1) + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f")) / 8) + __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"));
+        const temp = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), Math.ceil(endOffset - __classPrivateFieldGet(this, _BiBaseAsync_offset, "f")));
+        _wbit(temp, value, bits, __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f"), endian, unsigned);
+        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), temp);
+        if (consume) {
+            __classPrivateFieldSet(this, _BiBaseAsync_offset, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + Math.floor((bits + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f")) / 8), "f");
+            __classPrivateFieldSet(this, _BiBaseAsync_insetBit, (bits + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f")) % 8, "f");
+        }
+    }
+    ;
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @returns number
+     */
+    async writeUBitBE(value, bits) {
+        return await this.writeBit(value, bits, true, "big");
+    }
+    ;
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @returns number
+     */
+    async writeUBitLE(value, bits) {
+        return await this.writeBit(value, bits, true, "little");
+    }
+    ;
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns number
+     */
+    async writeBitBE(value, bits, unsigned) {
+        return await this.writeBit(value, bits, unsigned, "big");
+    }
+    ;
+    /**
+     * Bit field writer.
+     *
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns number
+     */
+    async writeBitLE(value, bits, unsigned) {
+        return await this.writeBit(value, bits, unsigned, "little");
     }
     ;
     ///////////////////////////////
@@ -26799,11 +14382,26 @@ class BiBaseAsync {
     /**
      * Read byte.
      *
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @returns {Promise<number>}
+     * @param {boolean} unsigned - if the value is unsigned or not
+     * @param {boolean} consume - move offset after read
      */
-    async readByte(unsigned) {
-        return await rbyte(this, unsigned);
+    async readByte(unsigned = false, consume = true) {
+        await this.open();
+        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, 1, consume);
+        var value = data[0];
+        if (unsigned) {
+            value = value & 0xFF;
+        }
+        else {
+            value = value > 127 ? value - 256 : value;
+        }
+        return value;
+    }
+    /**
+     * Read unsigned byte.
+     */
+    async readUByte() {
+        return await this.readByte(true);
     }
     ;
     /**
@@ -26811,15 +14409,25 @@ class BiBaseAsync {
      *
      * @param {number} amount - amount of bytes to read
      * @param {boolean} unsigned - if value is unsigned or not
-     * @returns {Promise<number[]>}
+     * @param {boolean} consume - move offset after read
      */
-    async readBytes(amount, unsigned) {
+    async readBytes(amount, unsigned, consume = true) {
         const array = [];
         for (let i = 0; i < amount; i++) {
-            const num = await rbyte(this, unsigned);
-            array.push(num);
+            const value = await this.readByte(unsigned, consume);
+            array.push(value);
         }
         return array;
+    }
+    ;
+    /**
+     * Read multiple unsigned bytes.
+     *
+     * @param {number} amount - amount of bytes to read
+     * @param {boolean} consume - move offset after read
+     */
+    async readUBytes(amount, consume = true) {
+        return await this.readBytes(amount, true, consume);
     }
     ;
     /**
@@ -26827,20 +14435,24 @@ class BiBaseAsync {
      *
      * @param {number} value - value as int
      * @param {boolean} unsigned - if the value is unsigned
+     * @param {boolean} consume - move offset after write
      */
-    async writeByte(value, unsigned) {
-        return await wbyte(this, value, unsigned);
+    async writeByte(value, unsigned, consume = true) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
+        }
+        this.open();
+        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, [numberSafe(value, 8, unsigned)], consume);
     }
     ;
     /**
-     * Write multiple bytes.
+     * Write multiple unsigned bytes.
      *
      * @param {number[]} values - array of values as int
-     * @param {boolean} unsigned - if the value is unsigned
      */
-    async writeBytes(values, unsigned) {
+    async writeUBytes(values) {
         for (let i = 0; i < values.length; i++) {
-            await wbyte(this, values[i], unsigned);
+            await this.writeUByte(values[i]);
         }
     }
     ;
@@ -26850,16 +14462,7 @@ class BiBaseAsync {
      * @param {number} value - value as int
      */
     async writeUByte(value) {
-        return await wbyte(this, value, true);
-    }
-    ;
-    /**
-     * Read unsigned byte.
-     *
-     * @returns {Promise<number>}
-     */
-    async readUByte() {
-        return await this.readByte(true);
+        return await this.writeByte(value, true);
     }
     ;
     ///////////////////////////////
@@ -26870,10 +14473,60 @@ class BiBaseAsync {
      *
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {endian} endian - ``big`` or ``little``
-     * @returns {Promise<number>}
+     * @param {boolean} consume - move offset after read
      */
-    async readInt16(unsigned, endian) {
-        return await rint16(this, unsigned, endian);
+    async readInt16(unsigned = false, endian = this.endian, consume = true) {
+        await this.open();
+        const buf = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, 2, consume);
+        const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+        if (canInt16) {
+            if (unsigned) {
+                return view.getUint16(0, endian == "little");
+            }
+            else {
+                return view.getInt16(0, endian == "little");
+            }
+        }
+        else {
+            return _rint16(buf, 0, endian, unsigned);
+        }
+    }
+    ;
+    /**
+     * Read unsigned short.
+     *
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    async readUInt16(endian = this.endian) {
+        return await this.readInt16(true, endian);
+    }
+    ;
+    /**
+     * Read unsigned short in little endian.
+     */
+    async readUInt16LE() {
+        return await this.readUInt16("little");
+    }
+    ;
+    /**
+     * Read unsigned short in big endian.
+     */
+    async readUInt16BE() {
+        return await this.readUInt16("big");
+    }
+    ;
+    /**
+     * Read signed short in little endian.
+     */
+    async readInt16LE() {
+        return await this.readInt16(false, "little");
+    }
+    ;
+    /**
+    * Read signed short in big endian.
+    */
+    async readInt16BE() {
+        return await this.readInt16(false, "big");
     }
     ;
     /**
@@ -26882,9 +14535,24 @@ class BiBaseAsync {
      * @param {number} value - value as int
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
      */
-    async writeInt16(value, unsigned, endian) {
-        return await wint16(this, value, unsigned, endian);
+    async writeInt16(value, unsigned = false, endian = this.endian, consume = true) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
+        }
+        if (canInt16) {
+            if (unsigned) {
+                view2ByteDummy.setUint16(0, value, endian == "little");
+            }
+            else {
+                view2ByteDummy.setInt16(0, value, endian == "little");
+            }
+        }
+        else {
+            _wint16(buff2ByteDummy, numberSafe(value, 16, unsigned), 0, endian, unsigned);
+        }
+        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, buff2ByteDummy, consume);
     }
     ;
     /**
@@ -26893,8 +14561,8 @@ class BiBaseAsync {
      * @param {number} value - value as int
      * @param {endian} endian - ``big`` or ``little``
      */
-    async writeUInt16(value, endian) {
-        return await wint16(this, value, true, endian);
+    async writeUInt16(value, endian = this.endian) {
+        return await this.writeInt16(value, true, endian);
     }
     ;
     /**
@@ -26903,7 +14571,7 @@ class BiBaseAsync {
      * @param {number} value - value as int
      */
     async writeUInt16BE(value) {
-        return await this.writeInt16(value, true, "big");
+        return await this.writeUInt16(value, "big");
     }
     ;
     /**
@@ -26912,7 +14580,7 @@ class BiBaseAsync {
      * @param {number} value - value as int
      */
     async writeUInt16LE(value) {
-        return await this.writeInt16(value, true, "little");
+        return await this.writeUInt16(value, "little");
     }
     ;
     /**
@@ -26925,77 +14593,105 @@ class BiBaseAsync {
     }
     ;
     /**
-     * Read unsigned short.
+     * Write signed int16.
      *
-     * @param {endian} endian - ``big`` or ``little``
-     *
-     * @returns {Promise<number>}
+     * @param {number} value - value as int
      */
-    async readUInt16(endian) {
-        return await this.readInt16(true, endian);
-    }
-    ;
-    /**
-     * Read unsigned short in little endian.
-     *
-     * @returns {number}
-     */
-    async readUInt16LE() {
-        return await this.readInt16(true, "little");
-    }
-    ;
-    /**
-     * Read signed short in little endian.
-     *
-     * @returns {number}
-     */
-    async readInt16LE() {
-        return await this.readInt16(false, "little");
-    }
-    ;
-    /**
-     * Read unsigned short in big endian.
-     *
-     * @returns {Promise<number>}
-     */
-    async readUInt16BE() {
-        return await this.readInt16(true, "big");
-    }
-    ;
-    /**
-    * Read signed short in big endian.
-    *
-    * @returns {Promise<number>}
-    */
-    async readInt16BE() {
-        return await this.readInt16(false, "big");
+    async writeInt16BE(value) {
+        return await this.writeInt16(value, false, "big");
     }
     ;
     ///////////////////////////////
     // #region HALF FLOAT
     ///////////////////////////////
     /**
-     * Read half float.
+     * Read 16 bit float.
      *
      * @param {endian} endian - ``big`` or ``little``
-     * @returns {Promise<number>}
+     * @param {boolean} consume - move offset after read
      */
-    async readHalfFloat(endian) {
-        return await rhalffloat(this, endian);
+    async readHalfFloat(endian = this.endian, consume = true) {
+        const buf = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, 2, consume);
+        const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+        if (canFloat16) {
+            return view.getFloat16(0, endian == "little");
+        }
+        else {
+            return _rhalffloat(buf, 0, endian);
+        }
     }
     ;
     /**
-     * Writes half float.
+     * Read 16 bit float.
+     *
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
+     */
+    async readFloat16(endian = this.endian, consume = true) {
+        return await this.readHalfFloat(endian, consume);
+    }
+    ;
+    /**
+    * Read 16 bit float.
+    */
+    async readHalfFloatBE() {
+        return await this.readHalfFloat("big");
+    }
+    ;
+    /**
+    * Read 16 bit float.
+    */
+    async readFloat16BE() {
+        return await this.readHalfFloat("big");
+    }
+    ;
+    /**
+     * Read 16 bit float.
+     */
+    async readHalfFloatLE() {
+        return await this.readHalfFloat("little");
+    }
+    ;
+    /**
+     * Read 16 bit float.
+     */
+    async readFloat16LE() {
+        return await this.readHalfFloat("little");
+    }
+    ;
+    /**
+     * Writes 16 bit float.
      *
      * @param {number} value - value as int
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
      */
-    async writeHalfFloat(value, endian) {
-        return await whalffloat(this, value, endian);
+    async writeHalfFloat(value, endian = this.endian, consume = true) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
+        }
+        if (canFloat16) {
+            view2ByteDummy.setFloat16(0, value, endian == "little");
+        }
+        else {
+            _whalffloat(buff2ByteDummy, value, 0, endian);
+        }
+        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, buff2ByteDummy, consume);
     }
     ;
     /**
-     * Writes half float.
+     * Writes 16 bit float.
+     *
+     * @param {number} value - value as int
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
+     */
+    async writeFloat16(value, endian = this.endian, consume = true) {
+        return await this.writeHalfFloat(value, endian, consume);
+    }
+    ;
+    /**
+     * Writes 16 bit float.
      *
      * @param {number} value - value as int
      */
@@ -27004,7 +14700,16 @@ class BiBaseAsync {
     }
     ;
     /**
-     * Writes half float.
+     * Writes 16 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    async writeFloat16BE(value) {
+        return await this.writeHalfFloat(value, "big");
+    }
+    ;
+    /**
+     * Writes 16 bit float.
      *
      * @param {number} value - value as int
      */
@@ -27013,56 +14718,121 @@ class BiBaseAsync {
     }
     ;
     /**
-    * Read half float.
-    *
-    * @returns {Promise<number>}
-    */
-    async readHalfFloatBE() {
-        return await this.readHalfFloat("big");
-    }
-    ;
-    /**
-     * Read half float.
+     * Writes 16 bit float.
      *
-     * @returns {Promise<number>}
+     * @param {number} value - value as int
      */
-    async readHalfFloatLE() {
-        return await this.readHalfFloat("little");
+    async writeFloat16LE(value) {
+        return await this.writeHalfFloat(value, "little");
     }
     ;
     ///////////////////////////////
     // #region INT32 READER
     ///////////////////////////////
     /**
-     * Read 32 bit integer.
-     *
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {Promise<number>}
+     * Read signed 32 bit integer.
      */
-    async readInt32(unsigned, endian) {
-        return await rint32(this, unsigned, endian);
+    async readInt32(unsigned = false, endian = this.endian, consume = true) {
+        const buf = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, 4, consume);
+        const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+        if (canInt32) {
+            if (unsigned) {
+                return view.getUint32(0, endian == "little");
+            }
+            else {
+                return view.getInt32(0, endian == "little");
+            }
+        }
+        else {
+            return _rint32(buf, 0, endian, unsigned);
+        }
     }
     ;
     /**
-     * Write int32.
+     * Read signed 32 bit integer.
+     */
+    async readInt(endian) {
+        return await this.readInt32(false, endian);
+    }
+    /**
+     * Read signed 32 bit integer.
+     */
+    async readInt32BE() {
+        return await this.readInt("big");
+    }
+    ;
+    /**
+     * Read signed 32 bit integer.
+     */
+    async readInt32LE() {
+        return await this.readInt("little");
+    }
+    ;
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    async readUInt32(endian) {
+        return await this.readInt32(true, endian);
+    }
+    ;
+    /**
+     * Read unsigned 32 bit integer.
+     *
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    async readUInt(endian) {
+        return await this.readInt32(true, endian);
+    }
+    ;
+    /**
+     * Read unsigned 32 bit integer.
+     */
+    async readUInt32BE() {
+        return await this.readUInt("big");
+    }
+    ;
+    /**
+     * Read signed 32 bit integer.
+     */
+    async readUInt32LE() {
+        return await this.readUInt("little");
+    }
+    ;
+    /**
+     * Write 32 bit integer.
      *
      * @param {number} value - value as int
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
      */
-    async writeInt32(value, unsigned, endian) {
-        return await wint32(this, value, unsigned, endian);
+    async writeInt32(value, unsigned = false, endian = this.endian, consume = true) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
+        }
+        if (canInt32) {
+            if (unsigned) {
+                view4ByteDummy.setUint32(0, value, endian == "little");
+            }
+            else {
+                view4ByteDummy.setInt32(0, value, endian == "little");
+            }
+        }
+        else {
+            _wint32(buff4ByteDummy, numberSafe(value, 32, unsigned), 0, endian, unsigned);
+        }
+        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, buff4ByteDummy, consume);
     }
-    ;
     /**
-     * Write unsigned int32.
+     * Write signed 32 bit integer.
      *
      * @param {number} value - value as int
      * @param {endian} endian - ``big`` or ``little``
      */
-    async writeUInt32(value, endian) {
-        return await wint32(this, value, true, endian);
+    async writeInt(value, endian) {
+        return await this.writeInt32(value, false, endian);
     }
     ;
     /**
@@ -27071,16 +14841,7 @@ class BiBaseAsync {
      * @param {number} value - value as int
      */
     async writeInt32LE(value) {
-        return await this.writeInt32(value, false, "little");
-    }
-    ;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    async writeUInt32LE(value) {
-        return await this.writeInt32(value, true, "little");
+        return await this.writeInt(value, "little");
     }
     ;
     /**
@@ -27089,79 +14850,127 @@ class BiBaseAsync {
      * @param {number} value - value as int
      */
     async writeInt32BE(value) {
-        return await this.writeInt32(value, false, "big");
+        return await this.writeInt(value, "big");
     }
     ;
     /**
-     * Read signed 32 bit integer.
+     * Write unsigned 32 bit integer.
      *
-     * @returns {Promise<number>}
+     * @param {number} value - value as int
+     * @param {endian} endian - ``big`` or ``little``
      */
-    async readInt32BE() {
-        return await this.readInt32(false, "big");
+    async writeUInt(value, endian) {
+        return await this.writeInt32(value, true, endian);
     }
     ;
     /**
-     * Read unsigned 32 bit integer.
+     * Write unsigned 32 bit integer.
      *
-     * @returns {Promise<number>}
+     * @param {number} value - value as int
+     * @param {endian} endian - ``big`` or ``little``
      */
-    async readUInt32BE() {
-        return await this.readInt32(true, "big");
+    async writeUInt32(value, endian) {
+        return await this.writeUInt(value, endian);
     }
     ;
     /**
-     * Read signed 32 bit integer.
+     * Write unsigned int32.
      *
-     * @returns {Promise<number>}
+     * @param {number} value - value as int
      */
-    async readInt32LE() {
-        return await this.readInt32(false, "little");
+    async writeUInt32BE(value) {
+        return await this.writeUInt32(value, "big");
     }
     ;
     /**
-     * Read signed 32 bit integer.
+     * Write unsigned int32.
      *
-     * @returns {Promise<number>}
+     * @param {number} value - value as int
      */
-    async readUInt32LE() {
-        return await this.readInt32(true, "little");
-    }
-    ;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
-    async readUInt() {
-        return await this.readInt32(true);
+    async writeUInt32LE(value) {
+        return await this.writeUInt32(value, "little");
     }
     ;
     ///////////////////////////////
     // #region FLOAT32 READER
     ///////////////////////////////
     /**
-     * Read float.
+     * Read 32 bit float.
      *
      * @param {endian} endian - ``big`` or ``little``
-     * @returns {Promise<number>}
+     * @param {boolean} consume - move offset after read
      */
-    async readFloat(endian) {
-        return await rfloat(this, endian);
+    async readFloat(endian = this.endian, consume = true) {
+        const buf = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, 4, consume);
+        const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+        if (canFloat32) {
+            return view.getFloat32(0, endian == "little");
+        }
+        else {
+            return _rfloat(buf, 0, endian);
+        }
     }
     ;
     /**
-     * Write float.
+     * Read 32 bit float.
+     *
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
+     */
+    async readFloat32(endian = this.endian, consume = true) {
+        return await this.readFloat(endian, consume);
+    }
+    ;
+    /**
+     * Read 32 bit float.
+     */
+    async readFloatBE() {
+        return await this.readFloat("big");
+    }
+    ;
+    /**
+     * Read 32 bit float.
+     */
+    async readFloat32BE() {
+        return await this.readFloat("big");
+    }
+    ;
+    /**
+     * Read 32 bit float.
+     */
+    async readFloatLE() {
+        return await this.readFloat("little");
+    }
+    ;
+    /**
+     * Read 32 bit float.
+     */
+    async readFloat32LE() {
+        return await this.readFloat("little");
+    }
+    ;
+    /**
+     * Write 32 bit float.
      *
      * @param {number} value - value as int
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
      */
-    async writeFloat(value, endian) {
-        return await wfloat(this, value, endian);
+    async writeFloat(value, endian = this.endian, consume = true) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
+        }
+        if (canFloat32) {
+            view4ByteDummy.setFloat32(0, value, endian == "little");
+        }
+        else {
+            _wfloat(buff4ByteDummy, value, 0, endian);
+        }
+        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, buff4ByteDummy, consume);
     }
     ;
     /**
-     * Write float.
+     * Write 32 bit float.
      *
      * @param {number} value - value as int
      */
@@ -27170,30 +14979,30 @@ class BiBaseAsync {
     }
     ;
     /**
-     * Write float.
+     * Write 32 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    async writeFloat32LE(value) {
+        return await this.writeFloat(value, "little");
+    }
+    ;
+    /**
+     * Write 32 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    async writeFloat32BE(value) {
+        return await this.writeFloat(value, "big");
+    }
+    ;
+    /**
+     * Write 32 bit float.
      *
      * @param {number} value - value as int
      */
     async writeFloatBE(value) {
         return await this.writeFloat(value, "big");
-    }
-    ;
-    /**
-     * Read float.
-     *
-     * @returns {Promise<number>}
-     */
-    async readFloatBE() {
-        return await this.readFloat("big");
-    }
-    ;
-    /**
-     * Read float.
-     *
-     * @returns {number}
-     */
-    async readFloatLE() {
-        return await this.readFloat("little");
     }
     ;
     ///////////////////////////////
@@ -27206,10 +15015,82 @@ class BiBaseAsync {
      *
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {endian?} endian - ``big`` or ``little``
-     * @returns {Promise<hasBigInt extends true ? bigint : number>}
+     * @param {boolean} consume - move offset after read
      */
-    async readInt64(unsigned, endian) {
-        return await rint64(this, unsigned, endian);
+    async readInt64(unsigned = false, endian = this.endian, consume = true) {
+        if (!hasBigInt) {
+            throw new Error("System doesn't support BigInt values.");
+        }
+        const buf = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, 8, consume);
+        const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+        var value;
+        if (canBigInt64) {
+            if (unsigned) {
+                value = view.getBigUint64(0, endian == "little");
+            }
+            else {
+                value = view.getBigInt64(0, endian == "little");
+            }
+        }
+        else {
+            value = _rint64(buf, 0, endian, unsigned);
+        }
+        if (this.enforceBigInt == true || (typeof value == "bigint" && !isSafeInt64(value))) {
+            return value;
+        }
+        else {
+            if (isSafeInt64(value)) {
+                return Number(value);
+            }
+            else {
+                throw new Error("Value is outside of number range and enforceBigInt is set to false. " + value);
+            }
+        }
+    }
+    ;
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     */
+    async readUInt64() {
+        return await this.readInt64(true);
+    }
+    ;
+    /**
+     * Read signed 64 bit integer.
+     *
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     */
+    async readInt64BE() {
+        return await this.readInt64(false, "big");
+    }
+    ;
+    /**
+     * Read signed 64 bit integer.
+     *
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     */
+    async readInt64LE() {
+        return await this.readInt64(false, "little");
+    }
+    ;
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     */
+    async readUInt64BE() {
+        return await this.readInt64(true, "big");
+    }
+    ;
+    /**
+     * Read unsigned 64 bit integer.
+     *
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     */
+    async readUInt64LE() {
+        return await this.readInt64(true, "little");
     }
     ;
     /**
@@ -27218,9 +15099,27 @@ class BiBaseAsync {
      * @param {BigValue} value - value as int
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
      */
-    async writeInt64(value, unsigned, endian) {
-        return await wint64(this, value, unsigned, endian);
+    async writeInt64(value, unsigned = false, endian = this.endian, consume = true) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
+        }
+        if (!hasBigInt) {
+            throw new Error("System doesn't support BigInt values.");
+        }
+        if (canBigInt64) {
+            if (unsigned) {
+                view8ByteDummy.setBigUint64(0, BigInt(value), endian == "little");
+            }
+            else {
+                view8ByteDummy.setBigInt64(0, BigInt(value), endian == "little");
+            }
+        }
+        else {
+            _wint64(buff8ByteDummy, numberSafe(value, 64, unsigned), 0, endian, unsigned);
+        }
+        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, buff8ByteDummy, consume);
     }
     ;
     /**
@@ -27229,7 +15128,7 @@ class BiBaseAsync {
      * @param {BigValue} value - value as int
      * @param {endian} endian - ``big`` or ``little``
      */
-    async writeUInt64(value, endian) {
+    async writeUInt64(value, endian = this.endian) {
         return await this.writeInt64(value, true, endian);
     }
     ;
@@ -27240,15 +15139,6 @@ class BiBaseAsync {
      */
     async writeInt64LE(value) {
         return await this.writeInt64(value, false, "little");
-    }
-    ;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    async writeUInt64LE(value) {
-        return await this.writeInt64(value, true, "little");
     }
     ;
     /**
@@ -27265,90 +15155,109 @@ class BiBaseAsync {
      *
      * @param {BigValue} value - value as int
      */
+    async writeUInt64LE(value) {
+        return await this.writeInt64(value, true, "little");
+    }
+    ;
+    /**
+     * Write unsigned 64 bit integer.
+     *
+     * @param {BigValue} value - value as int
+     */
     async writeUInt64BE(value) {
         return await this.writeInt64(value, true, "big");
-    }
-    ;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {Promise<BigValue>}
-     */
-    async readUInt64() {
-        return await this.readInt64(true);
-    }
-    ;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {Promise<BigValue>}
-     */
-    async readInt64BE() {
-        return await this.readInt64(false, "big");
-    }
-    ;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {Promise<BigValue>}
-     */
-    async readUInt64BE() {
-        return await this.readInt64(true, "big");
-    }
-    ;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {Promise<BigValue>}
-     */
-    async readInt64LE() {
-        return await this.readInt64(false, "little");
-    }
-    ;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {Promise<BigValue>}
-     */
-    async readUInt64LE() {
-        return await this.readInt64(true, "little");
     }
     ;
     ///////////////////////////////
     // #region FLOAT64 READER
     ///////////////////////////////
     /**
-     * Read double float.
+     * Read 64 bit float.
      *
      * @param {endian} endian - ``big`` or ``little``
-     * @returns {Promise<number>}
      */
-    async readDoubleFloat(endian) {
-        return await rdfloat(this, endian);
+    async readDoubleFloat(endian = this.endian, consume = true) {
+        const buf = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, 8, consume);
+        const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+        if (canFloat64) {
+            return view.getFloat64(0, endian == "little");
+        }
+        else {
+            if (!hasBigInt) {
+                throw new Error("System doesn't support BigInt values.");
+            }
+            return _rdfloat(buf, 0, endian);
+        }
     }
     ;
     /**
-     * Writes double float.
+     * Read 64 bit float.
+     *
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    async readFloat64(endian = this.endian) {
+        return await this.readDoubleFloat(endian);
+    }
+    ;
+    /**
+     * Read 64 bit float.
+     */
+    async readDoubleFloatBE() {
+        return await this.readDoubleFloat("big");
+    }
+    ;
+    /**
+     * Read 64 bit float.
+     */
+    async readFloat64BE() {
+        return await this.readDoubleFloat("big");
+    }
+    ;
+    /**
+     * Read 64 bit float.
+     */
+    async readDoubleFloatLE() {
+        return await this.readDoubleFloat("little");
+    }
+    ;
+    /**
+     * Read 64 bit float.
+     */
+    async readFloat64LE() {
+        return await this.readDoubleFloat("little");
+    }
+    ;
+    /**
+     * Writes 64 bit float.
      *
      * @param {number} value - value as int
      * @param {endian} endian - ``big`` or ``little``
      */
-    async writeDoubleFloat(value, endian) {
-        return await wdfloat(this, value, endian);
+    async writeDoubleFloat(value, endian = this.endian, consume = true) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
+        }
+        if (canFloat64) {
+            view8ByteDummy.setFloat64(0, value, endian == "little");
+        }
+        else {
+            _wdfloat(buff8ByteDummy, value, 0, endian);
+        }
+        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, buff8ByteDummy, consume);
     }
     ;
     /**
-     * Writes double float.
+     * Writes 64 bit float.
+     *
+     * @param {number} value - value as int
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    async writeFloat64(value, endian = this.endian) {
+        return await this.writeDoubleFloat(value, endian);
+    }
+    ;
+    /**
+     * Writes 64 bit float.
      *
      * @param {number} value - value as int
      */
@@ -27357,7 +15266,16 @@ class BiBaseAsync {
     }
     ;
     /**
-     * Writes double float.
+     * Writes 64 bit float.
+     *
+     * @param {number} value - value as int
+     */
+    async writeFloat64BE(value) {
+        return await this.writeDoubleFloat(value, "big");
+    }
+    ;
+    /**
+     * Writes 64 bit float.
      *
      * @param {number} value - value as int
      */
@@ -27366,21 +15284,12 @@ class BiBaseAsync {
     }
     ;
     /**
-     * Read double float.
+     * Writes 64 bit float.
      *
-     * @returns {Promise<number>}
+     * @param {number} value - value as int
      */
-    async readDoubleFloatBE() {
-        return await this.readDoubleFloat("big");
-    }
-    ;
-    /**
-     * Read double float.
-     *
-     * @returns {Promise<number>}
-     */
-    async readDoubleFloatLE() {
-        return await this.readDoubleFloat("little");
+    async writeFloat64LE(value) {
+        return await this.writeDoubleFloat(value, "little");
     }
     ;
     ///////////////////////////////
@@ -27391,15 +15300,63 @@ class BiBaseAsync {
     *
     * @param {stringOptions} options
     * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
     * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
     * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
-    * @returns {Promise<string>}
+    * @param {stringOptions["endian"]?} options.endian - for wide-pascal, double-wide-pascal and utf-16, utf-32
+    * @param {boolean} consume - move offset after read
     */
-    async readString(options) {
-        return await rstring(this, options);
+    async readString(options = this.strDefaults, consume = true) {
+        await this.open();
+        var length = options.length;
+        var stringType = options.stringType ?? 'utf-8';
+        var terminateValue = options.terminateValue;
+        var lengthReadSize = options.lengthReadSize ?? 1;
+        var stripNull = options.stripNull ?? true;
+        var endian = options.endian ?? this.endian;
+        var encoding = options.encoding ?? 'utf-8';
+        var terminate = terminateValue;
+        var readLengthinBytes = 0;
+        if (length != undefined) {
+            switch (stringType) {
+                case "utf-8":
+                    readLengthinBytes = length;
+                    break;
+                case "utf-16":
+                    readLengthinBytes = length * 2;
+                    break;
+                case "utf-32":
+                    readLengthinBytes = length * 4;
+                    break;
+                default:
+                    readLengthinBytes = length;
+                    break;
+            }
+        }
+        else {
+            readLengthinBytes = this.data.length - __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+        }
+        if (__classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + readLengthinBytes > this.size) {
+            if (this.strict || this.readOnly) {
+                throw new Error('Growing requires strict: false');
+            }
+            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_confrimSize).call(this, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + readLengthinBytes);
+        }
+        if (terminateValue != undefined && typeof terminateValue == "number") {
+            terminate = terminateValue & 0xFF;
+        }
+        else {
+            terminate = 0;
+        }
+        const saved_offset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+        const saved_bitoffset = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
+        const str = await _rstringAsync(stringType, lengthReadSize, readLengthinBytes, terminate, stripNull, encoding, endian, this.readUByte.bind(this), this.readUInt16.bind(this), this.readUInt32.bind(this));
+        if (!consume) {
+            __classPrivateFieldSet(this, _BiBaseAsync_offset, saved_offset, "f");
+            __classPrivateFieldSet(this, _BiBaseAsync_insetBit, saved_bitoffset, "f");
+        }
+        return str;
     }
     ;
     /**
@@ -27408,18 +15365,612 @@ class BiBaseAsync {
     * @param {string} string - text string
     * @param {stringOptions?} options
     * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
     * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
     * @param {stringOptions["lengthWriteSize"]?} options.lengthWriteSize - for pascal strings. 1, 2 or 4 byte length write size
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
+    * @param {stringOptions["endian"]?} options.endian - for wide-pascal, double-wide-pascal and utf-16, utf-32
+    * @param {boolean} consume - move offset after write
     */
-    async writeString(string, options) {
-        return await wstring(this, string, options);
+    async writeString(string, options = this.strDefaults, consume = true) {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readOnly mode!");
+        }
+        await this.open();
+        var length = options.length;
+        var stringType = options.stringType ?? 'utf-8';
+        var terminateValue = options.terminateValue;
+        var lengthWriteSize = options.lengthWriteSize ?? 1;
+        var endian = options.endian ?? this.endian;
+        var maxLengthValue = length ?? string.length;
+        var strUnits = string.length;
+        var maxBytes;
+        switch (stringType) {
+            case 'pascal':
+                maxLengthValue = 255;
+                if (length != undefined) {
+                    maxLengthValue = length;
+                }
+                break;
+            case 'wide-pascal':
+                strUnits *= 2;
+                maxLengthValue = 65535;
+                if (length != undefined) {
+                    maxLengthValue = length / 2;
+                }
+                break;
+            case 'double-wide-pascal':
+                strUnits *= 4;
+                maxLengthValue = 4294967295;
+                if (length != undefined) {
+                    maxLengthValue = length / 4;
+                }
+                break;
+        }
+        if (terminateValue == undefined) {
+            if (stringType == "ascii" || stringType == 'utf-8' ||
+                stringType == 'utf-16' ||
+                stringType == 'utf-32') {
+                terminateValue = 0;
+            }
+        }
+        var maxBytes = Math.min(strUnits, maxLengthValue);
+        string = string.substring(0, maxBytes);
+        var encodedString;
+        var totalLength = string.length;
+        switch (stringType) {
+            case 'ascii':
+            case 'utf-8':
+            case 'pascal':
+                {
+                    encodedString = new TextEncoder().encode(string);
+                    totalLength = encodedString.byteLength + 1;
+                }
+                break;
+            case 'utf-16':
+            case 'wide-pascal':
+                {
+                    const utf16Buffer = new Uint16Array(string.length);
+                    for (let i = 0; i < string.length; i++) {
+                        utf16Buffer[i] = string.charCodeAt(i);
+                    }
+                    encodedString = new Uint8Array(utf16Buffer.buffer);
+                    totalLength = encodedString.byteLength + 2;
+                }
+                break;
+            case 'utf-32':
+            case 'double-wide-pascal':
+                {
+                    const utf32Buffer = new Uint32Array(string.length);
+                    for (let i = 0; i < string.length; i++) {
+                        utf32Buffer[i] = string.codePointAt(i);
+                    }
+                    encodedString = new Uint8Array(utf32Buffer.buffer);
+                    totalLength = encodedString.byteLength + 4;
+                }
+                break;
+        }
+        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_confrimSize).call(this, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + totalLength);
+        const savedOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+        const savedBitOffset = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
+        await _wstringAsync(encodedString, stringType, endian, terminateValue, lengthWriteSize, this.writeUByte.bind(this), this.writeUInt16.bind(this), this.writeUInt32.bind(this));
+        if (!consume) {
+            __classPrivateFieldSet(this, _BiBaseAsync_offset, savedOffset, "f");
+            __classPrivateFieldSet(this, _BiBaseAsync_insetBit, savedBitOffset, "f");
+        }
     }
     ;
 }
-_BiBaseAsync_data = new WeakMap();
+_BiBaseAsync_offset = new WeakMap(), _BiBaseAsync_insetBit = new WeakMap(), _BiBaseAsync_data = new WeakMap(), _BiBaseAsync_view = new WeakMap(), _BiBaseAsync_instances = new WeakSet(), _BiBaseAsync_updateSize = 
+/**
+ * Internal update size
+ *
+ * run after setting data
+ */
+async function _BiBaseAsync_updateSize() {
+    if (this.isMemoryMode) {
+        this.size = this.data.length;
+        this.bitSize = this.size * 8;
+        return;
+    }
+    if (typeof fs === "undefined") {
+        throw new Error("Can't load file outside Node.");
+    }
+    if (this.fd != null) {
+        try {
+            const stat = await this.fd.stat();
+            this.size = stat.size;
+            this.bitSize = this.size * 8;
+        }
+        catch (error) {
+            throw new Error(error);
+        }
+    }
+}, _BiBaseAsync_updateView = function _BiBaseAsync_updateView() {
+    if (__classPrivateFieldGet(this, _BiBaseAsync_data, "f")) {
+        __classPrivateFieldSet(this, _BiBaseAsync_view, new DataView(__classPrivateFieldGet(this, _BiBaseAsync_data, "f").buffer, __classPrivateFieldGet(this, _BiBaseAsync_data, "f").byteOffset ?? 0, __classPrivateFieldGet(this, _BiBaseAsync_data, "f").byteLength), "f");
+    }
+}, _BiBaseAsync_initFile = 
+/**
+ * `this.fd` must be null and not in memory mode
+ */
+async function _BiBaseAsync_initFile() {
+    if (this.isMemoryMode || this.fd != null) {
+        return;
+    }
+    if (!(await _fileExists(this.filePath))) {
+        await fs.writeFile(this.filePath, "");
+    }
+    try {
+        this.fd = await fs.open(this.filePath, this.fsMode);
+    }
+    catch (error) {
+        throw new Error(error);
+    }
+    await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_updateSize).call(this);
+    const numChunks = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getNumChunks).call(this);
+    this.chunks = new Array(numChunks).fill(null);
+    this.chunkPromises = new Array(numChunks).fill(null);
+    if (this.windowSize == 0) {
+        this.loadAllPromise = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_preloadAllChunks).call(this);
+    }
+    else {
+        this.loadAllPromise = Promise.resolve();
+    }
+}, _BiBaseAsync_initMemory = function _BiBaseAsync_initMemory() {
+    if (!this.isMemoryMode) {
+        return;
+    }
+    if (this.isFullyLoaded) {
+        return;
+    }
+    this.size = this.data.length;
+    this.bitSize = this.size * 8;
+    const numChunks = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getNumChunks).call(this);
+    this.chunks = new Array(numChunks).fill(null);
+    this.chunkPromises = new Array(numChunks).fill(null);
+    this.isFullyLoaded = true;
+    this.loadAllPromise = null;
+}, _BiBaseAsync_getChunkIndex = function _BiBaseAsync_getChunkIndex(offset) {
+    return this.windowSize === 0 ? 0 : Math.floor(offset / this.windowSize);
+}, _BiBaseAsync_getNumChunks = function _BiBaseAsync_getNumChunks() {
+    return this.windowSize === 0 ? 1 : Math.ceil(this.size / this.windowSize);
+}, _BiBaseAsync_preloadAllChunks = 
+/**
+ * When the whole file is loaded at once
+ */
+async function _BiBaseAsync_preloadAllChunks() {
+    const promises = [];
+    for (let i = 0; i < this.chunks.length; i++) {
+        promises.push(__classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_ensureChunkLoaded).call(this, i));
+    }
+    await Promise.all(promises);
+    this.isFullyLoaded = true;
+}, _BiBaseAsync_ensureChunkLoaded = 
+/**
+ * Checks the chunk is loaded
+ *
+ * @param {number} chunkIndex
+ */
+async function _BiBaseAsync_ensureChunkLoaded(chunkIndex) {
+    if (this.windowSize === 0) {
+        chunkIndex = 0;
+    }
+    if (chunkIndex >= this.chunks.length) {
+        return null;
+    }
+    if (this.chunks[chunkIndex] !== null) {
+        return this.chunks[chunkIndex];
+    }
+    if (this.isMemoryMode) {
+        const start = chunkIndex * this.windowSize;
+        const end = Math.min(start + this.windowSize, this.size);
+        this.chunks[chunkIndex] = this.data.subarray(start, end);
+        return this.chunks[chunkIndex];
+    }
+    if (this.chunkPromises[chunkIndex]) {
+        return await this.chunkPromises[chunkIndex];
+    }
+    const promise = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_performChunkLoad).call(this, chunkIndex);
+    this.chunkPromises[chunkIndex] = promise;
+    return await promise;
+}, _BiBaseAsync_performChunkLoad = 
+/**
+ * Gets needed chunk
+ *
+ * @param {number} chunkIndex
+ */
+async function _BiBaseAsync_performChunkLoad(chunkIndex) {
+    const start = chunkIndex * this.windowSize;
+    const length = Math.min(this.windowSize, this.size - start);
+    const buffer = Buffer.alloc(length);
+    await this.fd.read(buffer, 0, length, start);
+    this.chunks[chunkIndex] = buffer;
+    return buffer;
+}, _BiBaseAsync_ensureRangeLoaded = 
+/**
+ * Makes sure the needed size is loaded
+ *
+ * @param {number} offset
+ * @param {number} length
+ */
+async function _BiBaseAsync_ensureRangeLoaded(offset, length) {
+    const needed = offset + length;
+    if (needed > this.size) {
+        if (this.strict || this.readOnly) {
+            throw new Error(`Operation exceeds file size (${needed} > ${this.size})`);
+        }
+        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_confrimSize).call(this, needed);
+    }
+    const startChunk = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getChunkIndex).call(this, offset);
+    const endChunk = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getChunkIndex).call(this, offset + length - 1);
+    const promises = [];
+    for (let i = startChunk; i <= endChunk && i < this.chunks.length; i++) {
+        if (this.chunks[i] === null) {
+            promises.push(__classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_ensureChunkLoaded).call(this, i));
+        }
+    }
+    await Promise.all(promises);
+}, _BiBaseAsync_peekBytes = 
+/**
+ * Get bytes without changing offset
+ *
+ * @param {number} offset
+ * @param {number} length
+ */
+async function _BiBaseAsync_peekBytes(offset, length) {
+    await this.open();
+    if (length <= 0) {
+        if (this.isMemoryMode) {
+            if (this.isBuffer(this.data)) {
+                return Buffer.alloc(0);
+            }
+            else {
+                return new Uint8Array(0);
+            }
+        }
+        else {
+            return Buffer.alloc(0);
+        }
+    }
+    await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_ensureRangeLoaded).call(this, offset, length);
+    var result;
+    if (this.isMemoryMode) {
+        return this.data.subarray(offset, offset + length);
+    }
+    else {
+        result = Buffer.alloc(length);
+    }
+    let pos = offset;
+    let writePos = 0;
+    while (writePos < length) {
+        const chunkIndex = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getChunkIndex).call(this, pos);
+        const chunk = this.chunks[chunkIndex];
+        const chunkOffset = pos % this.windowSize;
+        const toCopy = Math.min(length - writePos, chunk.length - chunkOffset);
+        result.set(chunk.subarray(chunkOffset, chunkOffset + toCopy), writePos);
+        writePos += toCopy;
+        pos += toCopy;
+    }
+    return result;
+}, _BiBaseAsync_writeBytesAt = 
+/**
+ * write bytes internal
+ *
+ * @param {number} offset
+ * @param {Uint8Array | Buffer | number[]} data
+ */
+async function _BiBaseAsync_writeBytesAt(offset, data) {
+    await this.open();
+    if (data.length === 0) {
+        return;
+    }
+    await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_ensureRangeLoaded).call(this, offset, data.length);
+    let pos = offset;
+    let readPos = 0;
+    if (this.isMemoryMode) {
+        for (let i = 0, n = offset; i < data.length; i++, n++) {
+            __classPrivateFieldGet(this, _BiBaseAsync_data, "f")[n] = data[i];
+        }
+        return;
+    }
+    while (readPos < data.length) {
+        const chunkIndex = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getChunkIndex).call(this, pos);
+        const chunk = this.chunks[chunkIndex];
+        const chunkOffset = pos % this.windowSize;
+        const toCopy = Math.min(data.length - readPos, chunk.length - chunkOffset);
+        var sub;
+        if (this.isBufferOrUint8Array(data)) {
+            sub = data.subarray(readPos, readPos + toCopy);
+        }
+        else {
+            sub = data.slice(readPos, readPos + toCopy);
+        }
+        chunk.set(sub, chunkOffset);
+        this.dirtyChunks.add(chunkIndex);
+        readPos += toCopy;
+        pos += toCopy;
+    }
+}, _BiBaseAsync_confrimSize = 
+/**
+ * Checks loaded size
+ *
+ * Will set `wasExpanded` if expanded
+ *
+ * @param {number} neededSize
+ */
+async function _BiBaseAsync_confrimSize(neededSize) {
+    // check if the current request fits in range
+    if (neededSize <= this.size) {
+        return;
+    }
+    var targetSize = neededSize;
+    // now adjust the size if less to `growthIncrement` factor
+    if (targetSize > this.size) {
+        if (this.strict || this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: ` + neededSize + " at " + __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + " of " + this.size);
+        }
+        if (this.growthIncrement != 0) {
+            this.wasExpanded = true;
+            targetSize = Math.ceil(neededSize / this.growthIncrement) * this.growthIncrement;
+        }
+        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_extendArray).call(this, targetSize);
+    }
+}, _BiBaseAsync_extendArray = 
+/**
+* extends the data
+*
+* @param {number} targetSize
+*/
+async function _BiBaseAsync_extendArray(targetSize) {
+    await this.flush();
+    if (this.isMemoryMode) {
+        const toPadd = targetSize - this.size;
+        var newData;
+        if (isBuffer(__classPrivateFieldGet(this, _BiBaseAsync_data, "f"))) {
+            var paddbuffer = Buffer.alloc(toPadd);
+            newData = Buffer.concat([__classPrivateFieldGet(this, _BiBaseAsync_data, "f"), paddbuffer]);
+        }
+        else {
+            newData = new Uint8Array(this.size + toPadd);
+            newData.set(__classPrivateFieldGet(this, _BiBaseAsync_data, "f"));
+        }
+        this.setData = newData;
+        this.size = targetSize;
+        this.bitSize = this.size * 8;
+        this.chunks = new Array(__classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getNumChunks).call(this)).fill(null);
+        this.chunkPromises = new Array(__classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getNumChunks).call(this)).fill(null);
+        this.dirtyChunks.clear();
+    }
+    else {
+        await this.fd.truncate(targetSize);
+        this.size = targetSize;
+        this.bitSize = this.size * 8;
+        const oldNum = this.chunks.length;
+        const newNum = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getNumChunks).call(this);
+        this.chunks.length = newNum;
+        this.chunkPromises.length = newNum;
+        for (let i = oldNum; i < newNum; i++) {
+            this.chunks[i] = null;
+            this.chunkPromises[i] = null;
+        }
+    }
+}, _BiBaseAsync_setFileSize = 
+/**
+ * For updating file size
+ *
+ * @param {number} exactSize
+ * @returns
+ */
+async function _BiBaseAsync_setFileSize(exactSize) {
+    if (exactSize === this.size) {
+        return;
+    }
+    await this.flush();
+    if (this.isMemoryMode) {
+        const newData = this.data.subarray(0, exactSize);
+        this.setData = newData;
+        this.size = exactSize;
+        this.bitSize = this.size * 8;
+        const newNum = Math.ceil(exactSize / this.windowSize);
+        this.chunks = new Array(newNum).fill(null);
+        this.chunkPromises = new Array(newNum).fill(null);
+        this.dirtyChunks.clear();
+    }
+    else {
+        await this.fd.truncate(exactSize);
+        this.size = exactSize;
+        this.bitSize = this.size * 8;
+        const oldNum = this.chunks.length;
+        const newNum = Math.ceil(exactSize / this.windowSize);
+        this.chunks.length = newNum;
+        this.chunkPromises.length = newNum;
+        if (newNum < oldNum) {
+            this.dirtyChunks = new Set([...this.dirtyChunks].filter(i => i < newNum));
+        }
+        else {
+            for (let i = oldNum; i < newNum; i++) {
+                this.chunks[i] = null;
+                this.chunkPromises[i] = null;
+            }
+        }
+    }
+}, _BiBaseAsync_invalidateFromChunk = function _BiBaseAsync_invalidateFromChunk(startChunk) {
+    for (let i = Math.max(0, startChunk); i < this.chunks.length; i++) {
+        this.chunks[i] = null;
+        this.chunkPromises[i] = null;
+        this.dirtyChunks.delete(i);
+    }
+}, _BiBaseAsync_shiftTailForward = 
+/**
+ * Pulls data back
+ *
+ * @param {number} insertOffset
+ * @param {number} insertLen
+ * @param {number} oldEnd
+ * @param {boolean} consume
+ */
+async function _BiBaseAsync_shiftTailForward(insertOffset, insertLen, oldEnd, consume = false) {
+    if (insertLen <= 0) {
+        return;
+    }
+    if (this.isMemoryMode) {
+        const tailCopy = this.data.subarray(insertOffset, oldEnd);
+        this.data.set(tailCopy, insertOffset + insertLen);
+    }
+    else {
+        let readEnd = oldEnd;
+        let writeEnd = oldEnd + insertLen;
+        const buf = Buffer.alloc(Math.min(this.windowSize, this.size));
+        while (readEnd > insertOffset) {
+            const len = Math.min(this.windowSize, readEnd - insertOffset);
+            const readStart = readEnd - len;
+            const { bytesRead } = await this.fd.read(buf, 0, len, readStart);
+            const writeStart = writeEnd - len;
+            await this.fd.write(buf, 0, bytesRead, writeStart);
+            readEnd = readStart;
+            writeEnd = writeStart;
+        }
+    }
+    if (consume) {
+        __classPrivateFieldSet(this, _BiBaseAsync_offset, insertOffset + insertLen, "f");
+        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
+    }
+}, _BiBaseAsync_shiftTailBackward = 
+/**
+ *
+ * @param {number} removeOffset
+ * @param {number} removeLen
+ * @param {boolean} consume
+ */
+async function _BiBaseAsync_shiftTailBackward(removeOffset, removeLen, consume = false) {
+    if (removeLen <= 0) {
+        return;
+    }
+    if (this.isMemoryMode) {
+        const tailStart = removeOffset + removeLen;
+        const tailCopy = this.data.subarray(tailStart, this.size);
+        this.data.set(tailCopy, removeOffset);
+    }
+    else {
+        const oldEnd = this.size;
+        let readPos = removeOffset + removeLen;
+        let writePos = removeOffset;
+        const buf = Buffer.alloc(Math.min(this.windowSize, this.size));
+        while (readPos < oldEnd) {
+            const len = Math.min(this.windowSize, oldEnd - readPos);
+            const { bytesRead } = await this.fd.read(buf, 0, len, readPos);
+            await this.fd.write(buf, 0, bytesRead, writePos);
+            readPos += bytesRead;
+            writePos += bytesRead;
+        }
+    }
+    if (consume) {
+        __classPrivateFieldSet(this, _BiBaseAsync_offset, removeOffset, "f");
+        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
+    }
+}, _BiBaseAsync_updateOffsets = async function _BiBaseAsync_updateOffsets(newOffset, trueBytes, trueBits) {
+    if (newOffset < 0) {
+        throw new RangeError('Offset cannot be negative');
+    }
+    if (newOffset > this.size) {
+        if (this.strict || this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+            throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: ` + newOffset + " at " + __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + " of " + this.size);
+        }
+        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_confrimSize).call(this, newOffset);
+    }
+    __classPrivateFieldSet(this, _BiBaseAsync_offset, trueBytes, "f");
+    // Adjust byte offset based on bit overflow
+    __classPrivateFieldSet(this, _BiBaseAsync_offset, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + Math.floor(trueBits / 8), "f");
+    // Adjust bit offset
+    __classPrivateFieldSet(this, _BiBaseAsync_insetBit, normalizeBitOffset(trueBits) % 8, "f");
+    // Ensure bit offset stays between 0-7
+    __classPrivateFieldSet(this, _BiBaseAsync_insetBit, Math.min(Math.max(__classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f"), 0), 7), "f");
+    // Ensure offset doesn't go negative
+    __classPrivateFieldSet(this, _BiBaseAsync_offset, Math.max(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), 0), "f");
+}, _BiBaseAsync_readBytes = async function _BiBaseAsync_readBytes(length, consume = true) {
+    await this.open();
+    if (length <= 0) {
+        return new Uint8Array(0);
+    }
+    const offSave = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+    var trueByte = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+    const trueBit = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
+    if (trueBit != 0) {
+        trueByte += 1;
+    }
+    __classPrivateFieldSet(this, _BiBaseAsync_offset, trueByte, "f");
+    const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, trueByte, length);
+    if (consume) {
+        __classPrivateFieldSet(this, _BiBaseAsync_offset, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, "f");
+        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
+    }
+    else {
+        __classPrivateFieldSet(this, _BiBaseAsync_offset, offSave, "f");
+    }
+    return data;
+}, _BiBaseAsync_writeBytes = async function _BiBaseAsync_writeBytes(data, consume = true) {
+    if (this.readOnly) {
+        throw new Error('Cannot write to read-only file');
+    }
+    await this.open();
+    if (data.length === 0) {
+        return;
+    }
+    const offSave = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+    var trueByte = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+    const trueBit = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
+    if (trueBit != 0) {
+        trueByte += 1;
+    }
+    __classPrivateFieldSet(this, _BiBaseAsync_offset, trueByte, "f");
+    await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, trueByte, data);
+    if (consume) {
+        __classPrivateFieldSet(this, _BiBaseAsync_offset, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + data.length, "f");
+        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
+    }
+    else {
+        __classPrivateFieldSet(this, _BiBaseAsync_offset, offSave, "f");
+    }
+}, _BiBaseAsync_findNumber = function _BiBaseAsync_findNumber(data, value, bits, unsigned, endian = this.endian) {
+    for (let z = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"); z <= (this.size - (bits / 8)); z++) {
+        var offsetInBits = 0;
+        var currentValue = 0;
+        for (var i = 0; i < bits;) {
+            const remaining = bits - i;
+            const bitOffset = offsetInBits & 7;
+            const currentByte = data[z + (offsetInBits >> 3)];
+            const read = Math.min(remaining, 8 - bitOffset);
+            if (endian == "big") {
+                let mask = ~(0xFF << read);
+                let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
+                currentValue <<= read;
+                currentValue |= readBits;
+            }
+            else {
+                let mask = ~(0xFF << read);
+                let readBits = (currentByte >> bitOffset) & mask;
+                currentValue |= readBits << i;
+            }
+            offsetInBits += read;
+            i += read;
+        }
+        if (unsigned == true || bits <= 7) {
+            currentValue = currentValue >>> 0;
+        }
+        else {
+            if (currentValue & (1 << (bits - 1))) {
+                currentValue |= -1 ^ ((1 << bits) - 1);
+            }
+        }
+        if (currentValue === value) {
+            return z - __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"); // Found the byte, return the index from current
+        }
+    }
+    return -1; // number not found
+};
 
 /**
  * Async Binary reader, includes bitfields and strings.
@@ -27430,9 +15981,9 @@ _BiBaseAsync_data = new WeakMap();
  * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
  * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
  * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
  * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
- * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
+ * @param {BiOptions["readOnly"]} options.readOnly - If you want to prevent write operations (default true in reader)
  *
  * @since 4.0
  */
@@ -27446,82 +15997,23 @@ class BiReaderAsync extends BiBaseAsync {
      * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
      * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
      * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false.
      * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
+     * @param {BiOptions["readOnly"]} options.readOnly - If you want to prevent write operations (default true in reader)
      */
     constructor(input, options = {}) {
-        super(input, options.writeable ?? false);
+        options.byteOffset = options.byteOffset ?? 0;
+        options.bitOffset = options.bitOffset ?? 0;
+        options.endianness = options.endianness ?? "little";
+        options.strict = options.strict ?? true;
+        options.growthIncrement = options.growthIncrement ?? 1048576;
+        options.enforceBigInt = options.enforceBigInt ?? false;
+        options.readOnly = options.readOnly ?? true;
+        options.windowSize = options.windowSize = 4096;
         if (input == undefined) {
             throw new Error("Can not start BiReader without data.");
         }
-        this.strict = true;
-        this.enforceBigInt = (options?.enforceBigInt) ?? hasBigInt;
-        if (options.extendBufferSize != undefined &&
-            options.extendBufferSize != 0) {
-            this.extendBufferSize = options.extendBufferSize;
-        }
-        if (options.endianness != undefined &&
-            typeof options.endianness != "string") {
-            throw new Error("Endian must be big or little");
-        }
-        if (options.endianness != undefined &&
-            !(options.endianness == "big" || options.endianness == "little")) {
-            throw new Error("Byte order must be big or little");
-        }
-        this.endian = options.endianness || "little";
-        if (typeof options.strict == "boolean") {
-            this.strict = options.strict;
-        }
-        else {
-            if (options.strict != undefined) {
-                throw new Error("Strict mode must be true or false");
-            }
-        }
-        if (input == undefined) {
-            throw new Error("Data or file path required");
-        }
-        else {
-            if (typeof input == "string") {
-                this.filePath = input;
-                this.mode = "file";
-                this.offset = options.byteOffset ?? 0;
-                this.bitoffset = options.bitOffset ?? 0;
-            }
-            else if (this.isBufferOrUint8Array(input)) {
-                this.data = input;
-                this.mode = "memory";
-                this.size = this.data.length;
-                this.sizeB = this.data.length * 8;
-            }
-            else {
-                throw new Error("Write data must be Uint8Array or Buffer");
-            }
-        }
-        if (options.byteOffset != undefined || options.bitOffset != undefined) {
-            this.offset = ((Math.abs(options.byteOffset || 0)) + Math.ceil((Math.abs(options.bitOffset || 0)) / 8));
-            // Adjust byte offset based on bit overflow
-            this.offset += Math.floor((Math.abs(options.bitOffset || 0)) / 8);
-            // Adjust bit offset
-            this.bitoffset = Math.abs(normalizeBitOffset(options.bitOffset)) % 8;
-            // Ensure bit offset stays between 0-7
-            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
-            // Ensure offset doesn't go negative
-            this.offset = Math.max(this.offset, 0);
-            if (this.offset > this.size) {
-                if (this.strict == false) {
-                    if (this.extendBufferSize != 0) {
-                        this.extendArray(this.extendBufferSize);
-                    }
-                    else {
-                        this.extendArray(this.offset - this.size);
-                    }
-                }
-                else {
-                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
-                }
-            }
-        }
+        super(input, options);
     }
     ;
     /**
@@ -27535,9 +16027,9 @@ class BiReaderAsync extends BiBaseAsync {
      * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
      * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
      * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
      * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
+     * @param {BiOptions["readonly"]} options.readonly - If you want to prevent write operations (default true in reader)
      *
      * @returns {Promise<BiReaderAsync<DataType, hasBigInt>>}
      */
@@ -30479,12 +18971,12 @@ class BiReaderAsync extends BiBaseAsync {
     *
     * @param {stringOptions} options
     * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["stringType"]?} options.stringType - ascii, utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
     * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
     * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
     * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
+    * @param {stringOptions["endian"]?} options.endian - for utf-16, utf-32, wide-pascal or double-wide-pascal
     * @returns {string}
     */
     async string(options) {
@@ -30492,14 +18984,14 @@ class BiReaderAsync extends BiBaseAsync {
     }
     ;
     /**
-    * Reads string using setting from .strSettings
+    * Reads string using setting from .strDefaults
     *
     * Default is ``utf-8``
     *
     * @returns {Promise<string>}
     */
     async str() {
-        return await this.readString(this.strSettings);
+        return await this.readString(this.strDefaults);
     }
     ;
     /**
@@ -30525,7 +19017,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async cstring(length, terminateValue, stripNull) {
-        return await this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
+        return await this.utf8string(length, terminateValue, stripNull);
     }
     ;
     /**
@@ -30539,6 +19031,19 @@ class BiReaderAsync extends BiBaseAsync {
     */
     async ansistring(length, terminateValue, stripNull) {
         return await this.string({ stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue, stripNull: stripNull });
+    }
+    ;
+    /**
+    * Reads latin1 string.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async latin1string(length, terminateValue, stripNull) {
+        return await this.string({ stringType: "utf-8", encoding: "iso-8859-1", length: length, terminateValue: terminateValue, stripNull: stripNull });
     }
     ;
     /**
@@ -30566,7 +19071,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async unistring(length, terminateValue, stripNull, endian) {
-        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
+        return await this.utf16string(length, terminateValue, stripNull, endian);
     }
     ;
     /**
@@ -30579,7 +19084,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async utf16stringle(length, terminateValue, stripNull) {
-        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
+        return await this.utf16string(length, terminateValue, stripNull, "little");
     }
     ;
     /**
@@ -30592,7 +19097,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async unistringle(length, terminateValue, stripNull) {
-        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
+        return await this.utf16stringle(length, terminateValue, stripNull);
     }
     ;
     /**
@@ -30605,7 +19110,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async utf16stringbe(length, terminateValue, stripNull) {
-        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
+        return await this.utf16string(length, terminateValue, stripNull, "big");
     }
     ;
     /**
@@ -30618,7 +19123,47 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async unistringbe(length, terminateValue, stripNull) {
-        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
+        return await this.utf16stringbe(length, terminateValue, stripNull);
+    }
+    ;
+    /**
+    * Reads UTF-32 (Unicode) string.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @returns {Promise<string>}
+    */
+    async utf32string(length, terminateValue, stripNull, endian) {
+        return await this.string({ stringType: "utf-32", encoding: "utf-32", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
+    }
+    ;
+    /**
+    * Reads UTF-32 (Unicode) string in little endian order.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async utf32stringle(length, terminateValue, stripNull) {
+        return await this.utf32string(length, terminateValue, stripNull, "little");
+    }
+    ;
+    /**
+    * Reads UTF-32 (Unicode) string in big endian order.
+    *
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async utf32stringbe(length, terminateValue, stripNull) {
+        return await this.utf32string(length, terminateValue, stripNull, "big");
     }
     ;
     /**
@@ -30643,7 +19188,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async pstring1(stripNull, endian) {
-        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: endian });
+        return await this.pstring(1, stripNull, endian);
     }
     ;
     /**
@@ -30654,7 +19199,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async pstring1le(stripNull) {
-        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "little" });
+        return await this.pstring1(stripNull, "little");
     }
     ;
     /**
@@ -30665,7 +19210,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async pstring1be(stripNull) {
-        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "big" });
+        return await this.pstring1(stripNull, "big");
     }
     ;
     /**
@@ -30677,7 +19222,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async pstring2(stripNull, endian) {
-        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: endian });
+        return await this.pstring(2, stripNull, endian);
     }
     ;
     /**
@@ -30688,7 +19233,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async pstring2le(stripNull) {
-        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "little" });
+        return await this.pstring2(stripNull, "little");
     }
     ;
     /**
@@ -30699,7 +19244,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async pstring2be(stripNull) {
-        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "big" });
+        return await this.pstring2(stripNull, "big");
     }
     ;
     /**
@@ -30711,7 +19256,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async pstring4(stripNull, endian) {
-        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: endian });
+        return await this.pstring(4, stripNull, endian);
     }
     ;
     /**
@@ -30722,7 +19267,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async pstring4le(stripNull) {
-        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "little" });
+        return await this.pstring4(stripNull, "little");
     }
     ;
     /**
@@ -30733,7 +19278,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async pstring4be(stripNull) {
-        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "big" });
+        return await this.pstring4(stripNull, "big");
     }
     ;
     /**
@@ -30758,7 +19303,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async wpstring1(stripNull, endian) {
-        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: endian, stripNull: stripNull });
+        return await this.wpstring(1, stripNull, endian);
     }
     ;
     /**
@@ -30769,7 +19314,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async wpstring1le(stripNull) {
-        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "little", stripNull: stripNull });
+        return await this.wpstring1(stripNull, "little");
     }
     ;
     /**
@@ -30780,7 +19325,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async wpstring1be(stripNull) {
-        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "big", stripNull: stripNull });
+        return await this.wpstring1(stripNull, "big");
     }
     ;
     /**
@@ -30792,7 +19337,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async wpstring2(stripNull, endian) {
-        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: endian, stripNull: stripNull });
+        return await this.wpstring(2, stripNull, endian);
     }
     ;
     /**
@@ -30803,7 +19348,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async wpstring2le(stripNull) {
-        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "little", stripNull: stripNull });
+        return await this.wpstring2(stripNull, "little");
     }
     ;
     /**
@@ -30814,7 +19359,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async wpstring2be(stripNull) {
-        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "big", stripNull: stripNull });
+        return await this.wpstring2(stripNull, "big");
     }
     ;
     /**
@@ -30826,18 +19371,7 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async wpstring4(stripNull, endian) {
-        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: endian, stripNull: stripNull });
-    }
-    ;
-    /**
-    * Reads Wide-Pascal string 4 byte length read in big endian order.
-    *
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    *
-    * @returns {Promise<string>}
-    */
-    async wpstring4be(stripNull) {
-        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "big", stripNull: stripNull });
+        return await this.wpstring(4, stripNull, endian);
     }
     ;
     /**
@@ -30848,7 +19382,133 @@ class BiReaderAsync extends BiBaseAsync {
     * @returns {Promise<string>}
     */
     async wpstring4le(stripNull) {
-        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "little", stripNull: stripNull });
+        return await this.wpstring4(stripNull, "little");
+    }
+    ;
+    /**
+    * Reads Wide-Pascal string 4 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async wpstring4be(stripNull) {
+        return await this.wpstring4(stripNull, "big");
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @returns {Promise<string>}
+    */
+    async dwpstring(lengthReadSize, stripNull, endian) {
+        return await this.string({ stringType: "double-wide-pascal", encoding: "utf-32", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 1 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @returns {Promise<string>}
+    */
+    async dwpstring1(stripNull, endian) {
+        return await this.dwpstring(1, stripNull, endian);
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 1 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async dwpstring1le(stripNull) {
+        return await this.dwpstring1(stripNull, "little");
+    }
+    ;
+    /**
+    * Reads Double WidePascal string 1 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async dwpstring1be(stripNull) {
+        return await this.dwpstring1(stripNull, "big");
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 2 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @returns {Promise<string>}
+    */
+    async dwpstring2(stripNull, endian) {
+        return await this.dwpstring(2, stripNull, endian);
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 2 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async dwpstring2le(stripNull) {
+        return await this.dwpstring2(stripNull, "little");
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 2 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async dwpstring2be(stripNull) {
+        return await this.dwpstring2(stripNull, "big");
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 4 byte length read.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    *
+    * @returns {Promise<string>}
+    */
+    async dwpstring4(stripNull, endian) {
+        return await this.dwpstring(4, stripNull, endian);
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 4 byte length read in little endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async dwpstring4le(stripNull) {
+        return await this.dwpstring4(stripNull, "little");
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 4 byte length read in big endian order.
+    *
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async dwpstring4be(stripNull) {
+        return await this.dwpstring4(stripNull, "big");
     }
     ;
 }
@@ -30862,9 +19522,8 @@ class BiReaderAsync extends BiBaseAsync {
  * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
  * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
  * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
  * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
- * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
  *
  * @since 4.0
  */
@@ -30878,83 +19537,24 @@ class BiWriterAsync extends BiBaseAsync {
      * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
      * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
      * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false.
      * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
      */
     constructor(input, options = {}) {
-        super(input, options.writeable ?? true);
-        this.strict = false;
-        this.enforceBigInt = (options?.enforceBigInt) ?? hasBigInt;
-        if (options.extendBufferSize != undefined &&
-            options.extendBufferSize != 0) {
-            this.extendBufferSize = options.extendBufferSize;
-        }
+        options.byteOffset = options.byteOffset ?? 0;
+        options.bitOffset = options.bitOffset ?? 0;
+        options.endianness = options.endianness ?? "little";
+        options.strict = options.strict ?? false;
+        options.growthIncrement = options.growthIncrement ?? 1048576;
+        options.enforceBigInt = options.enforceBigInt ?? false;
+        options.readOnly = options.readOnly ?? false;
+        options.windowSize = options.windowSize = 4096;
+        const { growthIncrement, } = options;
         if (input == undefined) {
-            input = new Uint8Array(this.extendBufferSize);
-            console.warn(`BiWriter started without data. Creating Uint8Array with extendBufferSize.`);
+            input = new Uint8Array(growthIncrement);
+            console.warn(`BiWriter started without data. Creating Uint8Array with growthIncrement.`);
         }
-        if (options.endianness != undefined &&
-            typeof options.endianness != "string") {
-            throw new Error("endianness must be big or little.");
-        }
-        if (options.endianness != undefined &&
-            !(options.endianness == "big" || options.endianness == "little")) {
-            throw new Error("Endianness must be big or little.");
-        }
-        this.endian = options.endianness || "little";
-        if (typeof options.strict == "boolean") {
-            this.strict = options.strict;
-        }
-        else {
-            if (options.strict != undefined) {
-                throw new Error("Strict mode must be true or false.");
-            }
-        }
-        if (input == undefined) {
-            throw new Error("Data or file path required");
-        }
-        else {
-            if (typeof input == "string") {
-                this.filePath = input;
-                this.mode = "file";
-                this.offset = options.byteOffset ?? 0;
-                this.bitoffset = options.bitOffset ?? 0;
-            }
-            else if (this.isBufferOrUint8Array(input)) {
-                this.data = input;
-                this.mode = "memory";
-                this.size = this.data.length;
-                this.sizeB = this.data.length * 8;
-            }
-            else {
-                throw new Error("Write data must be Uint8Array or Buffer");
-            }
-        }
-        if (options.byteOffset != undefined || options.bitOffset != undefined) {
-            this.offset = ((Math.abs(options.byteOffset || 0)) + Math.ceil((Math.abs(options.bitOffset || 0)) / 8));
-            // Adjust byte offset based on bit overflow
-            this.offset += Math.floor((Math.abs(options.bitOffset || 0)) / 8);
-            // Adjust bit offset
-            this.bitoffset = Math.abs(normalizeBitOffset(options.bitOffset)) % 8;
-            // Ensure bit offset stays between 0-7
-            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
-            // Ensure offset doesn't go negative
-            this.offset = Math.max(this.offset, 0);
-            if (this.offset > this.size) {
-                if (this.strict == false) {
-                    if (this.extendBufferSize != 0) {
-                        this.extendArray(this.extendBufferSize);
-                    }
-                    else {
-                        this.extendArray(this.offset - this.size);
-                    }
-                }
-                else {
-                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
-                }
-            }
-        }
+        super(input, options);
     }
     ;
     /**
@@ -30969,7 +19569,7 @@ class BiWriterAsync extends BiBaseAsync {
      * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
      * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
      * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
      * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
      * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
      *
@@ -33923,25 +22523,25 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {string} string - text string
     * @param {stringOptions?} options
     * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["stringType"]?} options.stringType - ascii, utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
     * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
     * @param {stringOptions["lengthWriteSize"]?} options.lengthWriteSize - for pascal strings. 1, 2 or 4 byte length write size
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
+    * @param {stringOptions["endian"]?} options.endian - for utf-16, utf-32, wide-pascal or double-wide-pascal
     */
     async string(string, options) {
         return await this.writeString(string, options);
     }
     ;
     /**
-    * Writes string using setting from .strSettings
+    * Writes string using setting from .strDefaults
     *
     * Default is ``utf-8``
     *
     * @param {string} string - text string
     */
     async str(string) {
-        await this.writeString(string, this.strSettings);
+        await this.writeString(string, this.strDefaults);
     }
     ;
     /**
@@ -33963,7 +22563,7 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
     async cstring(string, length, terminateValue) {
-        return await this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
+        return await this.utf8string(string, length, terminateValue);
     }
     ;
     /**
@@ -33975,6 +22575,17 @@ class BiWriterAsync extends BiBaseAsync {
     */
     async ansistring(string, length, terminateValue) {
         return await this.string(string, { stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue });
+    }
+    ;
+    /**
+    * Writes latin1 string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
+    async latin1tring(string, length, terminateValue) {
+        return await this.string(string, { stringType: "utf-8", encoding: "iso-8859-1", length: length, terminateValue: terminateValue });
     }
     ;
     /**
@@ -33998,7 +22609,7 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
     */
     async unistring(string, length, terminateValue, endian) {
-        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
+        return await this.utf16string(string, length, terminateValue, endian);
     }
     ;
     /**
@@ -34009,7 +22620,7 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
     async utf16stringle(string, length, terminateValue) {
-        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
+        return await this.unistring(string, length, terminateValue, "little");
     }
     ;
     /**
@@ -34020,7 +22631,7 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
     async unistringle(string, length, terminateValue) {
-        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
+        return await this.utf16stringle(string, length, terminateValue);
     }
     ;
     /**
@@ -34031,7 +22642,7 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
     async utf16stringbe(string, length, terminateValue) {
-        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
+        return await this.unistring(string, length, terminateValue, "big");
     }
     ;
     /**
@@ -34042,7 +22653,41 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
     async unistringbe(string, length, terminateValue) {
-        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
+        return await this.utf16stringbe(string, length, terminateValue);
+    }
+    ;
+    /**
+    * Writes UTF-32 (Unicode) string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
+    */
+    async utf32string(string, length, terminateValue, endian) {
+        return await this.string(string, { stringType: "utf-32", encoding: "utf-32", length: length, terminateValue: terminateValue, endian: endian });
+    }
+    ;
+    /**
+    * Writes UTF-32 (Unicode) string in little endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
+    async utf32stringle(string, length, terminateValue) {
+        return await this.utf32string(string, length, terminateValue, "little");
+    }
+    ;
+    /**
+    * Writes UTF-32 (Unicode) string in big endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    */
+    async utf32stringbe(string, length, terminateValue) {
+        return await this.utf32string(string, length, terminateValue, "big");
     }
     ;
     /**
@@ -34063,7 +22708,7 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {stringOptions["endian"]} endian - ``big`` or ``little`` for 2 or 4 byte length write size
     */
     async pstring1(string, endian) {
-        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: endian });
+        return await this.pstring(string, 1, endian);
     }
     ;
     /**
@@ -34072,7 +22717,7 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {string} string - text string
     */
     async pstring1le(string) {
-        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "little" });
+        return await this.pstring1(string, "little");
     }
     ;
     /**
@@ -34081,7 +22726,7 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {string} string - text string
     */
     async pstring1be(string) {
-        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "big" });
+        return await this.pstring1(string, "big");
     }
     ;
     /**
@@ -34091,7 +22736,7 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     async pstring2(string, endian) {
-        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: endian });
+        return await this.pstring(string, 2, endian);
     }
     ;
     /**
@@ -34100,7 +22745,7 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {string} string - text string
     */
     async pstring2le(string) {
-        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "little" });
+        return await this.pstring2(string, "little");
     }
     ;
     /**
@@ -34109,7 +22754,7 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {string} string - text string
     */
     async pstring2be(string) {
-        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "big" });
+        return await this.pstring2(string, "big");
     }
     ;
     /**
@@ -34119,16 +22764,7 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     async pstring4(string, endian) {
-        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: endian });
-    }
-    ;
-    /**
-    * Writes Pascal string 4 byte length read in big endian order.
-    *
-    * @param {string} string - text string
-    */
-    async pstring4be(string) {
-        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "big" });
+        return await this.pstring(string, 4, endian);
     }
     ;
     /**
@@ -34137,11 +22773,20 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {string} string - text string
     */
     async pstring4le(string) {
-        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "little" });
+        return await this.pstring4(string, "little");
     }
     ;
     /**
-    * Writes Wide-Pascal string.
+    * Writes Pascal string 4 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
+    async pstring4be(string) {
+        return await this.pstring4(string, "big");
+    }
+    ;
+    /**
+    * Writes Wide Pascal string.
     *
     * @param {string} string - text string
     * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
@@ -34152,107 +22797,222 @@ class BiWriterAsync extends BiBaseAsync {
     }
     ;
     /**
-    * Writes Wide-Pascal string in big endian order.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
-    */
-    async wpstringbe(string, lengthWriteSize) {
-        return await this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "big" });
-    }
-    ;
-    /**
-    * Writes Wide-Pascal string in little endian order.
+    * Writes Wide Pascal string in little endian order.
     *
     * @param {string} string - text string
     * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     */
     async wpstringle(string, lengthWriteSize) {
-        return await this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "little" });
+        return await this.wpstring(string, lengthWriteSize, "little");
     }
     ;
     /**
-    * Writes Wide-Pascal string.
+    * Writes Wide Pascal string in big endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    */
+    async wpstringbe(string, lengthWriteSize) {
+        return await this.wpstring(string, lengthWriteSize, "big");
+    }
+    ;
+    /**
+    * Writes Wide Pascal string.
     *
     * @param {string} string - text string
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     async wpstring1(string, endian) {
-        return await this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: endian });
+        return await this.wpstring(string, 1, endian);
     }
     ;
     /**
-    * Writes Wide-Pascal string 1 byte length read in big endian order.
+    * Writes Wide Pascal string 1 byte length read in big endian order.
     *
     * @param {string} string - text string
     */
     async wpstring1be(string) {
-        return await this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "big" });
+        return await this.wpstring1(string, "little");
     }
     ;
     /**
-    * Writes Wide-Pascal string 1 byte length read in little endian order.
+    * Writes Wide Pascal string 1 byte length read in little endian order.
     *
     * @param {string} string - text string
     */
     async wpstring1le(string) {
-        return await this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "little" });
+        return await this.wpstring1(string, "big");
     }
     ;
     /**
-    * Writes Wide-Pascal string 2 byte length read.
+    * Writes Wide Pascal string 2 byte length read.
     *
     * @param {string} string - text string
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     async wpstring2(string, endian) {
-        return await this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: endian });
+        return await this.wpstring(string, 2, endian);
     }
     ;
     /**
-    * Writes Wide-Pascal string 2 byte length read in little endian order.
+    * Writes Wide Pascal string 2 byte length read in little endian order.
     *
     * @param {string} string - text string
     */
     async wpstring2le(string) {
-        return await this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "little" });
+        return await this.wpstring2(string, "little");
     }
     ;
     /**
-    * Writes Wide-Pascal string 2 byte length read in big endian order.
+    * Writes Wide Pascal string 2 byte length read in big endian order.
     *
     * @param {string} string - text string
     */
     async wpstring2be(string) {
-        return await this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "big" });
+        return await this.wpstring2(string, "big");
     }
     ;
     /**
-    * Writes Wide-Pascal string 4 byte length read.
+    * Writes Wide Pascal string 4 byte length read.
     *
     * @param {string} string - text string
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     async wpstring4(string, endian) {
-        return await this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: endian });
+        return await this.wpstring(string, 4, endian);
     }
     ;
     /**
-    * Writes Wide-Pascal string 4 byte length read in little endian order.
+    * Writes Wide Pascal string 4 byte length read in little endian order.
     *
     * @param {string} string - text string
     */
     async wpstring4le(string) {
-        return await this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "little" });
+        return await this.wpstring4(string, "little");
     }
     ;
     /**
-    * Writes Wide-Pascal string 4 byte length read in big endian order.
+    * Writes Wide Pascal string 4 byte length read in big endian order.
     *
     * @param {string} string - text string
     */
     async wpstring4be(string) {
-        return await this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "big" });
+        return await this.wpstring4(string, "big");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
+    async dwpstring(string, lengthWriteSize, endian) {
+        return await this.string(string, { stringType: "double-wide-pascal", encoding: "utf-32", lengthWriteSize: lengthWriteSize, endian: endian });
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string in little endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    */
+    async dwpstringle(string, lengthWriteSize) {
+        return await this.dwpstring(string, lengthWriteSize, "little");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string in big endian order.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    */
+    async dwpstringbe(string, lengthWriteSize) {
+        return await this.dwpstring(string, lengthWriteSize, "big");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
+    async dwpstring1(string, endian) {
+        return await this.dwpstring(string, 1, endian);
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 1 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
+    async dwpstring1le(string) {
+        return await this.dwpstring1(string, "little");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 1 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
+    async dwpstring1be(string) {
+        return await this.dwpstring1(string, "big");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 2 byte length read.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
+    async dwpstring2(string, endian) {
+        return await this.dwpstring(string, 2, endian);
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 2 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
+    async dwpstring2le(string) {
+        return await this.dwpstring2(string, "little");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 2 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
+    async dwpstring2be(string) {
+        return await this.dwpstring2(string, "big");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 4 byte length read.
+    *
+    * @param {string} string - text string
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    */
+    async dwpstring4(string, endian) {
+        return await this.dwpstring(string, 4, endian);
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 4 byte length read in little endian order.
+    *
+    * @param {string} string - text string
+    */
+    async dwpstring4le(string) {
+        return await this.dwpstring4(string, "little");
+    }
+    ;
+    /**
+    * Writes Double Wide Pascal string 4 byte length read in big endian order.
+    *
+    * @param {string} string - text string
+    */
+    async dwpstring4be(string) {
+        return await this.dwpstring4(string, "big");
     }
     ;
 }
@@ -34270,11 +23030,11 @@ class bireader {
 /**
  * Not in use anymore.
  * @since 4.0
- * @deprecated Use ``BiReaderLegacy`` instead.
+ * @deprecated Use ``BiReader`` instead.
  */
 class BiReaderStream {
     constructor() {
-        throw new Error("BiReaderStream is deprecated. Use BiReaderLegacy instead.");
+        throw new Error("BiReaderStream is deprecated. Use BiReader instead.");
     }
 }
 /**
@@ -34290,22 +23050,20 @@ class biwriter {
 /**
  * Not in use anymore.
  * @since 4.0
- * @deprecated Use ``BiWriterLegacy`` instead.
+ * @deprecated Use ``BiWriter`` instead.
  */
 class BiWriterStream {
     constructor() {
-        throw new Error("BiWriterStream is deprecated. Use BiWriterLegacy instead.");
+        throw new Error("BiWriterStream is deprecated. Use BiWriter instead.");
     }
 }
 
 exports.BiBase = BiBase;
 exports.BiReader = BiReader;
 exports.BiReaderAsync = BiReaderAsync;
-exports.BiReaderLegacy = BiReaderLegacy;
 exports.BiReaderStream = BiReaderStream;
 exports.BiWriter = BiWriter;
 exports.BiWriterAsync = BiWriterAsync;
-exports.BiWriterLegacy = BiWriterLegacy;
 exports.BiWriterStream = BiWriterStream;
 exports.bireader = bireader;
 exports.biwriter = biwriter;

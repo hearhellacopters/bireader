@@ -1,9 +1,7 @@
 import {
     BiOptions,
-    hasBigInt,
     endian,
     stringOptions,
-    normalizeBitOffset
 } from "./common.js";
 import { BiBase } from './core/BiBase.js';
 
@@ -12,118 +10,51 @@ import { BiBase } from './core/BiBase.js';
  *
  * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
  * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+ * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start reader (default ``0``)
+ * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
  * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
- * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
+ * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
+ * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+ * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
+ * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default ``true`` in reader)
  * 
  * @since 2.0
  */
-export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends boolean> extends BiBase<DataType, hasBigInt> {
+export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends boolean> extends BiBase<DataType, alwaysBigInt> {
 
     /**
      * Binary reader, includes bitfields and strings.
      *
      * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
      * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
+     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start reader (default ``0``)
+     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
      * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["extendBufferSize"]?} options.extendBufferSize - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default false in reader)
+     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true`` in reader)
+     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
+     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
+     * @param {BiOptions["readOnly"]} options.readOnly - If you want to prevent write operations (default ``true`` in reader)
      */
     constructor(input: string | DataType, options: BiOptions = {}) {
-        super(input, options.writeable ?? false);
+        options.byteOffset = options.byteOffset ?? 0;
+
+        options.bitOffset = options.bitOffset ?? 0;
+
+        options.endianness = options.endianness ?? "little";
+
+        options.strict = options.strict ?? true;
+
+        options.growthIncrement = options.growthIncrement ?? 1048576;
+
+        options.enforceBigInt = options.enforceBigInt ?? false;
+
+        options.readOnly = options.readOnly ?? true;
 
         if (input == undefined) {
             throw new Error("Can not start BiReader without data.");
         }
 
-        this.strict = true;
-
-        this.enforceBigInt = (options?.enforceBigInt) as hasBigInt ?? hasBigInt as hasBigInt;
-
-        if (options.extendBufferSize != undefined &&
-            options.extendBufferSize != 0) {
-            this.extendBufferSize = options.extendBufferSize;
-        }
-
-        if (options.endianness != undefined &&
-            typeof options.endianness != "string") {
-            throw new Error("Endian must be big or little");
-        }
-
-        if (options.endianness != undefined &&
-            !(options.endianness == "big" || options.endianness == "little")) {
-            throw new Error("Byte order must be big or little");
-        }
-
-        this.endian = options.endianness || "little";
-
-        if (typeof options.strict == "boolean") {
-            this.strict = options.strict;
-        } else {
-            if (options.strict != undefined) {
-                throw new Error("Strict mode must be true or false");
-            }
-        }
-
-        if (input == undefined) {
-            throw new Error("Data or file path required");
-        } else {
-            if (typeof input == "string") {
-                this.filePath = input;
-
-                this.mode = "file";
-
-                this.offset = options.byteOffset ?? 0;
-
-                this.bitoffset = options.bitOffset ?? 0;
-            } else if (this.isBufferOrUint8Array(input)) {
-                this.data = input as DataType;
-
-                this.mode = "memory";
-
-                this.size = this.data.length;
-
-                this.sizeB = this.data.length * 8;
-            } else {
-                throw new Error("Write data must be Uint8Array or Buffer");
-            }
-        }
-
-        if (options.byteOffset != undefined || options.bitOffset != undefined) {
-            this.offset = ((Math.abs(options.byteOffset || 0)) + Math.ceil((Math.abs(options.bitOffset || 0)) / 8));
-            // Adjust byte offset based on bit overflow
-            this.offset += Math.floor((Math.abs(options.bitOffset || 0)) / 8);
-            // Adjust bit offset
-            this.bitoffset = Math.abs(normalizeBitOffset(options.bitOffset)) % 8;
-            // Ensure bit offset stays between 0-7
-            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
-            // Ensure offset doesn't go negative
-            this.offset = Math.max(this.offset, 0);
-
-            if (this.offset > this.size) {
-                if (this.strict == false) {
-                    if (this.extendBufferSize != 0) {
-                        this.extendArray(this.extendBufferSize);
-                    } else {
-                        this.extendArray(this.offset - this.size);
-                    }
-                } else {
-                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
-                }
-            }
-        }
-
-        if (this.mode == "file") {
-            this.open();
-        }
+        super(input, options);
     };
 
     //
@@ -2843,7 +2774,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get int64(): hasBigInt extends true ? bigint : number {
+    get int64(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64();
     };
 
@@ -2852,7 +2783,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get bigint(): hasBigInt extends true ? bigint : number {
+    get bigint(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64();
     };
 
@@ -2861,7 +2792,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get quad(): hasBigInt extends true ? bigint : number{
+    get quad(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64();
     };
 
@@ -2870,7 +2801,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get uint64(): hasBigInt extends true ? bigint : number {
+    get uint64(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64(true);
     };
 
@@ -2879,7 +2810,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get ubigint(): hasBigInt extends true ? bigint : number {
+    get ubigint(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64(true);
     };
 
@@ -2888,7 +2819,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get uquad(): hasBigInt extends true ? bigint : number {
+    get uquad(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64(true);
     };
 
@@ -2897,7 +2828,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get int64be(): hasBigInt extends true ? bigint : number {
+    get int64be(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64(false, "big");
     };
 
@@ -2906,7 +2837,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get bigintbe(): hasBigInt extends true ? bigint : number {
+    get bigintbe(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64(false, "big");
     };
 
@@ -2915,7 +2846,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get quadbe(): hasBigInt extends true ? bigint : number {
+    get quadbe(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64(false, "big");
     };
 
@@ -2924,7 +2855,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get uint64be(): hasBigInt extends true ? bigint : number {
+    get uint64be(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64(true, "big");
     };
 
@@ -2933,7 +2864,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get ubigintbe(): hasBigInt extends true ? bigint : number {
+    get ubigintbe(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64(true, "big");
     };
 
@@ -2942,7 +2873,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get uquadbe(): hasBigInt extends true ? bigint : number {
+    get uquadbe(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64(true, "big");
     };
 
@@ -2951,7 +2882,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get int64le(): hasBigInt extends true ? bigint : number {
+    get int64le(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64(false, "little");
     };
 
@@ -2960,7 +2891,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get bigintle(): hasBigInt extends true ? bigint : number {
+    get bigintle(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64(false, "little");
     };
 
@@ -2969,7 +2900,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get quadle(): hasBigInt extends true ? bigint : number {
+    get quadle(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64(false, "little");
     };
 
@@ -2978,7 +2909,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get uint64le(): hasBigInt extends true ? bigint : number {
+    get uint64le(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64(true, "little");
     };
 
@@ -2987,7 +2918,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get ubigintle(): hasBigInt extends true ? bigint : number {
+    get ubigintle(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64(true, "little");
     };
 
@@ -2996,7 +2927,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get uquadle(): hasBigInt extends true ? bigint : number {
+    get uquadle(): alwaysBigInt extends true ? bigint : number {
         return this.readInt64(true, "little");
     };
 
@@ -3067,27 +2998,27 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * 
     * @param {stringOptions} options 
     * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["stringType"]?} options.stringType - ascii, utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
     * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
     * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
     * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types 
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
+    * @param {stringOptions["endian"]?} options.endian - for utf-16, utf-32, wide-pascal or double-wide-pascal
     * @returns {string}
     */
-    string(options?: stringOptions): string {
+    string(options: stringOptions = this.strDefaults): string {
         return this.readString(options);
     };
 
     /**
-    * Reads string using setting from .strSettings
+    * Reads string using setting from .strDefaults
     * 
     * Default is ``utf-8``
     * 
     * @returns {string}
     */
     get str(): string {
-        return this.readString(this.strSettings);
+        return this.readString(this.strDefaults);
     };
 
     /**
@@ -3113,7 +3044,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     cstring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
+        return this.utf8string(length, terminateValue, stripNull);
     };
 
     /**
@@ -3127,6 +3058,19 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     */
     ansistring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
         return this.string({ stringType: "utf-8", encoding: "windows-1252", length: length, terminateValue: terminateValue, stripNull: stripNull });
+    };
+
+    /**
+    * Reads latin1 string.
+    * 
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    latin1tring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
+        return this.string({ stringType: "utf-8", encoding: "iso-8859-1", length: length, terminateValue: terminateValue, stripNull: stripNull });
     };
 
     /**
@@ -3154,7 +3098,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     unistring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
+        return this.utf16string(length, terminateValue, stripNull, endian);
     };
 
     /**
@@ -3167,7 +3111,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     utf16stringle(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
+        return this.utf16string(length, terminateValue, stripNull, "little");
     };
 
     /**
@@ -3180,7 +3124,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     unistringle(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
+        return this.utf16stringle(length, terminateValue, stripNull);
     };
 
     /**
@@ -3193,7 +3137,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     utf16stringbe(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
+        return this.utf16string(length, terminateValue, stripNull, "big");
     };
 
     /**
@@ -3206,7 +3150,47 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     unistringbe(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
+        return this.utf16stringbe(length, terminateValue, stripNull);
+    };
+
+    /**
+    * Reads UTF-32 (Unicode) string.
+    * 
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    * 
+    * @returns {string}
+    */
+    utf32string(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
+        return this.string({ stringType: "utf-32", encoding: "utf-32", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
+    };
+
+    /**
+    * Reads UTF-32 (Unicode) string in little endian order.
+    * 
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    utf32stringle(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
+        return this.utf32string(length, terminateValue, stripNull, "little");
+    };
+
+    /**
+    * Reads UTF-32 (Unicode) string in big endian order.
+    * 
+    * @param {stringOptions["length"]} length - for fixed length utf strings
+    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    utf32stringbe(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
+        return this.utf32string(length, terminateValue, stripNull, "big");
     };
 
     /**
@@ -3231,7 +3215,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     pstring1(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: endian });
+        return this.pstring(1, stripNull, endian);
     };
 
     /**
@@ -3242,7 +3226,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     pstring1le(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "little" });
+        return this.pstring1(stripNull, "little");
     };
 
     /**
@@ -3253,7 +3237,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     pstring1be(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "big" });
+        return this.pstring1(stripNull, "big");
     };
 
     /**
@@ -3265,7 +3249,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     pstring2(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: endian });
+        return this.pstring(2, stripNull, endian);
     };
 
     /**
@@ -3276,7 +3260,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     pstring2le(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "little" });
+        return this.pstring2(stripNull, "little");
     };
 
     /**
@@ -3287,7 +3271,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     pstring2be(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "big" });
+        return this.pstring2(stripNull, "big");
     };
 
     /**
@@ -3299,7 +3283,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     pstring4(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: endian });
+        return this.pstring(4, stripNull, endian);
     };
 
     /**
@@ -3310,7 +3294,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     pstring4le(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "little" });
+        return this.pstring4(stripNull, "little");
     };
 
     /**
@@ -3321,11 +3305,11 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     pstring4be(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "big" });
+        return this.pstring4(stripNull, "big" );
     };
 
     /**
-    * Reads Wide-Pascal string.
+    * Reads Wide Pascal string.
     * 
     * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
@@ -3338,7 +3322,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     };
 
     /**
-    * Reads Wide-Pascal string 1 byte length read.
+    * Reads Wide Pascal string 1 byte length read.
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
@@ -3346,33 +3330,33 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     wpstring1(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: endian, stripNull: stripNull });
+        return this.wpstring(1, stripNull, endian);
     };
 
     /**
-    * Reads Wide-Pascal string 1 byte length read in little endian order.
+    * Reads Wide Pascal string 1 byte length read in little endian order.
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
     * @returns {string}
     */
     wpstring1le(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "little", stripNull: stripNull });
+        return this.wpstring1(stripNull, "little");
     };
 
     /**
-    * Reads Wide-Pascal string 1 byte length read in big endian order.
+    * Reads Wide Pascal string 1 byte length read in big endian order.
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
     * @returns {string}
     */
     wpstring1be(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "big", stripNull: stripNull });
+        return this.wpstring1(stripNull, "big");
     };
 
     /**
-    * Reads Wide-Pascal string 2 byte length read.
+    * Reads Wide Pascal string 2 byte length read.
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
@@ -3380,33 +3364,33 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     wpstring2(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: endian, stripNull: stripNull });
+        return this.wpstring(2, stripNull, endian);
     };
 
     /**
-    * Reads Wide-Pascal string 2 byte length read in little endian order.
+    * Reads Wide Pascal string 2 byte length read in little endian order.
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
     * @returns {string}
     */
     wpstring2le(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "little", stripNull: stripNull });
+        return this.wpstring2(stripNull, "little");
     };
 
     /**
-    * Reads Wide-Pascal string 2 byte length read in big endian order.
+    * Reads Wide Pascal string 2 byte length read in big endian order.
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
     * @returns {string}
     */
     wpstring2be(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "big", stripNull: stripNull });
+        return this.wpstring2(stripNull, "big");
     };
 
     /**
-    * Reads Wide-Pascal string 4 byte length read.
+    * Reads Wide Pascal string 4 byte length read.
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
@@ -3414,28 +3398,143 @@ export class BiReader<DataType extends Buffer | Uint8Array, hasBigInt extends bo
     * @returns {string}
     */
     wpstring4(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: endian, stripNull: stripNull });
+        return this.wpstring(4, stripNull, endian);
     };
 
     /**
-    * Reads Wide-Pascal string 4 byte length read in big endian order.
-    * 
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * 
-    * @returns {string}
-    */
-    wpstring4be(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "big", stripNull: stripNull });
-    };
-
-    /**
-    * Reads Wide-Pascal string 4 byte length read in little endian order.
+    * Reads Wide Pascal string 4 byte length read in little endian order.
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
     * @returns {string}
     */
     wpstring4le(stripNull?: stringOptions["stripNull"]): string {
-        return this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "little", stripNull: stripNull });
+        return this.wpstring4(stripNull, "little");
+    };
+
+    /**
+    * Reads Wide Pascal string 4 byte length read in big endian order.
+    * 
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    wpstring4be(stripNull?: stringOptions["stripNull"]): string {
+        return this.wpstring4(stripNull, "big");
+    };
+
+    /**
+    * Reads Double Wide Pascal string.
+    * 
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    * 
+    * @returns {string}
+    */
+    dwpstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
+        return this.string({ stringType: "double-wide-pascal", encoding: "utf-32", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
+    };
+
+    /**
+    * Reads Double Wide Pascal string 1 byte length read.
+    * 
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    * 
+    * @returns {string}
+    */
+    dwpstring1(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
+        return this.dwpstring(1, stripNull, endian);
+    };
+
+    /**
+    * Reads Double Wide Pascal string 1 byte length read in little endian order.
+    * 
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    dwpstring1le(stripNull?: stringOptions["stripNull"]): string {
+        return this.dwpstring1(stripNull, "little");
+    };
+
+    /**
+    * Reads Double WidePascal string 1 byte length read in big endian order.
+    * 
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    dwpstring1be(stripNull?: stringOptions["stripNull"]): string {
+        return this.dwpstring1(stripNull, "big");
+    };
+
+    /**
+    * Reads Double Wide Pascal string 2 byte length read.
+    * 
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    * 
+    * @returns {string}
+    */
+    dwpstring2(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
+        return this.dwpstring(2, stripNull, endian);
+    };
+
+    /**
+    * Reads Double Wide Pascal string 2 byte length read in little endian order.
+    * 
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    dwpstring2le(stripNull?: stringOptions["stripNull"]): string {
+        return this.dwpstring2(stripNull, "little");
+    };
+
+    /**
+    * Reads Double Wide Pascal string 2 byte length read in big endian order.
+    * 
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    dwpstring2be(stripNull?: stringOptions["stripNull"]): string {
+        return this.dwpstring2(stripNull, "big");
+    };
+
+    /**
+    * Reads Double Wide Pascal string 4 byte length read.
+    * 
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
+    * 
+    * @returns {string}
+    */
+    dwpstring4(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
+        return this.dwpstring(4, stripNull, endian);
+    };
+
+    /**
+    * Reads Double Wide Pascal string 4 byte length read in little endian order.
+    * 
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    dwpstring4le(stripNull?: stringOptions["stripNull"]): string {
+        return this.dwpstring4(stripNull, "little");
+    };
+
+    /**
+    * Reads Double Wide Pascal string 4 byte length read in big endian order.
+    * 
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    dwpstring4be(stripNull?: stringOptions["stripNull"]): string {
+        return this.dwpstring4(stripNull, "big");
     };
 };

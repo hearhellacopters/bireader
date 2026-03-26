@@ -1,4 +1,9 @@
-// @ts-check
+/**
+ * @file BiReaderLegacy / WriterLegacy for working in sync chunked file reads. Node only.
+ */
+
+// #region Imports
+
 import {
     BigValue,
     canInt8,
@@ -11,16 +16,16 @@ import {
     hasBigInt,
     isSafeInt64,
     endian,
-    arrayBufferCheck,
+    isBuffer,
+    isBufferOrUint8Array,
     hexdumpOptions,
     _hexDump,
+    _ADD,
     stringOptions,
     normalizeBitOffset
 } from '../common.js';
 import fs from 'fs';
 import { constants } from "buffer";
-
-var bufferConstants = constants;
 
 /**
  * For file system in Node
@@ -33,10 +38,10 @@ type FileDescriptor = number;
 type fsMode = "w+" | "r";
 
 function MAX_LENGTH() {
-    return bufferConstants.MAX_LENGTH;
+    return constants.MAX_LENGTH;
 };
 
-function hexDumpBase(ctx: BiBaseLegacy<true|false>, options: hexdumpOptions = {}): string {
+function hexDumpBase(ctx: BiBaseLegacy<true | false>, options: hexdumpOptions = {}): string {
     var length: any = options && options.length;
 
     var startByte: any = options && options.startByte;
@@ -60,7 +65,7 @@ function hexDumpBase(ctx: BiBaseLegacy<true|false>, options: hexdumpOptions = {}
     return _hexDump(data, options, start, end);
 };
 
-function skip(ctx: BiBaseLegacy<true|false>, bytes: number, bits?: number): void {
+function skip(ctx: BiBaseLegacy<true | false>, bytes: number, bits?: number): void {
     var new_size = (((bytes || 0) + ctx.offset) + Math.ceil((ctx.bitoffset + (bits || 0)) / 8));
 
     if (bits && bits < 0) {
@@ -69,7 +74,11 @@ function skip(ctx: BiBaseLegacy<true|false>, bytes: number, bits?: number): void
 
     if (new_size > ctx.size) {
         if (ctx.strict == false) {
-            ctx.extendArray(new_size - ctx.size);
+            if (ctx.growthIncrement != 0) {
+                ctx.extendArray(ctx.growthIncrement);
+            } else {
+                ctx.extendArray(new_size - ctx.size);
+            }
         } else {
             ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
 
@@ -90,21 +99,21 @@ function skip(ctx: BiBaseLegacy<true|false>, bytes: number, bits?: number): void
     return;
 };
 
-function align(ctx: BiBaseLegacy<true|false>, n: number) {
+function align(ctx: BiBaseLegacy<true | false>, n: number) {
     const a = ctx.offset % n;
     if (a) {
         ctx.skip(n - a);
     }
 };
 
-function alignRev(ctx: BiBaseLegacy<true|false>, n: number) {
+function alignRev(ctx: BiBaseLegacy<true | false>, n: number) {
     const a = ctx.offset % n;
     if (a) {
         ctx.skip(a * -1);
     }
 };
 
-function goto(ctx: BiBaseLegacy<true|false>, bytes: number, bits?: number): void {
+function goto(ctx: BiBaseLegacy<true | false>, bytes: number, bits?: number): void {
     var new_size = (((bytes || 0)) + Math.ceil(((bits || 0)) / 8));
 
     if (bits && bits < 0) {
@@ -113,7 +122,11 @@ function goto(ctx: BiBaseLegacy<true|false>, bytes: number, bits?: number): void
 
     if (new_size > ctx.size) {
         if (ctx.strict == false) {
-            ctx.extendArray(new_size - ctx.size);
+            if (ctx.growthIncrement != 0) {
+                ctx.extendArray(ctx.growthIncrement);
+            } else {
+                ctx.extendArray(new_size - ctx.size);
+            }
         } else {
             ctx.errorDump ? "\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump() : "";
 
@@ -133,7 +146,7 @@ function goto(ctx: BiBaseLegacy<true|false>, bytes: number, bits?: number): void
     return;
 };
 
-function check_size(ctx: BiBaseLegacy<true|false>, write_bytes: number, write_bit?: number, offset?: number): number {
+function check_size(ctx: BiBaseLegacy<true | false>, write_bytes: number, write_bit?: number, offset?: number): number {
     const bits: number = (write_bit || 0) + ctx.bitoffset;
 
     var new_off = (offset || ctx.offset);
@@ -151,7 +164,11 @@ function check_size(ctx: BiBaseLegacy<true|false>, write_bytes: number, write_bi
         const dif = needed_size - ctx.size;
 
         if (ctx.strict == false) {
-            ctx.extendArray(dif);
+            if (ctx.growthIncrement != 0) {
+                ctx.extendArray(ctx.growthIncrement);
+            } else {
+                ctx.extendArray(dif);
+            }
         } else {
             ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
 
@@ -162,7 +179,7 @@ function check_size(ctx: BiBaseLegacy<true|false>, write_bytes: number, write_bi
     return new_off;
 };
 
-function extendarray(ctx: BiBaseLegacy<true|false>, to_padd: number): void {
+function extendarray(ctx: BiBaseLegacy<true | false>, to_padd: number): void {
     ctx.open();
 
     if (fs == undefined) {
@@ -177,9 +194,9 @@ function extendarray(ctx: BiBaseLegacy<true|false>, to_padd: number): void {
         throw new Error('File position is outside of file size while in strict mode.');
     }
 
-    if (ctx.extendBufferSize != 0) {
-        if (ctx.extendBufferSize > to_padd) {
-            to_padd = ctx.extendBufferSize;
+    if (ctx.growthIncrement != 0) {
+        if (ctx.growthIncrement > to_padd) {
+            to_padd = ctx.growthIncrement;
         }
     }
 
@@ -192,7 +209,7 @@ function extendarray(ctx: BiBaseLegacy<true|false>, to_padd: number): void {
     ctx.updateSize();
 };
 
-function remove(ctx: BiBaseLegacy<true|false>, startOffset?: number, endOffset?: number, consume?: boolean, remove?: boolean, fillValue?: number): Buffer {
+function remove(ctx: BiBaseLegacy<true | false>, startOffset?: number, endOffset?: number, consume?: boolean, remove?: boolean, fillValue?: number): Buffer {
     ctx.open();
 
     const new_start = Math.abs(startOffset || 0);
@@ -200,7 +217,7 @@ function remove(ctx: BiBaseLegacy<true|false>, startOffset?: number, endOffset?:
     const new_offset = (endOffset || ctx.offset);
 
     if (fs == undefined) {
-        throw new Error("Can only use BiStream in Node.");
+        throw new Error("Can only use BiLegacy in Node.");
     }
 
     if (ctx.fd == null) {
@@ -209,7 +226,11 @@ function remove(ctx: BiBaseLegacy<true|false>, startOffset?: number, endOffset?:
 
     if (new_offset > ctx.size) {
         if (ctx.strict == false) {
-            ctx.extendArray(new_offset - ctx.size);
+            if (ctx.growthIncrement != 0) {
+                ctx.extendArray(ctx.growthIncrement);
+            } else {
+                ctx.extendArray(new_offset - ctx.size);
+            }
         } else {
             ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
 
@@ -461,7 +482,7 @@ function remove(ctx: BiBaseLegacy<true|false>, startOffset?: number, endOffset?:
     }
 };
 
-function addData(ctx: BiBaseLegacy<true|false>, data: Buffer | Uint8Array, consume?: boolean, offset?: number, replace?: boolean): void {
+function addData(ctx: BiBaseLegacy<true | false>, data: Buffer | Uint8Array, consume?: boolean, offset?: number, replace?: boolean): void {
     if (ctx.strict == true) {
         ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
 
@@ -471,7 +492,7 @@ function addData(ctx: BiBaseLegacy<true|false>, data: Buffer | Uint8Array, consu
     ctx.open();
 
     if (fs == undefined) {
-        throw new Error("Can only use BiStream in Node.");
+        throw new Error("Can only use BiLegacy in Node.");
     }
 
     if (ctx.fd == null) {
@@ -492,7 +513,11 @@ function addData(ctx: BiBaseLegacy<true|false>, data: Buffer | Uint8Array, consu
 
     if (newSize > ctx.size) {
         if (ctx.strict == false) {
-            ctx.extendArray(newSize - ctx.size);
+            if (ctx.growthIncrement != 0) {
+                ctx.extendArray(ctx.growthIncrement);
+            } else {
+                ctx.extendArray(newSize - ctx.size);
+            }
         } else {
             ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
 
@@ -500,11 +525,11 @@ function addData(ctx: BiBaseLegacy<true|false>, data: Buffer | Uint8Array, consu
         }
     }
 
-    if (!arrayBufferCheck(data)) {
+    if (!isBufferOrUint8Array(data)) {
         throw new Error('Data must be a Uint8Array or Buffer');
     }
 
-    if (Buffer.isBuffer(data)) {
+    if (isBuffer(data)) {
         data = new Uint8Array(data);
     }
 
@@ -559,10 +584,14 @@ function addData(ctx: BiBaseLegacy<true|false>, data: Buffer | Uint8Array, consu
     return;
 };
 
-function AND(ctx: BiBaseLegacy<true|false>, and_key: any, start?: number, end?: number, consume?: boolean): void {
+function AND(ctx: BiBaseLegacy<true | false>, and_key: any, start?: number, end?: number, consume?: boolean): void {
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
-            ctx.extendArray((end || 0) - ctx.size);
+            if (ctx.growthIncrement != 0) {
+                ctx.extendArray(ctx.growthIncrement);
+            } else {
+                ctx.extendArray((end || 0) - ctx.size);
+            }
         } else {
             ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
 
@@ -602,7 +631,7 @@ function AND(ctx: BiBaseLegacy<true|false>, and_key: any, start?: number, end?: 
             and_key = Uint8Array.from(Array.from(and_key as string).map(letter => letter.charCodeAt(0)));
         }
 
-        if (arrayBufferCheck(and_key)) {
+        if (isBufferOrUint8Array(and_key)) {
             var keyIndex = -1;
 
             while (new_start <= new_end) {
@@ -637,10 +666,14 @@ function AND(ctx: BiBaseLegacy<true|false>, and_key: any, start?: number, end?: 
     return;
 };
 
-function OR(ctx: BiBaseLegacy<true|false>, or_key: any, start?: number, end?: number, consume?: boolean): void {
+function OR(ctx: BiBaseLegacy<true | false>, or_key: any, start?: number, end?: number, consume?: boolean): void {
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
-            ctx.extendArray((end || 0) - ctx.size);
+            if (ctx.growthIncrement != 0) {
+                ctx.extendArray(ctx.growthIncrement);
+            } else {
+                ctx.extendArray((end || 0) - ctx.size);
+            }
         } else {
             ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
 
@@ -679,7 +712,7 @@ function OR(ctx: BiBaseLegacy<true|false>, or_key: any, start?: number, end?: nu
             or_key = Uint8Array.from(Array.from(or_key as string).map(letter => letter.charCodeAt(0)));
         }
 
-        if (arrayBufferCheck(or_key)) {
+        if (isBufferOrUint8Array(or_key)) {
             var number = -1;
 
             while (new_start <= new_end) {
@@ -715,10 +748,14 @@ function OR(ctx: BiBaseLegacy<true|false>, or_key: any, start?: number, end?: nu
     return;
 };
 
-function XOR(ctx: BiBaseLegacy<true|false>, xor_key: any, start?: number, end?: number, consume?: boolean): void {
+function XOR(ctx: BiBaseLegacy<true | false>, xor_key: any, start?: number, end?: number, consume?: boolean): void {
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
-            ctx.extendArray((end || 0) - ctx.size);
+            if (ctx.growthIncrement != 0) {
+                ctx.extendArray(ctx.growthIncrement);
+            } else {
+                ctx.extendArray((end || 0) - ctx.size);
+            }
         } else {
             ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
 
@@ -757,7 +794,7 @@ function XOR(ctx: BiBaseLegacy<true|false>, xor_key: any, start?: number, end?: 
             xor_key = Uint8Array.from(Array.from(xor_key as string).map(letter => letter.charCodeAt(0)));
         }
 
-        if (arrayBufferCheck(xor_key)) {
+        if (isBufferOrUint8Array(xor_key)) {
             var keyIndex = -1;
 
             while (new_start <= new_end) {
@@ -793,10 +830,14 @@ function XOR(ctx: BiBaseLegacy<true|false>, xor_key: any, start?: number, end?: 
     return;
 };
 
-function NOT(ctx: BiBaseLegacy<true|false>, start?: number, end?: number, consume?: boolean): void {
+function NOT(ctx: BiBaseLegacy<true | false>, start?: number, end?: number, consume?: boolean): void {
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
-            ctx.extendArray((end || 0) - ctx.size);
+            if (ctx.growthIncrement != 0) {
+                ctx.extendArray(ctx.growthIncrement);
+            } else {
+                ctx.extendArray((end || 0) - ctx.size);
+            }
         } else {
             ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
 
@@ -837,10 +878,14 @@ function NOT(ctx: BiBaseLegacy<true|false>, start?: number, end?: number, consum
     return;
 };
 
-function LSHIFT(ctx: BiBaseLegacy<true|false>, shift_key: any, start?: number, end?: number, consume?: boolean): void {
+function LSHIFT(ctx: BiBaseLegacy<true | false>, shift_key: any, start?: number, end?: number, consume?: boolean): void {
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
-            ctx.extendArray((end || 0) - ctx.size);
+            if (ctx.growthIncrement != 0) {
+                ctx.extendArray(ctx.growthIncrement);
+            } else {
+                ctx.extendArray((end || 0) - ctx.size);
+            }
         } else {
             ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
 
@@ -879,7 +924,7 @@ function LSHIFT(ctx: BiBaseLegacy<true|false>, shift_key: any, start?: number, e
             shift_key = Uint8Array.from(Array.from(shift_key as string).map(letter => letter.charCodeAt(0)));
         }
 
-        if (arrayBufferCheck(shift_key)) {
+        if (isBufferOrUint8Array(shift_key)) {
             let keyIndex = -1;
 
             while (new_start <= new_end) {
@@ -915,10 +960,14 @@ function LSHIFT(ctx: BiBaseLegacy<true|false>, shift_key: any, start?: number, e
     return;
 };
 
-function RSHIFT(ctx: BiBaseLegacy<true|false>, shift_key: any, start?: number, end?: number, consume?: boolean): void {
+function RSHIFT(ctx: BiBaseLegacy<true | false>, shift_key: any, start?: number, end?: number, consume?: boolean): void {
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
-            ctx.extendArray((end || 0) - ctx.size);
+            if (ctx.growthIncrement != 0) {
+                ctx.extendArray(ctx.growthIncrement);
+            } else {
+                ctx.extendArray((end || 0) - ctx.size);
+            }
         } else {
             ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
 
@@ -959,7 +1008,7 @@ function RSHIFT(ctx: BiBaseLegacy<true|false>, shift_key: any, start?: number, e
             shift_key = Uint8Array.from(Array.from(shift_key as string).map(letter => letter.charCodeAt(0)));
         }
 
-        if (arrayBufferCheck(shift_key)) {
+        if (isBufferOrUint8Array(shift_key)) {
             var keyIndex = -1;
 
             while (new_start <= new_end) {
@@ -995,10 +1044,14 @@ function RSHIFT(ctx: BiBaseLegacy<true|false>, shift_key: any, start?: number, e
     return;
 };
 
-function ADD(ctx: BiBaseLegacy<true|false>, add_key: any, start?: number, end?: number, consume?: boolean): void {
+function ADD(ctx: BiBaseLegacy<true | false>, add_key: any, start?: number, end?: number, consume?: boolean): void {
     if ((end || 0) > ctx.size) {
         if (ctx.strict == false) {
-            ctx.extendArray((end || 0) - ctx.size);
+            if (ctx.growthIncrement != 0) {
+                ctx.extendArray(ctx.growthIncrement);
+            } else {
+                ctx.extendArray((end || 0) - ctx.size);
+            }
         } else {
             ctx.errorDump ? "\x1b[31m[Error]\x1b[0m: hexdump:\n" + ctx.hexdump() : "";
 
@@ -1037,7 +1090,7 @@ function ADD(ctx: BiBaseLegacy<true|false>, add_key: any, start?: number, end?: 
             add_key = Uint8Array.from(Array.from(add_key as string).map(letter => letter.charCodeAt(0)));
         }
 
-        if (arrayBufferCheck(add_key)) {
+        if (isBufferOrUint8Array(add_key)) {
             var keyIndex = -1;
 
             while (new_start <= new_end) {
@@ -1073,7 +1126,7 @@ function ADD(ctx: BiBaseLegacy<true|false>, add_key: any, start?: number, end?: 
     return;
 };
 
-function fString(ctx: BiBaseLegacy<true|false>, searchString: string): number {
+function fString(ctx: BiBaseLegacy<true | false>, searchString: string): number {
     ctx.open();
 
     const chunkSize = 0x2000; // 8192 bytes
@@ -1122,7 +1175,7 @@ function fString(ctx: BiBaseLegacy<true|false>, searchString: string): number {
     return -1;
 };
 
-function fNumber(ctx: BiBaseLegacy<true|false>, targetNumber: number, bits: number, unsigned: boolean, endian?: string): number {
+function fNumber(ctx: BiBaseLegacy<true | false>, targetNumber: number, bits: number, unsigned: boolean, endian?: string): number {
     ctx.open();
 
     const chunkSize = 0x2000; // 8192 bytes
@@ -1198,7 +1251,7 @@ function fNumber(ctx: BiBaseLegacy<true|false>, targetNumber: number, bits: numb
     return -1; // number not found
 };
 
-function fHalfFloat(ctx: BiBaseLegacy<true|false>, targetNumber: number, endian?: string): number {
+function fHalfFloat(ctx: BiBaseLegacy<true | false>, targetNumber: number, endian?: string): number {
     ctx.open();
 
     const chunkSize = 0x2000; // 8192 bytes
@@ -1260,7 +1313,7 @@ function fHalfFloat(ctx: BiBaseLegacy<true|false>, targetNumber: number, endian?
     return -1; // number not found
 };
 
-function fFloat(ctx: BiBaseLegacy<true|false>, targetNumber: number, endian?: string): number {
+function fFloat(ctx: BiBaseLegacy<true | false>, targetNumber: number, endian?: string): number {
     ctx.open();
 
     const chunkSize = 0x2000; // 8192 bytes
@@ -1315,8 +1368,8 @@ function fFloat(ctx: BiBaseLegacy<true|false>, targetNumber: number, endian?: st
     return -1; // number not found
 };
 
-function fBigInt(ctx: BiBaseLegacy<true|false>, targetNumber: BigValue, unsigned: boolean, endian?: string): number {
-    if(!hasBigInt){
+function fBigInt(ctx: BiBaseLegacy<true | false>, targetNumber: BigValue, unsigned: boolean, endian?: string): number {
+    if (!hasBigInt) {
         throw new Error("System doesn't support BigInt values.");
     }
 
@@ -1369,8 +1422,8 @@ function fBigInt(ctx: BiBaseLegacy<true|false>, targetNumber: BigValue, unsigned
     return -1; // number not found
 };
 
-function fDoubleFloat(ctx: BiBaseLegacy<true|false>, targetNumber: number, endian?: string): number {
-    if(!hasBigInt){
+function fDoubleFloat(ctx: BiBaseLegacy<true | false>, targetNumber: number, endian?: string): number {
+    if (!hasBigInt) {
         throw new Error("System doesn't support BigInt values.");
     }
 
@@ -1439,7 +1492,7 @@ function fDoubleFloat(ctx: BiBaseLegacy<true|false>, targetNumber: number, endia
     return -1; // number not found
 };
 
-function wbit(ctx: BiBaseLegacy<true|false>, value: number, bits: number, unsigned?: boolean, endian?: string): void {
+function wbit(ctx: BiBaseLegacy<true | false>, value: number, bits: number, unsigned?: boolean, endian?: string): void {
     ctx.open();
 
     if (value == undefined) {
@@ -1485,8 +1538,11 @@ function wbit(ctx: BiBaseLegacy<true|false>, value: number, bits: number, unsign
     const size_needed = ((((bits - 1) + ctx.bitoffset) / 8) + ctx.offset);
 
     if (size_needed > ctx.size) {
-        //add size
-        ctx.extendArray(size_needed - ctx.size);
+        if (ctx.growthIncrement != 0) {
+            ctx.extendArray(ctx.growthIncrement);
+        } else {
+            ctx.extendArray(size_needed - ctx.size);
+        }
     }
 
     var off_in_bits = (ctx.offset * 8) + ctx.bitoffset;
@@ -1540,7 +1596,7 @@ function wbit(ctx: BiBaseLegacy<true|false>, value: number, bits: number, unsign
     ctx.bitoffset = ((bits) + ctx.bitoffset) % 8;
 };
 
-function rbit(ctx: BiBaseLegacy<true|false>, bits?: number, unsigned?: boolean, endian?: string): number {
+function rbit(ctx: BiBaseLegacy<true | false>, bits?: number, unsigned?: boolean, endian?: string): number {
     ctx.open();
 
     if (bits == undefined || typeof bits != "number") {
@@ -1616,7 +1672,7 @@ function rbit(ctx: BiBaseLegacy<true|false>, bits?: number, unsigned?: boolean, 
     return value;
 };
 
-function wbyte(ctx: BiBaseLegacy<true|false>, value: number, unsigned?: boolean): void {
+function wbyte(ctx: BiBaseLegacy<true | false>, value: number, unsigned?: boolean): void {
     ctx.open();
 
     check_size(ctx, 1, 0);
@@ -1662,7 +1718,7 @@ function wbyte(ctx: BiBaseLegacy<true|false>, value: number, unsigned?: boolean)
     return;
 };
 
-function rbyte(ctx: BiBaseLegacy<true|false>, unsigned?: boolean): number {
+function rbyte(ctx: BiBaseLegacy<true | false>, unsigned?: boolean): number {
     ctx.open();
 
     check_size(ctx, 1);
@@ -1698,7 +1754,7 @@ function rbyte(ctx: BiBaseLegacy<true|false>, unsigned?: boolean): number {
     }
 };
 
-function wint16(ctx: BiBaseLegacy<true|false>, value: number, unsigned?: boolean, endian?: string): void {
+function wint16(ctx: BiBaseLegacy<true | false>, value: number, unsigned?: boolean, endian?: string): void {
     ctx.open();
 
     check_size(ctx, 2, 0);
@@ -1752,7 +1808,7 @@ function wint16(ctx: BiBaseLegacy<true|false>, value: number, unsigned?: boolean
     return;
 };
 
-function rint16(ctx: BiBaseLegacy<true|false>, unsigned?: boolean, endian?: string): number {
+function rint16(ctx: BiBaseLegacy<true | false>, unsigned?: boolean, endian?: string): number {
     ctx.open();
 
     check_size(ctx, 2);
@@ -1794,7 +1850,7 @@ function rint16(ctx: BiBaseLegacy<true|false>, unsigned?: boolean, endian?: stri
     }
 };
 
-function rhalffloat(ctx: BiBaseLegacy<true|false>, endian?: endian): number {
+function rhalffloat(ctx: BiBaseLegacy<true | false>, endian?: endian): number {
     if (canFloat16) {
         ctx.open();
 
@@ -1844,7 +1900,7 @@ function rhalffloat(ctx: BiBaseLegacy<true|false>, endian?: endian): number {
     return floatValue;
 };
 
-function whalffloat(ctx: BiBaseLegacy<true|false>, value: number, endian?: string): void {
+function whalffloat(ctx: BiBaseLegacy<true | false>, value: number, endian?: string): void {
     ctx.open();
 
     check_size(ctx, 2, 0);
@@ -1938,7 +1994,7 @@ function whalffloat(ctx: BiBaseLegacy<true|false>, value: number, endian?: strin
     ctx.bitoffset = 0;
 };
 
-function wint32(ctx: BiBaseLegacy<true|false>, value: number, unsigned?: boolean, endian?: string): void {
+function wint32(ctx: BiBaseLegacy<true | false>, value: number, unsigned?: boolean, endian?: string): void {
     ctx.open();
 
     check_size(ctx, 4, 0);
@@ -1998,7 +2054,7 @@ function wint32(ctx: BiBaseLegacy<true|false>, value: number, unsigned?: boolean
     ctx.bitoffset = 0;
 };
 
-function rint32(ctx: BiBaseLegacy<true|false>, unsigned?: boolean, endian?: string): number {
+function rint32(ctx: BiBaseLegacy<true | false>, unsigned?: boolean, endian?: string): number {
     ctx.open();
 
     check_size(ctx, 4);
@@ -2040,7 +2096,7 @@ function rint32(ctx: BiBaseLegacy<true|false>, unsigned?: boolean, endian?: stri
     }
 };
 
-function rfloat(ctx: BiBaseLegacy<true|false>, endian?: endian): number {
+function rfloat(ctx: BiBaseLegacy<true | false>, endian?: endian): number {
     if (canFloat32) {
         ctx.open();
 
@@ -2083,7 +2139,7 @@ function rfloat(ctx: BiBaseLegacy<true|false>, endian?: endian): number {
     return floatValue;
 };
 
-function wfloat(ctx: BiBaseLegacy<true|false>, value: number, endian?: string): void {
+function wfloat(ctx: BiBaseLegacy<true | false>, value: number, endian?: string): void {
     ctx.open();
 
     check_size(ctx, 4, 0);
@@ -2142,7 +2198,7 @@ function wfloat(ctx: BiBaseLegacy<true|false>, value: number, endian?: string): 
 };
 
 function rint64<hasBigInt extends boolean>(ctx: BiBaseLegacy<hasBigInt>, unsigned?: boolean, endian?: string): hasBigInt extends true ? bigint : number {
-    if(!hasBigInt){
+    if (!hasBigInt) {
         throw new Error("System doesn't support BigInt values.");
     }
 
@@ -2204,8 +2260,8 @@ function rint64<hasBigInt extends boolean>(ctx: BiBaseLegacy<hasBigInt>, unsigne
     }
 };
 
-function wint64(ctx: BiBaseLegacy<true|false>, value: BigValue, unsigned?: boolean, endian?: string): void {
-    if(!hasBigInt){
+function wint64(ctx: BiBaseLegacy<true | false>, value: BigValue, unsigned?: boolean, endian?: string): void {
+    if (!hasBigInt) {
         throw new Error("System doesn't support BigInt values.");
     }
 
@@ -2297,7 +2353,7 @@ function wint64(ctx: BiBaseLegacy<true|false>, value: BigValue, unsigned?: boole
     ctx.bitoffset = 0;
 };
 
-function wdfloat(ctx: BiBaseLegacy<true|false>, value: number, endian?: string): void {
+function wdfloat(ctx: BiBaseLegacy<true | false>, value: number, endian?: string): void {
     ctx.open();
 
     check_size(ctx, 8, 0);
@@ -2349,7 +2405,7 @@ function wdfloat(ctx: BiBaseLegacy<true|false>, value: number, endian?: string):
     ctx.bitoffset = 0;
 };
 
-function rdfloat(ctx: BiBaseLegacy<true|false>, endian?: endian): number {
+function rdfloat(ctx: BiBaseLegacy<true | false>, endian?: endian): number {
     if (canFloat64) {
         ctx.open();
 
@@ -2401,7 +2457,7 @@ function rdfloat(ctx: BiBaseLegacy<true|false>, endian?: endian): number {
     return floatValue;
 };
 
-function rstring(ctx: BiBaseLegacy<true|false>, options?: stringOptions): string {
+function rstring(ctx: BiBaseLegacy<true | false>, options?: stringOptions): string {
     ctx.open();
 
     var length: any = options && options.length;
@@ -2548,7 +2604,7 @@ function rstring(ctx: BiBaseLegacy<true|false>, options?: stringOptions): string
     }
 };
 
-function wstring(ctx: BiBaseLegacy<true|false>, string: string, options?: stringOptions): void {
+function wstring(ctx: BiBaseLegacy<true | false>, string: string, options?: stringOptions): void {
     ctx.open();
 
     var length: any = options && options.length;
@@ -2772,7 +2828,7 @@ export class BiBaseLegacy<hasBigInt extends boolean> {
      * 
      * NOTE: Using ``BiWriterLegacy.get`` or ``BiWriterLegacy.return`` will now remove all data after the current write position. Use ``BiWriterLegacy.data`` to get the full buffer instead.
      */
-    public extendBufferSize: number = 0;
+    public growthIncrement: number = 0;
 
     public fd: FileDescriptor | null = null;
 
@@ -2793,7 +2849,7 @@ export class BiBaseLegacy<hasBigInt extends boolean> {
     public mode: 'memory' | 'file' = 'file';
 
     constructor(filePath?: string, readwrite?: boolean) {
-        if(typeof Buffer === 'undefined' || typeof fs == "undefined"){
+        if (typeof Buffer === 'undefined' || typeof fs == "undefined") {
             throw new Error("Need node to read or write files.");
         }
 
@@ -2869,8 +2925,8 @@ export class BiBaseLegacy<hasBigInt extends boolean> {
             return this.size;
         }
 
-        if (bufferConstants == undefined || fs == undefined) {
-            throw new Error("Can't use BitFile without Node.");
+        if (typeof Buffer === "undefined" || typeof fs === "undefined") {
+            throw new Error("Can't use files without Node.");
         }
 
         if (this.maxFileSize == null) {
@@ -2898,7 +2954,11 @@ export class BiBaseLegacy<hasBigInt extends boolean> {
 
             if (this.offset > this.size) {
                 if (this.strict == false) {
-                    this.extendArray(this.offset - this.size);
+                    if (this.growthIncrement != 0) {
+                        this.extendArray(this.growthIncrement);
+                    } else {
+                        this.extendArray(this.offset - this.size);
+                    }
                 } else {
                     throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
                 }
@@ -2925,6 +2985,10 @@ export class BiBaseLegacy<hasBigInt extends boolean> {
                 this.sizeB = this.size * 8;
             } catch (error) {
                 throw new Error(error);
+            }
+
+            if (this.size > this.maxFileSize) {
+                throw new Error("File too large to load.");
             }
         }
     };
@@ -2985,7 +3049,11 @@ export class BiBaseLegacy<hasBigInt extends boolean> {
 
         if (end > this.size) {
             if (this.strict == false) {
-                this.extendArray(length);
+                if (this.growthIncrement != 0) {
+                    this.extendArray(this.growthIncrement);
+                } else {
+                    this.extendArray(length);
+                }
             } else {
                 throw new Error('File read is outside data size while in strict mode.');
             }
@@ -2996,7 +3064,7 @@ export class BiBaseLegacy<hasBigInt extends boolean> {
         try {
             const bytesRead = fs.readSync(this.fd, data, 0, data.length, start);
 
-            if(bytesRead != length){
+            if (bytesRead != length) {
                 throw new Error("Didn't read the amount needed for value: " + bytesRead + " of " + length);
             }
         } catch (error) {
@@ -3041,7 +3109,11 @@ export class BiBaseLegacy<hasBigInt extends boolean> {
 
         if (end > this.size) {
             if (this.strict == false) {
-                this.extendArray(data.length);
+                if (this.growthIncrement != 0) {
+                    this.extendArray(this.growthIncrement);
+                } else {
+                    this.extendArray(data.length);
+                }
             } else {
                 throw new Error('File write is outside of data size while in strict mode.');
             }
@@ -3073,8 +3145,8 @@ export class BiBaseLegacy<hasBigInt extends boolean> {
     commit(consume: boolean = true): number {
         this.open();
 
-        if (!Buffer.isBuffer(this.data)) {
-            var data = Buffer.from(this.data);
+        if (!isBuffer(this.data)) {
+            const data = Buffer.from(this.data);
 
             return this.write(this.offset, data, consume);
         } else if (this.data === null) {
@@ -3150,7 +3222,7 @@ export class BiBaseLegacy<hasBigInt extends boolean> {
     };
 
     isBufferOrUint8Array(obj: Buffer | Uint8Array): boolean {
-        return arrayBufferCheck(obj);
+        return isBufferOrUint8Array(obj);
     };
 
     /**
@@ -3481,14 +3553,14 @@ export class BiBaseLegacy<hasBigInt extends boolean> {
     /**
      * Returns current data.
      * 
-     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
+     * Note: Will remove all data after current position if ``growthIncrement`` was set.
      * 
      * Use ``.data`` instead if you want the full buffer data.
      * 
      * @returns {Buffer} ``Buffer``
      */
     get(): Buffer {
-        if (this.extendBufferSize != 0) {
+        if (this.growthIncrement != 0) {
             this.trim();
         }
 
@@ -3498,7 +3570,7 @@ export class BiBaseLegacy<hasBigInt extends boolean> {
     /**
      * Returns current data.
      * 
-     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
+     * Note: Will remove all data after current position if ``growthIncrement`` was set.
      * 
      * Use ``.data`` instead if you want the full buffer data.
      * 

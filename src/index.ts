@@ -1,7 +1,5 @@
 export { BiReader } from './BiReader.js';
 export { BiWriter } from './BiWriter.js';
-export { BiReaderLegacy } from './BiReaderLegacy.js';
-export { BiWriterLegacy } from './BiWriterLegacy.js';
 export { BiReaderAsync } from './BiReaderAsync.js';
 export { BiWriterAsync } from './BiWriterAsync.js';
 export { hexdump } from './common.js';
@@ -24,7 +22,7 @@ export class bireader {
  */
 export class BiReaderStream {
     constructor() {
-        throw new Error("BiReaderStream is deprecated. Use BiReaderLegacy instead.");
+        throw new Error("BiReaderStream is deprecated. Use BiReader instead.");
     }
 };
 
@@ -46,6 +44,6 @@ export class biwriter {
  */
 export class BiWriterStream {
     constructor() {
-        throw new Error("BiWriterStream is deprecated. Use BiWriterLegacy instead.");
+        throw new Error("BiWriterStream is deprecated. Use BiWriter instead.");
     }
 };

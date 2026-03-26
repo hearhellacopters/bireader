@@ -1,9 +1,11 @@
 import {
     BiOptions,
+    hasBigInt,
     endian,
     stringOptions,
-} from "./common.js";
-import { BiBaseAsync } from './core/BiBaseAsync.js';
+    normalizeBitOffset
+} from "../common.js";
+import { BiBaseAsync } from './BiBaseAsync.js';
 
 /**
  * Async Binary reader, includes bitfields and strings.
@@ -31,32 +33,94 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
      * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
      * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false.
+     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
      * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
      * @param {BiOptions["readOnly"]} options.readOnly - If you want to prevent write operations (default true in reader)
      */
     constructor(input: string | DataType, options: BiOptions = {}) {
-        options.byteOffset = options.byteOffset ?? 0;
-        
-        options.bitOffset = options.bitOffset ?? 0;
-
-        options.endianness = options.endianness ?? "little";
-
-        options.strict = options.strict ?? true;
-
-        options.growthIncrement = options.growthIncrement ?? 1048576;
-
-        options.enforceBigInt = options.enforceBigInt ?? false;
-
-        options.readOnly = options.readOnly ?? true;
-
-        options.windowSize = options.windowSize = 4096;
+        super(input, options.readOnly ?? true);
 
         if (input == undefined) {
             throw new Error("Can not start BiReader without data.");
         }
 
-        super(input, options);
+        this.strict = true;
+
+        this.enforceBigInt = (options?.enforceBigInt) as hasBigInt ?? hasBigInt as hasBigInt;
+
+        if (options.growthIncrement != undefined &&
+            options.growthIncrement != 0) {
+            this.growthIncrement = options.growthIncrement;
+        }
+
+        if (options.endianness != undefined &&
+            typeof options.endianness != "string") {
+            throw new Error("Endian must be big or little");
+        }
+
+        if (options.endianness != undefined &&
+            !(options.endianness == "big" || options.endianness == "little")) {
+            throw new Error("Byte order must be big or little");
+        }
+
+        this.endian = options.endianness || "little";
+
+        if (typeof options.strict == "boolean") {
+            this.strict = options.strict;
+        } else {
+            if (options.strict != undefined) {
+                throw new Error("Strict mode must be true or false");
+            }
+        }
+
+        if (input == undefined) {
+            throw new Error("Data or file path required");
+        } else {
+            if (typeof input == "string") {
+                this.filePath = input;
+
+                this.mode = "file";
+
+            } else if (this.isBufferOrUint8Array(input)) {
+                this.data = input as DataType;
+
+                this.mode = "memory";
+
+                this.size = this.data.length;
+
+                this.sizeB = this.data.length * 8;
+            } else {
+                throw new Error("Write data must be Uint8Array or Buffer");
+            }
+        }
+
+        this.offset = options.byteOffset ?? 0;
+
+        this.bitoffset = options.bitOffset ?? 0;
+        
+        this.offset = ((Math.abs(this.offset)) + Math.ceil((Math.abs(this.bitoffset)) / 8));
+        // Adjust byte offset based on bit overflow
+        this.offset += Math.floor((Math.abs(this.bitoffset)) / 8);
+        // Adjust bit offset
+        this.bitoffset = Math.abs(normalizeBitOffset(this.bitoffset)) % 8;
+        // Ensure bit offset stays between 0-7
+        this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
+        // Ensure offset doesn't go negative
+        this.offset = Math.max(this.offset, 0);
+
+        if (this.offset > this.size) {
+            if (this.strict == false) {
+                const dif = this.offset - this.size;
+
+                if (this.growthIncrement != 0 && this.growthIncrement > dif) {
+                    this.extendArray(Math.ceil(dif / this.growthIncrement) * this.growthIncrement);
+                } else {
+                    this.extendArray(dif);
+                }
+            } else {
+                throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
+            }
+        }
     };
 
     /**
@@ -76,7 +140,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * @returns {Promise<BiReaderAsync<DataType, hasBigInt>>}
      */
-    static async create<DataType extends Buffer | Uint8Array, hasBigInt extends boolean>(input: string | DataType, options: BiOptions = {}): Promise<BiReaderAsync<DataType, hasBigInt>> {
+    static async create<DataType extends Buffer | Uint8Array, hasBigInt extends boolean>(input: string | DataType, options: BiOptions = {}): Promise<BiReaderAsync<DataType, hasBigInt>>{
         const instance = new BiReaderAsync<DataType, hasBigInt>(input, options);
 
         await instance.open();
@@ -2819,7 +2883,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async quad(): Promise<hasBigInt extends true ? bigint : number> {
+    async quad(): Promise<hasBigInt extends true ? bigint : number>{
         return await this.readInt64();
     };
 
@@ -3025,12 +3089,12 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * 
     * @param {stringOptions} options 
     * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - ascii, utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
+    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, utf-32 pascal or wide-pascal
     * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
     * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
     * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types 
-    * @param {stringOptions["endian"]?} options.endian - for utf-16, utf-32, wide-pascal or double-wide-pascal
+    * @param {stringOptions["endian"]?} options.endian - for wide-pascal, utf-16, utf-32
     * @returns {string}
     */
     async string(options?: stringOptions): Promise<string> {
@@ -3038,14 +3102,14 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     };
 
     /**
-    * Reads string using setting from .strDefaults
+    * Reads string using setting from .strSettings
     * 
     * Default is ``utf-8``
     * 
     * @returns {Promise<string>}
     */
     async str(): Promise<string> {
-        return await this.readString(this.strDefaults);
+        return await this.readString(this.strSettings);
     };
 
     /**
@@ -3071,7 +3135,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async cstring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.utf8string(length, terminateValue, stripNull);
+        return await this.string({ stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue, stripNull: stripNull });
     };
 
     /**
@@ -3125,7 +3189,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async unistring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
-        return await this.utf16string(length, terminateValue, stripNull, endian);
+        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
     };
 
     /**
@@ -3138,7 +3202,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async utf16stringle(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.utf16string(length, terminateValue, stripNull, "little");
+        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
     };
 
     /**
@@ -3151,7 +3215,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async unistringle(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.utf16stringle(length, terminateValue, stripNull);
+        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little", stripNull: stripNull });
     };
 
     /**
@@ -3164,7 +3228,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async utf16stringbe(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.utf16string(length, terminateValue, stripNull, "big");
+        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
     };
 
     /**
@@ -3177,47 +3241,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async unistringbe(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.utf16stringbe(length, terminateValue, stripNull);
-    };
-
-    /**
-    * Reads UTF-32 (Unicode) string.
-    * 
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    * 
-    * @returns {Promise<string>}
-    */
-    async utf32string(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
-        return await this.string({ stringType: "utf-32", encoding: "utf-32", length: length, terminateValue: terminateValue, endian: endian, stripNull: stripNull });
-    };
-
-    /**
-    * Reads UTF-32 (Unicode) string in little endian order.
-    * 
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * 
-    * @returns {Promise<string>}
-    */
-    async utf32stringle(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.utf32string(length, terminateValue, stripNull, "little");
-    };
-
-    /**
-    * Reads UTF-32 (Unicode) string in big endian order.
-    * 
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * 
-    * @returns {Promise<string>}
-    */
-    async utf32stringbe(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.utf32string(length, terminateValue, stripNull, "big");
+        return await this.string({ stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big", stripNull: stripNull });
     };
 
     /**
@@ -3242,7 +3266,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async pstring1(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
-        return await this.pstring(1, stripNull, endian);
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: endian });
     };
 
     /**
@@ -3253,7 +3277,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async pstring1le(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.pstring1(stripNull, "little");
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "little" });
     };
 
     /**
@@ -3264,7 +3288,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async pstring1be(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.pstring1(stripNull, "big");
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 1, stripNull: stripNull, endian: "big" });
     };
 
     /**
@@ -3276,7 +3300,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async pstring2(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
-        return await this.pstring(2, stripNull, endian);
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: endian });
     };
 
     /**
@@ -3287,7 +3311,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async pstring2le(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.pstring2(stripNull, "little");
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "little" });
     };
 
     /**
@@ -3298,7 +3322,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async pstring2be(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.pstring2(stripNull, "big");
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 2, stripNull: stripNull, endian: "big" });
     };
 
     /**
@@ -3310,7 +3334,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async pstring4(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
-        return await this.pstring(4, stripNull, endian);
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: endian });
     };
 
     /**
@@ -3321,7 +3345,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async pstring4le(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.pstring4(stripNull, "little");
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "little" });
     };
 
     /**
@@ -3332,7 +3356,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async pstring4be(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.pstring4(stripNull, "big" );
+        return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: 4, stripNull: stripNull, endian: "big" });
     };
 
     /**
@@ -3357,7 +3381,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async wpstring1(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
-        return await this.wpstring(1, stripNull, endian);
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: endian, stripNull: stripNull });
     };
 
     /**
@@ -3368,7 +3392,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async wpstring1le(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.wpstring1(stripNull, "little");
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "little", stripNull: stripNull });
     };
 
     /**
@@ -3379,7 +3403,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async wpstring1be(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.wpstring1(stripNull, "big");
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 1, endian: "big", stripNull: stripNull });
     };
 
     /**
@@ -3391,7 +3415,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async wpstring2(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
-        return await this.wpstring(2, stripNull, endian);
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: endian, stripNull: stripNull });
     };
 
     /**
@@ -3402,7 +3426,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async wpstring2le(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.wpstring2(stripNull, "little");
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "little", stripNull: stripNull });
     };
 
     /**
@@ -3413,7 +3437,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async wpstring2be(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.wpstring2(stripNull, "big");
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 2, endian: "big", stripNull: stripNull });
     };
 
     /**
@@ -3425,18 +3449,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async wpstring4(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
-        return await this.wpstring(4, stripNull, endian);
-    };
-
-    /**
-    * Reads Wide-Pascal string 4 byte length read in little endian order.
-    * 
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * 
-    * @returns {Promise<string>}
-    */
-    async wpstring4le(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.wpstring4(stripNull, "little");
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: endian, stripNull: stripNull });
     };
 
     /**
@@ -3447,121 +3460,17 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async wpstring4be(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.wpstring4(stripNull, "big");
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "big", stripNull: stripNull });
     };
 
     /**
-    * Reads Double Wide Pascal string.
-    * 
-    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    * 
-    * @returns {Promise<string>}
-    */
-    async dwpstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
-        return await this.string({ stringType: "double-wide-pascal", encoding: "utf-32", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
-    };
-
-    /**
-    * Reads Double Wide Pascal string 1 byte length read.
-    * 
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    * 
-    * @returns {Promise<string>}
-    */
-    async dwpstring1(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
-        return await this.dwpstring(1, stripNull, endian);
-    };
-
-    /**
-    * Reads Double Wide Pascal string 1 byte length read in little endian order.
+    * Reads Wide-Pascal string 4 byte length read in little endian order.
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
     * 
     * @returns {Promise<string>}
     */
-    async dwpstring1le(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.dwpstring1(stripNull, "little");
-    };
-
-    /**
-    * Reads Double WidePascal string 1 byte length read in big endian order.
-    * 
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * 
-    * @returns {Promise<string>}
-    */
-    async dwpstring1be(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.dwpstring1(stripNull, "big");
-    };
-
-    /**
-    * Reads Double Wide Pascal string 2 byte length read.
-    * 
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    * 
-    * @returns {Promise<string>}
-    */
-    async dwpstring2(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
-        return await this.dwpstring(2, stripNull, endian);
-    };
-
-    /**
-    * Reads Double Wide Pascal string 2 byte length read in little endian order.
-    * 
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * 
-    * @returns {Promise<string>}
-    */
-    async dwpstring2le(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.dwpstring2(stripNull, "little");
-    };
-
-    /**
-    * Reads Double Wide Pascal string 2 byte length read in big endian order.
-    * 
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * 
-    * @returns {Promise<string>}
-    */
-    async dwpstring2be(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.dwpstring2(stripNull, "big");
-    };
-
-    /**
-    * Reads Double Wide Pascal string 4 byte length read.
-    * 
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    * 
-    * @returns {Promise<string>}
-    */
-    async dwpstring4(stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
-        return await this.dwpstring(4, stripNull, endian);
-    };
-
-    /**
-    * Reads Double Wide Pascal string 4 byte length read in little endian order.
-    * 
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * 
-    * @returns {Promise<string>}
-    */
-    async dwpstring4le(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.dwpstring4(stripNull, "little");
-    };
-
-    /**
-    * Reads Double Wide Pascal string 4 byte length read in big endian order.
-    * 
-    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
-    * 
-    * @returns {Promise<string>}
-    */
-    async dwpstring4be(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.dwpstring4(stripNull, "big");
+    async wpstring4le(stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.string({ stringType: "wide-pascal", encoding: "utf-16", lengthReadSize: 4, endian: "little", stripNull: stripNull });
     };
 };

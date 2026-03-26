@@ -1,6 +1,33 @@
 # BiReader / BiWriter
 
-A feature rich binary reader ***and writer*** that keeps track of your position to quickly create file structures. Includes shared naming conventions, programmable inputs and advanced math for easy data conversions on low level parsing. Accepts `Uint8Array`, `Buffer` or a `filePath`.
+**A fast, dual-mode (sync / async) file / buffer handler with byte + bit-level access.**
+
+Feature rich binary reader ***and writer*** that keeps track of your position to quickly create file structures. Perfect for binary parsers, editors, game save files, custom formats, or any situation where you need random access + structural modifications without loading the entire file into memory. Includes shared naming conventions, programmable inputs and advanced math for easy data conversions on low level parsing. Accepts `Uint8Array`, `Buffer` or a `filePath`. Includes Sync and [Async](#async) verions.
+
+---
+
+## ✨ Features
+
+- **Dual mode**: Sync or Async file reader (`r+` / `r`) on disk **or** pure in-memory `Buffer` or `Uint8Array`
+- **Chunked async loading** – configurable `windowSize` (default 4 KiB)  
+  → Set `windowSize: 0` to load the entire file in **one** async read
+- **Byte cursor**: Track and change location with `offset` +Bit cursor `bitOffset`
+- **Full bitfield support** – `readBit()` / `writeBit()` with:
+  - signed / unsigned
+  - big-endian (`'be'`) or little-endian (`'le'`)
+  - any alignment (bits can start anywhere)
+- **Structural edits**:
+  - `insert()` – insert data anywhere
+  - `remove()` – delete data and **return** the removed chunk
+  - `trim()` – shrink (returns removed tail)
+  - `push()` – Grows start
+- **Expandable files** with smart `growthIncrement` (default 1 MiB) to minimize syscalls
+- `return()` – flushes changes and returns the complete current content
+- `readonly` and `strict` modes (for limiting `growthIncrement`)
+- In `async` class, all operations automatically wait for required chunks
+- Zero dependencies (only `fs` & `fs/promises` in Node)
+
+---
 
 Supported data types:
 
@@ -17,10 +44,12 @@ Supported data types:
 ## What's New?
 
 ### v4
+ * Added `BiReaderAsync` and `BiWriterAsync`. See [Async](#async) classes.
  * Uses `DataView` read and write functions when possible for more efficient code (previous code is now fallback).
- * Merged `BiReaderStream` and `BiWriterStream` to `BiReader` and `BiWriter` for file reading (Node only).
- * Marked `BiReaderStream` and `BiWriterStream` as deprecated. Use `BiReaderLegacy` or `BiWriterLegacy`. See [BiLegacy](#bilegacy) section.
- * Added `BiReaderAsync` and `BiWriterAsync`. See [Async](#async) section.
+ * Added support for `UTF-32` and `Double Wide Pascal` (32 bit) strings.
+ * Large code clean up with included test.
+ * Marked deprecated `BiReaderStream` and `BiWriterStream` as functionality was moved to `BiReader` and `BiWriter` for file reading (Node only).
+ * Values for writes are now clamped to bit size and don't throw errors.
 
 ### v3
  * Added `enforceBigInt` option for always returning a `BigInt` type on 64 bit reads, otherwise will return a `number` if integer safe.
@@ -28,7 +57,7 @@ Supported data types:
  * Added new `BiReaderStream` and `BiWriterStream` (Node only).
  * Added `.deleteFile()` and `.renameFile(filePath)`.
  * Added setter `.strSettings` for use with `.str` for easier coding.
- * Added better options for extending array buffer when writing data with `extendBufferSize`.
+ * Added better options for extending array buffer when writing data with `growthIncrement`.
  * Consolidated all options argument into single object when creating class.
  * Removed deprecated `bireader` and `biwriter` classes.
  * Fixed standalone `hexdump` function. 
@@ -89,9 +118,9 @@ function parse_webp(data){
   switch (header.format){
     case "VP8 ":
         header.formatType = "Lossy";
-        var read_size = 0;
+        var readSize = 0;
         header.frame_tag = br.ubit24;
-        read_size += 3;
+        readSize += 3;
         header.key_frame = header.frame_tag & 0x1;
         header.version = (header.frame_tag >> 1) & 0x7;
         header.show_frame = (header.frame_tag >> 4) & 0x1;
@@ -103,22 +132,22 @@ function parse_webp(data){
         header.vertical_size_code = br.ubit16;
         header.height = header.vertical_size_code & 0x3FFF;
         header.vertical_scale = header.vertical_size_code >> 14;
-        read_size += 7;
-        header.VP8data = br.extract(header.formatChunkSize - read_size, true);
+        readSize += 7;
+        header.VP8data = br.extract(header.formatChunkSize - readSize, true);
         break;
     case "VP8L":
         header.formatType = "Lossless";
-        var read_size = 0;
+        var readSize = 0;
         header.signature = br.ubyte; // should be 47
-        read_size += 1;
+        readSize += 1;
         header.readWidth =  br.ubit14;
         header.width = header.readWidth+1;
         header.readHeight =  br.ubit14;
         header.height = header.readHeight+1;
         header.alpha_is_used =  br.bit1;
         header.version_number =  br.ubit3;
-        read_size += 4;
-        header.VP8Ldata = br.extract(header.formatChunkSize - read_size, true);
+        readSize += 4;
+        header.VP8Ldata = br.extract(header.formatChunkSize - readSize, true);
         break;
     case "VP8X":
         header.formatType = "Extended";
@@ -308,6 +337,8 @@ function write_webp(data){
 
 Common functions for setup, movement, manipulation and math shared by both.
 
+Naming is shared across sync and async classes.
+
 <table>
 <thead>
   <tr>
@@ -322,15 +353,53 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
   <tr>
     <td>Class</td>
-    <td>new BiReader(<b>dataOrPath</b>, {byteOffset, bitOffset, endianess, strict, extendBufferSize, enforceBigInt, writeable})</td>
-    <td align="center" rowspan="2"><b>string path or Buffer or Uint8Array</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending initially supplied data (default true for reader, false for writer), extended Buffer size amount, always return BigInt values on 64 bit reads, writeable file (default true in BiWriter)
+    <td>new BiReader(<b>dataOrPath</b>, {byteOffset, bitOffset, endianess, strict, growthIncrement, enforceBigInt, readOnly})</td>
+    <td  rowspan="2"><b>dataOrPath:</b> string path or Buffer or Uint8Array</b><br><b>byteOffset:</b> byte offset (default <code>0</code>)<br><b>bitOffset:</b> bit offset (overides <code>byteOffset</code>) (default <code>0</code>)<br><b>endianess:</b> endian big or little (default <code>little</code>)<br><b>strict:</b> strict mode restrict extending initially supplied data (default <code>true</code> for reader, <code>false</code> for writer)<br><b>growthIncrement:</b> default extended Buffer size (default <code>1 MiB</code>)<br><b>enforceBigInt:</b> always return <code>bigint</code> values on 64 bit reads (default <code>false</code>)<br><b>readOnly:</b> read only Buffer or file (default <code>true</code> in writer)
     </td>
-    <td rowspan="2">Start with new Constructor.<br><br><b>File Note:</b> When writing to a file, you must use close() when finished, or commit() to make sure changes are committed. write() automatically commits the supplied data.<br><br><b>Data Note:</b> Supplied data can always be found with <b>.data</b>.<br><br><b>Supplied data note:</b> While BiWriter can be created with a 0 length Uint8Array or Buffer, each new value write will create a new array and concat the two. For large data writes this will lead to a degraded performance. It's best to supply a larger than needed buffer when creating the Writer and use <b>.trim()</b> after you're finished. <br><br> You can set the <b>extendBufferSize</b> value to always extend by a fixed amount when reaching the end. This will also change the logic for <b>.return</b> and <b>.get</b> to trim the remining data from the current position for you. Use <b>.data</b> instead if you want to get the whole padded buffer array.</td>
+    <td rowspan="2">Start with new Constructor.<br><br><b>File Note:</b> When writing to a file, you must use close() when finished, or commit() to make sure changes are committed.<br><br><b>Data Note:</b> Supplied data can always be found with <b>.data</b>.<br><br><b>Supplied data note:</b> While BiWriter can be created with a 0 length Uint8Array or Buffer, the default <code>growthIncrement</code> will prevent a new array created on each operation (leading to a degraded performance). It's best to supply a larger than needed buffer when creating the Writer and use <b>.trim()</b> after you're finished.</td>
   </tr>
   <tr>
     <td>Class</td>
-    <td>new BiWriter(<b>dataOrPath</b>, {byteOffset, bitOffset, endianess, strict, extendBufferSize, enforceBigInt, writeable})</td>
+    <td>new BiWriter(<b>dataOrPath</b>, {byteOffset, bitOffset, endianess, strict, growthIncrement, enforceBigInt, writeable})</td>
   </tr>
+  <th align="center" colspan="4"><i>File Mode</i></th>
+  <tr>
+    <td>Function</td>
+    <td>open()
+    <td align="center"><b>none</td>
+    <td>Opens file for reading / writing. Happens before any operations.</td>
+  </tr>
+  <tr>
+    <td>Function</td>
+    <td>close()
+    <td align="center"><b>none</td>
+    <td>Closes file after reading / writing. Note: Commits any edits to the file.</td>
+  </tr>
+  <tr>
+    <td>Function</td>
+    <td>commit()
+    <td align="center"><b>none</td>
+    <td>Commits any edits to data to file.</td>
+  </tr>
+  <tr>
+    <td>Function</td>
+    <td>writeMode(<b>mode</b>)</td>
+    <td align="center" >boolean</td>
+    <td>Set strict and readOnly to true or false. Will close and reopen file in file mode.</td>
+  </tr>
+  <tr>
+    <td>Function</td>
+    <td>renameFile(<b>newFilePath</b>)
+    <td align="center"><b>Full path to file to rename.</td>
+    <td>Renames the file on the file system, keeps read / write position.<br/><br/><b>Note: This is permanent.</b></td>
+  </tr>
+  <tr>
+    <td>Function</td>
+    <td>deleteFile()
+    <td align="center"><b>none</td>
+    <td>Unlinks the file from the file system.<br/><br/><b>Note: This is permanent, it doesn't send the file to the recycling bin for recovery.</b></td>
+  </tr>
+  <th align="center" colspan="4"><i>Endian</i></th>
   <tr>
     <td>Function</td>
     <td>endianness(<b>"big" | "little"</b>)</td>
@@ -341,55 +410,57 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td>Presets</td>
     <td>bigEndian(), big(), be()<br>littleEndian(), little(), le()</td>
   </tr>
+  <th align="center" colspan="4"><i>Size</i></th>
   <tr>
     <td>get</td>
-    <td>length</td>
+    <td>size</td>
     <td align="center" rowspan="2">None</td>
     <td rowspan="2">Gets the current buffer size in bytes.</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>len, size, FileSize</td>
+    <td>length, len, fileSize</td>
   </tr>
   <tr>
     <td>get</td>
-    <td>lengthB</td>
+    <td>sizeBits</td>
     <td align="center" rowspan="2">None</td>
     <td rowspan="2">Gets the current buffer size in bits.</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>lenb, sizeB, FileSizeB</td>
+    <td>lengthBits, lenBits, fileSizeBits</td>
   </tr>
+  <th align="center" colspan="4"><i>Position</i></th>
   <tr>
     <td>get</td>
-    <td>getOffset</td>
+    <td>offset</td>
     <td align="center" rowspan="2">None</td>
     <td rowspan="2">Gets current byte position.</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>off, FTell, tell, saveOffset</td>
+    <td>byteOffset, off, FTell, saveOffset</td>
   </tr>
   <tr>
     <td>get</td>
-    <td>getOffsetBit</td>
+    <td>bitOffset</td>
+    <td align="center" rowspan="2">None</td>
+    <td rowspan="2">Gets current bit position.</td>
+  </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>offsetBits, offBits, FTellBits, saveBitOffset</td>
+  </tr>
+  <tr>
+    <td>get</td>
+    <td>insetBit</td>
     <td align="center" rowspan="2">None</td>
     <td rowspan="2">Gets current byte's bit position (0-7).</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>offb, FTellB, tellB, saveOffsetBit</td>
-  </tr>
-  <tr>
-    <td>get</td>
-    <td>getOffsetAbsBit</td>
-    <td align="center" rowspan="2">None</td>
-    <td rowspan="2">Gets current absolute bit position from start of data.</td>
-  </tr>
-  <tr>
-    <td>Aliases</td>
-    <td>offab, tellAbsB, saveOffsetAbsBit</td>
+    <td>inBit, bitTell, saveInsetBit</td>
   </tr>
   <tr>
     <td>get</td>
@@ -403,13 +474,13 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>get</td>
-    <td>remainB</td>
+    <td>remainBits</td>
     <td align="center" rowspan="2">None</td>
     <td rowspan="2">Size in bits of current read position to the end.</td>
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>FEoFB</td>
+    <td>FEoFBits</td>
   </tr>
   <tr>
     <td>get</td>
@@ -421,43 +492,34 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td>Aliases</td>
     <td>row</td>
   </tr>
+  <th align="center" colspan="4"><i>Finishing</i></th>
   <tr>
     <td>Function</td>
     <td>get()</td>
     <td align="center" rowspan="2">None</td>
-    <td rowspan="2">Returns supplied data. <b>Note:</b> Will use .trim() command if extendBufferSize is set (removes all data after current position). Use .data if you want the full padded data buffer.</td>
+    <td rowspan="2">Returns supplied data. <b>Note:</b> Will use <code>.trim()</code> function if <code>growthIncrement</code> extended the buffer (removes all data after current position). Use <code>.data</code> if you want the full padded data buffer.</td>
   </tr>
   <tr>
-    <td>get</td>
-    <td>return()</td>
+    <td>Aliases</td>
+    <td>return(), getFullBuffer()</td>
   </tr>
+  <tr>
+    <td>Function</td>
+    <td>end()</td>
+    <td align="center" rowspan="2">None</td>
+    <td rowspan="2">Removes supplied data.</td>
+  </tr>
+  <tr>
+    <td>Aliases</td>
+    <td>close(), done(), finished()</td>
+  </tr> 
   <tr>
     <td>get</td>
     <td>data</td>
     <td align="center">None</td>
     <td >Returns full current buffer data.</td>
   </tr>
-  <tr>
-    <td>set</td>
-    <td>enforceBigInt = true</td>
-    <td align="center">boolean</td>
-    <td >If 64 bit reads always return a <code>bigint</code> or a <code>number</code> when possible</td>
-  </tr>
-  <tr>
-    <td>set</td>
-    <td>strSettings = {length?, stringType?, terminateValue?, lengthReadSize?, lengthWriteSize?, stripNull?, encoding?, endian?}</td>
-    <td>
-      <b>length:</b> Length of string for fixed length, non-terminate value utf strings<br/>
-      <b>stringType:</b> <code>utf-8</code>, <code>utf-16</code>, <code>pascal</code> or <code>wide-pascal</code>. Default <code>utf-8</code>.<br/>
-      <b>terminateValue:</b> Number only with <code>stringType</code> of utf types.<br/>
-      <b>lengthReadSize</b> For pascal strings. 1, 2 or 4 byte length read size. Default <code>1</code><br/>
-      <b>lengthWriteSize:</b> For pascal strings. 1, 2 or 4 byte length write size. Default <code>1</code>.<br/>
-      <b>stripNull:</b> Removes 0x00 characters. default <code>true</code><br/>
-      <b>encoding:</b> TextEncoder accepted types. Default <code>utf-8</code>.<br/>
-      <b>endian:</b> <code>big</code> or <code>little</code><br/>
-    </td>
-    <td >Set universal string settings across all string functions.</td>
-  </tr>
+  <th align="center" colspan="4"><i>Hex Dump</i></th>
   <tr>
     <td>Function</td>
     <td>hexdump({length, startByte, suppressUnicode})</td>
@@ -476,6 +538,7 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td align="center">None</td>
     <td >Turns on hexdump on error</td>
   </tr>
+  <th align="center" colspan="4"><i>Strict</i></th>
   <tr>
     <td>Function</td>
     <td>unrestrict()</td>
@@ -488,53 +551,7 @@ Common functions for setup, movement, manipulation and math shared by both.
     <td align="center">None</td>
     <td>Sets strict mode to true, won't extend array if data is outside of max size (<b>default true for reader, false for writer</b>)</td>
   </tr>
-  <tr>
-    <td>Function</td>
-    <td>end()</td>
-    <td align="center" rowspan="2">None</td>
-    <td rowspan="2">Removes supplied data.</td>
-  </tr>
-  <tr>
-    <td>Aliases</td>
-    <td>close(), done(), finished()</td>
-  </tr>
-  <th align="center" colspan="4"><i>File Control</i></th>
-  <tr>
-    <td>Function</td>
-    <td>open()
-    <td align="center"><b>none</td>
-    <td>Opens file for reading / writing. Happens at class creation.</td>
-  </tr>
-  <tr>
-    <td>Function</td>
-    <td>close()
-    <td align="center"><b>none</td>
-    <td>Closes file after reading / writing. Note: Commits any edits to the file.</td>
-  </tr>
-  <tr>
-    <td>Function</td>
-    <td>commit()
-    <td align="center"><b>none</td>
-    <td>Commits any edits to data to file.</td>
-  </tr>
-  <tr>
-    <td>Function</td>
-    <td>writeMode(writable)
-    <td align="center"><b>True if you want to switch to writing in BiReader.</td>
-    <td>Note: This changes reader to write mode. Allows file to be expanded in size as well.</td>
-  </tr>
-  <tr>
-    <td>Function</td>
-    <td>renameFile(<b>newFilePath</b>)
-    <td align="center"><b>Full path to file to rename.</td>
-    <td>Renames the file on the file system, keeps read / write position.<br/><br/><b>Note: This is permanent.</b></td>
-  </tr>
-  <tr>
-    <td>Function</td>
-    <td>deleteFile()
-    <td align="center"><b>none</td>
-    <td>Unlinks the file from the file system.<br/><br/><b>Note: This is permanent, it doesn't send the file to the recycling bin for recovery.</b></td>
-  </tr>
+   
   <th align="center" colspan="4"><i>Search</i></th>
   <tr>
     <td>Function</td>
@@ -610,7 +627,7 @@ Common functions for setup, movement, manipulation and math shared by both.
   <tr>
     <td>Function</td>
     <td>goto(<b>byte</b>, bit)</td>
-    <td align="center" rowspan="2"><b>Byte offset from start</b>, bit offset from byte offset</td>
+    <td align="center" rowspan="2"><b>Byte offset from start</b>, bits within byte offset</td>
     <td rowspan="2"><b>Note:</b> Remaining bits are drop when returning to byte function.</td>
   </tr>
   <tr>
@@ -666,13 +683,13 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Function</td>
-    <td>replace(<b>data</b>, consume, offset)</td>
+    <td>replace(<b>data</b>, offset, consume)</td>
     <td align="center" rowspan="2"><b>Data to replace in supplied data</b>, move byte position to after data read (default false), byte position to start replace (default current byte position)</td>
     <td rowspan="2">Replaces data at current byte or supplied offset.<br><b>Note:</b> Errors on strict mode</td>
   </tr>
   <tr>
     <td>Alias</td>
-    <td>writeBytes(values, unsigned), overwrite(<b>data</b>, consume, offset)</td>
+    <td>overwrite(<b>data</b>, offset, consume)</td>
   </tr>
   <tr>
     <td>Function</td>
@@ -696,8 +713,8 @@ Common functions for setup, movement, manipulation and math shared by both.
   </tr>
   <tr>
     <td>Function</td>
-    <td>insert(<b>data</b>, consume, offset)</td>
-    <td align="center" rowspan="2"><b>New data to insert</b>, move byte position to after data read (default false), byte position to insert (default current byte position)</td>
+    <td>insert(<b>data</b>, offset, consume)</td>
+    <td align="center" rowspan="2"><b>New data to insert</b>, byte position to insert (default current byte position), move byte position to after data read (default true)</td>
     <td rowspan="2">Inserts new data into supplied data. <b>Note:</b> Data type must match supplied data. Errors on strict mode</td>
   </tr>
   <tr>
@@ -814,15 +831,9 @@ Common functions for setup, movement, manipulation and math shared by both.
 
 ## Async
 
-With 4.0 you can now use ``BiReaderAsync`` and ``BiWriterAsync`` for async operations. Pass a normal Buffer or Uint8Array to it or read from a file when passed a string path (only in Node.js). When passed a Buffer or Uint8Array, it's the same logic as the sync class. This class is designed for larger files where you don't want to load the whole file buffer into memory all at once or need an async class.
+With 4.0 you can now use ``BiReaderAsync`` and ``BiWriterAsync`` for async operations. Pass a normal Buffer, Uint8Array or a string path (only in Node.js). When passed a Buffer or Uint8Array, it's uses the same logic as the sync class. When working with reading or creating a file, the class async loads the files in chunks for quick editing (window size is editing). This class is designed for larger files where you don't want to load the whole file buffer into memory all at once or need an async class.
 
-**Naming:** Same function naming applies to async as [Common Functions](#common-functions) section but this class is all async functions. ``BiReader`` and ``BiWriter`` are interchangeable when it comes to all functions and class objects names but get and set methods are now also async functions.
-
-**Writing:** When operating a file, **all write functions will throw an error unless you switch to `.writeMode(true)`**. The file is read only in ``BiReaderAsync`` until you do (``BiWriterAsync`` is true). Any write functions inside the reader size will error beforehand.
-
-**Large removal:** When using any function that removes data from the file and would return a Buffer, **if the size of the returned Buffer is outside of the Node max size for a Buffer, a new file will be made with the location and size concat to the name with a .removed file extention instead.**
-
-**Programmers Note:** The buffer data within these classes is always the last read or write command when operating a file. These classes do NOT load the whole file. Use the ``BiReader`` and ``BiWriter`` for that.
+**Naming:** Same function naming applies to async as [Common Functions](#common-functions) section but these classes use all async functions, **so `get` and `set` methods are now also async functions.**
 
 <table>
 <thead>
@@ -835,117 +846,14 @@ With 4.0 you can now use ``BiReaderAsync`` and ``BiWriterAsync`` for async opera
 <tbody>
   <tr>
     <td>Class</td>
-    <td>new BiReaderAsync(<b>dataOrFilePath</b>, {byteOffset, bitOffset, endianess, strict, extendBufferSize, writeable})</td>
-    <td align="center" rowspan="2"><b>Path to file or Buffer or Uint8Array</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending file size (default true for reader, false for writer), extended file size amount, edit the file (default true in BiWriterAsync).
+    <td>new BiReaderAsync(<b>dataOrFilePath</b>, {byteOffset, bitOffset, endianess, strict, growthIncrement, readOnly, windowSize})</td>
+    <td  rowspan="2"><b>dataOrPath:</b> string path or Buffer or Uint8Array</b><br><b>byteOffset:</b> byte offset (default <code>0</code>)<br><b>bitOffset:</b> bit offset (overides <code>byteOffset</code>) (default <code>0</code>)<br><b>endianess:</b> endian big or little (default <code>little</code>)<br><b>strict:</b> strict mode restrict extending initially supplied data (default <code>true</code> for reader, <code>false</code> for writer)<br><b>growthIncrement:</b> default extended Buffer size (default <code>1 MiB</code>)<br><b>enforceBigInt:</b> always return <code>bigint</code> values on 64 bit reads (default <code>false</code>)<br><b>readOnly:</b> read only Buffer or file (default <code>true</code> in writer)<br><b>windowSize:</b> The chunk size when reading files. Set to <code>0</code> if you want the whole file read in one async cycle (default <code>4 KiB</code>)
     </td>
-    <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> The file must be opened with <b>await .open()</b> and closed with <b>await .close()</b>. The <b>.data</b> value is always the Buffer to the last read or write value. Read sizes outside of Node's max size will error, unless remove then it will create a new file.<br><br><b>Writer note:</b> You can set the <b>extendBufferSize</b> value to always extend the file by this minimum amount when reaching the end of the file. The file is saved after every write.</td>
+    <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> The file must be opened with await <code>.open()</code> and closed with await <code>.close()</code>. The <b>.data</b> can't be used in file mode, so use await <code>.get()</code> or <code>.return()</code></td>
   </tr>
   <tr>
     <td>Class</td>
-    <td>new BiWriterAsync(<b>dataOrFilePath</b>, {byteOffset, bitOffset, endianess, strict, extendBufferSize, writeable})</td>
-  </tr>
-  <th align="center" colspan="4"><i>File Control</i></th>
-  <tr>
-    <td>Async</td>
-    <td>open()
-    <td align="center"><b>none</td>
-    <td>Opens file for reading / writing.</td>
-  </tr>
-  <tr>
-    <td>Async</td>
-    <td>close()
-    <td align="center"><b>none</td>
-    <td>Closes file after reading / writing.</td>
-  </tr>
-  <tr>
-    <td>Async</td>
-    <td>create(<b>dataOrFilePath</b>, {byteOffset, bitOffset, endianess, strict, extendBufferSize, writeable})</td>
-    <td align="center"><b>Path to file or Buffer or Uint8Array</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending file size (default true for reader, false for writer), extended file size amount, edit the file (default true in BiWriterAsync).</td>
-    <td>Creates a new class and opens the file.</td>
-  </tr>
-  <tr>
-    <td>Function</td>
-    <td>writeMode(writable)
-    <td align="center"><b>True</b> if you want to switch to writing in BiReaderLegacy.</td>
-    <td>Note: This changes reader to write mode. Allows file to be expanded in size as well.</td>
-  </tr>
-  <tr>
-    <td>Async</td>
-    <td>renameFile(<b>newFilePath</b>)
-    <td align="center"><b>Full path to file to rename.</td>
-    <td>Renames the file on the file system, keeps read / write position.<br/><br/><b>Note: This is permanent.</b></td>
-  </tr>
-  <tr>
-    <td>Async</td>
-    <td>deleteFile()
-    <td align="center"><b>none</td>
-    <td>Unlinks the file from the file system.<br/><br/><b>Note: This is permanent, it doesn't send the file to the recycling bin for recovery.</b></td>
-  </tr>
-</tbody>
-</table>
-
-## BiLegacy
-
-With 4.0 you can now use ``BiReaderLegacy`` and ``BiWriterLegacy`` (old ``BiStreamReader`` and ``BiStreamWriter``) for older versions of Node.js only. It's designed for larger files where you can't or don't want to load the whole file buffer into memory all at once.
-
-**Naming:** Same function naming applies to legacy as [Common Functions](#common-functions) section but this class saves the file after every operation. **BiReaderLegacy / BiReader** and **BiWriterLegacy / BiWriter** are interchangeable when it comes to all functions and class objects names for easy use with Typescript.
-
-**Writing:** Unlike the other classes, **all write functions will throw an error unless you switch to `.writeMode(true)`** The file is read only until you do. Any write functions inside the reader will error beforehand.
-
-**Large removal:** When using any function that removes data from the file and would return a Buffer, **if the size of the returned Buffer is outside of the Node max size for a Buffer, a new file will be made with the location and size concat to the name with a .removed file extention instead.**
-
-**Programmers Note:** These are *NOT* async function (use [Async](#async) classes for that) or streamed over time like ``fs.createReadStream``. It uses ``fs.openSync`` and ``fs.readSync`` and ``fs.writeSync`` to read and write just the data requested at the position requested at the time of operation, saving memory but costing processing power. This is for legacy systems and niche cases as the newer versions of Node.js have a much larger file buffers over the older limits.
-
-<table>
-<thead>
-  <tr>
-    <th align="center" colspan="2">Methods</th>
-    <th align="center">Params (bold requires)</th>
-    <th align="left">Desc</th>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td>Class</td>
-    <td>new BiReaderLegacy(<b>filePath</b>, {byteOffset, bitOffset, endianess, strict, extendBufferSize, writeable})</td>
-    <td align="center" rowspan="2"><b>Path to file</b>, byte offset (default 0), bit offset (default 0), endian big or little (default little), strict mode true to restrict extending file size (default true for reader, false for writer), extended file size amount, edit the file (default true in BiWriterLegacy).
-    </td>
-    <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> The file must be opened with <b>.open()</b> and closed with <b>.close()</b>. The <b>.data</b> value is always the Buffer to the last read or write value. Read sizes outside of Node's max size will error, unless remove then it will create a new file.<br><br><b>Writer note:</b> You can set the <b>extendBufferSize</b> value to always extend the file by this minimum amount when reaching the end of the file. The file is saved after every write.</td>
-  </tr>
-  <tr>
-    <td>Class</td>
-    <td>new BiWriterLegacy(<b>filePath</b>, {byteOffset, bitOffset, endianess, strict, extendBufferSize, writeable})</td>
-  </tr>
-  <th align="center" colspan="4"><i>File Control</i></th>
-  <tr>
-    <td>Function</td>
-    <td>open()
-    <td align="center"><b>none</td>
-    <td>Opens file for reading / writing.</td>
-  </tr>
-  <tr>
-    <td>Function</td>
-    <td>close()
-    <td align="center"><b>none</td>
-    <td>Closes file after reading / writing.</td>
-  </tr>
-  <tr>
-    <td>Function</td>
-    <td>writeMode(writable)
-    <td align="center"><b>True if you want to switch to writing in BiReaderLegacy.</td>
-    <td>Note: This changes reader to write mode. Allows file to be expanded in size as well.</td>
-  </tr>
-  <tr>
-    <td>Function</td>
-    <td>renameFile(<b>newFilePath</b>)
-    <td align="center"><b>Full path to file to rename.</td>
-    <td>Renames the file on the file system, keeps read / write position.<br/><br/><b>Note: This is permanent.</b></td>
-  </tr>
-  <tr>
-    <td>Function</td>
-    <td>deleteFile()
-    <td align="center"><b>none</td>
-    <td>Unlinks the file from the file system.<br/><br/><b>Note: This is permanent, it doesn't send the file to the recycling bin for recovery.</b></td>
+    <td>new BiWriterAsync(<b>dataOrFilePath</b>, {byteOffset, bitOffset, endianess, strict, growthIncrement, readOnly, windowSize})</td>
   </tr>
 </tbody>
 </table>
@@ -1234,7 +1142,7 @@ Parse value as a double float (aka dfloat). Can be in little or big endian order
 
 ## Strings
 
-Parse a string in any format. Be sure to use options object for formatting unless using a preset. Strings with larger than 1 byte character reads can use `be` or `le` at the end for little or big endian.
+Parse a string in any format. Either null terminated strings (utf) or fixed length (pascal). Be sure to use options object for formatting unless using a preset. Default string settings can be stored in `strSettings`. Strings with larger than 1 byte character reads can use `be` or `le` at the end for little or big endian.
 
 Presents include C or Unicode, Ansi and multiple pascals.
 
@@ -1260,7 +1168,7 @@ Presents include C or Unicode, Ansi and multiple pascals.
         endian<br>
         })
         </td>
-    <td><ul><li>Length for non-fixed UTF strings. If not supplied, reads until 0 or supplied terminate value (for fixed length UTF strings only)</li><li>String type. Defaults to utf-8 (utf-8, utf-16, pascal, wide-pascal accepted)</li><li>Terminate value. Default is 0x00 (for non-fixed length utf strings)</li><li>Size of the first value that defines the length of the string. Defaults to 1 as uint8, respects supplied endian (for Pascal strings only, accepts 1, 2 or 4 bytes)</li><li>Removes 0x00 characters on read (default true)</li><li>Encoding. Defaults to utf-8 on utf-8 or pascal and utf-16 on utf-16 or wide-pascal (accepts all TextDecoder options)</li><li>Endian (for wide-pascal and utf-16 character order, does not overwite set endian)</li></ul></td>
+    <td><b>length:</b> Length in uints (NOT bytes) for non-terminate UTF strings. If not supplied, reads until <code>0x00</code> or supplied terminate value (for fixed length UTF strings only)<br><b>stringType:</b> String type. Defaults to utf-8 (<code>utf-8</code>, <code>utf-16</code>, <code>utf-32</code>, <code>pascal</code>, <code>wide-pascal</code>, <code>double-wide-pascal</code> accepted)<br><b>terminateValue:</b> Terminate value. Default is <code>0x00</code> (for non-fixed length utf strings)<br><b>lengthReadSize:</b> Size of the first value that defines the length of the string. Defaults to <code>1</code> as uint8, respects supplied endian (for Pascal strings only, accepts <code>1</code>, <code>2</code> or <code>4</code> bytes)<br><b>stripNull:</b> Removes 0x00 characters on read (default <code>true</code>)<br><b>encoding:</b> Defaults to <code>utf-8</code> (accepts all TextDecoder options)<br><b>endian:</b> for <code>utf-16</code>, <code>utf-32</code>, <code>wide-pascal</code> and <code>double-wide-pascal</code> character order</td>
   </tr>
   <tr>
     <td>writeString(<b>string</b>, {<br>
@@ -1271,18 +1179,34 @@ Presents include C or Unicode, Ansi and multiple pascals.
         encoding,<br>
         endian<br>
         })</td>
-     <td><ul><li><b>String to write</b></li><li>Length for non-fixed UTF strings. If not supplied, defaults to encoded string length (for fixed length UTF strings only, will trucate if supplied value is smaller than string length)</li><li>String type. Defaults to utf-8 (utf-8, utf-16, pascal, wide-pascal accepted)</li><li>Terminate value. Default is 0x00 (for non-fixed length utf strings)</li><li>Size of the first value that defines the length of the string. Defaults to 1 as uint8, respects supplied endian (for Pascal strings only, accepts 1, 2 or 4 bytes)</li><li>Encoding. Defaults to utf-8 on utf-8 or pascal and utf-16 on utf-16 or wide-pascal (accepts all TextDecoder options)</li><li>Endian (for wide-pascal and utf-16 character order, does not overwite set endian)</li></ul></td>
+     <td><b>string:</b> String to write<br>length:</b> Length in uints (NOT bytes) for non-terminate UTF strings. If not supplied, reads until <code>0x00</code> or supplied terminate value (for fixed length UTF strings only)<br><b>stringType:</b> String type. Defaults to utf-8 (<code>utf-8</code>, <code>utf-16</code>, <code>utf-32</code>, <code>pascal</code>, <code>wide-pascal</code>, <code>double-wide-pascal</code> accepted)<br><b>terminateValue:</b> Terminate value. Default is <code>0x00</code> (for non-fixed length utf strings)<br><b>lengthReadSize:</b> Size of the first value that defines the length of the string. Defaults to <code>1</code> as uint8, respects supplied endian (for Pascal strings only, accepts <code>1</code>, <code>2</code> or <code>4</code> bytes)<br><b>encoding:</b> Defaults to <code>utf-8</code> (accepts all TextDecoder options)<br><b>endian:</b> for <code>utf-16</code>, <code>utf-32</code>, <code>wide-pascal</code> and <code>double-wide-pascal</code> character order</td>
+  </tr>
+  <tr>
+    <td><b>Default settings</b></td>
+    <td>strSettings = {length?, stringType?, terminateValue?, lengthReadSize?, lengthWriteSize?, stripNull?, encoding?, endian?}</td>
+    <td>
+      <b>length:</b> Length of string for fixed length, non-terminate value utf strings<br/>
+      <b>stringType:</b> <code>utf-8</code>, <code>utf-16</code>, <code>utf-32</code>,<code>pascal</code>, <code>wide-pascal</code> or <code>double-wide-pascal</code>. Default <code>utf-8</code>.<br/>
+      <b>terminateValue:</b> Number only with <code>stringType</code> of utf types.<br/>
+      <b>lengthReadSize</b> For pascal strings. 1, 2 or 4 byte length read size. Default <code>1</code><br/>
+      <b>lengthWriteSize:</b> For pascal strings. 1, 2 or 4 byte length write size. Default <code>1</code>.<br/>
+      <b>stripNull:</b> Removes 0x00 characters. default <code>true</code><br/>
+      <b>encoding:</b> TextEncoder accepted types. Default <code>utf-8</code>.<br/>
+      <b>endian:</b> <code>big</code> or <code>little</code><br/>
+    </td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
     <td>
     {c|utf8}string(length, terminateValue, stripNull)<br><br>
     ansistring(length, terminateValue, stripNull)<br><br>
-    {utf16|uni}string(length, terminateValue, stripNull, *endian)<br><br>
+    {utf16|utf32|uni}string(length, terminateValue, stripNull, *endian)<br><br>
     pstring(lengthReadSize, stripNull, *endian)<br><br>
     pstring{1|2|4}{be|le}(stripNull, *endian)<br><br>
     wpstring{be|le}(lengthReadSize, stripNull, *endian)<br><br>
     wpstring{1|2|4}{be|le}(stripNull, *endian)
+    dwpstring{be|le}(lengthReadSize, stripNull, *endian)<br><br>
+    dwpstring{1|2|4}{be|le}(stripNull, *endian)
     </td>
     <td>Based on above.<br><b>Note:</b> Presets use augments not a single object. Endian only needed when not part of function name. Does not override set endian.</td>
   </tr>
@@ -1291,11 +1215,13 @@ Presents include C or Unicode, Ansi and multiple pascals.
     <td>
     {c|utf8}string(<b>string</b>, length, terminateValue)<br><br>
     ansistring(<b>string</b>, length, terminateValue)<br><br>
-    {utf16|uni}string{be|le}(<b>string</b>,length, terminateValue, *endian)<br><br>
+    {utf16|utf32|uni}string{be|le}(<b>string</b>,length, terminateValue, *endian)<br><br>
     pstring(<b>string</b>, lengthWriteSize, *endian)<br><br>
     pstring{1|2|4}{be|le}(<b>string</b>, *endian)<br><br>
     wpstring{be|le}(<b>string</b>, lengthWriteSize, *endian)<br><br>
     wpstring{1|2|4}{be|le}(<b>string</b>, *endian)
+    dwpstring{be|le}(<b>string</b>, lengthWriteSize, *endian)<br><br>
+    dwpstring{1|2|4}{be|le}(<b>string</b>, *endian)
     </td>
     <td>Based on above.<br><b>Note:</b> Presets use augments not a single object. Endian only needed when not part of function name. Does not override set endian.</td>
   </tr>

@@ -1,10 +1,12 @@
 import {
     BigValue,
+    hasBigInt,
     BiOptions,
     endian,
     stringOptions,
-} from "./common.js";
-import { BiBaseAsync } from './core/BiBaseAsync.js';
+    normalizeBitOffset
+} from "../common.js";
+import { BiBaseAsync } from './BiBaseAsync.js';
 
 /**
  * Async Binary writer, includes bitfields and strings.
@@ -31,37 +33,94 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
      * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
      * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false.
+     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
      * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
      */
     constructor(input?: string | DataType, options: BiOptions = {}) {
-        options.byteOffset = options.byteOffset ?? 0;
-        
-        options.bitOffset = options.bitOffset ?? 0;
+        super(input, false);
 
-        options.endianness = options.endianness ?? "little";
+        this.strict = false;
 
-        options.strict = options.strict ?? false;
+        this.enforceBigInt = (options?.enforceBigInt) as hasBigInt ?? hasBigInt as hasBigInt;
 
-        options.growthIncrement = options.growthIncrement ?? 1048576;
-
-        options.enforceBigInt = options.enforceBigInt ?? false;
-
-        options.readOnly = options.readOnly ?? false;
-
-        options.windowSize = options.windowSize = 4096;
-
-        const {
-            growthIncrement,
-        } = options;
+        if (options.growthIncrement != undefined &&
+            options.growthIncrement != 0) {
+            this.growthIncrement = options.growthIncrement;
+        }
 
         if (input == undefined) {
-            input = new Uint8Array(growthIncrement) as DataType;
+            input = new Uint8Array(this.growthIncrement) as DataType;
 
             console.warn(`BiWriter started without data. Creating Uint8Array with growthIncrement.`);
         }
 
-        super(input, options);
+        if (options.endianness != undefined &&
+            typeof options.endianness != "string") {
+            throw new Error("endianness must be big or little.");
+        }
+
+        if (options.endianness != undefined &&
+            !(options.endianness == "big" || options.endianness == "little")) {
+            throw new Error("Endianness must be big or little.");
+        }
+
+        this.endian = options.endianness || "little";
+
+        if (typeof options.strict == "boolean") {
+            this.strict = options.strict;
+        } else {
+            if (options.strict != undefined) {
+                throw new Error("Strict mode must be true or false.");
+            }
+        }
+
+        if (input == undefined) {
+            throw new Error("Data or file path required");
+        } else {
+            if (typeof input == "string") {
+                this.filePath = input;
+
+                this.mode = "file";
+            } else if (this.isBufferOrUint8Array(input)) {
+                this.data = input as DataType;
+
+                this.mode = "memory";
+
+                this.size = this.data.length;
+
+                this.sizeB = this.data.length * 8;
+            } else {
+                throw new Error("Write data must be Uint8Array or Buffer");
+            }
+        }
+
+        this.offset = options.byteOffset ?? 0;
+
+        this.bitoffset = options.bitOffset ?? 0;
+
+        this.offset = ((Math.abs(this.offset)) + Math.ceil((Math.abs(this.bitoffset)) / 8))
+        // Adjust byte offset based on bit overflow
+        this.offset += Math.floor((Math.abs(this.bitoffset)) / 8);
+        // Adjust bit offset
+        this.bitoffset = Math.abs(normalizeBitOffset(this.bitoffset)) % 8;
+        // Ensure bit offset stays between 0-7
+        this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
+        // Ensure offset doesn't go negative
+        this.offset = Math.max(this.offset, 0);
+
+        if (this.offset > this.size) {
+            if (this.strict == false) {
+                const dif = this.offset - this.size;
+
+                if (this.growthIncrement != 0 && this.growthIncrement > dif) {
+                    this.extendArray(Math.ceil(dif / this.growthIncrement) * this.growthIncrement);
+                } else {
+                    this.extendArray(dif);
+                }
+            } else {
+                throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
+            }
+        }
     };
 
     /**
@@ -3041,25 +3100,25 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @param {string} string - text string
     * @param {stringOptions?} options
     * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - ascii, utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
+    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
     * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
     * @param {stringOptions["lengthWriteSize"]?} options.lengthWriteSize - for pascal strings. 1, 2 or 4 byte length write size
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types 
-    * @param {stringOptions["endian"]?} options.endian - for utf-16, utf-32, wide-pascal or double-wide-pascal
+    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
     */
     async string(string: string, options?: stringOptions) {
         return await this.writeString(string, options);
     };
 
     /**
-    * Writes string using setting from .strDefaults
+    * Writes string using setting from .strSettings
     * 
     * Default is ``utf-8``
     * 
     * @param {string} string - text string
     */
     async str(string: string) {
-        await this.writeString(string, this.strDefaults);
+        await this.writeString(string, this.strSettings);
     };
 
     /**
@@ -3081,7 +3140,7 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
     async cstring(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]) {
-        return await this.utf8string(string, length, terminateValue);
+        return await this.string(string, { stringType: "utf-8", encoding: "utf-8", length: length, terminateValue: terminateValue });
     };
 
     /**
@@ -3127,7 +3186,7 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
     */
     async unistring(string: string, length?: number, terminateValue?: stringOptions["terminateValue"], endian?: stringOptions["endian"]) {
-        return await this.utf16string(string, length, terminateValue, endian);
+        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: endian });
     };
 
     /**
@@ -3138,7 +3197,7 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
     async utf16stringle(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]) {
-        return await this.unistring(string, length, terminateValue, "little");
+        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
     };
 
     /**
@@ -3149,7 +3208,7 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
     async unistringle(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]) {
-        return await this.utf16stringle(string, length, terminateValue);
+        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "little" });
     };
 
     /**
@@ -3160,7 +3219,7 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
     async utf16stringbe(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]) {
-        return await this.unistring(string, length, terminateValue, "big");
+        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
     };
 
     /**
@@ -3171,41 +3230,7 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
     async unistringbe(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]) {
-        return await this.utf16stringbe(string, length, terminateValue);
-    };
-
-    /**
-    * Writes UTF-32 (Unicode) string.
-    * 
-    * @param {string} string - text string
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    * @param {stringOptions["endian"]} endian - for wide-pascal and utf-16
-    */
-    async utf32string(string: string, length?: number, terminateValue?: stringOptions["terminateValue"], endian?: stringOptions["endian"]) {
-        return await this.string(string, { stringType: "utf-32", encoding: "utf-32", length: length, terminateValue: terminateValue, endian: endian });
-    };
-
-    /**
-    * Writes UTF-32 (Unicode) string in little endian order.
-    * 
-    * @param {string} string - text string
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    */
-    async utf32stringle(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]) {
-        return await this.utf32string(string, length, terminateValue, "little");
-    };
-
-    /**
-    * Writes UTF-32 (Unicode) string in big endian order.
-    * 
-    * @param {string} string - text string
-    * @param {stringOptions["length"]} length - for fixed length utf strings
-    * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
-    */
-    async utf32stringbe(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]) {
-        return await this.utf32string(string, length, terminateValue, "big");
+        return await this.string(string, { stringType: "utf-16", encoding: "utf-16", length: length, terminateValue: terminateValue, endian: "big" });
     };
 
     /**
@@ -3226,7 +3251,7 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @param {stringOptions["endian"]} endian - ``big`` or ``little`` for 2 or 4 byte length write size
     */
     async pstring1(string: string, endian?: stringOptions["endian"]) {
-        return await this.pstring(string, 1, endian);
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: endian });
     };
 
     /**
@@ -3235,7 +3260,7 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @param {string} string - text string
     */
     async pstring1le(string: string) {
-        return await this.pstring1(string, "little");
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "little" });
     };
 
     /**
@@ -3244,7 +3269,7 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @param {string} string - text string
     */
     async pstring1be(string: string) {
-        return await this.pstring1(string, "big");
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 1, endian: "big" });
     };
 
     /**
@@ -3254,7 +3279,7 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     async pstring2(string: string, endian?: stringOptions["endian"]) {
-        return await this.pstring(string, 2, endian);
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: endian });
     };
 
     /**
@@ -3263,7 +3288,7 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @param {string} string - text string
     */
     async pstring2le(string: string) {
-        return await this.pstring2(string, "little");
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "little" });
     };
 
     /**
@@ -3272,7 +3297,7 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @param {string} string - text string
     */
     async pstring2be(string: string) {
-        return await this.pstring2(string, "big");
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 2, endian: "big" });
     };
 
     /**
@@ -3282,16 +3307,7 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     async pstring4(string: string, endian?: stringOptions["endian"]) {
-        return await this.pstring(string, 4, endian);
-    };
-
-    /**
-    * Writes Pascal string 4 byte length read in little endian order.
-    * 
-    * @param {string} string - text string
-    */
-    async pstring4le(string: string) {
-        return await this.pstring4(string, "little");
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: endian });
     };
 
     /**
@@ -3300,236 +3316,130 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @param {string} string - text string
     */
     async pstring4be(string: string) {
-        return await this.pstring4(string, "big");
-    };    
+        return await this.string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "big" });
+    };
 
     /**
-    * Writes Wide Pascal string.
+    * Writes Pascal string 4 byte length read in little endian order.
+    * 
+    * @param {string} string - text string
+    */
+    async pstring4le(string: string) {
+        return await this .string(string, { stringType: "pascal", encoding: "utf-8", lengthWriteSize: 4, endian: "little" });
+    };
+
+    /**
+    * Writes Wide-Pascal string.
     * 
     * @param {string} string - text string
     * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     async wpstring(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"], endian?: stringOptions["endian"]) {
-        return await this.string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: endian });
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: endian });
     };
 
     /**
-    * Writes Wide Pascal string in little endian order.
-    * 
-    * @param {string} string - text string
-    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
-    */
-    async wpstringle(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"]) {
-        return await this.wpstring(string, lengthWriteSize, "little");
-    };
-
-    /**
-    * Writes Wide Pascal string in big endian order.
+    * Writes Wide-Pascal string in big endian order.
     * 
     * @param {string} string - text string
     * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
     */
     async wpstringbe(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"]) {
-        return await this.wpstring(string, lengthWriteSize, "big");
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "big" });
     };
 
     /**
-    * Writes Wide Pascal string.
+    * Writes Wide-Pascal string in little endian order.
+    * 
+    * @param {string} string - text string
+    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
+    */
+    async wpstringle(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"]) {
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: lengthWriteSize, endian: "little" });
+    };
+
+    /**
+    * Writes Wide-Pascal string.
     * 
     * @param {string} string - text string
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     async wpstring1(string: string, endian?: stringOptions["endian"]) {
-        return await this.wpstring(string, 1, endian);
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: endian });
     };
 
     /**
-    * Writes Wide Pascal string 1 byte length read in big endian order.
+    * Writes Wide-Pascal string 1 byte length read in big endian order.
     * 
     * @param {string} string - text string
     */
     async wpstring1be(string: string) {
-        return await this.wpstring1(string, "little");
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "big" });
     };
 
     /**
-    * Writes Wide Pascal string 1 byte length read in little endian order.
+    * Writes Wide-Pascal string 1 byte length read in little endian order.
     * 
     * @param {string} string - text string
     */
     async wpstring1le(string: string) {
-        return await this.wpstring1(string, "big");
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 1, endian: "little" });
     };
 
     /**
-    * Writes Wide Pascal string 2 byte length read.
+    * Writes Wide-Pascal string 2 byte length read.
     * 
     * @param {string} string - text string
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     async wpstring2(string: string, endian?: stringOptions["endian"]) {
-        return await this.wpstring(string, 2, endian);
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: endian });
     };
 
     /**
-    * Writes Wide Pascal string 2 byte length read in little endian order.
+    * Writes Wide-Pascal string 2 byte length read in little endian order.
     * 
     * @param {string} string - text string
     */
     async wpstring2le(string: string) {
-        return await this.wpstring2(string, "little");
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "little" });
     };
 
     /**
-    * Writes Wide Pascal string 2 byte length read in big endian order.
+    * Writes Wide-Pascal string 2 byte length read in big endian order.
     * 
     * @param {string} string - text string
     */
     async wpstring2be(string: string) {
-        return await this.wpstring2(string, "big");
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 2, endian: "big" });
     };
 
     /**
-    * Writes Wide Pascal string 4 byte length read.
+    * Writes Wide-Pascal string 4 byte length read.
     * 
     * @param {string} string - text string
     * @param {stringOptions["endian"]} endian - ``big`` or ``little``
     */
     async wpstring4(string: string, endian?: stringOptions["endian"]) {
-        return await this.wpstring(string, 4, endian);
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: endian });
     };
 
     /**
-    * Writes Wide Pascal string 4 byte length read in little endian order.
+    * Writes Wide-Pascal string 4 byte length read in little endian order.
     * 
     * @param {string} string - text string
     */
     async wpstring4le(string: string) {
-        return await this.wpstring4(string, "little");
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "little" });
     };
 
     /**
-    * Writes Wide Pascal string 4 byte length read in big endian order.
+    * Writes Wide-Pascal string 4 byte length read in big endian order.
     * 
     * @param {string} string - text string
     */
     async wpstring4be(string: string) {
-        return await this.wpstring4(string, "big");
-    };
-
-    /**
-    * Writes Double Wide Pascal string.
-    * 
-    * @param {string} string - text string
-    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    */
-    async dwpstring(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"], endian?: stringOptions["endian"]) {
-        return await this.string(string, { stringType: "double-wide-pascal", encoding: "utf-32", lengthWriteSize: lengthWriteSize, endian: endian });
-    };
-
-    /**
-    * Writes Double Wide Pascal string in little endian order.
-    * 
-    * @param {string} string - text string
-    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
-    */
-    async dwpstringle(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"]) {
-        return await this.dwpstring(string, lengthWriteSize, "little");
-    };
-
-    /**
-    * Writes Double Wide Pascal string in big endian order.
-    * 
-    * @param {string} string - text string
-    * @param {stringOptions["lengthWriteSize"]} lengthWriteSize - 1, 2 or 4 byte length write size (default 1)
-    */
-    async dwpstringbe(string: string, lengthWriteSize?: stringOptions["lengthWriteSize"]) {
-        return await this.dwpstring(string, lengthWriteSize, "big");
-    };
-
-    /**
-    * Writes Double Wide Pascal string.
-    * 
-    * @param {string} string - text string
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    */
-    async dwpstring1(string: string, endian?: stringOptions["endian"]) {
-        return await this.dwpstring(string, 1, endian);
-    };
-
-    /**
-    * Writes Double Wide Pascal string 1 byte length read in little endian order.
-    * 
-    * @param {string} string - text string
-    */
-    async dwpstring1le(string: string) {
-        return await this.dwpstring1(string, "little");
-    };
-
-    /**
-    * Writes Double Wide Pascal string 1 byte length read in big endian order.
-    * 
-    * @param {string} string - text string
-    */
-    async dwpstring1be(string: string) {
-        return await this.dwpstring1(string, "big");
-    };
-
-    /**
-    * Writes Double Wide Pascal string 2 byte length read.
-    * 
-    * @param {string} string - text string
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    */
-    async dwpstring2(string: string, endian?: stringOptions["endian"]) {
-        return await this.dwpstring(string, 2, endian);
-    };
-
-    /**
-    * Writes Double Wide Pascal string 2 byte length read in little endian order.
-    * 
-    * @param {string} string - text string
-    */
-    async dwpstring2le(string: string) {
-        return await this.dwpstring2(string, "little");
-    };
-
-    /**
-    * Writes Double Wide Pascal string 2 byte length read in big endian order.
-    * 
-    * @param {string} string - text string
-    */
-    async dwpstring2be(string: string) {
-        return await this.dwpstring2(string, "big");
-    };
-
-    /**
-    * Writes Double Wide Pascal string 4 byte length read.
-    * 
-    * @param {string} string - text string
-    * @param {stringOptions["endian"]} endian - ``big`` or ``little``
-    */
-    async dwpstring4(string: string, endian?: stringOptions["endian"]) {
-        return await this.dwpstring(string, 4, endian);
-    };
-
-    /**
-    * Writes Double Wide Pascal string 4 byte length read in little endian order.
-    * 
-    * @param {string} string - text string
-    */
-    async dwpstring4le(string: string) {
-        return await this.dwpstring4(string, "little");
-    };
-
-    /**
-    * Writes Double Wide Pascal string 4 byte length read in big endian order.
-    * 
-    * @param {string} string - text string
-    */
-    async dwpstring4be(string: string) {
-        return await this.dwpstring4(string, "big");
+        return await this .string(string, { stringType: "wide-pascal", encoding: "utf-16", lengthWriteSize: 4, endian: "big" });
     };
 };

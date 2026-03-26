@@ -1,5 +1,7 @@
 export { BiReader } from './BiReader.js';
 export { BiWriter } from './BiWriter.js';
+export { BiReaderAsync } from './BiReaderAsync.js';
+export { BiWriterAsync } from './BiWriterAsync.js';
 export { BiBase } from './core/BiBase.js'
 export { hexdump } from './common.js';
 

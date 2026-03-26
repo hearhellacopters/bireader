@@ -1,6 +1,19 @@
+/**
+ * @file BiReader / Writer base for working in sync Buffers or full file reads. Node and Browser.
+ */
+
 // #region Imports
+var fs: typeof import("fs");
 import {
+    // types
+    BiOptions,
     BigValue,
+    endian,
+    // options
+    hexdumpOptions,
+    stringOptions,
+    // checks
+    hasBigInt,
     canInt8,
     canInt16,
     canFloat16,
@@ -8,2258 +21,69 @@ import {
     canFloat32,
     canBigInt64,
     canFloat64,
-    hasBigInt,
     isSafeInt64,
     isBuffer,
-    endian,
-    arrayBufferCheck,
-    hexdumpOptions,
+    isUint8Array,
+    isBufferOrUint8Array,
+    // helpers
+    numberSafe,
+    normalizeBitOffset,
+    textEncode,
     _hexDump,
-    stringOptions,
-    normalizeBitOffset
+    _AND,
+    _OR,
+    _XOR,
+    _NOT,
+    _RSHIFT,
+    _LSHIFT,
+    _ADD,
+    _rbit,
+    _wbit,
+    _rbyte,
+    _wbyte,
+    _rint16,
+    _wint16,
+    _rhalffloat,
+    _whalffloat,
+    _wint32,
+    _rint32,
+    _rfloat,
+    _wfloat,
+    _rint64,
+    _wint64,
+    _rdfloat,
+    _wdfloat,
+    _rstring,
+    _wstring,
 } from '../common.js';
-type FS = typeof import("fs");
-
-const bufferConstants = { MAX_LENGTH: 2147483647 }; // 2 gigs
-
-var fs: FS;
 
 (async function () {
     if (typeof process !== 'undefined' && process.versions && process.versions.node) {
         // We are in Node.js
         try {
             if (typeof require !== 'undefined') {
-                fs = require('fs');
-
-                const buffer = require("buffer");
-
-                bufferConstants.MAX_LENGTH = buffer.constants.MAX_LENGTH;
+                if (typeof fs === "undefined") {
+                    fs = require('fs');
+                }
             } else {
-                fs = await import('fs');
-
-                const buffer = await import("buffer");
-
-                bufferConstants.MAX_LENGTH = buffer.constants.MAX_LENGTH;
+                if (typeof fs === "undefined") {
+                    fs = await import('fs');
+                }
             }
         } catch (error) {
-            console.error('Failed to load fs and buffer module:', error);
+            console.error('Failed to load fs module:', error);
         }
     }
 })();
 
-/**
- * For file system in Node
- */
-type FileDescriptor = number;
-
-/**
- * file system read modes
- */
-type fsMode = "w+" | "r";
-
-function MAX_LENGTH() {
-    return bufferConstants.MAX_LENGTH;
-};
-
-function hexDumpBase(ctx: BiBase<Buffer | Uint8Array, true | false>, options: hexdumpOptions = {}): string {
-    var length: any = options && options.length;
-
-    var startByte: any = options && options.startByte;
-
-    if ((startByte || 0) > ctx.size) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-        throw new Error("Hexdump start is outside of data size: " + startByte + " of " + ctx.size);
-    }
-
-    const start = startByte || ctx.offset;
-
-    const end = Math.min(start + (length || 192), ctx.size);
-
-    if (start + (length || 0) > ctx.size) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-        throw new Error("Hexdump amount is outside of data size: " + (start + (length || 0)) + " of " + end);
-    }
-
-    var data = ctx.data;
-
-    if (ctx.mode == "file") {
-        data = ctx.lift(start, start + length, false);
-    }
-
-    return _hexDump(data, options, start, end);
-};
-
-// #region Movement
-
-function skip(ctx: BiBase<Buffer | Uint8Array, true | false>, bytes: number, bits?: number): void {
-    var new_size = (((bytes || 0) + ctx.offset) + Math.ceil((ctx.bitoffset + (bits || 0)) / 8));
-
-    if (bits && bits < 0) {
-        new_size = Math.floor(((((bytes || 0) + ctx.offset) * 8) + ctx.bitoffset + (bits || 0)) / 8);
-    }
-
-    if (new_size > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            } else {
-                ctx.extendArray(new_size - ctx.size);
-            }
-        } else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: Seek of range of data: seek " + new_size + " of " + ctx.size);
-        }
-    }
-    // Adjust byte offset based on bit overflow
-    ctx.offset += Math.floor((ctx.bitoffset + (bits || 0)) / 8);
-    // Adjust bit offset
-    ctx.bitoffset = (ctx.bitoffset + normalizeBitOffset(bits)) % 8;
-    // Adjust byte offset based on byte overflow
-    ctx.offset += bytes;
-    // Ensure bit offset stays between 0-7
-    ctx.bitoffset = Math.min(Math.max(ctx.bitoffset, 0), 7);
-    // Ensure offset doesn't go negative
-    ctx.offset = Math.max(ctx.offset, 0);
-
-    return;
-};
-
-function align(ctx: BiBase<Buffer | Uint8Array, true | false>, n: number) {
-    const a = ctx.offset % n;
-    if (a) {
-        ctx.skip(n - a);
-    }
-};
-
-function alignRev(ctx: BiBase<Buffer | Uint8Array, true | false>, n: number) {
-    const a = ctx.offset % n;
-    if (a) {
-        ctx.skip(a * -1);
-    }
-};
-
-function goto(ctx: BiBase<Buffer | Uint8Array, true | false>, bytes: number, bits?: number): void {
-    var new_size = (((bytes || 0)) + Math.ceil(((bits || 0)) / 8));
-
-    if (bits && bits < 0) {
-        new_size = Math.floor(((((bytes || 0)) * 8) + (bits || 0)) / 8);
-    }
-
-    if (new_size > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            } else {
-                ctx.extendArray(new_size - ctx.size);
-            }
-        } else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: Goto outside of range of data: goto " + new_size + " of " + ctx.size);
-        }
-    }
-    ctx.offset = bytes;
-    // Adjust byte offset based on bit overflow
-    ctx.offset += Math.floor(((bits || 0)) / 8);
-    // Adjust bit offset
-    ctx.bitoffset = normalizeBitOffset(bits) % 8;
-    // Ensure bit offset stays between 0-7
-    ctx.bitoffset = Math.min(Math.max(ctx.bitoffset, 0), 7);
-    // Ensure offset doesn't go negative
-    ctx.offset = Math.max(ctx.offset, 0);
-
-    return;
-};
-
-// #region Manipulation
-
-function check_size(ctx: BiBase<Buffer | Uint8Array, true | false>, write_bytes: number, write_bit?: number, offset?: number): number {
-    const bits: number = (write_bit || 0) + ctx.bitoffset;
-
-    var new_off = (offset || ctx.offset);
-
-    var writesize = write_bytes || 0;
-
-    if (bits != 0) {
-        //add bits
-        writesize += Math.ceil(bits / 8);
-    }
-    //if bigger extend
-    const needed_size: number = new_off + writesize;
-
-    if (needed_size > ctx.size) {
-        const dif = needed_size - ctx.size;
-
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            } else {
-                ctx.extendArray(dif);
-            }
-        } else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: ` + needed_size + " at " + ctx.offset + " of " + ctx.size);
-        }
-    }
-    //start read location
-    return new_off;
-};
-
-function extendarray(ctx: BiBase<Buffer | Uint8Array, true | false>, to_padd: number): void {
-    ctx.open();
-
-    if (ctx.strict) {
-        throw new Error('File position is outside of file size while in strict mode.');
-    }
-
-    if (ctx.size + to_padd > ctx.maxFileSize) {
-        throw new Error("buffer extend outside of max: " + (ctx.size + to_padd) + " to " + ctx.maxFileSize);
-    }
-
-    if (ctx.mode == "file") {
-        if (ctx.extendBufferSize != 0) {
-            if (ctx.extendBufferSize > to_padd) {
-                to_padd = ctx.extendBufferSize;
-            }
-        }
-
-        try {
-            fs.ftruncateSync(ctx.fd, ctx.size + to_padd);
-        } catch (error) {
-            throw new Error(error);
-        }
-
-        ctx.updateSize();
-
-        return;
-    }
-
-    if (isBuffer(ctx.data)) {
-        var paddbuffer = Buffer.alloc(to_padd);
-
-        ctx.data = Buffer.concat([ctx.data, paddbuffer]);
-    } else {
-        const newBuf = new Uint8Array(ctx.size + to_padd);
-
-        newBuf.set(ctx.data);
-
-        ctx.data = newBuf;
-    }
-
-    ctx.size = ctx.data.length;
-
-    ctx.sizeB = ctx.data.length * 8;
-
-    return;
-};
-
-function remove(ctx: BiBase<Buffer | Uint8Array, true | false>, startOffset?: number, endOffset?: number, consume?: boolean, remove?: boolean, fillValue?: number): any {
-    ctx.open();
-
-    const new_start = Math.abs(startOffset || 0);
-
-    const new_offset = (endOffset || ctx.offset);
-
-    if (new_offset > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            } else {
-                ctx.extendArray(new_offset - ctx.size);
-            }
-        } else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + endOffset + " of " + ctx.size);
-        }
-    }
-
-    if (ctx.strict == true && remove == true) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-        throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + ctx.size);
-    }
-
-    const data_removed = ctx.data.subarray(new_start, new_offset);
-
-    if (remove) {
-        const part1 = ctx.data.subarray(0, new_start);
-
-        const part2 = ctx.data.subarray(new_offset, ctx.size);
-
-        if (isBuffer(ctx.data)) {
-            ctx.data = Buffer.concat([part1, part2]);
-        } else {
-            const newBuf = new Uint8Array(part1.byteLength + part2.byteLength);
-
-            newBuf.set(part1, 0);
-
-            newBuf.set(part2, part1.byteLength);
-
-            ctx.data = newBuf;
-        }
-
-        ctx.size = ctx.data.length;
-
-        ctx.sizeB = ctx.data.length * 8;
-    }
-
-    if (fillValue != undefined && remove == false) {
-        const part1 = ctx.data.subarray(0, new_start);
-
-        const part2 = ctx.data.subarray(new_offset, ctx.size);
-
-        const replacement = new Array(data_removed.length).fill(fillValue & 0xff);
-
-        if (isBuffer(ctx.data)) {
-            const buff_placement = Buffer.from(replacement);
-
-            ctx.data = Buffer.concat([part1, buff_placement, part2]);
-        } else {
-            const newBuf = new Uint8Array(part1.byteLength + replacement.length + part2.byteLength);
-
-            newBuf.set(part1, 0);
-
-            newBuf.set(replacement, part1.byteLength);
-
-            newBuf.set(part2, part1.byteLength + replacement.length);
-
-            ctx.data = newBuf;
-        }
-
-        ctx.size = ctx.data.length;
-
-        ctx.sizeB = ctx.data.length * 8;
-    }
-
-    if (consume == true) {
-        if (remove != true) {
-            ctx.offset = new_offset;
-
-            ctx.bitoffset = 0;
-        } else {
-            ctx.offset = new_start;
-
-            ctx.bitoffset = 0;
-        }
-    }
-
-    return data_removed;
-};
-
-function addData<DataType extends Buffer | Uint8Array>(ctx: BiBase<DataType, true | false>, data: DataType, consume?: boolean, offset?: number, replace?: boolean): void {
-    if (ctx.strict == true) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-        throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Can not insert data in strict mode. Use unrestrict() to enable.`);
-    }
-
-    ctx.open();
-
-    if (isBuffer(data) && !isBuffer(ctx.data)) {
-        data = Buffer.from(data) as DataType;
-    }
-
-    if (data instanceof Uint8Array && !(ctx.data instanceof Uint8Array)) {
-        data = new Uint8Array(data) as DataType;
-    }
-
-    var needed_size: number = offset || ctx.offset;
-
-    if (replace) {
-        needed_size = (offset || ctx.offset) + data.length;
-
-        const part1 = ctx.data.subarray(0, needed_size - data.length);
-
-        const part2 = ctx.data.subarray(needed_size, ctx.size);
-
-        if (isBuffer(ctx.data)) {
-            ctx.data = Buffer.concat([part1, data, part2]) as DataType;
-        } else {
-            const newBuf = new Uint8Array(part1.byteLength + data.byteLength + part2.byteLength);
-
-            newBuf.set(part1, 0);
-
-            newBuf.set(data, part1.byteLength);
-
-            newBuf.set(part2, part1.byteLength + data.byteLength);
-
-            ctx.data = newBuf as DataType;
-        }
-
-        ctx.size = ctx.data.length;
-
-        ctx.sizeB = ctx.data.length * 8;
-    } else {
-        const part1 = ctx.data.subarray(0, needed_size);
-
-        const part2 = ctx.data.subarray(needed_size, ctx.size);
-
-        if (isBuffer(ctx.data)) {
-            ctx.data = Buffer.concat([part1, data, part2]) as DataType;
-        } else {
-            const newBuf = new Uint8Array(part1.byteLength + data.byteLength + part2.byteLength);
-
-            newBuf.set(part1, 0);
-
-            newBuf.set(data, part1.byteLength);
-
-            newBuf.set(part2, part1.byteLength + data.byteLength);
-
-            ctx.data = newBuf as DataType;
-        }
-
-        ctx.size = ctx.data.length;
-
-        ctx.sizeB = ctx.data.length * 8;
-    }
-
-    if (consume) {
-        ctx.offset = (offset || ctx.offset) + data.length;
-
-        ctx.bitoffset = 0;
-    }
-};
-
-// #region Math
-
-function AND(ctx: BiBase<Buffer | Uint8Array, true | false>, and_key: number | string | Uint8Array | Buffer, start?: number, end?: number, consume?: boolean): any {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            } else {
-                ctx.extendArray((end || 0) - ctx.size);
-            }
-        } else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-
-    ctx.open();
-
-    if (typeof and_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] & (and_key & 0xff);
-
-            if (consume) {
-                ctx.offset = i;
-
-                ctx.bitoffset = 0;
-            }
-        }
-    } else {
-        if (typeof and_key == "string") {
-            and_key = Uint8Array.from(Array.from(and_key as string).map(letter => letter.charCodeAt(0)));
-        }
-
-        if (arrayBufferCheck(and_key)) {
-            var number = -1;
-
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != and_key.length - 1) {
-                    number = number + 1;
-                } else {
-                    number = 0;
-                }
-
-                ctx.data[i] = ctx.data[i] & and_key[number];
-
-                if (consume) {
-                    ctx.offset = i;
-
-                    ctx.bitoffset = 0;
-                }
-            }
-        } else {
-            throw new Error("AND key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-};
-
-function OR(ctx: BiBase<Buffer | Uint8Array, true | false>, or_key: number | string | Uint8Array | Buffer, start?: number, end?: number, consume?: boolean): any {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            } else {
-                ctx.extendArray((end || 0) - ctx.size);
-            }
-        } else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-
-    ctx.open();
-
-    if (typeof or_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] | (or_key & 0xff);
-
-            if (consume) {
-                ctx.offset = i;
-
-                ctx.bitoffset = 0;
-            }
-        }
-    } else {
-        if (typeof or_key == "string") {
-            or_key = Uint8Array.from(Array.from(or_key as string).map(letter => letter.charCodeAt(0)));
-        }
-
-        if (arrayBufferCheck(or_key)) {
-            var number = -1;
-
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != or_key.length - 1) {
-                    number = number + 1;
-                } else {
-                    number = 0;
-                }
-
-                ctx.data[i] = ctx.data[i] | or_key[number];
-
-                if (consume) {
-                    ctx.offset = i;
-
-                    ctx.bitoffset = 0;
-                }
-            }
-        } else {
-            throw new Error("OR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-};
-
-function XOR(ctx: BiBase<Buffer | Uint8Array, true | false>, xor_key: number | string | Uint8Array | Buffer, start?: number, end?: number, consume?: boolean): any {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            } else {
-                ctx.extendArray((end || 0) - ctx.size);
-            }
-        } else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-
-    ctx.open();
-
-    if (typeof xor_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] ^ (xor_key & 0xff);
-
-            if (consume) {
-                ctx.offset = i;
-
-                ctx.bitoffset = 0;
-            }
-        }
-    } else {
-        if (typeof xor_key == "string") {
-            xor_key = Uint8Array.from(Array.from(xor_key as string).map(letter => letter.charCodeAt(0)));
-        }
-
-        if (arrayBufferCheck(xor_key)) {
-            let number = -1;
-
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != xor_key.length - 1) {
-                    number = number + 1;
-                } else {
-                    number = 0;
-                }
-
-                ctx.data[i] = ctx.data[i] ^ xor_key[number];
-
-                if (consume) {
-                    ctx.offset = i;
-
-                    ctx.bitoffset = 0;
-                }
-            }
-        } else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-};
-
-function NOT(ctx: BiBase<Buffer | Uint8Array, true | false>, start?: number, end?: number, consume?: boolean): any {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            }
-            else {
-                ctx.extendArray((end || 0) - ctx.size);
-            }
-        } else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-
-    ctx.open();
-
-    for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-        ctx.data[i] = ~ctx.data[i];
-
-        if (consume) {
-            ctx.offset = i;
-
-            ctx.bitoffset = 0;
-        }
-    }
-};
-
-function LSHIFT(ctx: BiBase<Buffer | Uint8Array, true | false>, shift_key: number | string | Uint8Array | Buffer, start?: number, end?: number, consume?: boolean): any {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            } else {
-                ctx.extendArray((end || 0) - ctx.size);
-            }
-        } else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-
-    ctx.open();
-
-    if (typeof shift_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] << shift_key;
-
-            if (consume) {
-                ctx.offset = i;
-
-                ctx.bitoffset = 0;
-            }
-        }
-    } else {
-        if (typeof shift_key == "string") {
-            shift_key = Uint8Array.from(Array.from(shift_key as string).map(letter => letter.charCodeAt(0)));
-        }
-
-        if (arrayBufferCheck(shift_key)) {
-            var number = -1;
-
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != shift_key.length - 1) {
-                    number = number + 1;
-                } else {
-                    number = 0;
-                }
-
-                ctx.data[i] = ctx.data[i] << shift_key[number];
-
-                if (consume) {
-                    ctx.offset = i;
-
-                    ctx.bitoffset = 0;
-                }
-            }
-        } else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-};
-
-function RSHIFT(ctx: BiBase<Buffer | Uint8Array, true | false>, shift_key: number | string | Uint8Array | Buffer, start?: number, end?: number, consume?: boolean): any {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            } else {
-                ctx.extendArray((end || 0) - ctx.size);
-            }
-        } else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-
-    ctx.open();
-
-    if (typeof shift_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] >> shift_key;
-
-            if (consume) {
-                ctx.offset = i;
-
-                ctx.bitoffset = 0;
-            }
-        }
-    } else {
-        if (typeof shift_key == "string") {
-            shift_key = Uint8Array.from(Array.from(shift_key as string).map(letter => letter.charCodeAt(0)));
-        }
-
-        if (arrayBufferCheck(shift_key)) {
-            var number = -1;
-
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != shift_key.length - 1) {
-                    number = number + 1;
-                } else {
-                    number = 0;
-                }
-
-                ctx.data[i] = ctx.data[i] >> shift_key[number];
-
-                if (consume) {
-                    ctx.offset = i;
-
-                    ctx.bitoffset = 0;
-                }
-            }
-        } else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-};
-
-function ADD(ctx: BiBase<Buffer | Uint8Array, true | false>, add_key: number | string | Uint8Array | Buffer, start?: number, end?: number, consume?: boolean): any {
-    if ((end || 0) > ctx.size) {
-        if (ctx.strict == false) {
-            if (ctx.extendBufferSize != 0) {
-                ctx.extendArray(ctx.extendBufferSize);
-            } else {
-                ctx.extendArray((end || 0) - ctx.size);
-            }
-        } else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error("\x1b[33m[Strict mode]\x1b[0m: End offset outside of data: endOffset " + (end || 0) + " of " + ctx.size);
-        }
-    }
-
-    ctx.open();
-
-    if (typeof add_key == "number") {
-        for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-            ctx.data[i] = ctx.data[i] + add_key;
-
-            if (consume) {
-                ctx.offset = i;
-
-                ctx.bitoffset = 0;
-            }
-        }
-    } else {
-        if (typeof add_key == "string") {
-            add_key = Uint8Array.from(Array.from(add_key as string).map(letter => letter.charCodeAt(0)));
-        }
-
-        if (arrayBufferCheck(add_key)) {
-            var number = -1;
-
-            for (let i = (start || 0); i < Math.min(end || ctx.size, ctx.size); i++) {
-                if (number != add_key.length - 1) {
-                    number = number + 1;
-                } else {
-                    number = 0;
-                }
-
-                ctx.data[i] = ctx.data[i] + add_key[number];
-
-                if (consume) {
-                    ctx.offset = i;
-                    ctx.bitoffset = 0;
-                }
-            }
-        } else {
-            throw new Error("XOR key must be a byte value, string, Uint8Array or Buffer");
-        }
-    }
-};
-
-// #region Search
-
-function fString(ctx: BiBase<Buffer | Uint8Array, true | false>, searchString: string): number {
-    ctx.open();
-    // Convert the searchString to Uint8Array
-    const searchArray = new TextEncoder().encode(searchString);
-
-    for (let i = ctx.offset; i <= ctx.size - searchArray.length; i++) {
-        var match = true;
-
-        for (let j = 0; j < searchArray.length; j++) {
-            if (ctx.data[i + j] !== searchArray[j]) {
-                match = false;
-
-                break;
-            }
-        }
-
-        if (match) {
-            return i; // Found the string, return the index
-        }
-    }
-
-    return -1; // String not found
-};
-
-function fNumber(ctx: BiBase<Buffer | Uint8Array, true | false>, targetNumber: number, bits: number, unsigned: boolean, endian?: string): number {
-    ctx.open();
-
-    check_size(ctx, Math.floor(bits / 8), 0);
-
-    for (let z = ctx.offset; z <= (ctx.size - (bits / 8)); z++) {
-        var off_in_bits = 0;
-
-        var value = 0;
-
-        for (var i = 0; i < bits;) {
-            const remaining = bits - i;
-
-            const bitOffset = off_in_bits & 7;
-
-            const currentByte = ctx.data[z + (off_in_bits >> 3)];
-
-            const read = Math.min(remaining, 8 - bitOffset);
-
-            if ((endian != undefined ? endian : ctx.endian) == "big") {
-                let mask = ~(0xFF << read);
-
-                let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
-
-                value <<= read;
-
-                value |= readBits;
-            } else {
-                let mask = ~(0xFF << read);
-
-                let readBits = (currentByte >> bitOffset) & mask;
-
-                value |= readBits << i;
-            }
-
-            off_in_bits += read;
-
-            i += read;
-        }
-
-        if (unsigned == true || bits <= 7) {
-            value = value >>> 0;
-        } else {
-            if (bits !== 32 && value & (1 << (bits - 1))) {
-                value |= -1 ^ ((1 << bits) - 1);
-            }
-        }
-
-        if (value === targetNumber) {
-            return z - ctx.offset; // Found the byte, return the index from current
-        }
-    }
-
-    return -1; // number not found
-};
-
-function fHalfFloat(ctx: BiBase<Buffer | Uint8Array, true | false>, targetNumber: number, endian?: string): number {
-    ctx.open();
-
-    check_size(ctx, 2, 0);
-
-    for (let z = ctx.offset; z <= (ctx.size - 2); z++) {
-        var value = 0;
-
-        if ((endian != undefined ? endian : ctx.endian) == "little") {
-            value = ((ctx.data[z + 1] & 0xFFFF) << 8) | (ctx.data[z] & 0xFFFF);
-        } else {
-            value = ((ctx.data[z] & 0xFFFF) << 8) | (ctx.data[z + 1] & 0xFFFF);
-        }
-
-        const sign = (value & 0x8000) >> 15;
-
-        const exponent = (value & 0x7C00) >> 10;
-
-        const fraction = value & 0x03FF;
-
-        var floatValue: number;
-
-        if (exponent === 0) {
-            if (fraction === 0) {
-                floatValue = (sign === 0) ? 0 : -0; // +/-0
-            } else {
-                // Denormalized number
-                floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, -14) * (fraction / 0x0400);
-            }
-        } else if (exponent === 0x1F) {
-            if (fraction === 0) {
-                floatValue = (sign === 0) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-            } else {
-                floatValue = Number.NaN;
-            }
-        } else {
-            // Normalized number
-            floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x0400);
-        }
-
-        if (floatValue === targetNumber) {
-            return z; // Found the number, return the index
-        }
-    }
-
-    return -1; // number not found
-};
-
-function fFloat(ctx: BiBase<Buffer | Uint8Array, true | false>, targetNumber: number, endian?: string): number {
-    ctx.open();
-
-    check_size(ctx, 4, 0);
-
-    for (let z = ctx.offset; z <= (ctx.size - 4); z++) {
-        var value = 0;
-
-        if ((endian != undefined ? endian : ctx.endian) == "little") {
-            value = ((ctx.data[z + 3] & 0xFF) << 24) |
-                ((ctx.data[z + 2] & 0xFF) << 16) |
-                ((ctx.data[z + 1] & 0xFF) << 8) |
-                (ctx.data[z] & 0xFF);
-        } else {
-            value = ((ctx.data[z] & 0xFF) << 24) |
-                ((ctx.data[z + 1] & 0xFF) << 16) |
-                ((ctx.data[z + 2] & 0xFF) << 8) |
-                (ctx.data[z + 3] & 0xFF);
-        }
-
-        const isNegative = (value & 0x80000000) !== 0 ? 1 : 0;
-        // Extract the exponent and fraction parts
-        const exponent = (value >> 23) & 0xFF;
-
-        const fraction = value & 0x7FFFFF;
-        // Calculate the float value
-        var floatValue: number;
-
-        if (exponent === 0) {
-            // Denormalized number (exponent is 0)
-            floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
-        } else if (exponent === 0xFF) {
-            // Infinity or NaN (exponent is 255)
-            floatValue = fraction === 0 ? (isNegative ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : Number.NaN;
-        } else {
-            // Normalized number
-            floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
-        }
-
-        if (floatValue === targetNumber) {
-            return z; // Found the number, return the index
-        }
-    }
-
-    return -1; // number not found
-};
-
-function fBigInt(ctx: BiBase<Buffer | Uint8Array, true | false>, targetNumber: BigValue, unsigned: boolean, endian?: string): number {
-    if(!hasBigInt){
-        throw new Error("System doesn't support BigInt values.");
-    }
-
-    ctx.open();
-
-    check_size(ctx, 8, 0);
-
-    for (let z = ctx.offset; z <= (ctx.size - 8); z++) {
-        var value: bigint = BigInt(0);
-
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            for (let i = 0; i < 8; i++) {
-                value = value | BigInt((ctx.data[z + i] & 0xFF)) << BigInt(8 * i);
-            }
-
-            if (unsigned == undefined || unsigned == false) {
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-            }
-        } else {
-            for (let i = 0; i < 8; i++) {
-                value = (value << BigInt(8)) | BigInt((ctx.data[z + i] & 0xFF));
-            }
-
-            if (unsigned == undefined || unsigned == false) {
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-            }
-        }
-
-        if (value == BigInt(targetNumber)) {
-            return z;
-        }
-    }
-
-    return -1;// number not found
-};
-
-function fDoubleFloat(ctx: BiBase<Buffer | Uint8Array, true | false>, targetNumber: number, endian?: string): number {
-    if(!hasBigInt){
-        throw new Error("System doesn't support BigInt values.");
-    }
-
-    ctx.open();
-
-    check_size(ctx, 8, 0);
-
-    for (let z = ctx.offset; z <= (ctx.size - 8); z++) {
-        var value = BigInt(0);
-
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            for (let i = 0; i < 8; i++) {
-                value = value | BigInt((ctx.data[z + i] & 0xFF)) << BigInt(8 * i);
-            }
-        } else {
-            for (let i = 0; i < 8; i++) {
-                value = (value << BigInt(8)) | BigInt((ctx.data[z + i] & 0xFF));
-            }
-        }
-
-        const sign = (value & BigInt("9223372036854775808")) >> BigInt(63);
-
-        const exponent = Number((value & BigInt("9218868437227405312")) >> BigInt(52)) - 1023;
-
-        const fraction = Number(value & BigInt("4503599627370495")) / Math.pow(2, 52);
-
-        var floatValue: number;
-
-        if (exponent == -1023) {
-            if (fraction == 0) {
-                floatValue = (sign == BigInt(0)) ? 0 : -0; // +/-0
-            } else {
-                // Denormalized number
-                floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, -1022) * fraction;
-            }
-        } else if (exponent == 1024) {
-            if (fraction == 0) {
-                floatValue = (sign == BigInt(0)) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-            } else {
-                floatValue = Number.NaN;
-            }
-        } else {
-            // Normalized number
-            floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
-        }
-
-        if (floatValue == targetNumber) {
-            return z;
-        }
-    }
-
-    return -1; // number not found
-};
-
-// #region Write / Read Bits
-
-function wbit(ctx: BiBase<Buffer | Uint8Array, true | false>, value: number, bits: number, unsigned?: boolean, endian?: string) {
-    ctx.open();
-
-    if (value == undefined) {
-        throw new Error('Must supply value.');
-    }
-
-    if (bits == undefined) {
-        throw new Error("Enter number of bits to write")
-    }
-
-    if (bits == 0) {
-        return;
-    }
-
-    if (bits <= 0 || bits > 32) {
-        throw new Error('Bit length must be between 1 and 32. Got ' + bits);
-    }
-
-    if (unsigned == true || bits == 1) {
-        if (value < 0 || value > Math.pow(2, bits)) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error(`Value is out of range for the specified ${bits}bit length.` + " min: " + 0 + " max: " + Math.pow(2, bits) + " value: " + value);
-        }
-    } else {
-        const maxValue = Math.pow(2, bits - 1) - 1;
-
-        const minValue = -maxValue - 1;
-
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-            throw new Error(`Value is out of range for the specified ${bits}bit length.` + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-
-    if (unsigned == true || bits == 1) {
-        const maxValue = Math.pow(2, bits) - 1;
-
-        value = value & maxValue;
-    }
-
-    const size_needed = ((((bits - 1) + ctx.bitoffset) / 8) + ctx.offset);
-
-    if (size_needed > ctx.size) {
-        //add size
-        if (ctx.extendBufferSize != 0) {
-            ctx.extendArray(ctx.extendBufferSize);
-        } else {
-            ctx.extendArray(size_needed - ctx.size);
-        }
-    }
-
-    var off_in_bits = (ctx.offset * 8) + ctx.bitoffset;
-
-    for (var i = 0; i < bits;) {
-        const remaining = bits - i;
-
-        const bitOffset = off_in_bits & 7;
-
-        const byteOffset = off_in_bits >> 3;
-
-        const written = Math.min(remaining, 8 - bitOffset);
-
-        if ((endian != undefined ? endian : ctx.endian) == "big") {
-            let mask = ~(~0 << written);
-
-            let writeBits = (value >> (bits - i - written)) & mask;
-
-            var destShift = 8 - bitOffset - written;
-
-            let destMask = ~(mask << destShift);
-
-            ctx.data[byteOffset] = (ctx.data[byteOffset] & destMask) | (writeBits << destShift);
-        } else {
-            let mask = ~(0xFF << written);
-
-            let writeBits = value & mask;
-
-            value >>= written;
-
-            let destMask = ~(mask << bitOffset);
-
-            ctx.data[byteOffset] = (ctx.data[byteOffset] & destMask) | (writeBits << bitOffset);
-        }
-
-        off_in_bits += written;
-
-        i += written;
-    }
-
-    ctx.offset = ctx.offset + Math.floor(((bits) + ctx.bitoffset) / 8); //end byte
-
-    ctx.bitoffset = ((bits) + ctx.bitoffset) % 8;
-};
-
-function rbit(ctx: BiBase<Buffer | Uint8Array, true | false>, bits?: number, unsigned?: boolean, endian?: string): number {
-    ctx.open();
-
-    if (bits == undefined || typeof bits != "number") {
-        throw new Error("Enter number of bits to read");
-    }
-
-    if (bits == 0) {
-        return 0;
-    }
-
-    if (bits <= 0 || bits > 32) {
-        throw new Error('Bit length must be between 1 and 32. Got ' + bits);
-    }
-
-    const size_needed = ((((bits - 1) + ctx.bitoffset) / 8) + ctx.offset);
-
-    if (bits <= 0 || size_needed > ctx.size) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-        throw new Error("Invalid number of bits to read: " + size_needed + " of " + ctx.size);
-    }
-
-    var off_in_bits = (ctx.offset * 8) + ctx.bitoffset;
-
-    var value = 0;
-
-    for (var i = 0; i < bits;) {
-        const remaining = bits - i;
-
-        const bitOffset = off_in_bits & 7;
-
-        const currentByte = ctx.data[off_in_bits >> 3];
-
-        const read = Math.min(remaining, 8 - bitOffset);
-
-        if ((endian != undefined ? endian : ctx.endian) == "big") {
-            let mask = ~(0xFF << read);
-
-            let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
-
-            value <<= read;
-
-            value |= readBits;
-        } else {
-            let mask = ~(0xFF << read);
-
-            let readBits = (currentByte >> bitOffset) & mask;
-
-            value |= readBits << i;
-        }
-
-        off_in_bits += read;
-
-        i += read;
-    }
-
-    ctx.offset = ctx.offset + Math.floor(((bits) + ctx.bitoffset) / 8); //end byte
-
-    ctx.bitoffset = ((bits) + ctx.bitoffset) % 8;
-
-    if (unsigned == true || bits <= 7) {
-        return value >>> 0;
-    }
-
-    if (bits !== 32 && value & (1 << (bits - 1))) {
-        value |= -1 ^ ((1 << bits) - 1);
-    }
-
-    return value;
-};
-
-// #region Write / Read Bytes
-
-function wbyte(ctx: BiBase<Buffer | Uint8Array, true | false>, value: number, unsigned?: boolean): void {
-    ctx.open();
-
-    check_size(ctx, 1, 0);
-
-    if (unsigned == true) {
-        if (value < 0 || value > 255) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error('Value is out of range for the specified 8bit length.' + " min: " + 0 + " max: " + 255 + " value: " + value);
-        }
-    } else {
-        const maxValue = Math.pow(2, 8 - 1) - 1;
-
-        const minValue = -maxValue - 1;
-
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error('Value is out of range for the specified 8bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-
-    if (canInt8) {
-        if ((unsigned == undefined || unsigned == false)) {
-            ctx.view.setInt8(ctx.offset, value);
-        } else {
-            ctx.view.setUint8(ctx.offset, value);
-        }
-    } else {
-        ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-    }
-
-    ctx.offset += 1;
-
-    ctx.bitoffset = 0;
-};
-
-function rbyte(ctx: BiBase<Buffer | Uint8Array, true | false>, unsigned?: boolean): number {
-    ctx.open();
-
-    check_size(ctx, 1);
-
-    var read: number;
-
-    if (canInt8) {
-        if ((unsigned == undefined || unsigned == false)) {
-            read = ctx.view.getInt8(ctx.offset);
-        } else {
-            read = ctx.view.getUint8(ctx.offset);
-        }
-
-        ctx.offset += 1;
-
-        ctx.bitoffset = 0;
-
-        return read;
-    }
-
-    read = ctx.data[ctx.offset];
-
-    ctx.offset += 1;
-
-    ctx.bitoffset = 0;
-
-    if (unsigned == true) {
-        return read & 0xFF;
-    } else {
-        return read > 127 ? read - 256 : read;
-    }
-};
-
-// #region Write / Read Int16
-
-function wint16(ctx: BiBase<Buffer | Uint8Array, true | false>, value: number, unsigned?: boolean, endian?: string): void {
-    ctx.open();
-
-    check_size(ctx, 2, 0);
-
-    if (unsigned == true) {
-        if (value < 0 || value > 65535) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error('Value is out of range for the specified 16bit length.' + " min: " + 0 + " max: " + 65535 + " value: " + value);
-        }
-    } else {
-        const maxValue = Math.pow(2, 16 - 1) - 1;
-
-        const minValue = -maxValue - 1;
-
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error('Value is out of range for the specified 16bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-
-    if (canInt16) {
-        if ((unsigned == undefined || unsigned == false)) {
-            ctx.view.setInt16(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        } else {
-            ctx.view.setUint16(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-    } else {
-        if ((endian != undefined ? endian : ctx.endian) == "little") {
-            ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xff;
-
-            ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff;
-        } else {
-            ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xff;
-
-            ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? value : value & 0xff;
-        }
-    }
-
-    ctx.offset += 2;
-
-    ctx.bitoffset = 0;
-};
-
-function rint16(ctx: BiBase<Buffer | Uint8Array, true | false>, unsigned?: boolean, endian?: string): number {
-    ctx.open();
-
-    check_size(ctx, 2);
-
-    var read: number;
-
-    if (canInt16) {
-        if (unsigned == undefined || unsigned == false) {
-            read = ctx.view.getInt16(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        } else {
-            read = ctx.view.getUint16(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-
-        ctx.offset += 2;
-
-        ctx.bitoffset = 0;
-
-        return read;
-    } else {
-        if ((endian != undefined ? endian : ctx.endian) == "little") {
-            read = ((ctx.data[ctx.offset + 1] & 0xFFFF) << 8) | (ctx.data[ctx.offset] & 0xFFFF);
-        } else {
-            read = ((ctx.data[ctx.offset] & 0xFFFF) << 8) | (ctx.data[ctx.offset + 1] & 0xFFFF);
-        }
-    }
-
-    ctx.offset += 2;
-
-    ctx.bitoffset = 0;
-
-    if (unsigned == undefined || unsigned == false) {
-        return read & 0x8000 ? -(0x10000 - read) : read;
-    } else {
-        return read & 0xFFFF;
-    }
-};
-
-// #region Write / Read Float16
-
-function rhalffloat(ctx: BiBase<Buffer | Uint8Array, true | false>, endian?: endian): number {
-    if (canFloat16) {
-        ctx.open();
-
-        check_size(ctx, 2);
-
-        const float16Value = (ctx.view as any).getFloat16(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-
-        ctx.offset += 2;
-
-        ctx.bitoffset = 0;
-
-        return float16Value;
-    }
-
-    var uint16Value = ctx.readInt16(true, (endian != undefined ? endian : ctx.endian));
-
-    const sign = (uint16Value & 0x8000) >> 15;
-
-    const exponent = (uint16Value & 0x7C00) >> 10;
-
-    const fraction = uint16Value & 0x03FF;
-
-    var floatValue: number;
-
-    if (exponent === 0) {
-        if (fraction === 0) {
-            floatValue = (sign === 0) ? 0 : -0; // +/-0
-        } else {
-            // Denormalized number
-            floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, -14) * (fraction / 0x0400);
-        }
-    } else if (exponent === 0x1F) {
-        if (fraction === 0) {
-            floatValue = (sign === 0) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-        } else {
-            floatValue = Number.NaN;
-        }
-    } else {
-        // Normalized number
-        floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x0400);
-    }
-
-    return floatValue;
-};
-
-function whalffloat(ctx: BiBase<Buffer | Uint8Array, true | false>, value: number, endian?: string): void {
-    ctx.open();
-
-    check_size(ctx, 2, 0);
-
-    const maxValue = 65504;
-
-    const minValue = 5.96e-08;
-
-    if (value < minValue || value > maxValue) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-        throw new Error('Value is out of range for the specified half float length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-    }
-
-    if (canFloat16) {
-        (ctx.view as any).setFloat16(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-
-        ctx.offset += 2;
-
-        ctx.bitoffset = 0;
-
-        return;
-    }
-
-    const floatView = new Float32Array(1);
-
-    const intView = new Uint32Array(floatView.buffer);
-
-    floatView[0] = value;
-
-    const x = intView[0];
-
-    const sign = (x >> 31) & 0x1;
-
-    var exponent = (x >> 23) & 0xff;
-
-    var mantissa = x & 0x7fffff;
-
-    var halfFloatBits: number;
-
-    if (exponent === 0xff) {
-        // NaN or Infinity
-        halfFloatBits = (sign << 15) | (0x1f << 10) | (mantissa ? 0x200 : 0);
-    } else if (exponent > 142) {
-        // Overflow → Infinity
-        halfFloatBits = (sign << 15) | (0x1f << 10);
-    } else if (exponent < 113) {
-        // Subnormal or zero
-        if (exponent < 103) {
-            halfFloatBits = sign << 15;
-        } else {
-            mantissa |= 0x800000;
-
-            const shift = 125 - exponent;
-
-            mantissa = mantissa >> shift;
-
-            halfFloatBits = (sign << 15) | (mantissa >> 13);
-        }
-    } else {
-        // Normalized
-        exponent = exponent - 112;
-
-        mantissa = mantissa >> 13;
-
-        halfFloatBits = (sign << 15) | (exponent << 10) | mantissa;
-    }
-    // Write bytes based on endianness
-    if ((endian == undefined ? ctx.endian : endian) == "little") {
-        ctx.data[ctx.offset] = halfFloatBits & 0xFF;
-
-        ctx.data[ctx.offset + 1] = (halfFloatBits >> 8) & 0xFF;
-    } else {
-        ctx.data[ctx.offset] = (halfFloatBits >> 8) & 0xFF;
-
-        ctx.data[ctx.offset + 1] = halfFloatBits & 0xFF;
-    }
-
-    ctx.offset += 2;
-
-    ctx.bitoffset = 0;
-};
-
-// #region Write / Read Int32
-
-function wint32(ctx: BiBase<Buffer | Uint8Array, true | false>, value: number, unsigned?: boolean, endian?: string): void {
-    ctx.open();
-
-    check_size(ctx, 4, 0);
-
-    if (unsigned == true) {
-        if (value < 0 || value > 4294967295) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error('Value is out of range for the specified 32bit length.' + " min: " + 0 + " max: " + 4294967295 + " value: " + value);
-        }
-    } else {
-        const maxValue = Math.pow(2, 32 - 1) - 1;
-
-        const minValue = -maxValue - 1;
-
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error('Value is out of range for the specified 32bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-
-    if (canInt32) {
-        if ((unsigned == undefined || unsigned == false)) {
-            ctx.view.setInt32(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        } else {
-            ctx.view.setUint32(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-    } else {
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-
-            ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
-
-            ctx.data[ctx.offset + 2] = (unsigned == undefined || unsigned == false) ? (value >> 16) : (value >> 16) & 0xFF;
-
-            ctx.data[ctx.offset + 3] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
-        } else {
-            ctx.data[ctx.offset] = (unsigned == undefined || unsigned == false) ? (value >> 24) : (value >> 24) & 0xFF;
-
-            ctx.data[ctx.offset + 1] = (unsigned == undefined || unsigned == false) ? (value >> 16) : (value >> 16) & 0xFF;
-
-            ctx.data[ctx.offset + 2] = (unsigned == undefined || unsigned == false) ? (value >> 8) : (value >> 8) & 0xFF;
-
-            ctx.data[ctx.offset + 3] = (unsigned == undefined || unsigned == false) ? value : value & 0xFF;
-        }
-    }
-
-    ctx.offset += 4;
-
-    ctx.bitoffset = 0;
-};
-
-function rint32(ctx: BiBase<Buffer | Uint8Array, true | false>, unsigned?: boolean, endian?: string): number {
-    ctx.open();
-
-    check_size(ctx, 4);
-
-    var read: number;
-
-    if (canInt32) {
-        if ((unsigned == undefined || unsigned == false)) {
-            read = ctx.view.getInt32(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        } else {
-            read = ctx.view.getUint32(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-
-        ctx.offset += 4;
-
-        ctx.bitoffset = 0;
-
-        return read;
-    }
-
-    if ((endian != undefined ? endian : ctx.endian) == "little") {
-        read = ((ctx.data[ctx.offset + 3] & 0xFF) << 24) |
-            ((ctx.data[ctx.offset + 2] & 0xFF) << 16) |
-            ((ctx.data[ctx.offset + 1] & 0xFF) << 8) |
-            (ctx.data[ctx.offset] & 0xFF);
-    } else {
-        read = ((ctx.data[ctx.offset] & 0xFF) << 24) |
-            ((ctx.data[ctx.offset + 1] & 0xFF) << 16) |
-            ((ctx.data[ctx.offset + 2] & 0xFF) << 8) |
-            (ctx.data[ctx.offset + 3] & 0xFF);
-    }
-
-    ctx.offset += 4;
-
-    ctx.bitoffset = 0;
-
-    if (unsigned == undefined || unsigned == false) {
-        return read;
-    } else {
-        return read >>> 0;
-    }
-};
-
-// #region Write / Read Float32
-
-function rfloat(ctx: BiBase<Buffer | Uint8Array, true | false>, endian?: endian): number {
-    if (canFloat32) {
-        ctx.open();
-
-        check_size(ctx, 4);
-
-        const float32Value = ctx.view.getFloat32(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-
-        ctx.offset += 4;
-
-        ctx.bitoffset = 0;
-
-        return float32Value;
-    }
-
-    const uint32Value = ctx.readInt32(true, (endian == undefined ? ctx.endian : endian));
-    // Check if the value is negative (i.e., the most significant bit is set)
-    const isNegative = (uint32Value & 0x80000000) !== 0 ? 1 : 0;
-    // Extract the exponent and fraction parts
-    const exponent = (uint32Value >> 23) & 0xFF;
-
-    const fraction = uint32Value & 0x7FFFFF;
-    // Calculate the float value
-    var floatValue: number;
-
-    if (exponent === 0) {
-        // Denormalized number (exponent is 0)
-        floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
-    } else if (exponent === 0xFF) {
-        // Infinity or NaN (exponent is 255)
-        floatValue = fraction === 0 ? (isNegative ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : Number.NaN;
-    } else {
-        // Normalized number
-        floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
-    }
-
-    return floatValue;
-};
-
-function wfloat(ctx: BiBase<Buffer | Uint8Array, true | false>, value: number, endian?: string): void {
-    ctx.open();
-
-    check_size(ctx, 4, 0);
-
-    const MIN_POSITIVE_FLOAT32 = Number.MIN_VALUE;
-
-    const MAX_POSITIVE_FLOAT32 = 3.4028235e+38;
-
-    const MIN_NEGATIVE_FLOAT32 = -3.4028235e+38;
-
-    const MAX_NEGATIVE_FLOAT32 = -Number.MIN_VALUE;
-
-    if (!((value === 0) ||
-        (value >= MIN_POSITIVE_FLOAT32 && value <= MAX_POSITIVE_FLOAT32) ||
-        (value >= MIN_NEGATIVE_FLOAT32 && value <= MAX_NEGATIVE_FLOAT32))) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-        throw new Error('Value is out of range for the specified float length.' + " min: " + MIN_NEGATIVE_FLOAT32 + " max: " + MAX_POSITIVE_FLOAT32 + " value: " + value);
-    }
-
-    if (canFloat32) {
-        ctx.view.setFloat32(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-    } else {
-        const arrayFloat = new Float32Array(1);
-
-        arrayFloat[0] = value;
-
-        if (endian != undefined ? endian == "little" : ctx.endian == "little") {
-            ctx.data[ctx.offset] = arrayFloat.buffer[0];
-
-            ctx.data[ctx.offset + 1] = arrayFloat.buffer[1];
-
-            ctx.data[ctx.offset + 2] = arrayFloat.buffer[2];
-
-            ctx.data[ctx.offset + 3] = arrayFloat.buffer[3];
-        } else {
-            ctx.data[ctx.offset] = arrayFloat.buffer[3];
-
-            ctx.data[ctx.offset + 1] = arrayFloat.buffer[2];
-
-            ctx.data[ctx.offset + 2] = arrayFloat.buffer[1];
-
-            ctx.data[ctx.offset + 3] = arrayFloat.buffer[0];
-        }
-    }
-
-    ctx.offset += 4;
-
-    ctx.bitoffset = 0;
-};
-
-// #region Write / Read Int64
-
-function rint64<hasBigInt extends boolean>(ctx: BiBase<Buffer | Uint8Array, hasBigInt>, unsigned?: boolean, endian?: string): hasBigInt extends true ? bigint : number {
-    if(!hasBigInt){
-        throw new Error("System doesn't support BigInt values.");
-    }
-
-    ctx.open();
-
-    check_size(ctx, 8);
-
-    var value = BigInt(0);
-
-    if (canBigInt64) {
-        if (unsigned == undefined || unsigned == false) {
-            value = ctx.view.getBigInt64(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        } else {
-            value = ctx.view.getBigUint64(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-
-        ctx.offset += 8;
-    } else {
-        if ((endian == undefined ? ctx.endian : endian) == "little") {
-            for (let i = 0; i < 8; i++) {
-                value = value | BigInt((ctx.data[ctx.offset] & 0xFF)) << BigInt(8 * i);
-
-                ctx.offset += 1;
-            }
-
-            if (unsigned == undefined || unsigned == false) {
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-            }
-        } else {
-            for (let i = 0; i < 8; i++) {
-                value = (value << BigInt(8)) | BigInt((ctx.data[ctx.offset] & 0xFF));
-
-                ctx.offset += 1;
-            }
-            if (unsigned == undefined || unsigned == false) {
-                if (value & (BigInt(1) << BigInt(63))) {
-                    value -= BigInt(1) << BigInt(64);
-                }
-            }
-        }
-    }
-
-    ctx.bitoffset = 0;
-
-    if (ctx.enforceBigInt == true) {
-        return value as hasBigInt extends true ? bigint : number;
-    } else {
-        if (isSafeInt64(value)) {
-            return Number(value) as hasBigInt extends true ? bigint : number;
-        } else {
-            throw new Error("Value is outside of number range and enforceBigInt is set to false. " + value);
-        }
-    }
-};
-
-function wint64(ctx: BiBase<Buffer | Uint8Array, true | false>, value: BigValue, unsigned?: boolean, endian?: string): void {
-    if(!hasBigInt){
-        throw new Error("System doesn't support BigInt values.");
-    }
-
-    ctx.open();
-
-    check_size(ctx, 8, 0);
-
-    if (unsigned == true) {
-        if (value < 0 || value > Math.pow(2, 64) - 1) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error('Value is out of range for the specified 64bit length.' + " min: " + 0 + " max: " + (Math.pow(2, 64) - 1) + " value: " + value);
-        }
-    } else {
-        const maxValue = Math.pow(2, 63) - 1;
-
-        const minValue = -Math.pow(2, 63);
-
-        if (value < minValue || value > maxValue) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error('Value is out of range for the specified 64bit length.' + " min: " + minValue + " max: " + maxValue + " value: " + value);
-        }
-    }
-
-    if (canBigInt64) {
-        if (unsigned == undefined || unsigned == false) {
-            ctx.view.setBigInt64(ctx.offset, BigInt(value), endian != undefined ? endian == "little" : ctx.endian == "little");
-        } else {
-            ctx.view.setBigUint64(ctx.offset, BigInt(value), endian != undefined ? endian == "little" : ctx.endian == "little");
-        }
-    } else {
-        // Convert the BigInt to a 64-bit signed integer
-        const bigIntArray = new BigInt64Array(1);
-
-        bigIntArray[0] = BigInt(value);
-        // Use two 32-bit views to write the Int64
-        const int32Array = new Int32Array(bigIntArray.buffer);
-
-        for (let i = 0; i < 2; i++) {
-            if ((endian == undefined ? ctx.endian : endian) == "little") {
-                if (unsigned == undefined || unsigned == false) {
-                    ctx.data[ctx.offset + i * 4 + 0] = int32Array[i];
-
-                    ctx.data[ctx.offset + i * 4 + 1] = (int32Array[i] >> 8);
-
-                    ctx.data[ctx.offset + i * 4 + 2] = (int32Array[i] >> 16);
-
-                    ctx.data[ctx.offset + i * 4 + 3] = (int32Array[i] >> 24);
-                } else {
-                    ctx.data[ctx.offset + i * 4 + 0] = int32Array[i] & 0xFF;
-
-                    ctx.data[ctx.offset + i * 4 + 1] = (int32Array[i] >> 8) & 0xFF;
-
-                    ctx.data[ctx.offset + i * 4 + 2] = (int32Array[i] >> 16) & 0xFF;
-
-                    ctx.data[ctx.offset + i * 4 + 3] = (int32Array[i] >> 24) & 0xFF;
-                }
-            } else {
-                if (unsigned == undefined || unsigned == false) {
-                    ctx.data[ctx.offset + (1 - i) * 4 + 3] = int32Array[i];
-
-                    ctx.data[ctx.offset + (1 - i) * 4 + 2] = (int32Array[i] >> 8);
-
-                    ctx.data[ctx.offset + (1 - i) * 4 + 1] = (int32Array[i] >> 16);
-
-                    ctx.data[ctx.offset + (1 - i) * 4 + 0] = (int32Array[i] >> 24);
-                } else {
-                    ctx.data[ctx.offset + (1 - i) * 4 + 3] = int32Array[i] & 0xFF;
-
-                    ctx.data[ctx.offset + (1 - i) * 4 + 2] = (int32Array[i] >> 8) & 0xFF;
-
-                    ctx.data[ctx.offset + (1 - i) * 4 + 1] = (int32Array[i] >> 16) & 0xFF;
-
-                    ctx.data[ctx.offset + (1 - i) * 4 + 0] = (int32Array[i] >> 24) & 0xFF;
-                }
-            }
-        }
-    }
-
-    ctx.offset += 8;
-
-    ctx.bitoffset = 0;
-};
-
-// #region Write / Read Float64
-
-function wdfloat(ctx: BiBase<Buffer | Uint8Array, true | false>, value: number, endian?: string): void {
-    ctx.open();
-
-    check_size(ctx, 8, 0);
-
-    const MIN_POSITIVE_FLOAT64 = 2.2250738585072014e-308;
-
-    const MAX_POSITIVE_FLOAT64 = Number.MAX_VALUE;
-
-    const MIN_NEGATIVE_FLOAT64 = -Number.MAX_VALUE;
-
-    const MAX_NEGATIVE_FLOAT64 = -2.2250738585072014e-308;
-
-    if (!((value === 0) ||
-        (value >= MIN_POSITIVE_FLOAT64 && value <= MAX_POSITIVE_FLOAT64) ||
-        (value >= MIN_NEGATIVE_FLOAT64 && value <= MAX_NEGATIVE_FLOAT64))) {
-        ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-        throw new Error('Value is out of range for the specified 64bit length.' + " min: " + MIN_NEGATIVE_FLOAT64 + " max: " + MAX_POSITIVE_FLOAT64 + " value: " + value);
-    }
-
-    if (canFloat64) {
-        ctx.view.setFloat64(ctx.offset, value, endian != undefined ? endian == "little" : ctx.endian == "little");
-    } else {
-        const intArray = new Int32Array(2);
-
-        const floatArray = new Float64Array(intArray.buffer);
-
-        floatArray[0] = value;
-
-        const bytes = new Uint8Array(intArray.buffer);
-
-        for (let i = 0; i < 8; i++) {
-            if ((endian == undefined ? ctx.endian : endian) == "little") {
-                ctx.data[ctx.offset + i] = bytes[i];
-            } else {
-                ctx.data[ctx.offset + (7 - i)] = bytes[i];
-            }
-        }
-    }
-
-    ctx.offset += 8;
-
-    ctx.bitoffset = 0;
-};
-
-function rdfloat(ctx: BiBase<Buffer | Uint8Array, true | false>, endian?: endian): number {
-    if (canFloat64) {
-        ctx.open();
-
-        check_size(ctx, 8, 0);
-
-        const floatValue = ctx.view.getFloat64(ctx.offset, endian != undefined ? endian == "little" : ctx.endian == "little");
-
-        ctx.offset += 8;
-
-        ctx.bitoffset = 0;
-
-        return floatValue;
-    }
-
-    endian = (endian == undefined ? ctx.endian : endian);
-
-    var uint64Value = ctx.readInt64(true, endian);
-
-    const sign = (BigInt(uint64Value) & BigInt("9223372036854775808")) >> BigInt(63);
-
-    const exponent = Number((BigInt(uint64Value) & BigInt("9218868437227405312")) >> BigInt(52)) - 1023;
-
-    const fraction = Number(BigInt(uint64Value) & BigInt("4503599627370495")) / Math.pow(2, 52);
-
-    var floatValue: number;
-
-    if (exponent == -1023) {
-        if (fraction == 0) {
-            floatValue = (sign == BigInt(0)) ? 0 : -0; // +/-0
-        } else {
-            // Denormalized number
-            floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, -1022) * fraction;
-        }
-    } else if (exponent == 1024) {
-        if (fraction == 0) {
-            floatValue = (sign == BigInt(0)) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-        } else {
-            floatValue = Number.NaN;
-        }
-    } else {
-        // Normalized number
-        floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
-    }
-
-    return floatValue;
-};
-
-// #region Write / Read Strings
-
-function rstring(ctx: BiBase<Buffer | Uint8Array, true | false>, options?: stringOptions): string {
-    ctx.open();
-
-    var length: any = options && options.length;
-
-    var stringType: any = options && options.stringType || 'utf-8';
-
-    var terminateValue: any = options && options.terminateValue;
-
-    var lengthReadSize: any = options && options.lengthReadSize || 1;
-
-    var stripNull: any = options && options.stripNull || true;
-
-    var encoding: any = options && options.encoding || 'utf-8';
-
-    var endian: any = options && options.endian || ctx.endian;
-
-    var terminate = terminateValue;
-
-    if (length != undefined) {
-        check_size(ctx, length);
-    }
-
-    if (typeof terminateValue == "number") {
-        terminate = terminateValue & 0xFF;
-    } else {
-        if (terminateValue != undefined) {
-            throw new Error("terminateValue must be a number");
-        }
-    }
-
-    if (stringType == 'utf-8' || stringType == 'utf-16') {
-        if (encoding == undefined) {
-            if (stringType == 'utf-8') {
-                encoding = 'utf-8';
-            }
-            if (stringType == 'utf-16') {
-                encoding = 'utf-16';
-            }
-        }
-        // Read the string as UTF-8 encoded untill 0 or terminateValue
-        const encodedBytes: Array<number> = [];
-
-        if (length == undefined && terminateValue == undefined) {
-            terminate = 0;
-        }
-
-        var read_length = 0;
-
-        if (length != undefined) {
-            read_length = length;
-        } else {
-            read_length = ctx.data.length - ctx.offset;
-        }
-
-        for (let i = 0; i < read_length; i++) {
-            if (stringType === 'utf-8') {
-                var read = ctx.readUByte();
-
-                if (read == terminate) {
-                    break;
-                } else {
-                    if (!(stripNull == true && read == 0)) {
-                        encodedBytes.push(read);
-                    }
-                }
-            } else {
-                var read = ctx.readInt16(true, endian);
-
-                var read1 = read & 0xFF;
-
-                var read2 = (read >> 8) & 0xFF;
-
-                if (read == terminate) {
-                    break;
-                } else {
-                    if (!(stripNull == true && read == 0)) {
-                        encodedBytes.push(read1);
-
-                        encodedBytes.push(read2);
-                    }
-                }
-            }
-        }
-
-        return new TextDecoder(encoding).decode(new Uint8Array(encodedBytes));
-    } else if (stringType == 'pascal' || stringType == 'wide-pascal') {
-        if (encoding == undefined) {
-            if (stringType == 'pascal') {
-                encoding = 'utf-8';
-            }
-            if (stringType == 'wide-pascal') {
-                encoding = 'utf-16';
-            }
-        }
-
-        var maxBytes: number;
-
-        if (lengthReadSize == 1) {
-            maxBytes = ctx.readUByte();
-        } else if (lengthReadSize == 2) {
-            maxBytes = ctx.readInt16(true, endian);
-        } else if (lengthReadSize == 4) {
-            maxBytes = ctx.readInt32(true, endian);
-        } else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error("Invalid length read size: " + lengthReadSize);
-        }
-        // Read the string as Pascal or Delphi encoded
-        const encodedBytes: Array<number> = [];
-
-        for (let i = 0; i < maxBytes; i++) {
-            if (stringType == 'wide-pascal') {
-                const read = ctx.readInt16(true, endian);
-
-                i++;
-
-                if (!(stripNull == true && read == 0)) {
-                    encodedBytes.push(read);
-                }
-            } else {
-                const read = ctx.readUByte();
-
-                if (!(stripNull == true && read == 0)) {
-                    encodedBytes.push(read);
-                }
-            }
-        }
-
-        var str_return: string;
-
-        if (stringType == 'wide-pascal') {
-            const strBuffer = new Uint16Array(encodedBytes);
-
-            str_return = new TextDecoder().decode(strBuffer.buffer);
-        } else {
-            const strBuffer = new Uint8Array(encodedBytes);
-
-            str_return = new TextDecoder(encoding).decode(strBuffer);
-        }
-
-        return str_return;
-    } else {
-        throw new Error('Unsupported string type: ' + stringType);
-    }
-};
-
-function wstring(ctx: BiBase<Buffer | Uint8Array, true | false>, string: string, options?: stringOptions): void {
-    ctx.open();
-
-    var length: any = options && options.length;
-
-    var stringType: any = options && options.stringType || 'utf-8';
-
-    var terminateValue: any = options && options.terminateValue;
-
-    var lengthWriteSize: any = options && options.lengthWriteSize || 1;
-
-    var encoding: any = options && options.encoding || 'utf-8';
-
-    var endian: any = options && options.endian || ctx.endian;
-
-    if (stringType === 'utf-8' || stringType === 'utf-16') {
-        // Encode the string in the specified encoding
-        if (encoding == undefined) {
-            if (stringType == 'utf-8') {
-                encoding = 'utf-8';
-            }
-            if (stringType == 'utf-16') {
-                encoding = 'utf-16';
-            }
-        }
-
-        const encoder = new TextEncoder();
-
-        const encodedString = encoder.encode(string);
-
-        if (length == undefined && terminateValue == undefined) {
-            terminateValue = 0;
-        }
-
-        var totalLength = (length || encodedString.byteLength) + (terminateValue != undefined ? 1 : 0);
-
-        if (stringType == 'utf-16') {
-            totalLength = (length || encodedString.byteLength) + (terminateValue != undefined ? 2 : 0);
-        }
-
-        check_size(ctx, totalLength, 0);
-        // Write the string bytes to the Uint8Array
-        for (let i = 0; i < encodedString.length; i++) {
-            if (stringType === 'utf-16') {
-                const charCode = encodedString[i];
-
-                if (endian == "little") {
-                    ctx.data[ctx.offset + i * 2] = charCode & 0xFF;
-
-                    ctx.data[ctx.offset + i * 2 + 1] = (charCode >> 8) & 0xFF;
-                } else {
-                    ctx.data[ctx.offset + i * 2 + 1] = charCode & 0xFF;
-
-                    ctx.data[ctx.offset + i * 2] = (charCode >> 8) & 0xFF;
-                }
-            } else {
-                ctx.data[ctx.offset + i] = encodedString[i];
-            }
-        }
-
-        if (terminateValue != undefined) {
-            if (stringType === 'utf-16') {
-                ctx.data[ctx.offset + totalLength - 1] = terminateValue & 0xFF;
-
-                ctx.data[ctx.offset + totalLength] = (terminateValue >> 8) & 0xFF;
-            } else {
-                ctx.data[ctx.offset + totalLength] = terminateValue;
-            }
-        }
-
-        ctx.offset += totalLength;
-
-        ctx.bitoffset = 0;
-    } else if (stringType == 'pascal' || stringType == 'wide-pascal') {
-        if (encoding == undefined) {
-            if (stringType == 'pascal') {
-                encoding = 'utf-8';
-            }
-            if (stringType == 'wide-pascal') {
-                encoding = 'utf-16';
-            }
-        }
-
-        const encoder = new TextEncoder();
-
-        // Calculate the length of the string based on the specified max length
-        var maxLength: number;
-
-        // Encode the string in the specified encoding
-        if (lengthWriteSize == 1) {
-            maxLength = 255;
-        } else if (lengthWriteSize == 2) {
-            maxLength = 65535;
-        } else if (lengthWriteSize == 4) {
-            maxLength = 4294967295;
-        } else {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error("Invalid length write size: " + lengthWriteSize);
-        }
-
-        if (string.length > maxLength || (length || 0) > maxLength) {
-            ctx.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + ctx.hexdump({ returnString: true })) : "";
-
-            throw new Error("String outsize of max write length: " + maxLength);
-        }
-
-        const maxBytes = Math.min(string.length, maxLength);
-
-        const encodedString = encoder.encode(string.substring(0, maxBytes));
-
-        var totalLength = (length || encodedString.byteLength);
-
-        if (lengthWriteSize == 1) {
-            ctx.writeUByte(totalLength);
-        } else if (lengthWriteSize == 2) {
-            ctx.writeUInt16(totalLength, endian);
-        } else if (lengthWriteSize == 4) {
-            ctx.writeUInt32(totalLength, endian);
-        }
-
-        check_size(ctx, totalLength, 0);
-        // Write the string bytes to the Uint8Array
-        for (let i = 0; i < totalLength; i++) {
-            if (stringType == 'wide-pascal') {
-                if (endian == "little") {
-                    ctx.data[ctx.offset + i] = encodedString[i];
-
-                    ctx.data[ctx.offset + i + 1] = encodedString[i + 1];
-                } else {
-                    ctx.data[ctx.offset + i + 1] = encodedString[i];
-
-                    ctx.data[ctx.offset + i] = encodedString[i + 1];
-                }
-
-                i++;
-            } else {
-                ctx.data[ctx.offset + i] = encodedString[i];
-            }
-        }
-
-        ctx.offset += totalLength;
-
-        ctx.bitoffset = 0;
-    } else {
-        throw new Error('Unsupported string type: ' + stringType);
+function _fileExists(filePath: string) {
+    try {
+        fs.accessSync(filePath, fs.constants.F_OK);
+
+        return true;  // File exists
+    } catch (error) {
+        // @ts-ignore
+        return false;
     }
 };
 
@@ -2268,38 +92,44 @@ function wstring(ctx: BiBase<Buffer | Uint8Array, true | false>, string: string,
 /**
  * Base class for BiReader and BiWriter
  */
-export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends boolean> {
+export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends boolean> {
     /**
      * Endianness of default read. 
      * @type {endian}
      */
-    public endian: endian = "little";
+    endian: endian = "little";
     /**
      * Current read byte location.
      */
-    public offset: number = 0;
+    #offset: number = 0;
     /**
-     * Current read byte's bit location.
+     * Current read byte's bit location. 0 - 7
      */
-    public bitoffset: number = 0;
+    #insetBit: number = 0;
     /**
      * Size in bytes of the current buffer.
      */
-    public size: number = 0;
+    size: number = 0;
     /**
      * Size in bits of the current buffer.
      */
-    public sizeB: number = 0;
+    bitSize: number = 0;
     /**
-     * Allows the buffer to extend reading or writing outside of current size
+     * Stops the buffer extending on reading or writing outside of current size
      */
-    public strict: boolean = false;
+    strict: boolean = false;
     /**
      * Console log a hexdump on error.
      */
-    public errorDump: boolean = false;
-
+    errorDump: boolean = false;
+    /**
+     * Master Buffer
+     */
     #data: DataType | null = null;
+    /**
+     * DataView of master Buffer
+     */
+    #view: DataView;
     /**
      * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
      * 
@@ -2309,29 +139,35 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * 
      * NOTE: Using ``BiWriter.get`` or ``BiWriter.return`` will now remove all data after the current write position. Use ``BiWriter.data`` to get the full buffer instead.
      */
-    public extendBufferSize: number = 0;
-
-    public fd: FileDescriptor | null = null;
-
-    public filePath: string | null = null;
-
-    public fsMode: fsMode = "r";
+    growthIncrement: number = 1048576;
+    /**
+     * Open file description
+     */
+    fd: number = null;
+    /**
+     * Current file path
+     */
+    filePath: string = null;
+    /**
+     * File write mode
+     */
+    fsMode: "r+" | "r" = "r";
     /**
      * The settings that used when using the .str getter / setter
      */
-    private strDefaults: stringOptions = { stringType: "utf-8", terminateValue: 0x0 };
-
+    strDefaults: stringOptions = { stringType: "utf-8", terminateValue: 0x0 };
     /**
-     * Window size of the file data (largest amount it can read)
+     * All int64 reads will return as bigint type
      */
-    public maxFileSize: number | null = null;
-
-    public enforceBigInt: hasBigInt = null;
-
-    public view: DataView;
-
-    public mode: 'memory' | 'file' = 'memory';
-
+    enforceBigInt: alwaysBigInt = null;
+    /**
+     * Not using a file reader.
+     */
+    isMemoryMode: boolean;
+    /**
+     * If data can not be written to the buffer.
+     */
+    readOnly: boolean;
     /**
      * Get the current buffer data.
      * 
@@ -2350,34 +186,97 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
         if (this.isBufferOrUint8Array(data)) {
             this.#data = data;
 
-            this.updateView();
+            this.#updateView();
+
+            this.size = this.#data.length;
+
+            this.bitSize = this.size * 8;
         }
     };
 
-    constructor(input?: string | DataType, writeable?: boolean) {
+    wasExpanded: boolean = false;
+
+    /**
+     * Get the DataView of current buffer data.
+     */
+    get view() {
+        return this.#view;
+    };
+
+    constructor(input?: string | DataType, options: BiOptions = {}) {
+        const {
+            byteOffset,
+            bitOffset,
+            endianness,
+            strict,
+            growthIncrement,
+            enforceBigInt,
+            readOnly
+        } = options;
+
+        if (typeof strict != "boolean") {
+            throw new Error("Strict mode must be true or false");
+        }
+
+        this.readOnly = !!readOnly;
+
+        this.strict = readOnly ? true : strict;
+
+        this.fsMode = this.readOnly ? 'r' : 'r+'
+
+        this.enforceBigInt = !!enforceBigInt as alwaysBigInt;
+
+        if (this.enforceBigInt && !hasBigInt) {
+            this.enforceBigInt = false as alwaysBigInt;
+        }
+
+        this.growthIncrement = growthIncrement;
+
+        if (typeof endianness != "string" || !(endianness == "big" || endianness == "little")) {
+            throw new TypeError("Endian must be big or little");
+        }
+
+        this.endian = endianness;
+
         if (typeof input == "string") {
-            if(typeof Buffer === 'undefined' || typeof fs == "undefined"){
-                throw new Error("Need node to read or write files.");
+            if (typeof Buffer === 'undefined' || typeof fs === "undefined") {
+                throw new Error("Can't load file outside of Node.");
             }
 
             this.filePath = input;
 
-            this.mode = "file";
+            this.isMemoryMode = false;
+        } else if (this.isBufferOrUint8Array(input)) {
+            this.data = input as DataType;
+
+            this.isMemoryMode = true;
+
+            this.size = this.#data.length;
+
+            this.bitSize = this.#data.length * 8;
         } else {
-            this.mode = "memory";
+            throw new Error("Write data must be Uint8Array or Buffer");
         }
 
-        if (this.maxFileSize == null) {
-            this.maxFileSize = MAX_LENGTH() || 0x80000000;
-        }
+        this.#offset = byteOffset ?? 0;
 
-        if (writeable != undefined) {
-            if (writeable == true) {
-                this.fsMode = "w+";
-            } else {
-                this.fsMode = "r";
-            }
+        if((bitOffset ?? 0) != 0){
+            this.#offset = Math.floor(byteOffset / 8);
+
+            this.#insetBit = byteOffset % 8;
         }
+        
+        this.#offset = ((Math.abs(this.#offset)) + Math.ceil((Math.abs(this.#insetBit)) / 8))
+        // Adjust byte offset based on bit overflow
+        this.#offset += Math.floor((Math.abs(this.#insetBit)) / 8);
+        // Adjust bit offset
+        this.#insetBit = Math.abs(normalizeBitOffset(this.#insetBit)) % 8;
+        // Ensure bit offset stays between 0-7
+        this.#insetBit = Math.min(Math.max(this.#insetBit, 0), 7);
+        // Ensure offset doesn't go negative
+        this.#offset = Math.max(this.#offset, 0);
+
+        this.#confrimSize(this.#offset);
     };
 
     /**
@@ -2403,59 +302,269 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
         this.strDefaults.terminateValue = settings.terminateValue;
     };
 
+    ///////////////////////////////
+    // #region INTERNALS
+    ///////////////////////////////
+
     /**
-     * Enables expanding in reader (changes strict)
-     * 
-     * @param {boolean} mode - Enable expanding in reader (changes strict)
+     * Checks if obj is an Uint8Array or a Buffer
      */
-    writeMode(mode: boolean) {
+    isBufferOrUint8Array(obj: any): obj is Buffer | Uint8Array {
+        return isBufferOrUint8Array(obj);
+    };
+
+    /**
+     * Checks if obj is a Buffer
+     */
+    isBuffer(obj: any): obj is Buffer {
+        return isBuffer(obj);
+    };
+
+    /**
+     * Checks if obj is an Uint8Array
+     */
+    isUint8Array(obj: any): obj is Uint8Array {
+        return isUint8Array(obj);
+    }
+
+    /**
+     * Internal update size
+     * 
+     * run after setting data
+     */
+    #updateSize(): void {
+        if (this.isMemoryMode) {
+            this.size = this.#data.length;
+
+            this.bitSize = this.size * 8;
+
+            return;
+        }
+
+        if (typeof fs === "undefined") {
+            throw new Error("Can't load file outside of Node.");
+        }
+
+        if (this.fd != null) {
+            try {
+                const stat = fs.fstatSync(this.fd);
+
+                this.size = stat.size;
+
+                this.bitSize = this.size * 8;
+            } catch (error) {
+                throw new Error(error);
+            }
+        }
+    };
+
+    /**
+     * Internal update buffer.
+     * 
+     * Should come after updateSize
+     */
+    #updateBuffer() {
+        if (!this.isMemoryMode) {
+            if (this.fd == null) {
+                try {
+                    this.fd = fs.openSync(this.filePath, this.fsMode);
+                } catch (error) {
+                    throw new Error(error);
+                }
+            }
+
+            const data = Buffer.alloc(this.size) as DataType;
+
+            try {
+                const bytesRead = fs.readSync(this.fd, data, 0, data.length, 0);
+
+                if (bytesRead != this.size) {
+                    throw new Error("Didn't update file buffer size. Expecting " + this.size + " but got " + bytesRead);
+                }
+            } catch (error) {
+                throw new Error(error);
+            }
+
+            this.data = data;
+
+            this.#updateSize();
+        }
+
+        this.#offset = this.#offset ?? 0;
+
+        this.#insetBit = this.#insetBit ?? 0;
+
+        this.#offset = ((Math.abs(this.#offset)) + Math.ceil((Math.abs(this.#insetBit)) / 8));
+        // Adjust byte offset based on bit overflow
+        this.#offset += Math.floor((Math.abs(this.#insetBit)) / 8);
+        // Adjust bit offset
+        this.#insetBit = Math.abs(normalizeBitOffset(this.#insetBit)) % 8;
+        // Ensure bit offset stays between 0-7
+        this.#insetBit = Math.min(Math.max(this.#insetBit, 0), 7);
+        // Ensure offset doesn't go negative
+        this.#offset = Math.max(this.#offset, 0);
+
+        this.#confrimSize(this.#offset);
+    };
+
+    /**
+     * Call this after everytime we set/replace `this.data`
+     */
+    #updateView(): void {
+        if (this.#data) {
+            this.#view = new DataView(
+                this.#data.buffer,
+                this.#data.byteOffset ?? 0,
+                this.#data.byteLength
+            );
+        }
+    };
+
+    /**
+     * Calls to check if expanding the buffer needs to happen
+     */
+    #checkSize(writeBytes: number = 0, writeBit: number = 0, offset: number = this.#offset): number {
+        this.open();
+
+        const bits = writeBit + this.#insetBit;
+
+        if (bits != 0) {
+            //add bits
+            writeBytes += Math.ceil(bits / 8);
+        }
+        //if bigger extend
+        this.#confrimSize(offset + writeBytes);
+        //start read location
+        return offset;
+    };
+
+    /**
+     * Checks if input requires expanding the buffer
+     */
+    #confrimSize(neededSize: number) {
+        if (neededSize <= this.size) {
+            return;
+        }
+
+        var targetSize = neededSize;
+
+        if (targetSize > this.size) {
+            if (this.strict || this.readOnly) {
+                this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+                throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: ` + neededSize + " at " + this.#offset + " of " + this.size);
+            }
+
+            if (this.growthIncrement != 0) {
+                this.wasExpanded = true;
+
+                targetSize = Math.ceil(neededSize / this.growthIncrement) * this.growthIncrement;
+            }
+
+            this.#extendArray(targetSize);
+        }
+    };
+
+    /**
+     * Expends the buffer
+     */
+    #extendArray(targetSize: number): void {
+        this.open();
+
+        if (targetSize <= this.size) {
+            return;
+        }
+
+        const toPadd = targetSize - this.size;
+
+        if (this.isBuffer(this.#data)) {
+            var paddbuffer = Buffer.alloc(toPadd);
+
+            this.data = Buffer.concat([this.#data, paddbuffer]) as DataType;
+        } else {
+            const newBuf = new Uint8Array(this.size + toPadd) as DataType;
+
+            newBuf.set(this.#data);
+
+            this.data = newBuf;
+        }
+
+        this.size = this.#data.length;
+
+        this.bitSize = this.#data.length * 8;
+
+        return;
+    };
+
+    ///////////////////////////////
+    // #region FILE MODE
+    ///////////////////////////////
+
+    /**
+     * Enables writing and expanding (changes strict AND readonly)
+     * 
+     * @param {boolean} mode - True to enable writing and expanding (changes strict AND readonly)
+     */
+    writeMode(mode: boolean = true) {
         if (mode) {
             this.strict = false;
 
-            if (this.mode == "file") {
-                this.fsMode = "w+";
+            this.readOnly = false;
 
-                this.close();
-
-                this.open();
-            }
-
-            return;
+            this.fsMode = "r+";
         } else {
             this.strict = true;
 
-            if (this.mode == "file") {
-                this.fsMode = "r";
+            this.readOnly = true;
 
-                this.close();
+            this.fsMode = "r";
+        }
 
-                this.open();
-            }
+        if (!this.isMemoryMode) {
+            this.close();
 
-            return;
+            this.open();
         }
     };
 
     /**
      * Opens the file in `file` mode. Must be run before reading or writing.
      * 
-     * @returns {number} file size
+     * Can be used to pass new data to a loaded class, shifting to memory mode.
      */
-    open(): number {
-        if (this.mode == "memory") {
-            return this.size;
+    open(data?: DataType) {
+        if (this.isBufferOrUint8Array(data)) {
+            this.close();
+
+            this.filePath = null;
+
+            this.fd == null;
+
+            this.isMemoryMode = true;
+
+            this.data = data;
+
+            this.#updateSize();
+
+            this.#updateBuffer();
+
+            return;
+        }
+
+        if (this.isMemoryMode) {
+            return;
         }
 
         if (this.fd != null) {
-            return this.size;
+            return;
         }
 
-        if (fs == undefined) {
-            throw new Error("Can't load file without Node.");
+        if (typeof fs === "undefined") {
+            throw new Error("Can't load file outside of Node.");
         }
 
-        if (this.maxFileSize == null) {
-            this.maxFileSize = MAX_LENGTH();
+        if (!_fileExists(this.filePath)) {
+            fs.writeFileSync(this.filePath, "");
         }
 
         try {
@@ -2464,90 +573,31 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
             throw new Error(error);
         }
 
-        this.updateSize();
+        this.#updateSize();
 
-        this.data = Buffer.alloc(this.size) as DataType;
-
-        try {
-            fs.readSync(this.fd, this.data, 0, this.data.length, null);
-        } catch (error) {
-            throw new Error(error);
-        }
-
-        if (this.offset != undefined || this.bitoffset != undefined) {
-            this.offset = ((Math.abs(this.offset || 0)) + Math.ceil((Math.abs(this.bitoffset || 0)) / 8));
-            // Adjust byte offset based on bit overflow
-            this.offset += Math.floor((Math.abs(this.bitoffset || 0)) / 8);
-            // Adjust bit offset
-            this.bitoffset = Math.abs(normalizeBitOffset(this.bitoffset)) % 8;
-            // Ensure bit offset stays between 0-7
-            this.bitoffset = Math.min(Math.max(this.bitoffset, 0), 7);
-            // Ensure offset doesn't go negative
-            this.offset = Math.max(this.offset, 0);
-
-            if (this.offset > this.size) {
-                if (this.strict == false) {
-                    if (this.extendBufferSize != 0) {
-                        this.extendArray(this.extendBufferSize);
-                    } else {
-                        this.extendArray(this.offset - this.size);
-                    }
-                } else {
-                    throw new Error(`Starting offset outside of size: ${this.offset} of ${this.size}`);
-                }
-            }
-        }
-
-        return this.size;
-    };
-
-    /**
-     * Internal update size
-     */
-    updateSize(): void {
-        if (this.mode == "memory") {
-            return;
-        }
-
-        if (fs == undefined) {
-            throw new Error("Can't read file without Node.");
-        }
-
-        if (this.fd !== null) {
-            try {
-                const stat = fs.fstatSync(this.fd);
-
-                this.size = stat.size;
-
-                this.sizeB = this.size * 8;
-            } catch (error) {
-                throw new Error(error);
-            }
-
-            if (this.size > this.maxFileSize) {
-                throw new Error("File too large to load.");
-            }
-        }
+        this.#updateBuffer();
     };
 
     /**
      * commit data and removes it.
      */
-    close(): void {
-        if (this.mode == "memory") {
-            this.#data = undefined;
+    close(): DataType {
+        if (this.isMemoryMode) {
+            const data = this.#data;
 
-            this.view = undefined;
+            this.#data = null;
 
-            return;
+            this.#view = null;
+
+            return data;
         }
 
         if (this.fd === null) {
             return; // Already closed / or not open
         }
 
-        if (fs == undefined) {
-            throw new Error("Can't use BitFile without Node.");
+        if (typeof fs === "undefined") {
+            throw new Error("Can't load file outside of Node.");
         }
 
         this.commit();
@@ -2560,52 +610,32 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
 
         this.fd = null;
 
-        return;
-    };
+        const data = this.#data;
 
-    /**
-     * Write buffer to data
-     * 
-     * @param {DataType} data 
-     * @param {boolean} consume
-     * @param {number} start - likely this.offset
-     * @returns {Buffer | Uint8Array}
-     */
-    write(data: DataType, consume: boolean = false, start: number = this.offset): DataType {
-        if (this.mode == "memory") {
-            this.insert(data, consume, start);
+        this.#data = null;
 
-            return data;
-        }
+        this.#view = null;
 
-        this.open();
-
-        this.insert(data, consume, start);
-
-        return this.commit();
+        return data;
     };
 
     /**
      * Write data buffer back to file
-     * 
-     * @returns {DataType}
      */
-    commit(): DataType {
-        if (this.mode == "memory") {
-            return this.data;
+    commit() {
+        if (this.isMemoryMode || this.readOnly) {
+            return this.#data;
         }
-
+        // this.mode == "file"
         this.open();
 
         try {
-            fs.writeSync(this.fd, this.data, 0, this.data.length);
+            fs.writeSync(this.fd, this.#data, 0, this.#data.length);
         } catch (error) {
             throw new Error(error);
         }
 
-        this.updateSize();
-
-        return this.data;
+        this.#updateSize();
     };
 
     /**
@@ -2629,14 +659,12 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {string} newFilePath - New full file path and name.
      */
     renameFile(newFilePath: string) {
-        if (this.mode == "memory") {
+        if (this.isMemoryMode) {
             return;
         }
 
         try {
-            fs.closeSync(this.fd);
-
-            this.fd = null;
+            this.close();
 
             fs.renameSync(this.filePath, newFilePath);
         } catch (error) {
@@ -2651,46 +679,28 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     /**
      * Deletes the working file.
      * 
-     * Note: This is permanentand can't be undone. 
+     * Note: This is permanent and can't be undone. 
      * 
      * It doesn't send the file to the recycling bin for recovery.
      */
     deleteFile() {
-        if (this.mode == "memory") {
+        if (this.isMemoryMode) {
             return;
         }
 
-        try {
-            fs.closeSync(this.fd);
+        if (this.readOnly) {
+            throw new Error("Can't delete file in readonly mode!");
+        }
 
-            this.fd = null;
+        try {
+            this.close();
 
             fs.unlinkSync(this.filePath);
         } catch (error) {
             throw new Error(error);
         }
-    };
 
-    extendArray(to_padd: number): void {
-        return extendarray(this, to_padd);
-    };
-
-
-    isBufferOrUint8Array(obj: any): boolean {
-        return arrayBufferCheck(obj);
-    };
-
-    /**
-     * Call this after everytime we set/replace `this.data`
-     */
-    updateView(): void {
-        if (this.#data) {
-            this.view = new DataView(
-                this.#data.buffer,
-                this.#data.byteOffset ?? 0,
-                this.#data.byteLength
-            );
-        }
+        this.filePath = null;
     };
 
     ///////////////////////////////
@@ -2707,10 +717,11 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      */
     endianness(endian: endian): void {
         if (endian == undefined || typeof endian != "string") {
-            throw new Error("Endian must be big or little");
+            throw new TypeError("Endian must be big or little");
         }
+
         if (endian != undefined && !(endian == "big" || endian == "little")) {
-            throw new Error("Endian must be big or little");
+            throw new TypeError("Endian must be big or little");
         }
 
         this.endian = endian;
@@ -2783,6 +794,15 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     /**
      * Size in bytes of the current buffer.
      * 
+     *  @returns {number} size
+     */
+    get fileSize(): number {
+        return this.size;
+    };
+
+    /**
+     * Size in bytes of the current buffer.
+     * 
      * @returns {number} size
      */
     get FileSize(): number {
@@ -2794,8 +814,8 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * 
      * @returns {number} size
      */
-    get lengthB(): number {
-        return this.sizeB;
+    get lengthBits(): number {
+        return this.bitSize;
     };
 
     /**
@@ -2803,8 +823,8 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * 
      * @returns {number} size
      */
-    get FileSizeB(): number {
-        return this.sizeB;
+    get sizeBits(): number {
+        return this.bitSize;
     };
 
     /**
@@ -2812,13 +832,58 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * 
      * @returns {number} size
      */
-    get lenb(): number {
-        return this.sizeB;
+    get fileBitSize(): number {
+        return this.bitSize;
+    };
+
+    /**
+     * Size in bytes of the current buffer.
+     * 
+     *  @returns {number} size
+     */
+    get fileSizeBits(): number {
+        return this.bitSize;
+    };
+
+    /**
+     * Size in bits of the current buffer.
+     * 
+     * @returns {number} size
+     */
+    get lenBits(): number {
+        return this.bitSize;
     };
 
     ///////////////////////////////
     // #region POSITION
     ///////////////////////////////
+
+    /**
+     * Get the current byte position.
+     *
+     * @returns {number} current byte position
+     */
+    get offset(): number {
+        return this.#offset;
+    };
+
+    /**
+     * Get the current byte position;
+     *
+     * @returns {number} current byte position
+     */
+    get off(): number {
+        return this.offset;
+    };
+
+    /**
+     * Get the current byte position.
+     *
+     * @returns {number} current byte position
+     */
+    get getOffset(): number {
+        return this.offset;
+    };
 
     /**
      * Get the current byte position.
@@ -2839,15 +904,6 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     };
 
     /**
-     * Get the current byte position.
-     *
-     * @returns {number} current byte position
-     */
-    get getOffset(): number {
-        return this.offset;
-    };
-
-    /**
      * Get the current byte position;
      *
      * @returns {number} current byte position
@@ -2861,125 +917,225 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      *
      * @returns {number} current byte position
      */
-    get off(): number {
+    get byteOffset(): number {
         return this.offset;
     };
 
     /**
-     * Get the current bit position (0-7).
+     * Set the current byte position.
+     * 
+     * Same as {@link goto}
+     */
+    set offset(value: number) {
+        this.goto(value);
+    };
+
+    /**
+     * Set the current byte position.
+     * 
+     * Same as {@link goto}
+     */
+    set setOffset(value: number) {
+        this.offset = value;
+    };
+
+    /**
+     * Set the current byte position.
+     * 
+     * Same as {@link goto}
+     */
+    set setByteOffset(value: number) {
+        this.offset = value;
+    };
+
+    /**
+     * Get the current bit position.
      *
      * @returns {number} current bit position
      */
-    get getOffsetBit(): number {
-        return this.bitoffset;
+    get bitOffset(): number {
+        return (this.#offset * 8) + this.#insetBit;
     };
 
     /**
-     * Get the current bit position (0-7).
+     * Get the current bit position.
      *
      * @returns {number} current bit position
      */
-    get tellB(): number {
-        return this.bitoffset;
-    };
+    get offsetBits(): number {
+        return this.bitOffset;
+    }
 
     /**
-     * Get the current bit position (0-7).
+     * Get the current bit position.
      *
      * @returns {number} current bit position
      */
-    get FTellB(): number {
-        return this.bitoffset;
+    get getBitOffset(): number {
+        return this.bitOffset;
     };
 
     /**
-     * Get the current bit position (0-7).
+     * Get the current bit position.
      *
      * @returns {number} current bit position
      */
-    get offb(): number {
-        return this.bitoffset;
+    get saveBitOffset(): number {
+        return this.bitOffset;
     };
 
     /**
-     * Get the current absolute bit position (from start of data).
-     *
-     * @returns {number} current absolute bit position
-     */
-    get getOffsetAbsBit(): number {
-        return (this.offset * 8) + this.bitoffset;
-    };
-
-    /**
-     * Get the current absolute bit position (from start of data).
+     * Get the current bit position.
      *
      * @returns {number} current bit position
      */
-    get saveOffsetAbsBit(): number {
-        return (this.offset * 8) + this.bitoffset;
+    get FTellBits(): number {
+        return this.bitOffset;
     };
 
     /**
-     * Get the current absolute bit position (from start of data).
+     * Get the current bit position.
      *
-     * @returns {number} current absolute bit position
+     * @returns {number} current bit position
      */
-    get tellAbsB(): number {
-        return (this.offset * 8) + this.bitoffset;
+    get tellBits(): number {
+        return this.bitOffset;
     };
 
     /**
-     * Get the current absolute bit position (from start of data).
+     * Get the current bit position.
      *
-     * @returns {number} current absolute bit position
+     * @returns {number} current bit position
      */
-    get saveOffsetBit(): number {
-        return (this.offset * 8) + this.bitoffset;
+    get offBits(): number {
+        return this.bitOffset;
     };
 
     /**
-     * Get the current absolute bit position (from start of data).
+     * Set the current bit position.
+     * 
+     * Same as {@link goto}
+     */
+    set bitOffset(value: number) {
+        this.goto(value - (value % 8), value % 8);
+    };
+
+    /**
+     * Set the current bit position.
+     */
+    set setOffsetBits(value: number) {
+        this.bitOffset = value;
+    };
+
+    /**
+     * Set the current bit position.
+     */
+    set setBitOffset(value: number) {
+        this.setOffsetBits = value;
+    };
+
+    /**
+     * Get the current bit position with in the current byte (0-7).
      *
-     * @returns {number} current absolute bit position
+     * @returns {number} current bit position
      */
-    get offab(): number {
-        return (this.offset * 8) + this.bitoffset;
+    get insetBit(): number {
+        return this.#insetBit;
     };
 
     /**
-     * Size in bytes of current read position to the end
+     * Get the current bit position with in the current byte (0-7).
+     *
+     * @returns {number} current bit position
+     */
+    get getInsetBit(): number {
+        return this.insetBit;
+    };
+
+    /**
+     * Set the current bit position with in the current byte (0-7).
+     */
+    set insetBit(value: number) {
+        this.goto(this.offset, value % 8);
+    };
+
+    /**
+     * Get the current bit position with in the current byte (0-7).
+     *
+     * @returns {number} current bit position
+     */
+    get saveInsetBit(): number {
+        return this.insetBit;
+    };
+
+    /**
+     * Get the current bit position with in the current byte (0-7).
+     *
+     * @returns {number} current bit position
+     */
+    get inBit(): number {
+        return this.insetBit;
+    };
+
+    /**
+     * Get the current bit position with in the current byte (0-7).
+     *
+     * @returns {number} current bit position
+     */
+    get bitTell(): number {
+        return this.insetBit;
+    };
+
+    /**
+     * Set the current bit position with in the byte (0-7).
+     */
+    set setInsetBit(value: number) {
+        this.insetBit = value;
+    };
+
+    /**
+     * Size in bytes of current read position to the end of the data.
      * 
      * @returns {number} size
      */
     get remain(): number {
-        return this.size - this.offset;
+        return this.size - this.#offset;
     };
 
     /**
-     * Size in bytes of current read position to the end
+     * Size in bytes of current read position to the end of the data.
+     * 
+     * @returns {number} size
+     */
+    get remainBytes(): number {
+        return this.remain;
+    };
+
+    /**
+     * Size in bytes of current read position to the end of the data.
      * 
      * @returns {number} size
      */
     get FEoF(): number {
-        return this.size - this.offset;
+        return this.remainBytes;
     };
 
     /**
-     * Size in bits of current read position to the end
+     * Size in bits of current read position to the end of the data.
      * 
      * @returns {number} size
      */
-    get remainB(): number {
-        return (this.size * 8) - this.saveOffsetAbsBit;
+    get remainBits(): number {
+        return (this.size * 8) - this.bitOffset;
     };
 
     /**
-     * Size in bits of current read position to the end
+     * Size in bits of current read position to the end of the data.
      * 
      * @returns {number} size
      */
-    get FEoFB(): number {
-        return (this.size * 8) - this.saveOffsetAbsBit;
+    get FEoFBits(): number {
+        return this.remainBits;
     };
 
     /**
@@ -2988,7 +1144,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @returns {number} size
      */
     get getLine(): number {
-        return Math.abs(Math.floor((this.offset - 1) / 16));
+        return Math.abs(Math.floor((this.#offset - 1) / 16));
     };
 
     /**
@@ -2997,7 +1153,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @returns {number} size
      */
     get row(): number {
-        return Math.abs(Math.floor((this.offset - 1) / 16));
+        return this.getLine;
     };
 
     ///////////////////////////////
@@ -3007,24 +1163,37 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     /**
      * Returns current data.
      * 
-     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
+     * Note: Will remove all data after current position if ``growthIncrement`` was set and you expanded data past the end once.
      * 
      * Use ``.data`` instead if you want the full buffer data.
      * 
      * @returns {DataType} ``Buffer`` or ``Uint8Array``
      */
     get(): DataType {
-        if (this.extendBufferSize != 0) {
+        if (this.growthIncrement != 0 && this.wasExpanded) {
             this.trim();
         }
 
-        return this.data;
+        return this.#data;
     };
 
     /**
      * Returns current data.
      * 
-     * Note: Will remove all data after current position if ``extendBufferSize`` was set.
+     * Note: Will remove all data after current position if ``growthIncrement`` was set and you expanded data past the end once.
+     * 
+     * Use ``.data`` instead if you want the full buffer data.
+     * 
+     * @returns {DataType} ``Buffer`` or ``Uint8Array``
+     */
+    getFullBuffer(): DataType {
+            return this.get();
+    };
+
+    /**
+     * Returns current data.
+     * 
+     * Note: Will remove all data after current position if ``growthIncrement`` was set and you expanded data past the end once.
      * 
      * Use ``.data`` instead if you want the full buffer data.
      * 
@@ -3033,6 +1202,37 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     return(): DataType {
         return this.get();
     };
+
+    /**
+     * Returns and remove data.
+     * 
+     * Commits any changes to file when editing a file.
+     */
+    end(): DataType  {
+        return this.close();
+    };
+
+    /**
+     * removes data.
+     * 
+     * Commits any changes to file when editing a file.
+     */
+    done(): DataType {
+        return this.end();
+    };
+
+    /**
+     * removes data.
+     * 
+     * Commits any changes to file when editing a file.
+     */
+    finished(): DataType {
+        return this.end();
+    };
+
+    ///////////////////////////////
+    // #region HEX DUMP
+    ///////////////////////////////
 
     /**
     * Creates hex dump string. Will console log or return string if set in options.
@@ -3045,7 +1245,19 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
     */
     hexdump(options: hexdumpOptions = {}): void | string {
-        return hexDumpBase(this, options);
+        const length: any = options?.length ?? 192;
+
+        const startByte: any = options?.startByte ?? this.#offset;
+
+        const endByte = Math.min(startByte + length, this.size);
+
+        const newSize = endByte - startByte;
+
+        if (startByte > this.size || endByte > this.size) {
+            throw new RangeError("Hexdump amount is outside of data size: " + newSize + " of " + endByte);
+        }
+
+        return _hexDump(this.data, options, startByte, endByte);
     };
 
     /**
@@ -3080,46 +1292,54 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
         this.strict = false;
     };
 
-    /**
-     * removes data.
-     * 
-     * Commits any changes to file when editing a file.
-     */
-    end(): void {
-        if (this.mode == "memory") {
-            this.#data = undefined;
-
-            this.view = undefined;
-
-            return;
-        }
-
-        this.commit();
-
-        return;
-    };
-
-    /**
-     * removes data.
-     * 
-     * Commits any changes to file when editing a file.
-     */
-    done(): void {
-        return this.end();
-    };
-
-    /**
-     * removes data.
-     * 
-     * Commits any changes to file when editing a file.
-     */
-    finished(): void {
-        return this.end();
-    };
-
     ///////////////////////////////
     // #region   FIND 
     ///////////////////////////////
+
+    /**
+     * Searches for position of array of byte values from current read position.
+     * 
+     * Returns -1 if not found.
+     * 
+     * Does not change current read position.
+     * 
+     * @param {Uint8Array | Buffer | Array<number>} bytesToFind 
+     */
+    findBytes(bytesToFind: Uint8Array | Buffer | Array<number>): number {
+        if (Array.isArray(bytesToFind)) {
+            bytesToFind = new Uint8Array(bytesToFind);
+        }
+
+        this.open();
+
+        if (this.isBuffer(this.data)) {
+            var offset = (this.data as Buffer).subarray(this.#offset, this.size).indexOf(bytesToFind as Uint8Array | Buffer);
+
+            if (offset == -1) {
+                return -1;
+            }
+
+            return offset + this.#offset;
+        }
+        // this.data == Uint8Array
+        for (let i = this.#offset; i <= this.size - bytesToFind.length; i++) {
+            var match = true;
+
+            for (let j = 0; j < bytesToFind.length; j++) {
+                if (this.data[i + j] !== bytesToFind[j]) {
+                    match = false;
+
+                    break;
+                }
+            }
+
+            if (match) {
+                return i; // Found the string, return the index
+            }
+        }
+
+        return -1;
+    };
 
     /**
      * Searches for byte position of string from current read position.
@@ -3129,9 +1349,66 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * Does not change current read position.
      * 
      * @param {string} string - String to search for.
+     * @param {1|2|4} bytesPerChar - how many bytes each character should take up
      */
-    findString(string: string): number {
-        return fString(this, string);
+    findString(string: string, bytesPerChar: number = 1): number {
+        const encoded = textEncode(string, bytesPerChar);
+
+        return this.findBytes(encoded);
+    };
+
+    #findNumber(value: number, bits: number, unsigned: boolean, endian: endian = this.endian): number {
+        this.#checkSize(Math.floor(bits / 8), 0, this.#offset);
+
+        for (let z = this.#offset; z <= (this.size - (bits / 8)); z++) {
+            var offsetInBits = 0;
+
+            var value = 0;
+
+            for (var i = 0; i < bits;) {
+                const remaining = bits - i;
+
+                const bitOffset = offsetInBits & 7;
+
+                const currentByte = this.data[z + (offsetInBits >> 3)];
+
+                const read = Math.min(remaining, 8 - bitOffset);
+
+                if (endian == "big") {
+                    let mask = ~(0xFF << read);
+
+                    let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
+
+                    value <<= read;
+
+                    value |= readBits;
+                } else {
+                    let mask = ~(0xFF << read);
+
+                    let readBits = (currentByte >> bitOffset) & mask;
+
+                    value |= readBits << i;
+                }
+
+                offsetInBits += read;
+
+                i += read;
+            }
+
+            if (unsigned || bits <= 7) {
+                value = value >>> 0;
+            } else {
+                if (bits !== 32 && value & (1 << (bits - 1))) {
+                    value |= -1 ^ ((1 << bits) - 1);
+                }
+            }
+
+            if (value === value) {
+                return z - this.#offset; // Found the byte, return the index from current
+            }
+        }
+
+        return -1; // number not found
     };
 
     /**
@@ -3145,8 +1422,8 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findByte(value: number, unsigned?: boolean, endian?: endian): number {
-        return fNumber(this, value, 8, unsigned == undefined ? true : unsigned, endian);
+    findByte(value: number, unsigned: boolean = true, endian: endian = this.endian): number {
+        return this.#findNumber(value, 8, unsigned, endian);
     };
 
     /**
@@ -3160,8 +1437,8 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findShort(value: number, unsigned?: boolean, endian?: endian): number {
-        return fNumber(this, value, 16, unsigned == undefined ? true : unsigned, endian);
+    findShort(value: number, unsigned: boolean = true, endian: endian = this.endian): number {
+        return this.#findNumber(value, 16, unsigned, endian);
     };
 
     /**
@@ -3175,8 +1452,8 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findInt(value: number, unsigned?: boolean, endian?: endian): number {
-        return fNumber(this, value, 32, unsigned == undefined ? true : unsigned, endian);
+    findInt(value: number, unsigned: boolean = true, endian: endian = this.endian): number {
+        return this.#findNumber(value, 32, unsigned, endian);
     };
 
     /**
@@ -3190,8 +1467,44 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {boolean} unsigned - If the number is unsigned (default true)
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findInt64(value: BigValue, unsigned?: boolean, endian?: endian): number {
-        return fBigInt(this, value, unsigned == undefined ? true : unsigned, endian);
+    findInt64(value: BigValue, unsigned: boolean = true, endian: endian = this.endian): number {
+        if (!hasBigInt) {
+            throw new Error("System doesn't support BigInt values.");
+        }
+
+        this.#checkSize(8, 0, this.#offset);
+
+        for (let z = this.#offset; z <= (this.size - 8); z++) {
+            var startingValue = BigInt(0);
+
+            if (endian == "little") {
+                for (let i = 0; i < 8; i++) {
+                    startingValue = startingValue | BigInt((this.data[z + i] & 0xFF)) << BigInt(8 * i);
+                }
+
+                if (!unsigned) {
+                    if (startingValue & (BigInt(1) << BigInt(63))) {
+                        startingValue -= BigInt(1) << BigInt(64);
+                    }
+                }
+            } else {
+                for (let i = 0; i < 8; i++) {
+                    startingValue = (startingValue << BigInt(8)) | BigInt((this.data[z + i] & 0xFF));
+                }
+
+                if (!unsigned) {
+                    if (startingValue & (BigInt(1) << BigInt(63))) {
+                        startingValue -= BigInt(1) << BigInt(64);
+                    }
+                }
+            }
+
+            if (startingValue == BigInt(value)) {
+                return z;
+            }
+        }
+
+        return -1;// number not found
     };
 
     /**
@@ -3204,8 +1517,50 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} value - Number to search for.
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findHalfFloat(value: number, endian?: endian): number {
-        return fHalfFloat(this, value, endian);
+    findHalfFloat(value: number, endian: endian = this.endian): number {
+        this.#checkSize(2, 0, this.#offset);
+
+        for (let z = this.#offset; z <= (this.size - 2); z++) {
+            var startingValue = 0;
+
+            if (endian == "little") {
+                startingValue = ((this.data[z + 1] & 0xFFFF) << 8) | (this.data[z] & 0xFFFF);
+            } else {
+                startingValue = ((this.data[z] & 0xFFFF) << 8) | (this.data[z + 1] & 0xFFFF);
+            }
+
+            const sign = (startingValue & 0x8000) >> 15;
+
+            const exponent = (startingValue & 0x7C00) >> 10;
+
+            const fraction = startingValue & 0x03FF;
+
+            var floatValue: number;
+
+            if (exponent === 0) {
+                if (fraction === 0) {
+                    floatValue = (sign === 0) ? 0 : -0; // +/-0
+                } else {
+                    // Denormalized number
+                    floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, -14) * (fraction / 0x0400);
+                }
+            } else if (exponent === 0x1F) {
+                if (fraction === 0) {
+                    floatValue = (sign === 0) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+                } else {
+                    floatValue = Number.NaN;
+                }
+            } else {
+                // Normalized number
+                floatValue = (sign === 0 ? 1 : -1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x0400);
+            }
+
+            if (floatValue === value) {
+                return z; // Found the number, return the index
+            }
+        }
+
+        return -1; // number not found
     };
 
     /**
@@ -3218,8 +1573,49 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} value - Number to search for.
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findFloat(value: number, endian?: endian): number {
-        return fFloat(this, value, endian);
+    findFloat(value: number, endian: endian = this.endian): number {
+        this.#checkSize(4, 0, this.#offset);
+
+        for (let z = this.#offset; z <= (this.size - 4); z++) {
+            var startingValue = 0;
+
+            if (endian == "little") {
+                startingValue = ((this.data[z + 3] & 0xFF) << 24) |
+                    ((this.data[z + 2] & 0xFF) << 16) |
+                    ((this.data[z + 1] & 0xFF) << 8) |
+                    (this.data[z] & 0xFF);
+            } else {
+                startingValue = ((this.data[z] & 0xFF) << 24) |
+                    ((this.data[z + 1] & 0xFF) << 16) |
+                    ((this.data[z + 2] & 0xFF) << 8) |
+                    (this.data[z + 3] & 0xFF);
+            }
+
+            const isNegative = (startingValue & 0x80000000) !== 0 ? 1 : 0;
+            // Extract the exponent and fraction parts
+            const exponent = (startingValue >> 23) & 0xFF;
+
+            const fraction = startingValue & 0x7FFFFF;
+            // Calculate the float value
+            var floatValue: number;
+
+            if (exponent === 0) {
+                // Denormalized number (exponent is 0)
+                floatValue = Math.pow(-1, isNegative) * Math.pow(2, -126) * (fraction / Math.pow(2, 23));
+            } else if (exponent === 0xFF) {
+                // Infinity or NaN (exponent is 255)
+                floatValue = fraction === 0 ? (isNegative ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : Number.NaN;
+            } else {
+                // Normalized number
+                floatValue = Math.pow(-1, isNegative) * Math.pow(2, exponent - 127) * (1 + fraction / Math.pow(2, 23));
+            }
+
+            if (floatValue === value) {
+                return z; // Found the number, return the index
+            }
+        }
+
+        return -1; // number not found
     };
 
     /**
@@ -3232,8 +1628,58 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} value - Number to search for.
      * @param {endian} endian - endianness of value (default set endian).
      */
-    findDoubleFloat(value: number, endian?: endian): number {
-        return fDoubleFloat(this, value, endian);
+    findDoubleFloat(value: number, endian: endian = this.endian): number {
+        if (!hasBigInt) {
+            throw new Error("System doesn't support BigInt values.");
+        }
+
+        this.#checkSize(8, 0, this.#offset);
+
+        for (let z = this.#offset; z <= (this.size - 8); z++) {
+            var startingValue = BigInt(0);
+
+            if (endian == "little") {
+                for (let i = 0; i < 8; i++) {
+                    startingValue = startingValue | BigInt((this.data[z + i] & 0xFF)) << BigInt(8 * i);
+                }
+            } else {
+                for (let i = 0; i < 8; i++) {
+                    startingValue = (startingValue << BigInt(8)) | BigInt((this.data[z + i] & 0xFF));
+                }
+            }
+
+            const sign = (startingValue & BigInt("9223372036854775808")) >> BigInt(63);
+
+            const exponent = Number((startingValue & BigInt("9218868437227405312")) >> BigInt(52)) - 1023;
+
+            const fraction = Number(startingValue & BigInt("4503599627370495")) / Math.pow(2, 52);
+
+            var floatValue: number;
+
+            if (exponent == -1023) {
+                if (fraction == 0) {
+                    floatValue = (sign == BigInt(0)) ? 0 : -0; // +/-0
+                } else {
+                    // Denormalized number
+                    floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, -1022) * fraction;
+                }
+            } else if (exponent == 1024) {
+                if (fraction == 0) {
+                    floatValue = (sign == BigInt(0)) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+                } else {
+                    floatValue = Number.NaN;
+                }
+            } else {
+                // Normalized number
+                floatValue = (sign == BigInt(0) ? 1 : -1) * Math.pow(2, exponent) * (1 + fraction);
+            }
+
+            if (floatValue == value) {
+                return z;
+            }
+        }
+
+        return -1; // number not found
     };
 
     ///////////////////////////////
@@ -3248,7 +1694,11 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} number - Byte to align
      */
     align(number: number): void {
-        return align(this, number);
+        const a = this.#offset % number;
+
+        if (a) {
+            this.skip(number - a);
+        }
     };
 
     /**
@@ -3259,7 +1709,11 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} number - Byte to align
      */
     alignRev(number: number): void {
-        return alignRev(this, number);
+        const a = this.#offset % number;
+
+        if (a) {
+            this.skip(a * -1);
+        }
     };
 
     /**
@@ -3271,7 +1725,25 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} bits - Bits to skip
      */
     skip(bytes: number, bits?: number): void {
-        return skip(this, bytes, bits);
+        var newOffset = ((bytes + this.#offset) + Math.ceil((this.#insetBit + bits) / 8));
+
+        if (bits && bits < 0) {
+            newOffset = Math.floor((((bytes + this.#offset) * 8) + this.#insetBit + bits) / 8);
+        }
+
+        this.#confrimSize(newOffset);
+        // Adjust byte offset based on bit overflow
+        this.#offset += Math.floor((this.#insetBit + bits) / 8);
+        // Adjust bit offset
+        this.#insetBit = (this.#insetBit + normalizeBitOffset(bits)) % 8;
+        // Adjust byte offset based on byte overflow
+        this.#offset += bytes;
+        // Ensure bit offset stays between 0-7
+        this.#insetBit = Math.min(Math.max(this.#insetBit, 0), 7);
+        // Ensure offset doesn't go negative
+        this.#offset = Math.max(this.#offset, 0);
+
+        return;
     };
 
     /**
@@ -3284,18 +1756,6 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     */
     jump(bytes: number, bits?: number): void {
         this.skip(bytes, bits);
-    };
-
-    /**
-     * Change position directly to address.
-     * 
-     * Note: Will extend array if strict mode is off and outside of max size.
-     * 
-     * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
-     */
-    FSeek(byte: number, bit?: number): void {
-        return goto(this, byte, bit)
     };
 
     /**
@@ -3318,8 +1778,38 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} byte - byte to set to
      * @param {number} bit - bit to set to
      */
-    goto(byte: number, bit?: number): void {
-        return goto(this, byte, bit);
+    goto(byte: number = 0, bit: number = 0): void {
+        var newOffset = byte + Math.ceil(bit / 8);
+
+        if (bit && bit < 0) {
+            newOffset = Math.floor(((byte * 8) + bit) / 8);
+        }
+
+        this.#confrimSize(newOffset);
+
+        this.#offset = byte;
+        // Adjust byte offset based on bit overflow
+        this.#offset += Math.floor(bit / 8);
+        // Adjust bit offset
+        this.#insetBit = normalizeBitOffset(bit) % 8;
+        // Ensure bit offset stays between 0-7
+        this.#insetBit = Math.min(Math.max(this.#insetBit, 0), 7);
+        // Ensure offset doesn't go negative
+        this.#offset = Math.max(this.#offset, 0);
+
+        return;
+    };
+
+    /**
+     * Change position directly to address.
+     * 
+     * Note: Will extend array if strict mode is off and outside of max size.
+     * 
+     * @param {number} byte - byte to set to
+     * @param {number} bit - bit to set to
+     */
+    FSeek(byte: number, bit?: number): void {
+        return this.goto(byte, bit)
     };
 
     /**
@@ -3350,8 +1840,9 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * Set byte and bit position to start of data.
      */
     rewind(): void {
-        this.offset = 0;
-        this.bitoffset = 0;
+        this.#offset = 0;
+
+        this.#insetBit = 0;
     };
 
     /**
@@ -3365,8 +1856,9 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * Set current byte and bit position to end of data.
      */
     last(): void {
-        this.offset = this.size;
-        this.bitoffset = 0;
+        this.#offset = this.size;
+
+        this.#insetBit = 0;
     };
 
     /**
@@ -3397,8 +1889,48 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {boolean} consume - Move position to end of removed data (default false)
      * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    delete(startOffset?: number, endOffset?: number, consume?: boolean): DataType {
-        return remove(this, startOffset || 0, endOffset || this.offset, consume || false, true);
+    delete(startOffset: number = 0, endOffset: number = this.#offset, consume: boolean = false): DataType {
+        if (this.readOnly || this.strict) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+            throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + this.size);
+        }
+
+        this.open();
+
+        startOffset = Math.abs(startOffset);
+
+        this.#confrimSize(endOffset);
+
+        const dataRemoved = this.data.subarray(startOffset, endOffset) as DataType;
+
+        const part1 = this.data.subarray(0, startOffset);
+
+        const part2 = this.data.subarray(endOffset, this.size);
+
+        if (this.isBuffer(this.data)) {
+            this.data = Buffer.concat([part1, part2]) as DataType;
+        } else {
+            const newBuf = new Uint8Array(part1.byteLength + part2.byteLength);
+
+            newBuf.set(part1, 0);
+
+            newBuf.set(part2, part1.byteLength);
+
+            this.data = newBuf as DataType;
+        }
+
+        this.size = this.data.length;
+
+        this.bitSize = this.data.length * 8;
+
+        if (consume) {
+            this.#offset = startOffset;
+
+            this.#insetBit = 0;
+        }
+
+        return dataRemoved;
     };
 
     /**
@@ -3409,7 +1941,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
     clip(): DataType {
-        return remove(this, this.offset, this.size, false, true);
+        return this.delete(this.#offset, this.size, false);
     };
 
     /**
@@ -3420,7 +1952,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
     trim(): DataType {
-        return remove(this, this.offset, this.size, false, true);
+        return this.delete(this.#offset, this.size, false);
     };
 
     /**
@@ -3430,10 +1962,10 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * 
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {TemplateStringsArray} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    crop(length: number, consume?: boolean): DataType {
-        return remove(this, this.offset, this.offset + (length || 0), consume || false, true);
+    crop(length: number = 0, consume: boolean = false): DataType {
+        return this.delete(this.#offset, this.#offset + length, consume);
     };
 
     /**
@@ -3445,8 +1977,76 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {boolean} consume - Move position to end of removed data (default false)
      * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    drop(length: number, consume?: boolean): DataType {
-        return remove(this, this.offset, this.offset + (length || 0), consume || false, true);
+    drop(length: number = 0, consume: boolean = false): DataType {
+        return this.delete(this.#offset, this.#offset + length, consume);
+    };
+
+    ///////////////////////////////
+    // #region REPLACE
+    ///////////////////////////////
+
+    /**
+     * Replaces data in data.
+     * 
+     * Note: Errors on strict mode if past end of data.
+     * 
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {number} offset - Offset to add it at (defaults to current position)
+     * @param {boolean} consume - Move current byte position to end of data (default false)
+     */
+    replace(data: DataType, offset: number = this.#offset, consume: boolean = false): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+            throw new Error("Can't replace data in readOnly mode!");
+        }
+
+        this.open();
+        // input is Buffer
+        if (this.isBuffer(data)) {
+            if (this.isUint8Array(this.data)) {
+                // source is Uint8Array
+                data = new Uint8Array(data) as DataType;
+            }
+        } else {
+            // input is Uint8Array
+            if (this.isBuffer(this.data)) {
+                // source is Buffer
+                data = Buffer.from(data) as DataType;
+            }
+        }
+
+        const neededSize = offset + data.length;
+
+        this.#confrimSize(neededSize);
+
+        const part1 = this.data.subarray(0, neededSize - data.length);
+
+        const part2 = this.data.subarray(neededSize, this.size);
+
+        if (this.isBuffer(this.data)) {
+            this.data = Buffer.concat([part1, data, part2]) as DataType;
+        } else {
+            const newBuf = new Uint8Array(part1.byteLength + data.byteLength + part2.byteLength);
+
+            newBuf.set(part1, 0);
+
+            newBuf.set(data, part1.byteLength);
+
+            newBuf.set(part2, part1.byteLength + data.byteLength);
+
+            this.data = newBuf as DataType;
+        }
+
+        this.size = this.data.length;
+
+        this.bitSize = this.data.length * 8;
+
+        if (consume) {
+            this.#offset = offset + data.length;
+
+            this.#insetBit = 0;
+        }
     };
 
     /**
@@ -3455,24 +2055,11 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * Note: Errors on strict mode.
      * 
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
-     * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Offset to add it at (defaults to current position)
-     */
-    replace(data: DataType, consume?: boolean, offset?: number): void {
-        return addData(this, data, consume || false, offset || this.offset, true);
-    };
-
-    /**
-     * Replaces data in data.
-     * 
-     * Note: Errors on strict mode.
-     * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {boolean} consume - Move current byte position to end of data (default false)
-     * @param {number} offset - Offset to add it at (defaults to current position)
      */
-    overwrite(data: DataType, consume?: boolean, offset?: number): void {
-        return addData(this, data, consume || false, offset || this.offset, true);
+    overwrite(data: DataType, offset: number = this.#offset, consume: boolean = false): void {
+        return this.replace(data, offset, consume);
     };
 
     ///////////////////////////////
@@ -3488,8 +2075,76 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): DataType {
-        return remove(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
+    fill(startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false, fillValue?: number): DataType {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+            throw new Error("Can't remove data in readonly mode!");
+        }
+
+        this.open();
+
+        if (startOffset < 0 || endOffset > this.size) {
+            throw new RangeError('Remove range out of bounds');
+        }
+
+        const removeLen = endOffset - startOffset;
+
+        if (removeLen <= 0) {
+            if (this.isMemoryMode) {
+                if (this.isBuffer(this.data)) {
+                    return Buffer.alloc(0) as DataType;
+                } else {
+                    return new Uint8Array(0) as DataType;
+                }
+            } else {
+                return Buffer.alloc(0) as DataType;
+            }
+        }
+
+        if (endOffset > this.size && this.strict) {
+            throw new Error('Cannot extend data while in strict mode. Use unrestrict() to enable.');
+        }
+
+        this.#confrimSize(endOffset);
+
+        const dataRemoved = this.data.subarray(startOffset, endOffset);
+        // without a fill value it's a basic lift
+        if (fillValue != undefined) {
+            const part1 = this.data.subarray(0, startOffset);
+
+            const part2 = this.data.subarray(endOffset, this.size);
+
+            const replacement = new Array(dataRemoved.length).fill(fillValue & 0xff);
+
+            if (isBuffer(this.data)) {
+                const buffReplacement = Buffer.from(replacement);
+
+                this.data = Buffer.concat([part1, buffReplacement, part2]) as DataType;
+            } else {
+                const newBuf = new Uint8Array(part1.byteLength + replacement.length + part2.byteLength);
+
+                newBuf.set(part1, 0);
+
+                newBuf.set(replacement, part1.byteLength);
+
+                newBuf.set(part2, part1.byteLength + replacement.length);
+
+                this.data = newBuf as DataType;
+            }
+
+            this.size = this.data.length;
+
+            this.bitSize = this.data.length * 8;
+        }
+
+        if (consume) {
+            this.#offset = endOffset;
+
+            this.#insetBit = 0;
+        }
+
+        return dataRemoved as DataType;
     };
 
     /**
@@ -3501,8 +2156,8 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): DataType {
-        return remove(this, startOffset || this.offset, endOffset || this.size, consume || false, false, fillValue);
+    lift(startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false, fillValue?: number): DataType {
+        return this.fill(startOffset, endOffset, consume, fillValue) as DataType;
     };
 
     /**
@@ -3511,11 +2166,11 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * Note: Does not affect supplied data.
      * 
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
+     * @param {number} consume - Moves offset to end of length (default false)
      * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    extract(length: number, consume?: boolean): DataType {
-        return remove(this, this.offset, this.offset + (length || 0), consume || false, false);
+    extract(length: number = 0, consume: boolean = false): DataType {
+        return this.fill(this.#offset, this.#offset + length, consume);
     };
 
     /**
@@ -3524,11 +2179,11 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * Note: Does not affect supplied data.
      * 
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
+     * @param {number} consume - Moves offset to end of length (default false)
      * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    slice(length: number, consume?: boolean): DataType {
-        return remove(this, this.offset, this.offset + (length || 0), consume || false, false);
+    slice(length: number = 0, consume: boolean = false): DataType {
+        return this.fill(this.#offset, this.#offset + length, consume);
     };
 
     /**
@@ -3537,11 +2192,11 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * Note: Does not affect supplied data.
      * 
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
+     * @param {number} consume - Moves offset to end of length (default false)
      * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    wrap(length: number, consume?: boolean): DataType {
-        return remove(this, this.offset, this.offset + (length || 0), consume || false, false);
+    wrap(length: number = 0, consume: boolean = false): DataType {
+        return this.fill(this.#offset, this.#offset + length, consume);
     };
 
     ///////////////////////////////
@@ -3554,11 +2209,70 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * Note: Errors on strict mode.
      * 
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Byte position to add at (defaults to current position)
+     * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    insert(data: DataType, consume?: boolean, offset?: number): void {
-        return addData(this, data, consume || false, offset || this.offset, false);
+    insert(data: DataType, offset: number = this.#offset, consume: boolean = true): void {
+        if (this.strict == true || this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+            throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Can not insert data in strict mode. Use unrestrict() to enable.`);
+        }
+
+        if (!this.strict) {
+            if (offset < 0 || offset > this.size) {
+                throw new RangeError('Insert offset out of bounds');
+            }
+        }
+
+        this.open();
+        // input is Buffer
+        if (this.isBuffer(data)) {
+            if (this.isUint8Array(this.data)) {
+                // source is Uint8Array
+                data = new Uint8Array(data) as DataType;
+            }
+        } else {
+            // input is Uint8Array
+            if (this.isBuffer(this.data)) {
+                // source is Buffer
+                data = Buffer.from(data) as DataType;
+            }
+        }
+
+        const insertLen = data?.length ?? 0;
+
+        if (insertLen === 0) {
+            return;
+        }
+
+        const part1 = this.data.subarray(0, offset);
+
+        const part2 = this.data.subarray(offset, this.size);
+
+        if (this.isBuffer(this.data)) {
+            this.data = Buffer.concat([part1, data, part2]) as DataType;
+        } else {
+            const newBuf = new Uint8Array(part1.byteLength + data.byteLength + part2.byteLength);
+
+            newBuf.set(part1, 0);
+
+            newBuf.set(data, part1.byteLength);
+
+            newBuf.set(part2, part1.byteLength + data.byteLength);
+
+            this.data = newBuf as DataType;
+        }
+
+        this.size = this.data.length;
+
+        this.bitSize = this.data.length * 8;
+
+        if (consume) {
+            this.#offset = offset + data.length;
+
+            this.#insetBit = 0;
+        }
     };
 
     /**
@@ -3567,11 +2281,11 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * Note: Errors on strict mode.
      * 
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Byte position to add at (defaults to current position)
+     * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    place(data: DataType, consume?: boolean, offset?: number): void {
-        return addData(this, data, consume || false, offset || this.offset, false);
+    place(data: DataType, offset: number = this.#offset, consume: boolean = true): void {
+        return this.insert(data, offset, consume);
     };
 
     /**
@@ -3582,8 +2296,8 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    unshift(data: DataType, consume?: boolean): void {
-        return addData(this, data, consume || false, 0, false);
+    unshift(data: DataType, consume: boolean = false): void {
+        return this.insert(data, 0, consume);
     };
 
     /**
@@ -3594,8 +2308,8 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    prepend(data: DataType, consume?: boolean): void {
-        return addData(this, data, consume || false, 0, false);
+    prepend(data: DataType, consume: boolean = false): void {
+        return this.insert(data, 0, consume);
     };
 
     /**
@@ -3606,8 +2320,8 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    push(data: DataType, consume?: boolean): void {
-        return addData(this, data, consume || false, this.size, false);
+    push(data: DataType, consume: boolean = false): void {
+        return this.insert(data, this.size, consume);
     };
 
     /**
@@ -3618,8 +2332,8 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    append(data: DataType, consume?: boolean): void {
-        return addData(this, data, consume || false, this.size, false);
+    append(data: DataType, consume: boolean = false): void {
+        return this.push(data, consume);
     };
 
     ///////////////////////////////
@@ -3634,16 +2348,30 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    xor(xorKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void {
-        var XORKey: any = xorKey;
+    xor(xorKey: number | string | Uint8Array | Buffer, startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+            throw new Error("Can't write data in readonly mode!");
+        }
 
         if (typeof xorKey == "string") {
             xorKey = new TextEncoder().encode(xorKey);
-        } else if (!(this.isBufferOrUint8Array(XORKey) || typeof xorKey == "number")) {
+        } else if (!(this.isBufferOrUint8Array(xorKey) || typeof xorKey == "number")) {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
 
-        return XOR(this, xorKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        this.open();
+
+        this.#confrimSize(endOffset);
+
+        const returnData = _XOR(this.data, startOffset, Math.min(endOffset, this.size), xorKey);
+
+        if (consume) {
+            this.#offset = returnData.offset;
+
+            this.#insetBit = returnData.bitoffset;
+        }
     };
 
     /**
@@ -3653,26 +2381,26 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} length - Length in bytes to XOR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    xorThis(xorKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void {
-        var Length: number = length || 1;
+    xorThis(xorKey: number | string | Uint8Array | Buffer, length?: number, consume: boolean = false): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
-        var XORKey: any = xorKey;
+            throw new Error("Can't write data in readonly mode!");
+        }
 
         if (typeof xorKey == "number") {
-            Length = length || 1;
+            length = length ?? 1;
         } else if (typeof xorKey == "string") {
-            const encoder = new TextEncoder().encode(xorKey);
+            xorKey = new TextEncoder().encode(xorKey)
 
-            XORKey = encoder;
-
-            Length = length || encoder.length;
-        } else if (this.isBufferOrUint8Array(XORKey)) {
-            Length = length || xorKey.length;
+            length = length ?? xorKey.length;
+        } else if (this.isBufferOrUint8Array(xorKey)) {
+            length = length ?? xorKey.length;
         } else {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
 
-        return XOR(this, XORKey, this.offset, this.offset + Length, consume || false);
+        return this.xor(xorKey, this.#offset, this.#offset + length, consume);
     };
 
     /**
@@ -3683,16 +2411,30 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    or(orKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void {
-        var ORKey: any = orKey;
+    or(orKey: number | string | Uint8Array | Buffer, startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+            throw new Error("Can't write data in readonly mode!");
+        }
 
         if (typeof orKey == "string") {
             orKey = new TextEncoder().encode(orKey);
-        } else if (!(this.isBufferOrUint8Array(ORKey) || typeof orKey == "number")) {
+        } else if (!(this.isBufferOrUint8Array(orKey) || typeof orKey == "number")) {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
 
-        return OR(this, orKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        this.open();
+
+        this.#confrimSize(endOffset);
+
+        const returnData = _OR(this.data, startOffset, Math.min(endOffset, this.size), orKey);
+
+        if (consume) {
+            this.#offset = returnData.offset;
+
+            this.#insetBit = returnData.bitoffset;
+        }
     };
 
     /**
@@ -3703,25 +2445,25 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {boolean} consume - Move current position to end of data (default false)
      */
     orThis(orKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void {
-        var Length: number = length || 1;
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
-        var ORKey: any = orKey;
+            throw new Error("Can't write data in readonly mode!");
+        }
 
         if (typeof orKey == "number") {
-            Length = length || 1;
+            length = length ?? 1;
         } else if (typeof orKey == "string") {
-            const encoder = new TextEncoder().encode(orKey);
+            orKey = new TextEncoder().encode(orKey);
 
-            ORKey = encoder;
-
-            Length = length || encoder.length;
-        } else if (this.isBufferOrUint8Array(ORKey)) {
-            Length = length || orKey.length;
+            length = length ?? orKey.length;
+        } else if (this.isBufferOrUint8Array(orKey)) {
+            length = length ?? orKey.length;
         } else {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
 
-        return OR(this, ORKey, this.offset, this.offset + Length, consume || false);
+        return this.or(orKey, this.#offset, this.#offset + length, consume || false);
     };
 
     /**
@@ -3732,16 +2474,30 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    and(andKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void {
-        var ANDKey: any = andKey;
+    and(andKey: number | string | Uint8Array | Buffer, startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
-        if (typeof ANDKey == "string") {
-            ANDKey = new TextEncoder().encode(ANDKey);
-        } else if (!(typeof ANDKey == "object" || typeof ANDKey == "number")) {
+            throw new Error("Can't write data in readonly mode!");
+        }
+
+        if (typeof andKey == "string") {
+            andKey = new TextEncoder().encode(andKey);
+        } else if (!(typeof andKey == "object" || typeof andKey == "number")) {
             throw new Error("AND must be a number, string, number array or Buffer");
         }
 
-        return AND(this, andKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        this.open();
+
+        this.#confrimSize(endOffset);
+
+        const returnData = _AND(this.data, startOffset, Math.min(endOffset, this.size), andKey);
+
+        if (consume) {
+            this.#offset = returnData.offset;
+
+            this.#insetBit = returnData.bitoffset;
+        }
     };
 
     /**
@@ -3751,26 +2507,26 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    andThis(andKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void {
-        var Length: number = length || 1;
+    andThis(andKey: number | string | Uint8Array | Buffer, length?: number, consume: boolean = false): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
-        var ANDKey: any = andKey;
-
-        if (typeof andKey == "number") {
-            Length = length || 1;
-        } else if (typeof andKey == "string") {
-            const encoder = new TextEncoder().encode(andKey);
-
-            ANDKey = encoder;
-
-            Length = length || encoder.length;
-        } else if (typeof andKey == "object") {
-            Length = length || andKey.length;
-        } else {
-            throw new Error("AND must be a number, string, number array or Buffer");
+            throw new Error("Can't write data in readonly mode!");
         }
 
-        return AND(this, ANDKey, this.offset, this.offset + Length, consume || false);
+        if (typeof andKey == "number") {
+            length = length ?? 1;
+        } else if (typeof andKey == "string") {
+            andKey = new TextEncoder().encode(andKey);
+
+            length = length ?? andKey.length;
+        } else if (this.isBufferOrUint8Array(andKey)) {
+            length = length ?? andKey.length;
+        } else {
+            throw new Error("AND must be a number, string, Uint8Array or Buffer");
+        }
+
+        return this.and(andKey, this.#offset, this.#offset + length, consume);
     };
 
     /**
@@ -3781,16 +2537,30 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    add(addKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void {
-        var addedKey: any = addKey;
+    add(addKey: number | string | Uint8Array | Buffer, startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
-        if (typeof addedKey == "string") {
-            addedKey = new TextEncoder().encode(addedKey);
-        } else if (!(typeof addedKey == "object" || typeof addedKey == "number")) {
+            throw new Error("Can't write data in readonly mode!");
+        }
+
+        if (typeof addKey == "string") {
+            addKey = new TextEncoder().encode(addKey);
+        } else if (!(typeof addKey == "object" || typeof addKey == "number")) {
             throw new Error("Add key must be a number, string, number array or Buffer");
         }
 
-        return ADD(this, addedKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        this.open();
+
+        this.#confrimSize(endOffset);
+
+        const returnData = _ADD(this.data, startOffset, Math.min(endOffset, this.size), addKey);
+
+        if (consume) {
+            this.#offset = returnData.offset;
+
+            this.#insetBit = returnData.bitoffset;
+        }
     };
 
     /**
@@ -3800,26 +2570,26 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} length - Length in bytes to add from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    addThis(addKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void {
-        var Length: number = length || 1;
+    addThis(addKey: number | string | Uint8Array | Buffer, length?: number, consume: boolean = false): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
-        var AddedKey: any = addKey;
-
-        if (typeof AddedKey == "number") {
-            Length = length || 1;
-        } else if (typeof AddedKey == "string") {
-            const encoder = new TextEncoder().encode(AddedKey);
-
-            AddedKey = encoder;
-
-            Length = length || encoder.length;
-        } else if (typeof AddedKey == "object") {
-            Length = length || AddedKey.length;
-        } else {
-            throw new Error("Add key must be a number, string, number array or Buffer");
+            throw new Error("Can't write data in readonly mode!");
         }
 
-        return ADD(this, AddedKey, this.offset, this.offset + Length, consume || false);
+        if (typeof addKey == "number") {
+            length = length ?? 1;
+        } else if (typeof addKey == "string") {
+            addKey = new TextEncoder().encode(addKey);
+
+            length = length ?? addKey.length;
+        } else if (this.isBufferOrUint8Array(addKey)) {
+            length = length ?? addKey.length;
+        } else {
+            throw new Error("ADD must be a number, string, Uint8Array or Buffer");
+        }
+
+        return this.add(addKey, this.#offset, this.#offset + length, consume);
     };
 
     /**
@@ -3829,8 +2599,24 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    not(startOffset?: number, endOffset?: number, consume?: boolean): void {
-        return NOT(this, startOffset || this.offset, endOffset || this.size, consume || false);
+    not(startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+            throw new Error("Can't write data in readonly mode!");
+        }
+
+        this.open();
+
+        this.#confrimSize(endOffset);
+
+        const returnData = _NOT(this.data, startOffset, Math.min(endOffset, this.size));
+
+        if (consume) {
+            this.#offset = returnData.offset;
+
+            this.#insetBit = returnData.bitoffset;
+        }
     };
 
     /**
@@ -3839,8 +2625,8 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} length - Length in bytes to NOT from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    notThis(length?: number, consume?: boolean): void {
-        return NOT(this, this.offset, this.offset + (length || 1), consume || false);
+    notThis(length: number = 1, consume: boolean = false): void {
+        return this.not(this.#offset, this.#offset + length, consume);
     };
 
     /**
@@ -3851,16 +2637,30 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    lShift(shiftKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void {
-        var lShiftKey: any = shiftKey;
+    lShift(shiftKey: number | string | Uint8Array | Buffer, startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
-        if (typeof lShiftKey == "string") {
-            lShiftKey = new TextEncoder().encode(lShiftKey);
-        } else if (!(typeof lShiftKey == "object" || typeof lShiftKey == "number")) {
+            throw new Error("Can't write data in readonly mode!");
+        }
+
+        if (typeof shiftKey == "string") {
+            shiftKey = new TextEncoder().encode(shiftKey);
+        } else if (!(typeof shiftKey == "object" || typeof shiftKey == "number")) {
             throw new Error("Left shift must be a number, string, number array or Buffer");
         }
 
-        return LSHIFT(this, lShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        this.open();
+
+        this.#confrimSize(endOffset);
+
+        const returnData = _LSHIFT(this.data, startOffset, Math.min(endOffset, this.size), shiftKey);
+
+        if (consume) {
+            this.#offset = returnData.offset;
+
+            this.#insetBit = returnData.bitoffset;
+        }
     };
 
     /**
@@ -3870,26 +2670,26 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    lShiftThis(shiftKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void {
-        var Length: number = length || 1;
+    lShiftThis(shiftKey: number | string | Uint8Array | Buffer, length?: number, consume: boolean = false): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
-        var lShiftKey: any = shiftKey;
-
-        if (typeof lShiftKey == "number") {
-            Length = length || 1;
-        } else if (typeof lShiftKey == "string") {
-            const encoder = new TextEncoder().encode(lShiftKey);
-
-            lShiftKey = encoder;
-
-            Length = length || encoder.length;
-        } else if (typeof lShiftKey == "object") {
-            Length = length || lShiftKey.length;
-        } else {
-            throw new Error("Left shift must be a number, string, number array or Buffer");
+            throw new Error("Can't write data in readonly mode!");
         }
 
-        return LSHIFT(this, shiftKey, this.offset, this.offset + Length, consume || false);
+        if (typeof shiftKey == "number") {
+            length = length ?? 1;
+        } else if (typeof shiftKey == "string") {
+            shiftKey = new TextEncoder().encode(shiftKey);
+
+            length = length ?? shiftKey.length;
+        } else if (this.isBufferOrUint8Array(shiftKey)) {
+            length = length ?? shiftKey.length;
+        } else {
+            throw new Error("Left shift must be a number, string, Uint8Array or Buffer");
+        }
+
+        return this.lShift(shiftKey, this.#offset, this.#offset + length, consume);
     };
 
     /**
@@ -3900,16 +2700,30 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    rShift(shiftKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void {
-        var rShiftKey: any = shiftKey;
+    rShift(shiftKey: number | string | Uint8Array | Buffer, startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
-        if (typeof rShiftKey == "string") {
-            rShiftKey = new TextEncoder().encode(rShiftKey);
-        } else if (!(typeof rShiftKey == "object" || typeof rShiftKey == "number")) {
+            throw new Error("Can't write data in readonly mode!");
+        }
+
+        if (typeof shiftKey == "string") {
+            shiftKey = new TextEncoder().encode(shiftKey);
+        } else if (!(typeof shiftKey == "object" || typeof shiftKey == "number")) {
             throw new Error("Right shift must be a number, string, number array or Buffer");
         }
 
-        return RSHIFT(this, rShiftKey, startOffset || this.offset, endOffset || this.size, consume || false);
+        this.open();
+
+        this.#confrimSize(endOffset);
+
+        const returnData = _RSHIFT(this.data, startOffset, Math.min(endOffset, this.size), shiftKey);
+
+        if (consume) {
+            this.#offset = returnData.offset;
+
+            this.#insetBit = returnData.bitoffset;
+        }
     };
 
     /**
@@ -3919,98 +2733,31 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    rShiftThis(shiftKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void {
-        var Length: number = length || 1;
+    rShiftThis(shiftKey: number | string | Uint8Array | Buffer, length?: number, consume: boolean = false): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
-        var lShiftKey: any = shiftKey;
-
-        if (typeof lShiftKey == "number") {
-            Length = length || 1;
-        } else if (typeof lShiftKey == "string") {
-            const encoder = new TextEncoder().encode(lShiftKey);
-            lShiftKey = encoder;
-            Length = length || encoder.length;
-        } else if (typeof lShiftKey == "object") {
-            Length = length || lShiftKey.length;
-        } else {
-            throw new Error("Right shift must be a number, string, number array or Buffer");
+            throw new Error("Can't write data in readonly mode!");
         }
 
-        return RSHIFT(this, lShiftKey, this.offset, this.offset + Length, consume || false);
+        if (typeof shiftKey == "number") {
+            length = length ?? 1;
+        } else if (typeof shiftKey == "string") {
+            shiftKey = new TextEncoder().encode(shiftKey);
+
+            length = length ?? shiftKey.length;
+        } else if (this.isBufferOrUint8Array(shiftKey)) {
+            length = length ?? shiftKey.length;
+        } else {
+            throw new Error("right shift must be a number, string, Uint8Array or Buffer");
+        }
+
+        return this.rShift(shiftKey, this.#offset, this.#offset + length, consume);
     };
 
     ///////////////////////////////
     // #region BIT READER
     ///////////////////////////////
-
-    /**
-     *
-     * Write bits, must have at least value and number of bits.
-     * 
-     * ``Note``: When returning to a byte write, remaining bits are skipped.
-     *
-     * @param {number} value - value as int 
-     * @param {number} bits - number of bits to write
-     * @param {boolean} unsigned - if value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeBit(value: number, bits: number, unsigned?: boolean, endian?: endian): void {
-        return wbit(this, value, bits, unsigned, endian);
-    };
-
-    /**
-     * Bit field writer.
-     * 
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int 
-     * @param {number} bits - bits to write
-     * @returns number
-     */
-    writeUBitBE(value: number, bits: number): void {
-        return wbit(this, value, bits, true, "big");
-    };
-
-    /**
-     * Bit field writer.
-     * 
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int 
-     * @param {number} bits - bits to write
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns number
-     */
-    writeBitBE(value: number, bits: number, unsigned?: boolean): void {
-        return wbit(this, value, bits, unsigned, "big");
-    };
-
-    /**
-     * Bit field writer.
-     * 
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @returns number
-     */
-    writeUBitLE(value: number, bits: number): void {
-        return wbit(this, value, bits, true, "little");
-    };
-
-    /**
-     * Bit field writer.
-     * 
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns number
-     */
-    writeBitLE(value: number, bits: number, unsigned?: boolean): void {
-        return wbit(this, value, bits, unsigned, "little");
-    };
 
     /**
      * Bit field reader.
@@ -4020,10 +2767,39 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {number} bits - bits to read
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
      * @returns {number}
      */
-    readBit(bits?: number, unsigned?: boolean, endian?: endian): number {
-        return rbit(this, bits, unsigned, endian);
+    readBit(bits?: number, unsigned: boolean = false, endian: endian = this.endian, consume: boolean = true): number {
+        this.open();
+
+        if (typeof bits != "number") {
+            throw new TypeError("Enter number of bits to read");
+        }
+
+        if (bits == 0) {
+            return 0;
+        }
+
+        if (bits <= 0 || bits > 32) {
+            throw new Error('Bit length must be between 1 and 32. Got ' + bits);
+        }
+
+        const sizeNeeded = Math.floor(((bits - 1) + this.#insetBit) / 8) + this.#offset;
+
+        this.#confrimSize(sizeNeeded);
+
+        const bitStart = (this.#offset * 8) + this.#insetBit;
+
+        const value = _rbit(this.data, bits, bitStart, endian, unsigned);
+
+        if (consume) {
+            this.#offset += Math.floor((bits + this.#insetBit) / 8);
+
+            this.#insetBit = (bits + this.#insetBit) % 8;
+        }
+
+        return value;
     };
 
     /**
@@ -4036,19 +2812,6 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      */
     readUBitBE(bits: number): number {
         return this.readBit(bits, true, "big");
-    };
-
-    /**
-     * Bit field reader.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
-     */
-    readBitBE(bits: number, unsigned?: boolean): number {
-        return this.readBit(bits, unsigned, "big");
     };
 
     /**
@@ -4072,8 +2835,123 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {boolean} unsigned - if the value is unsigned
      * @returns {number}
      */
+    readBitBE(bits: number, unsigned?: boolean): number {
+        return this.readBit(bits, unsigned, "big");
+    };
+
+    /**
+     * Bit field reader.
+     * 
+     * Note: When returning to a byte read, remaining bits are dropped.
+     *
+     * @param {number} bits - bits to read
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns {number}
+     */
     readBitLE(bits: number, unsigned?: boolean): number {
         return this.readBit(bits, unsigned, "little");
+    };
+
+    /**
+     *
+     * Write bits, must have at least value and number of bits.
+     * 
+     * ``Note``: When returning to a byte write, remaining bits are skipped.
+     *
+     * @param {number} value - value as int 
+     * @param {number} bits - number of bits to write
+     * @param {boolean} unsigned - if value is unsigned
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
+     */
+    writeBit(value: number, bits: number, unsigned: boolean = false, endian: endian = this.endian, consume: boolean = true): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+            throw new Error("Can't write data in readOnly mode!");
+        }
+
+        this.open();
+
+        if (bits == 0) {
+            return;
+        }
+
+        if (bits <= 0 || bits > 32) {
+            throw new Error('Bit length must be between 1 and 32. Got ' + bits);
+        }
+
+        value = numberSafe(value, bits, unsigned);
+
+        const endOffset = Math.ceil(((bits - 1) + this.#insetBit) / 8) + this.#offset;
+
+        this.#confrimSize(endOffset);
+
+        const offset = (this.#offset * 8) + this.#insetBit;
+
+        _wbit(this.data, value, bits, offset, endian, unsigned);
+
+        if (consume) {
+            this.#offset += Math.floor((bits + this.#insetBit) / 8);
+
+            this.#insetBit = (bits + this.#insetBit) % 8;
+        }
+
+        return;
+    };
+
+    /**
+     * Bit field writer.
+     * 
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int 
+     * @param {number} bits - bits to write
+     * @returns number
+     */
+    writeUBitBE(value: number, bits: number): void {
+        return this.writeBit(value, bits, true, "big");
+    };
+
+    /**
+     * Bit field writer.
+     * 
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @returns number
+     */
+    writeUBitLE(value: number, bits: number): void {
+        return this.writeBit(value, bits, true, "little");
+    };
+
+    /**
+     * Bit field writer.
+     * 
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int 
+     * @param {number} bits - bits to write
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns number
+     */
+    writeBitBE(value: number, bits: number, unsigned?: boolean): void {
+        return this.writeBit(value, bits, unsigned, "big");
+    };
+
+    /**
+     * Bit field writer.
+     * 
+     * Note: When returning to a byte write, remaining bits are dropped.
+     *
+     * @param {number} value - value as int
+     * @param {number} bits - bits to write
+     * @param {boolean} unsigned - if the value is unsigned
+     * @returns number
+     */
+    writeBitLE(value: number, bits: number, unsigned?: boolean): void {
+        return this.writeBit(value, bits, unsigned, "little");
     };
 
     ///////////////////////////////
@@ -4083,53 +2961,38 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     /**
      * Read byte.
      * 
-     * @param {boolean} unsigned - if value is unsigned or not
+     * @param {boolean} unsigned - if the value is unsigned or not
+     * @param {boolean} consume - move offset after read
      * @returns {number}
      */
-    readByte(unsigned?: boolean): number {
-        return rbyte(this, unsigned);
-    };
+    readByte(unsigned: boolean = false, consume: boolean = true): number {
+        this.open();
 
-    /**
-     * Read multiple bytes.
-     * 
-     * @param {number} amount - amount of bytes to read
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @returns {number[]}
-     */
-    readBytes(amount: number, unsigned?: boolean): number[] {
-        return Array.from({ length: amount }, () => rbyte(this, unsigned));
-    };
+        var trueByte = this.#offset;
 
-    /**
-     * Write byte.
-     *
-     * @param {number} value - value as int 
-     * @param {boolean} unsigned - if the value is unsigned
-     */
-    writeByte(value: number, unsigned?: boolean): void {
-        return wbyte(this, value, unsigned);
-    };
+        var trueBit = this.#insetBit;
 
-    /**
-     * Write multiple bytes.
-     * 
-     * @param {number[]} values - array of values as int
-     * @param {boolean} unsigned - if the value is unsigned
-     */
-    writeBytes(values: number[], unsigned?: boolean): void {
-        for (let i = 0; i < values.length; i++) {
-            wbyte(this, values[i], unsigned);
+        if (trueBit != 0) {
+            trueByte += 1;
         }
-    };
 
-    /**
-     * Write unsigned byte.
-     *
-     * @param {number} value - value as int 
-     */
-    writeUByte(value: number): void {
-        return wbyte(this, value, true);
+        this.#checkSize(1, 0, trueByte);
+
+        var value: number;
+
+        if (canInt8) {
+            value = unsigned ? this.view.getUint8(trueByte) : this.view.getInt8(trueByte);
+        } else {
+            value = _rbyte(this.data, trueByte, unsigned);
+        }
+
+        if (consume) {
+            this.#offset += 1;
+
+            this.#insetBit = 0;
+        }
+
+        return value;
     };
 
     /**
@@ -4141,6 +3004,104 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
         return this.readByte(true);
     };
 
+    /**
+     * Read multiple bytes.
+     * 
+     * @param {number} amount - amount of bytes to read
+     * @param {boolean} unsigned - if value is unsigned or not
+     * @param {boolean} consume - move offset after read
+     * @returns {number[]}
+     */
+    readBytes(amount: number, unsigned?: boolean, consume: boolean = true): number[] {
+        return Array.from({ length: amount }, () => this.readByte(unsigned, consume));
+    };
+
+    /**
+     * Read multiple unsigned bytes.
+     * 
+     * @param {number} amount - amount of bytes to read
+     * @param {boolean} consume - move offset after read
+     * @returns {number[]}
+     */
+    readUBytes(amount: number, consume: boolean = true): number[] {
+        return this.readBytes(amount, true, consume);
+    };
+
+    /**
+     * Write byte.
+     *
+     * @param {number} value - value as int 
+     * @param {boolean} unsigned - if the value is unsigned
+     * @param {boolean} consume - move offset after write
+     */
+    writeByte(value: number, unsigned: boolean = false, consume: boolean = true): void {
+        if (this.readOnly) {
+            throw new Error("Can't write data in readonly mode!");
+        }
+
+        this.open();
+
+        var trueByte = this.#offset;
+
+        var trueBit = this.#insetBit;
+
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+
+        this.#checkSize(1, 0, trueByte);
+
+        if (canInt8) {
+            if (unsigned) {
+                this.view.setUint8(trueByte, value);
+            } else {
+                this.view.setInt8(trueByte, value);
+            }
+        } else {
+            _wbyte(this.data, numberSafe(value, 8, unsigned), trueByte, unsigned);
+        }
+
+        if (consume) {
+            this.#offset += 1;
+
+            this.#insetBit = 0;
+        }
+
+        return;
+    };
+
+    /**
+     * Write multiple bytes.
+     * 
+     * @param {number[]} values - array of values as int
+     * @param {boolean} unsigned - if the value is unsigned
+     * @param {boolean} consume - move offset after write
+     */
+    writeBytes(values: number[], unsigned?: boolean, consume: boolean = true): void {
+        for (let i = 0; i < values.length; i++) {
+            this.writeByte(values[i], unsigned, consume);
+        }
+    };
+
+    /**
+     * Write multiple unsigned bytes.
+     * 
+     * @param {number[]} values - array of values as int
+     * @param {boolean} consume - move offset after write
+     */
+    writeUBytes(values: number[], consume: boolean = true): void {
+        return this.writeBytes(values, true, consume);
+    };
+
+    /**
+     * Write unsigned byte.
+     *
+     * @param {number} value - value as int 
+     */
+    writeUByte(value: number): void {
+        return this.writeByte(value, true);
+    };
+
     ///////////////////////////////
     // #region INT16 READER
     ///////////////////////////////
@@ -4150,58 +3111,41 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * 
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
      * @returns {number}
      */
-    readInt16(unsigned?: boolean, endian?: endian): number {
-        return rint16(this, unsigned, endian);
-    };
+    readInt16(unsigned: boolean = false, endian: endian = this.endian, consume: boolean = true): number {
+        this.open();
 
-    /**
-     * Write int16.
-     *
-     * @param {number} value - value as int 
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeInt16(value: number, unsigned?: boolean, endian?: endian): void {
-        return wint16(this, value, unsigned, endian);
-    };
+        var trueByte = this.#offset;
 
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int 
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt16(value: number, endian?: endian): void {
-        return wint16(this, value, true, endian);
-    };
+        var trueBit = this.#insetBit;
 
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int 
-     */
-    writeUInt16BE(value: number): void {
-        return this.writeInt16(value, true, "big");
-    };
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
 
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int 
-     */
-    writeUInt16LE(value: number): void {
-        return this.writeInt16(value, true, "little");
-    };
+        this.#checkSize(2, 0, trueByte);
 
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int 
-     */
-    writeInt16LE(value: number): void {
-        return this.writeInt16(value, false, "little");
+        var value: number;
+
+        if (canInt16) {
+            if (unsigned) {
+                value = this.view.getUint16(trueByte, endian == "little");
+            } else {
+                value = this.view.getInt16(trueByte, endian == "little");
+            }
+        } else {
+            value = _rint16(this.data, trueByte, endian, unsigned);
+        }
+
+        if (consume) {
+            this.#offset += 2;
+
+            this.#insetBit = 0;
+        }
+
+        return value;
     };
 
     /**
@@ -4211,7 +3155,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * 
      * @returns {number}
      */
-    readUInt16(endian?: endian): number {
+    readUInt16(endian: endian = this.endian): number {
         return this.readInt16(true, endian);
     };
 
@@ -4221,7 +3165,16 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @returns {number}
      */
     readUInt16LE(): number {
-        return this.readInt16(true, "little");
+        return this.readUInt16("little");
+    };
+
+    /**
+     * Read unsigned short in big endian.
+     * 
+     * @returns {number}
+     */
+    readUInt16BE(): number {
+        return this.readUInt16("big");
     };
 
     /**
@@ -4234,15 +3187,6 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     };
 
     /**
-     * Read unsigned short in big endian.
-     * 
-     * @returns {number}
-     */
-    readUInt16BE(): number {
-        return this.readInt16(true, "big");
-    };
-
-    /**
     * Read signed short in big endian.
     * 
     * @returns {number}
@@ -4251,50 +3195,152 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
         return this.readInt16(false, "big");
     };
 
+    /**
+     * Write int16.
+     *
+     * @param {number} value - value as int 
+     * @param {boolean} unsigned - if the value is unsigned
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
+     */
+    writeInt16(value: number, unsigned: boolean = false, endian: endian = this.endian, consume: boolean = true): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+            throw new Error("Can't write data in readonly mode!");
+        }
+
+        this.open();
+
+        var trueByte = this.#offset;
+
+        var trueBit = this.#insetBit;
+
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+
+        this.#checkSize(2, 0, trueByte);
+
+        if (canInt16) {
+            if (unsigned) {
+                this.view.setUint16(trueByte, value, endian == "little");
+            } else {
+                this.view.setInt16(trueByte, value, endian == "little");
+            }
+        } else {
+            _wint16(this.data, numberSafe(value, 16, unsigned), trueByte, endian, unsigned);
+        }
+
+        if (consume) {
+            this.#offset += 2;
+
+            this.#insetBit = 0;
+        }
+
+        return;
+    };
+
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int 
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    writeUInt16(value: number, endian: endian = this.endian): void {
+        return this.writeInt16(value, true, endian);
+    };
+
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int 
+     */
+    writeUInt16BE(value: number): void {
+        return this.writeUInt16(value, "big");
+    };
+
+    /**
+     * Write unsigned int16.
+     *
+     * @param {number} value - value as int 
+     */
+    writeUInt16LE(value: number): void {
+        return this.writeUInt16(value, "little");
+    };
+
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int 
+     */
+    writeInt16LE(value: number): void {
+        return this.writeInt16(value, false, "little");
+    };
+
+    /**
+     * Write signed int16.
+     *
+     * @param {number} value - value as int 
+     */
+    writeInt16BE(value: number): void {
+        return this.writeInt16(value, false, "big");
+    };
+
     ///////////////////////////////
     // #region HALF FLOAT
     ///////////////////////////////
 
     /**
-     * Read half float.
+     * Read 16 bit float.
      * 
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
      * @returns {number}
      */
-    readHalfFloat(endian?: endian): number {
-        return rhalffloat(this, endian);
+    readHalfFloat(endian: endian = this.endian, consume: boolean = true): number {
+        this.open();
+
+        var trueByte = this.#offset;
+
+        var trueBit = this.#insetBit;
+
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+
+        this.#checkSize(2, 0, trueByte);
+
+        var value: number;
+
+        if (canFloat16) {
+            value = this.view.getFloat16(trueByte, endian == "little");
+        } else {
+            value = _rhalffloat(this.data, trueByte, endian);
+        }
+
+        if (consume) {
+            this.#offset += 2;
+
+            this.#insetBit = 0;
+        }
+
+        return value;
     };
 
     /**
-     * Writes half float.
+     * Read 16 bit float.
      * 
-     * @param {number} value - value as int 
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
+     * @returns {number}
      */
-    writeHalfFloat(value: number, endian?: endian): void {
-        return whalffloat(this, value, endian);
+    readFloat16(endian: endian = this.endian, consume: boolean = true): number {
+        return this.readHalfFloat(endian, consume);
     };
 
     /**
-     * Writes half float.
-     * 
-     * @param {number} value - value as int 
-     */
-    writeHalfFloatBE(value: number): void {
-        return this.writeHalfFloat(value, "big");
-    };
-
-    /**
-     * Writes half float.
-     * 
-     * @param {number} value - value as int 
-     */
-    writeHalfFloatLE(value: number): void {
-        return this.writeHalfFloat(value, "little");
-    };
-
-    /**
-    * Read half float.
+    * Read 16 bit float.
     * 
     * @returns {number}
     */
@@ -4303,12 +3349,118 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     };
 
     /**
-     * Read half float.
+    * Read 16 bit float.
+    * 
+    * @returns {number}
+    */
+    readFloat16BE(): number {
+        return this.readHalfFloat("big");
+    };
+
+    /**
+     * Read 16 bit float.
      * 
      * @returns {number}
      */
     readHalfFloatLE(): number {
         return this.readHalfFloat("little");
+    };
+
+    /**
+     * Read 16 bit float.
+     * 
+     * @returns {number}
+     */
+    readFloat16LE(): number {
+        return this.readHalfFloat("little");
+    };
+
+    /**
+     * Writes 16 bit float.
+     * 
+     * @param {number} value - value as int 
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
+     */
+    writeHalfFloat(value: number, endian: endian = this.endian, consume: boolean = true): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+            throw new Error("Can't write data in readonly mode!");
+        }
+
+        this.open();
+
+        var trueByte = this.#offset;
+
+        var trueBit = this.#insetBit;
+
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+
+        this.#checkSize(2, 0, trueByte);
+
+        if (canFloat16) {
+            this.view.setFloat16(trueByte, value, endian == "little");
+        } else {
+            _whalffloat(this.data, value, trueByte, endian);
+        }
+
+        if (consume) {
+            this.#offset += 2;
+
+            this.#insetBit = 0;
+        }
+
+        return;
+    };
+
+    /**
+     * Writes 16 bit float.
+     * 
+     * @param {number} value - value as int 
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
+     */
+    writeFloat16(value: number, endian: endian = this.endian, consume: boolean = true): void {
+        return this.writeHalfFloat(value, endian, consume);
+    };
+
+    /**
+     * Writes 16 bit float.
+     * 
+     * @param {number} value - value as int 
+     */
+    writeHalfFloatBE(value: number): void {
+        return this.writeHalfFloat(value, "big");
+    };
+
+    /**
+     * Writes 16 bit float.
+     * 
+     * @param {number} value - value as int 
+     */
+    writeFloat16BE(value: number): void {
+        return this.writeHalfFloat(value, "big");
+    };
+
+    /**
+     * Writes 16 bit float.
+     * 
+     * @param {number} value - value as int 
+     */
+    writeHalfFloatLE(value: number): void {
+        return this.writeHalfFloat(value, "little");
+    };
+
+    /**
+     * Writes 16 bit float.
+     * 
+     * @param {number} value - value as int 
+     */
+    writeFloat16LE(value: number): void {
+        return this.writeHalfFloat(value, "little");
     };
 
     ///////////////////////////////
@@ -4320,58 +3472,51 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * 
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
      * @returns {number}
      */
-    readInt32(unsigned?: boolean, endian?: endian): number {
-        return rint32(this, unsigned, endian);
+    readInt32(unsigned: boolean = false, endian: endian = this.endian, consume: boolean = true): number {
+        this.open();
+
+        var trueByte = this.#offset;
+
+        var trueBit = this.#insetBit;
+
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+
+        this.#checkSize(4, 0, trueByte);
+
+        var value: number;
+
+        if (canInt32) {
+            if (unsigned) {
+                value = this.view.getUint32(trueByte, endian == "little");
+            } else {
+                value = this.view.getInt32(trueByte, endian == "little");
+            }
+        } else {
+            value = _rint32(this.data, trueByte, endian, unsigned);
+        }
+
+        if (consume) {
+            this.#offset += 4;
+
+            this.#insetBit = 0;
+        }
+
+        return value;
     };
 
     /**
-     * Write int32.
-     *
-     * @param {number} value - value as int 
-     * @param {boolean} unsigned - if the value is unsigned
+     * Read signed 32 bit integer.
+     * 
      * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
      */
-    writeInt32(value: number, unsigned?: boolean, endian?: endian): void {
-        return wint32(this, value, unsigned, endian);
-    };
-
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int 
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt32(value: number, endian?: endian): void {
-        return wint32(this, value, true, endian);
-    };
-
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int 
-     */
-    writeInt32LE(value: number): void {
-        return this.writeInt32(value, false, "little");
-    };
-
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int 
-     */
-    writeUInt32LE(value: number): void {
-        return this.writeInt32(value, true, "little");
-    };
-
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int 
-     */
-    writeInt32BE(value: number): void {
-        return this.writeInt32(value, false, "big");
+    readInt(endian: endian = this.endian): number {
+        return this.readInt32(false, endian);
     };
 
     /**
@@ -4380,16 +3525,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @returns {number}
      */
     readInt32BE(): number {
-        return this.readInt32(false, "big");
-    };
-
-    /**
-     * Read unsigned 32 bit integer.
-     * 
-     * @returns {number}
-     */
-    readUInt32BE(): number {
-        return this.readInt32(true, "big");
+        return this.readInt("big");
     };
 
     /**
@@ -4398,7 +3534,36 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @returns {number}
      */
     readInt32LE(): number {
-        return this.readInt32(false, "little");
+        return this.readInt("little");
+    };
+
+    /**
+     * Read unsigned 32 bit integer.
+     * 
+     * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
+     */
+    readUInt32(endian: endian = this.endian): number {
+        return this.readInt32(true, endian);
+    };
+
+    /**
+     * Read unsigned 32 bit integer.
+     * 
+     * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
+     */
+    readUInt(endian: endian = this.endian): number {
+        return this.readInt32(true, endian);
+    };
+
+    /**
+     * Read unsigned 32 bit integer.
+     * 
+     * @returns {number}
+     */
+    readUInt32BE(): number {
+        return this.readUInt("big");
     };
 
     /**
@@ -4407,16 +3572,119 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @returns {number}
      */
     readUInt32LE(): number {
-        return this.readInt32(true, "little");
+        return this.readUInt("little");
     };
 
     /**
-     * Read unsigned 32 bit integer.
-     * 
-     * @returns {number}
+     * Write 32 bit integer.
+     *
+     * @param {number} value - value as int 
+     * @param {boolean} unsigned - if the value is unsigned
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
      */
-    readUInt(): number {
-        return this.readInt32(true);
+    writeInt32(value: number, unsigned: boolean = false, endian: endian = this.endian, consume: boolean = true): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+            throw new Error("Can't write data in readonly mode!");
+        }
+
+        this.open();
+
+        var trueByte = this.#offset;
+
+        var trueBit = this.#insetBit;
+
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+
+        this.#checkSize(4, 0, trueByte);
+
+        if (canInt32) {
+            if (unsigned) {
+                this.view.setUint32(trueByte, value, endian == "little");
+            } else {
+                this.view.setInt32(trueByte, value, endian == "little");
+            }
+        } else {
+            _wint32(this.data, numberSafe(value, 32, unsigned), trueByte, endian, unsigned);
+        }
+
+        if (consume) {
+            this.#offset += 4;
+
+            this.#insetBit = 0;
+        }
+
+        return;
+    };
+
+    /**
+     * Write signed 32 bit integer.
+     *
+     * @param {number} value - value as int 
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    writeInt(value: number, endian: endian = this.endian): void {
+        return this.writeInt32(value, false, endian);
+    };
+
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int 
+     */
+    writeInt32LE(value: number): void {
+        return this.writeInt(value, "little");
+    };
+
+    /**
+     * Write signed int32.
+     *
+     * @param {number} value - value as int 
+     */
+    writeInt32BE(value: number): void {
+        return this.writeInt(value, "big");
+    };
+
+    /**
+     * Write unsigned 32 bit integer.
+     *
+     * @param {number} value - value as int 
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    writeUInt(value: number, endian: endian = this.endian): void {
+        return this.writeInt32(value, true, endian);
+    };
+
+    /**
+     * Write unsigned 32 bit integer.
+     *
+     * @param {number} value - value as int 
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    writeUInt32(value: number, endian: endian = this.endian): void {
+        return this.writeUInt(value, endian);
+    };
+
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int 
+     */
+    writeUInt32BE(value: number): void {
+        return this.writeUInt32(value, "big");
+    };
+
+    /**
+     * Write unsigned int32.
+     *
+     * @param {number} value - value as int 
+     */
+    writeUInt32LE(value: number): void {
+        return this.writeUInt32(value, "little");
     };
 
     ///////////////////////////////
@@ -4424,45 +3692,55 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     ///////////////////////////////
 
     /**
-     * Read float.
+     * Read 32 bit float.
      * 
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
      * @returns {number}
      */
-    readFloat(endian?: endian): number {
-        return rfloat(this, endian);
+    readFloat(endian: endian = this.endian, consume: boolean = true): number {
+        this.open();
+
+        var trueByte = this.#offset;
+
+        var trueBit = this.#insetBit;
+
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+
+        this.#checkSize(4, 0, trueByte);
+
+        var value: number;
+
+        if (canFloat32) {
+            value = this.view.getFloat32(trueByte, endian == "little");
+        } else {
+            value = _rfloat(this.data, trueByte, endian);
+        }
+
+        if (consume) {
+            this.#offset += 4;
+
+            this.#insetBit = 0;
+        }
+
+        return value;
     };
 
     /**
-     * Write float.
+     * Read 32 bit float.
      * 
-     * @param {number} value - value as int 
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
+     * @returns {number}
      */
-    writeFloat(value: number, endian?: endian): void {
-        return wfloat(this, value, endian);
+    readFloat32(endian: endian = this.endian, consume: boolean = true): number {
+        return this.readFloat(endian, consume);
     };
 
     /**
-     * Write float.
-     * 
-     * @param {number} value - value as int 
-     */
-    writeFloatLE(value: number): void {
-        return this.writeFloat(value, "little");
-    };
-
-    /**
-     * Write float.
-     * 
-     * @param {number} value - value as int 
-     */
-    writeFloatBE(value: number): void {
-        return this.writeFloat(value, "big");
-    };
-
-    /**
-     * Read float.
+     * Read 32 bit float.
      * 
      * @returns {number}
      */
@@ -4471,12 +3749,107 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     };
 
     /**
-     * Read float.
+     * Read 32 bit float.
+     * 
+     * @returns {number}
+     */
+    readFloat32BE(): number {
+        return this.readFloat("big");
+    };
+
+    /**
+     * Read 32 bit float.
      * 
      * @returns {number}
      */
     readFloatLE(): number {
         return this.readFloat("little");
+    };
+
+    /**
+     * Read 32 bit float.
+     * 
+     * @returns {number}
+     */
+    readFloat32LE(): number {
+        return this.readFloat("little");
+    };
+
+    /**
+     * Write 32 bit float.
+     * 
+     * @param {number} value - value as int 
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
+     */
+    writeFloat(value: number, endian: endian = this.endian, consume: boolean = true): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+            throw new Error("Can't write data in readonly mode!");
+        }
+
+        this.open();
+
+        var trueByte = this.#offset;
+
+        var trueBit = this.#insetBit;
+
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+
+        this.#checkSize(4, 0, trueByte);
+
+        if (canFloat32) {
+            this.view.setFloat32(trueByte, value, endian == "little");
+        } else {
+            _wfloat(this.data, value, trueByte, endian);
+        }
+
+        if (consume) {
+            this.#offset += 4;
+
+            this.#insetBit = 0;
+        }
+
+        return;
+    };
+
+    /**
+     * Write 32 bit float.
+     * 
+     * @param {number} value - value as int 
+     */
+    writeFloatLE(value: number): void {
+        return this.writeFloat(value, "little");
+    };
+
+    /**
+     * Write 32 bit float.
+     * 
+     * @param {number} value - value as int 
+     */
+    writeFloat32LE(value: number): void {
+        return this.writeFloat(value, "little");
+    };
+
+    /**
+     * Write 32 bit float.
+     * 
+     * @param {number} value - value as int 
+     */
+    writeFloat32BE(value: number): void {
+        return this.writeFloat(value, "big");
+    };
+
+    /**
+     * Write 32 bit float.
+     * 
+     * @param {number} value - value as int 
+     */
+    writeFloatBE(value: number): void {
+        return this.writeFloat(value, "big");
     };
 
     ///////////////////////////////
@@ -4489,10 +3862,108 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      * 
      * @param {boolean} unsigned - if value is unsigned or not
-     * @param {endian?} endian - ``big`` or ``little``
+     * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after read
      */
-    readInt64(unsigned?: boolean, endian?: endian): hasBigInt extends true ? bigint : number {
-        return rint64(this, unsigned, endian) as hasBigInt extends true ? bigint : number;
+    readInt64(unsigned: boolean = false, endian: endian = this.endian, consume: boolean = true): alwaysBigInt extends true ? bigint : number {
+        if (!hasBigInt) {
+            throw new Error("System doesn't support BigInt values.");
+        }
+
+        this.open();
+
+        var trueByte = this.#offset;
+
+        var trueBit = this.#insetBit;
+
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+
+        this.#checkSize(8, 0, trueByte);
+
+        var value: bigint;
+
+        if (canBigInt64) {
+            if (unsigned) {
+                value = this.view.getBigUint64(trueByte, endian == "little");
+            } else {
+                value = this.view.getBigInt64(trueByte, endian == "little");
+            }
+        } else {
+            value = _rint64(this.data, trueByte, endian, unsigned);
+        }
+
+        if (consume) {
+            this.#offset += 8;
+
+            this.#insetBit = 0;
+        }
+
+        if (this.enforceBigInt == true || (typeof value == "bigint" && !isSafeInt64(value))) {
+            return value as alwaysBigInt extends true ? bigint : number;
+        } else {
+            if (isSafeInt64(value)) {
+                return Number(value) as alwaysBigInt extends true ? bigint : number;
+            } else {
+                throw new Error("Value is outside of number range and enforceBigInt is set to false. " + value);
+            }
+        }
+    };
+
+    /**
+     * Read unsigned 64 bit integer.
+     * 
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
+     */
+    readUInt64(): alwaysBigInt extends true ? bigint : number {
+        return this.readInt64(true);
+    };
+
+    /**
+     * Read signed 64 bit integer.
+     * 
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
+     */
+    readInt64BE(): alwaysBigInt extends true ? bigint : number {
+        return this.readInt64(false, "big");
+    };
+
+    /**
+     * Read signed 64 bit integer.
+     * 
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
+     */
+    readInt64LE(): alwaysBigInt extends true ? bigint : number {
+        return this.readInt64(false, "little");
+    };
+
+    /**
+     * Read unsigned 64 bit integer.
+     * 
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
+     */
+    readUInt64BE(): alwaysBigInt extends true ? bigint : number {
+        return this.readInt64(true, "big");
+    };
+
+    /**
+     * Read unsigned 64 bit integer.
+     * 
+     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
+     * 
+     * @returns {BigValue}
+     */
+    readUInt64LE(): alwaysBigInt extends true ? bigint : number {
+        return this.readInt64(true, "little");
     };
 
     /**
@@ -4501,9 +3972,48 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {BigValue} value - value as int 
      * @param {boolean} unsigned - if the value is unsigned
      * @param {endian} endian - ``big`` or ``little``
+     * @param {boolean} consume - move offset after write
      */
-    writeInt64(value: BigValue, unsigned?: boolean, endian?: endian): void {
-        return wint64(this, value, unsigned, endian);
+    writeInt64(value: BigValue, unsigned: boolean = false, endian: endian = this.endian, consume: boolean = true): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+            throw new Error("Can't write data in readonly mode!");
+        }
+
+        if (!hasBigInt) {
+            throw new Error("System doesn't support BigInt values.");
+        }
+
+        this.open();
+
+        var trueByte = this.#offset;
+
+        var trueBit = this.#insetBit;
+
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+
+        this.#checkSize(8, 0, trueByte);
+
+        if (canBigInt64) {
+            if (unsigned) {
+                this.view.setBigInt64(trueByte, BigInt(value), endian == "little");
+            } else {
+                this.view.setBigUint64(trueByte, BigInt(value), endian == "little");
+            }
+        } else {
+            _wint64(this.data, numberSafe(value, 64, unsigned), trueByte, endian, unsigned);
+        }
+
+        if (consume) {
+            this.#offset += 8;
+
+            this.#insetBit = 0;
+        }
+
+        return;
     };
 
     /**
@@ -4512,7 +4022,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * @param {BigValue} value - value as int 
      * @param {endian} endian - ``big`` or ``little``
      */
-    writeUInt64(value: BigValue, endian?: endian) {
+    writeUInt64(value: BigValue, endian: endian = this.endian) {
         return this.writeInt64(value, true, endian);
     };
 
@@ -4523,15 +4033,6 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      */
     writeInt64LE(value: BigValue): void {
         return this.writeInt64(value, false, "little");
-    };
-
-    /**
-     * Write unsigned 64 bit integer.
-     * 
-     * @param {BigValue} value - value as int 
-     */
-    writeUInt64LE(value: BigValue): void {
-        return this.writeInt64(value, true, "little");
     };
 
     /**
@@ -4548,63 +4049,17 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
      * 
      * @param {BigValue} value - value as int 
      */
+    writeUInt64LE(value: BigValue): void {
+        return this.writeInt64(value, true, "little");
+    };
+
+    /**
+     * Write unsigned 64 bit integer.
+     * 
+     * @param {BigValue} value - value as int 
+     */
     writeUInt64BE(value: BigValue): void {
         return this.writeInt64(value, true, "big");
-    };
-
-    /**
-     * Read unsigned 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
-     */
-    readUInt64(): hasBigInt extends true ? bigint : number {
-        return this.readInt64(true);
-    };
-
-    /**
-     * Read signed 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
-     */
-    readInt64BE(): hasBigInt extends true ? bigint : number {
-        return this.readInt64(false, "big");
-    };
-
-    /**
-     * Read unsigned 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
-     */
-    readUInt64BE(): hasBigInt extends true ? bigint : number {
-        return this.readInt64(true, "big");
-    };
-
-    /**
-     * Read signed 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
-     */
-    readInt64LE(): hasBigInt extends true ? bigint : number {
-        return this.readInt64(false, "little");
-    };
-
-    /**
-     * Read unsigned 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     * 
-     * @returns {BigValue}
-     */
-    readUInt64LE(): hasBigInt extends true ? bigint : number {
-        return this.readInt64(true, "little");
     };
 
     ///////////////////////////////
@@ -4612,45 +4067,57 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     ///////////////////////////////
 
     /**
-     * Read double float.
+     * Read 64 bit float.
      * 
      * @param {endian} endian - ``big`` or ``little``
      * @returns {number}
      */
-    readDoubleFloat(endian?: endian): number {
-        return rdfloat(this, endian);
+    readDoubleFloat(endian: endian = this.endian, consume: boolean = true): number {
+        this.open();
+
+        var trueByte = this.#offset;
+
+        var trueBit = this.#insetBit;
+
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+
+        this.#checkSize(8, 0, trueByte);
+
+        var value: number;
+
+        if (canFloat64) {
+            value = this.view.getFloat64(trueByte, endian == "little");
+        } else {
+            if (!hasBigInt) {
+                throw new Error("System doesn't support BigInt values.");
+            }
+
+            value = _rdfloat(this.data, trueByte, endian);
+        }
+
+        if (consume) {
+            this.#offset += 8;
+
+            this.#insetBit = 0;
+        }
+
+        return value;
     };
 
     /**
-     * Writes double float.
+     * Read 64 bit float.
      * 
-     * @param {number} value - value as int 
      * @param {endian} endian - ``big`` or ``little``
+     * @returns {number}
      */
-    writeDoubleFloat(value: number, endian?: endian): void {
-        return wdfloat(this, value, endian);
+    readFloat64(endian: endian = this.endian): number {
+        return this.readDoubleFloat(endian);
     };
 
     /**
-     * Writes double float.
-     * 
-     * @param {number} value - value as int 
-     */
-    writeDoubleFloatBE(value: number): void {
-        return this.writeDoubleFloat(value, "big");
-    };
-
-    /**
-     * Writes double float.
-     * 
-     * @param {number} value - value as int 
-     */
-    writeDoubleFloatLE(value: number): void {
-        return this.writeDoubleFloat(value, "little");
-    };
-
-    /**
-     * Read double float.
+     * Read 64 bit float.
      * 
      * @returns {number}
      */
@@ -4659,12 +4126,116 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     };
 
     /**
-     * Read double float.
+     * Read 64 bit float.
+     * 
+     * @returns {number}
+     */
+    readFloat64BE(): number {
+        return this.readDoubleFloat("big");
+    };
+
+    /**
+     * Read 64 bit float.
      * 
      * @returns {number}
      */
     readDoubleFloatLE(): number {
         return this.readDoubleFloat("little");
+    };
+
+    /**
+     * Read 64 bit float.
+     * 
+     * @returns {number}
+     */
+    readFloat64LE(): number {
+        return this.readDoubleFloat("little");
+    };
+
+    /**
+     * Writes 64 bit float.
+     * 
+     * @param {number} value - value as int 
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    writeDoubleFloat(value: number, endian: endian = this.endian, consume: boolean = true): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+            throw new Error("Can't write data in readonly mode!");
+        }
+
+        this.open();
+
+        var trueByte = this.#offset;
+
+        var trueBit = this.#insetBit;
+
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+
+        this.#checkSize(8, 0, trueByte);
+
+        if (canFloat64) {
+            this.view.setFloat64(trueByte, value, endian == "little");
+        } else {
+            _wdfloat(this.data, value, trueByte, endian);
+        }
+
+        if (consume) {
+            this.#offset += 8;
+
+            this.#insetBit = 0;
+        }
+
+        return;
+    };
+
+    /**
+     * Writes 64 bit float.
+     * 
+     * @param {number} value - value as int 
+     * @param {endian} endian - ``big`` or ``little``
+     */
+    writeFloat64(value: number, endian: endian = this.endian): void {
+        return this.writeDoubleFloat(value, endian);
+    };
+
+    /**
+     * Writes 64 bit float.
+     * 
+     * @param {number} value - value as int 
+     */
+    writeDoubleFloatBE(value: number): void {
+        return this.writeDoubleFloat(value, "big");
+    };
+
+    /**
+     * Writes 64 bit float.
+     * 
+     * @param {number} value - value as int 
+     */
+    writeFloat64BE(value: number): void {
+        return this.writeDoubleFloat(value, "big");
+    };
+
+    /**
+     * Writes 64 bit float.
+     * 
+     * @param {number} value - value as int 
+     */
+    writeDoubleFloatLE(value: number): void {
+        return this.writeDoubleFloat(value, "little");
+    };
+
+    /**
+     * Writes 64 bit float.
+     * 
+     * @param {number} value - value as int 
+     */
+    writeFloat64LE(value: number): void {
+        return this.writeDoubleFloat(value, "little");
     };
 
     ///////////////////////////////
@@ -4675,16 +4246,76 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     * Reads string, use options object for different types.
     * 
     * @param {stringOptions} options 
-    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings (in units NOT bytes)
+    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
     * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
     * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types 
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
+    * @param {stringOptions["endian"]?} options.endian - for wide-pascal, double-wide-pascal and utf-16, utf-32
+    * @param {boolean} consume - move offset after read
     * @returns {string}
     */
-    readString(options?: stringOptions): string {
-        return rstring(this, options);
+    readString(options: stringOptions = this.strDefaults, consume: boolean = true): string {
+        this.open();
+
+        var length: number = options.length;
+
+        var stringType: stringOptions["stringType"] = options.stringType ?? 'utf-8';
+
+        var terminateValue: number = options.terminateValue;
+
+        var lengthReadSize: number = options.lengthReadSize ?? 1;
+
+        var stripNull: boolean = options.stripNull ?? true;
+
+        var endian: "little" | "big" = options.endian ?? this.endian;
+
+        var encoding: stringOptions["encoding"] = options.encoding ?? 'utf-8';
+
+        var terminate = terminateValue;
+
+        var readLengthinBytes = 0;
+
+        if (length != undefined) {
+            switch (stringType) {
+                case "utf-8":
+                    readLengthinBytes = length;
+                    break;
+                case "utf-16":
+                    readLengthinBytes = length * 2;
+                    break;
+                case "utf-32":
+                    readLengthinBytes = length * 4;
+                    break;
+                default:
+                    readLengthinBytes = length;
+                    break;
+            }
+
+            this.#checkSize(readLengthinBytes);
+        } else {
+            readLengthinBytes = this.data.length - this.#offset;
+        }
+
+        if (terminateValue != undefined && typeof terminateValue == "number") {
+            terminate = terminateValue & 0xFF;
+        } else {
+            terminate = 0;
+        }
+
+        const saved_offset = this.#offset;
+
+        const saved_bitoffset = this.#insetBit;
+
+        const str = _rstring(stringType, lengthReadSize, readLengthinBytes, terminate, stripNull, encoding, endian, this.readUByte.bind(this), this.readUInt16.bind(this), this.readUInt32.bind(this));
+
+        if (!consume) {
+            this.#offset = saved_offset;
+
+            this.#insetBit = saved_bitoffset
+        }
+
+        return str;
     };
 
     /**
@@ -4693,13 +4324,142 @@ export class BiBase<DataType extends Buffer | Uint8Array, hasBigInt extends bool
     * @param {string} string - text string
     * @param {stringOptions?} options
     * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, pascal or wide-pascal
+    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
     * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
     * @param {stringOptions["lengthWriteSize"]?} options.lengthWriteSize - for pascal strings. 1, 2 or 4 byte length write size
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types 
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal and utf-16
+    * @param {stringOptions["endian"]?} options.endian - for wide-pascal, double-wide-pascal and utf-16, utf-32
+    * @param {boolean} consume - move offset after write
     */
-    writeString(string: string, options?: stringOptions): void {
-        return wstring(this, string, options);
+    writeString(string: string, options: stringOptions = this.strDefaults, consume: boolean = true): void {
+        if (this.readOnly) {
+            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+
+            throw new Error("Can't write data in readonly mode!");
+        }
+
+        this.open();
+
+        var length: number = options.length;
+
+        var stringType: stringOptions["stringType"] = options.stringType ?? 'utf-8';
+
+        var terminateValue: number = options.terminateValue;
+
+        var lengthWriteSize: number = options.lengthWriteSize ?? 1;
+
+        var endian: "little" | "big" = options.endian ?? this.endian;
+
+        var maxLengthValue = length ?? string.length;
+
+        var strUnits = string.length;
+
+        var maxBytes: number;
+
+        switch (stringType) {
+            case 'pascal':
+                maxLengthValue = 255;
+
+                if (length != undefined) {
+                    maxLengthValue = length;
+                }
+
+                break;
+            case 'wide-pascal':
+                strUnits *= 2;
+
+                maxLengthValue = 65535;
+
+                if (length != undefined) {
+                    maxLengthValue = length / 2;
+                }
+
+                break;
+            case 'double-wide-pascal':
+                strUnits *= 4;
+
+                maxLengthValue = 4294967295;
+
+                if (length != undefined) {
+                    maxLengthValue = length / 4;
+                }
+
+                break;
+        }
+
+        if (terminateValue == undefined) {
+            if (stringType == "ascii" || stringType == 'utf-8' ||
+                stringType == 'utf-16' ||
+                stringType == 'utf-32'
+            ) {
+                terminateValue = 0;
+            }
+        }
+
+        var maxBytes = Math.min(strUnits, maxLengthValue);
+
+        string = string.substring(0, maxBytes);
+
+        var encodedString: Uint8Array<ArrayBufferLike>;
+
+        var totalLength = string.length;
+
+        switch (stringType) {
+            case 'ascii':
+            case 'utf-8':
+            case 'pascal':
+                {
+                    encodedString = new TextEncoder().encode(string);
+
+                    totalLength = encodedString.byteLength + 1;
+                }
+                break;
+            case 'utf-16':
+            case 'wide-pascal':
+                {
+                    const utf16Buffer = new Uint16Array(string.length);
+
+                    for (let i = 0; i < string.length; i++) {
+                        utf16Buffer[i] = string.charCodeAt(i);
+                    }
+
+                    encodedString = new Uint8Array(utf16Buffer.buffer);
+
+                    totalLength = encodedString.byteLength + 2;
+                }
+                break;
+            case 'utf-32':
+            case 'double-wide-pascal':
+                {
+                    const utf32Buffer = new Uint32Array(string.length);
+
+                    for (let i = 0; i < string.length; i++) {
+                        utf32Buffer[i] = string.codePointAt(i);
+                    }
+
+                    encodedString = new Uint8Array(utf32Buffer.buffer);
+
+                    totalLength = encodedString.byteLength + 4;
+                }
+                break;
+            default:
+                break;
+        }
+
+        this.#checkSize(totalLength, 0, this.#offset);
+
+        const savedOffset = this.#offset;
+
+        const savedBitOffset = this.#insetBit;
+
+        _wstring(encodedString, stringType, endian, terminateValue, lengthWriteSize, this.writeUByte.bind(this), this.writeUInt16.bind(this), this.writeUInt32.bind(this));
+
+        if (!consume) {
+            this.#offset = savedOffset;
+
+            this.#insetBit = savedBitOffset;
+        }
+
+        return;
     };
 };
