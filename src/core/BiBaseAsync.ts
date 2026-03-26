@@ -11,6 +11,8 @@ import {
     BiOptions,
     BigValue,
     endian,
+    ReturnMapping,
+    ReturnBigValueMapping,
     // options
     hexdumpOptions,
     stringOptions,
@@ -103,7 +105,7 @@ const view8ByteDummy = new DataView(buff8ByteDummy.buffer, buff8ByteDummy.byteOf
 /**
  * Base class for BiReader and BiWriter
  */
-export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt extends boolean> {
+export class BiBaseAsync<DataType, alwaysBigInt> {
     /**
      * Endianness of default read. 
      * @type {endian}
@@ -136,7 +138,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
     /**
      * Master Buffer
      */
-    #data: DataType = null;
+    #data: ReturnMapping<DataType> = null;
     /**
      * DataView of master Buffer
      */
@@ -185,20 +187,25 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
      * 
      * Use async {@link getData} while in file mode!
      */
-    get data() {
+    get data(): ReturnMapping<DataType> {
         return this.#data;
     };
 
     /**
      * Get the current buffer data.
+     * 
+     * For use in file mode!
      */
     async getData(){
         return await this.get();
     };
 
-    set setData(data: DataType) {
+    /**
+     * Set the current buffer data.
+     */
+    set data(data: DataType) {
         if (this.isBufferOrUint8Array(data)) {
-            this.#data = data;
+            this.#data = data as ReturnMapping<DataType>;
 
             this.#updateView();
 
@@ -208,6 +215,9 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
         }
     };
 
+    /**
+     * If the buffer was extended and needs to be trimmed
+     */
     wasExpanded: boolean = false;
 
     /**
@@ -222,11 +232,11 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
     /**
      * array of loaded data chunks
      */
-    chunks: DataType[] = [];
+    chunks: ReturnMapping<DataType>[] = [];
     /**
      * Promises for data chunks
      */
-    chunkPromises: Promise<DataType>[] = [];
+    chunkPromises: Promise<ReturnMapping<DataType>>[] = [];
     /**
      * Edited data chunks
      */
@@ -246,7 +256,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
      */
     loadAllPromise: Promise<void> = null;
 
-    constructor(input: string | DataType, options: BiOptions = {}) {
+    constructor(input: DataType, options: BiOptions<alwaysBigInt> = {}) {
         const {
             byteOffset,
             bitOffset,
@@ -280,7 +290,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
 
         this.enforceBigInt = !!enforceBigInt as alwaysBigInt;
 
-        if (this.enforceBigInt && !hasBigInt) {
+        if (!hasBigInt) {
             this.enforceBigInt = false as alwaysBigInt;
         }
 
@@ -301,7 +311,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
 
             this.isMemoryMode = false;
         } else if (this.isBufferOrUint8Array(input)) {
-            this.setData = input as DataType;
+            this.data = input;
 
             this.isMemoryMode = true;
 
@@ -501,7 +511,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
      * 
      * @param {number} chunkIndex 
      */
-    async #ensureChunkLoaded(chunkIndex: number): Promise<DataType> {
+    async #ensureChunkLoaded(chunkIndex: number): Promise<ReturnMapping<DataType>> {
         if (this.windowSize === 0) {
             chunkIndex = 0;
         }
@@ -519,7 +529,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
 
             const end = Math.min(start + this.windowSize, this.size);
 
-            this.chunks[chunkIndex] = this.data.subarray(start, end) as DataType;
+            this.chunks[chunkIndex] = this.data.subarray(start, end) as ReturnMapping<DataType>;
 
             return this.chunks[chunkIndex];
         }
@@ -530,9 +540,9 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
 
         const promise = this.#performChunkLoad(chunkIndex);
 
-        this.chunkPromises[chunkIndex] = promise as Promise<DataType>;
+        this.chunkPromises[chunkIndex] = promise as Promise<ReturnMapping<DataType>>;
 
-        return await promise as DataType;
+        return await promise as ReturnMapping<DataType>;
     };
 
     /**
@@ -549,7 +559,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
 
         await this.fd.read(buffer, 0, length, start);
 
-        this.chunks[chunkIndex] = buffer as DataType;
+        this.chunks[chunkIndex] = buffer as ReturnMapping<DataType>;
 
         return buffer;
     };
@@ -592,29 +602,29 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
      * @param {number} offset 
      * @param {number} length 
      */
-    async #peekBytes(offset: number, length: number) {
+    async #peekBytes(offset: number, length: number): Promise<ReturnMapping<DataType>> {
         await this.open();
 
         if (length <= 0) {
             if (this.isMemoryMode) {
                 if (this.isBuffer(this.data)) {
-                    return Buffer.alloc(0) as DataType;
+                    return Buffer.alloc(0);
                 } else {
-                    return new Uint8Array(0) as DataType;
+                    return new Uint8Array(0) as ReturnMapping<DataType>;
                 }
             } else {
-                return Buffer.alloc(0) as DataType;
+                return Buffer.alloc(0);
             }
         }
 
         await this.#ensureRangeLoaded(offset, length);
 
-        var result: DataType;
+        var result: ReturnMapping<DataType>;
 
         if (this.isMemoryMode) {
-            return this.data.subarray(offset, offset + length) as DataType;
+            return this.data.subarray(offset, offset + length) as ReturnMapping<DataType>;
         } else {
-            result = Buffer.alloc(length) as DataType;
+            result = Buffer.alloc(length);
         }
 
         let pos = offset;
@@ -736,20 +746,17 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
 
         if (this.isMemoryMode) {
             const toPadd = targetSize - this.size;
-
-            var newData: DataType;
-
             if (isBuffer(this.#data)) {
-                var paddbuffer = Buffer.alloc(toPadd);
+                const paddbuffer = Buffer.alloc(toPadd);
 
-                newData = Buffer.concat([this.#data, paddbuffer]) as DataType;
+                this.data = Buffer.concat([this.#data, paddbuffer]) as DataType;
             } else {
-                newData = new Uint8Array(this.size + toPadd) as DataType;
+                const newBuf = new Uint8Array(this.size + toPadd);
 
-                newData.set(this.#data);
+                newBuf.set(this.#data);
+
+                this.data = newBuf as DataType;
             }
-
-            this.setData = newData;
 
             this.size = targetSize;
 
@@ -799,7 +806,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
         if (this.isMemoryMode) {
             const newData = this.data.subarray(0, exactSize);
 
-            this.setData = newData as DataType;
+            this.data = newData as DataType;
 
             this.size = exactSize;
 
@@ -1081,7 +1088,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
             await this.#initFile();
         } else {
             if (this.isBufferOrUint8Array(data)) {
-                this.setData = data;
+                this.data = data;
             }
 
             this.#initMemory();
@@ -1091,7 +1098,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
     /**
      * commit data and removes it.
      */
-    async close(): Promise<DataType> {
+    async close(): Promise<ReturnMapping<DataType>> {
         await this.open();
 
         if (!this.readOnly && this.dirtyChunks.size > 0) {
@@ -1109,7 +1116,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
 
             this.fd = null;
 
-            return data as DataType;
+            return data as ReturnMapping<DataType>;
         }
 
         if (this.isMemoryMode) {
@@ -1870,7 +1877,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
         return await this.findBytes(encoded);
     };
 
-    #findNumber(data: DataType, value: number, bits: number, unsigned: boolean, endian: endian = this.endian): number {
+    #findNumber(data: ReturnMapping<DataType>, value: number, bits: number, unsigned: boolean, endian: endian = this.endian): number {
         for (let z = this.#offset; z <= (this.size - (bits / 8)); z++) {
             var offsetInBits = 0;
 
@@ -2478,7 +2485,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    async replace(data: DataType, offset: number = this.#offset, consume: boolean = false) {
+    async replace(data: DataType, offset: number = this.#offset, consume: boolean = false): Promise<ReturnMapping<DataType>> {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
@@ -2497,16 +2504,16 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
                 // input is Uint8Array
                 if (this.isBuffer(this.data)) {
                     // source is Buffer
-                    data = Buffer.from(data) as DataType;
+                    data = Buffer.from(data as Uint8Array) as DataType;
                 }
             }
         } else {
             if (!this.isBuffer(data)) {
-                data = Buffer.from(data) as DataType;
+                data = Buffer.from(data as Uint8Array) as  DataType;
             }
         }
 
-        const insertLen = data?.length ?? 0;
+        const insertLen = (data as Uint8Array | Buffer).length ?? 0;
 
         if (insertLen === 0) {
             return;
@@ -2528,7 +2535,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
 
         this.#insetBit = 0;
 
-        await this.#writeBytes(data, consume);
+        await this.#writeBytes(data as Uint8Array | Buffer, consume);
 
         const tailStartChunk = Math.floor((offset + insertLen) / this.windowSize);
 
@@ -2616,7 +2623,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
 
             const offsetBitSaver = this.#insetBit;
 
-            await this.#writeBytes(replacement, consume);
+            await this.#writeBytes(replacement as Uint8Array | Buffer, consume);
 
             if (!consume) {
                 this.#offset = offsetSaver;
@@ -2726,16 +2733,16 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
                 // input is Uint8Array
                 if (this.isBuffer(this.data)) {
                     // source is Buffer
-                    data = Buffer.from(data) as DataType;
+                    data = Buffer.from(data as Uint8Array) as DataType;
                 }
             }
         } else {
             if (!this.isBuffer(data)) {
-                data = Buffer.from(data) as DataType;
+                data = Buffer.from(data as Uint8Array) as DataType;
             }
         }
 
-        const insertLen = data?.length ?? 0;
+        const insertLen = (data as Buffer | Uint8Array).length ?? 0;
 
         if (insertLen === 0) {
             return;
@@ -2761,7 +2768,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
 
         this.#insetBit = 0;
 
-        await this.#writeBytes(data, consume);
+        await this.#writeBytes(data as Buffer |Uint8Array, consume);
 
         const tailStartChunk = Math.floor((offset + insertLen) / this.windowSize);
 
@@ -3317,7 +3324,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
 
         const endOffset = Math.ceil((((bits - 1) + this.#insetBit) / 8) + this.#offset);
 
-        const temp = await this.#peekBytes(this.#offset, Math.ceil(endOffset - this.#offset)) as DataType;
+        const temp = await this.#peekBytes(this.#offset, Math.ceil(endOffset - this.#offset)) as Buffer | Uint8Array;
 
         _wbit(temp, value, bits, this.#insetBit, endian, unsigned);
 
@@ -4048,7 +4055,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
      * @param {endian?} endian - ``big`` or ``little``
      * @param {boolean} consume - move offset after read
      */
-    async readInt64(unsigned: boolean = false, endian: endian = this.endian, consume: boolean = true): Promise<alwaysBigInt extends true ? bigint : number> {
+    async readInt64(unsigned: boolean = false, endian: endian = this.endian, consume: boolean = true): Promise<ReturnBigValueMapping<alwaysBigInt>> {
         if (!hasBigInt) {
             throw new Error("System doesn't support BigInt values.");
         }
@@ -4070,10 +4077,10 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
         }
 
         if (this.enforceBigInt == true || (typeof value == "bigint" && !isSafeInt64(value))) {
-            return value as alwaysBigInt extends true ? bigint : number;
+            return value as ReturnBigValueMapping<alwaysBigInt>;
         } else {
             if (isSafeInt64(value)) {
-                return Number(value) as alwaysBigInt extends true ? bigint : number;
+                return Number(value) as ReturnBigValueMapping<alwaysBigInt>;
             } else {
                 throw new Error("Value is outside of number range and enforceBigInt is set to false. " + value);
             }
@@ -4085,7 +4092,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async readUInt64(): Promise<alwaysBigInt extends true ? bigint : number> {
+    async readUInt64(): Promise<ReturnBigValueMapping<alwaysBigInt>> {
         return await this.readInt64(true);
     };
 
@@ -4094,7 +4101,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async readInt64BE(): Promise<alwaysBigInt extends true ? bigint : number> {
+    async readInt64BE(): Promise<ReturnBigValueMapping<alwaysBigInt>> {
         return await this.readInt64(false, "big");
     };
 
@@ -4103,7 +4110,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async readInt64LE(): Promise<alwaysBigInt extends true ? bigint : number> {
+    async readInt64LE(): Promise<ReturnBigValueMapping<alwaysBigInt>> {
         return await this.readInt64(false, "little");
     };
 
@@ -4112,7 +4119,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async readUInt64BE(): Promise<alwaysBigInt extends true ? bigint : number> {
+    async readUInt64BE(): Promise<ReturnBigValueMapping<alwaysBigInt>> {
         return await this.readInt64(true, "big");
     };
 
@@ -4121,7 +4128,7 @@ export class BiBaseAsync<DataType extends Buffer | Uint8Array, alwaysBigInt exte
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async readUInt64LE(): Promise<alwaysBigInt extends true ? bigint : number> {
+    async readUInt64LE(): Promise<ReturnBigValueMapping<alwaysBigInt>> {
         return await this.readInt64(true, "little");
     };
 

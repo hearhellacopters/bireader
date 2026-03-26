@@ -9,6 +9,8 @@ import {
     BiOptions,
     BigValue,
     endian,
+    ReturnMapping,
+    ReturnBigValueMapping,
     // options
     hexdumpOptions,
     stringOptions,
@@ -92,7 +94,7 @@ function _fileExists(filePath: string) {
 /**
  * Base class for BiReader and BiWriter
  */
-export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends boolean> {
+export class BiBase<DataType, alwaysBigInt> {
     /**
      * Endianness of default read. 
      * @type {endian}
@@ -125,7 +127,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
     /**
      * Master Buffer
      */
-    #data: DataType | null = null;
+    #data: ReturnMapping<DataType> = null;
     /**
      * DataView of master Buffer
      */
@@ -171,9 +173,9 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
     /**
      * Get the current buffer data.
      * 
-     * @type {DataType}
+     * @type {ReturnMapping<DataType>}
      */
-    get data(): DataType {
+    get data(): ReturnMapping<DataType> {
         return this.#data;
     };
 
@@ -184,7 +186,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      */
     set data(data: DataType) {
         if (this.isBufferOrUint8Array(data)) {
-            this.#data = data;
+            this.#data = data as ReturnMapping<DataType>;
 
             this.#updateView();
 
@@ -203,7 +205,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
         return this.#view;
     };
 
-    constructor(input?: string | DataType, options: BiOptions = {}) {
+    constructor(input?: DataType, options: BiOptions<alwaysBigInt> = {}) {
         const {
             byteOffset,
             bitOffset,
@@ -226,7 +228,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
 
         this.enforceBigInt = !!enforceBigInt as alwaysBigInt;
 
-        if (this.enforceBigInt && !hasBigInt) {
+        if (!hasBigInt) {
             this.enforceBigInt = false as alwaysBigInt;
         }
 
@@ -373,7 +375,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
                 }
             }
 
-            const data = Buffer.alloc(this.size) as DataType;
+            const data = Buffer.alloc(this.size);
 
             try {
                 const bytesRead = fs.readSync(this.fd, data, 0, data.length, 0);
@@ -385,7 +387,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
                 throw new Error(error);
             }
 
-            this.data = data;
+            this.data = data as DataType;
 
             this.#updateSize();
         }
@@ -482,11 +484,11 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
 
             this.data = Buffer.concat([this.#data, paddbuffer]) as DataType;
         } else {
-            const newBuf = new Uint8Array(this.size + toPadd) as DataType;
+            const newBuf = new Uint8Array(this.size + toPadd);
 
             newBuf.set(this.#data);
 
-            this.data = newBuf;
+            this.data = newBuf as DataType;
         }
 
         this.size = this.#data.length;
@@ -532,7 +534,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Can be used to pass new data to a loaded class, shifting to memory mode.
      */
-    open(data?: DataType) {
+    open(data?: ReturnMapping<DataType>) {
         if (this.isBufferOrUint8Array(data)) {
             this.close();
 
@@ -542,7 +544,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
 
             this.isMemoryMode = true;
 
-            this.data = data;
+            this.data = data as DataType;
 
             this.#updateSize();
 
@@ -581,7 +583,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
     /**
      * commit data and removes it.
      */
-    close(): DataType {
+    close(): ReturnMapping<DataType> {
         if (this.isMemoryMode) {
             const data = this.#data;
 
@@ -1167,9 +1169,9 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Use ``.data`` instead if you want the full buffer data.
      * 
-     * @returns {DataType} ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} ``Buffer`` or ``Uint8Array``
      */
-    get(): DataType {
+    get(): ReturnMapping<DataType> {
         if (this.growthIncrement != 0 && this.wasExpanded) {
             this.trim();
         }
@@ -1184,9 +1186,9 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Use ``.data`` instead if you want the full buffer data.
      * 
-     * @returns {DataType} ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} ``Buffer`` or ``Uint8Array``
      */
-    getFullBuffer(): DataType {
+    getFullBuffer(): ReturnMapping<DataType> {
             return this.get();
     };
 
@@ -1197,9 +1199,9 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Use ``.data`` instead if you want the full buffer data.
      * 
-     * @returns {DataType} ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} ``Buffer`` or ``Uint8Array``
      */
-    return(): DataType {
+    return(): ReturnMapping<DataType> {
         return this.get();
     };
 
@@ -1208,7 +1210,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Commits any changes to file when editing a file.
      */
-    end(): DataType  {
+    end(): ReturnMapping<DataType>  {
         return this.close();
     };
 
@@ -1217,7 +1219,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Commits any changes to file when editing a file.
      */
-    done(): DataType {
+    done(): ReturnMapping<DataType> {
         return this.end();
     };
 
@@ -1226,7 +1228,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Commits any changes to file when editing a file.
      */
-    finished(): DataType {
+    finished(): ReturnMapping<DataType> {
         return this.end();
     };
 
@@ -1990,11 +1992,11 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Note: Errors on strict mode if past end of data.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    replace(data: DataType, offset: number = this.#offset, consume: boolean = false): void {
+    replace(data: ReturnMapping<DataType>, offset: number = this.#offset, consume: boolean = false): void {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
@@ -2006,13 +2008,13 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
         if (this.isBuffer(data)) {
             if (this.isUint8Array(this.data)) {
                 // source is Uint8Array
-                data = new Uint8Array(data) as DataType;
+                data = new Uint8Array(data) as ReturnMapping<DataType>;
             }
         } else {
             // input is Uint8Array
             if (this.isBuffer(this.data)) {
                 // source is Buffer
-                data = Buffer.from(data) as DataType;
+                data = Buffer.from(data);
             }
         }
 
@@ -2054,11 +2056,11 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Note: Errors on strict mode.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    overwrite(data: DataType, offset: number = this.#offset, consume: boolean = false): void {
+    overwrite(data: ReturnMapping<DataType>, offset: number = this.#offset, consume: boolean = false): void {
         return this.replace(data, offset, consume);
     };
 
@@ -2208,11 +2210,11 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Note: Errors on strict mode.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {number} offset - Byte position to add at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    insert(data: DataType, offset: number = this.#offset, consume: boolean = true): void {
+    insert(data: ReturnMapping<DataType>, offset: number = this.#offset, consume: boolean = true): void {
         if (this.strict == true || this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
@@ -2230,13 +2232,13 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
         if (this.isBuffer(data)) {
             if (this.isUint8Array(this.data)) {
                 // source is Uint8Array
-                data = new Uint8Array(data) as DataType;
+                data = new Uint8Array(data) as ReturnMapping<DataType>;
             }
         } else {
             // input is Uint8Array
             if (this.isBuffer(this.data)) {
                 // source is Buffer
-                data = Buffer.from(data) as DataType;
+                data = Buffer.from(data);
             }
         }
 
@@ -2280,11 +2282,11 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Note: Errors on strict mode.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {number} offset - Byte position to add at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    place(data: DataType, offset: number = this.#offset, consume: boolean = true): void {
+    place(data: ReturnMapping<DataType>, offset: number = this.#offset, consume: boolean = true): void {
         return this.insert(data, offset, consume);
     };
 
@@ -2293,10 +2295,10 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Note: Errors on strict mode.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    unshift(data: DataType, consume: boolean = false): void {
+    unshift(data: ReturnMapping<DataType>, consume: boolean = false): void {
         return this.insert(data, 0, consume);
     };
 
@@ -2305,10 +2307,10 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Note: Errors on strict mode.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    prepend(data: DataType, consume: boolean = false): void {
+    prepend(data: ReturnMapping<DataType>, consume: boolean = false): void {
         return this.insert(data, 0, consume);
     };
 
@@ -2317,10 +2319,10 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Note: Errors on strict mode.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    push(data: DataType, consume: boolean = false): void {
+    push(data: ReturnMapping<DataType>, consume: boolean = false): void {
         return this.insert(data, this.size, consume);
     };
 
@@ -2329,10 +2331,10 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Note: Errors on strict mode.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    append(data: DataType, consume: boolean = false): void {
+    append(data: ReturnMapping<DataType>, consume: boolean = false): void {
         return this.push(data, consume);
     };
 
@@ -3865,7 +3867,7 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * @param {endian} endian - ``big`` or ``little``
      * @param {boolean} consume - move offset after read
      */
-    readInt64(unsigned: boolean = false, endian: endian = this.endian, consume: boolean = true): alwaysBigInt extends true ? bigint : number {
+    readInt64(unsigned: boolean = false, endian: endian = this.endian, consume: boolean = true): ReturnBigValueMapping<alwaysBigInt> {
         if (!hasBigInt) {
             throw new Error("System doesn't support BigInt values.");
         }
@@ -3901,10 +3903,10 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
         }
 
         if (this.enforceBigInt == true || (typeof value == "bigint" && !isSafeInt64(value))) {
-            return value as alwaysBigInt extends true ? bigint : number;
+            return value as ReturnBigValueMapping<alwaysBigInt>;
         } else {
             if (isSafeInt64(value)) {
-                return Number(value) as alwaysBigInt extends true ? bigint : number;
+                return Number(value) as ReturnBigValueMapping<alwaysBigInt>;
             } else {
                 throw new Error("Value is outside of number range and enforceBigInt is set to false. " + value);
             }
@@ -3916,9 +3918,9 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      * 
-     * @returns {BigValue}
+     * @returns {ReturnBigValueMapping<alwaysBigInt>}
      */
-    readUInt64(): alwaysBigInt extends true ? bigint : number {
+    readUInt64(): ReturnBigValueMapping<alwaysBigInt> {
         return this.readInt64(true);
     };
 
@@ -3927,9 +3929,9 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      * 
-     * @returns {BigValue}
+     * @returns {ReturnBigValueMapping<alwaysBigInt>}
      */
-    readInt64BE(): alwaysBigInt extends true ? bigint : number {
+    readInt64BE(): ReturnBigValueMapping<alwaysBigInt> {
         return this.readInt64(false, "big");
     };
 
@@ -3938,9 +3940,9 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      * 
-     * @returns {BigValue}
+     * @returns {ReturnBigValueMapping<alwaysBigInt>}
      */
-    readInt64LE(): alwaysBigInt extends true ? bigint : number {
+    readInt64LE(): ReturnBigValueMapping<alwaysBigInt> {
         return this.readInt64(false, "little");
     };
 
@@ -3949,9 +3951,9 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      * 
-     * @returns {BigValue}
+     * @returns {ReturnBigValueMapping<alwaysBigInt>}
      */
-    readUInt64BE(): alwaysBigInt extends true ? bigint : number {
+    readUInt64BE(): ReturnBigValueMapping<alwaysBigInt> {
         return this.readInt64(true, "big");
     };
 
@@ -3960,9 +3962,9 @@ export class BiBase<DataType extends Buffer | Uint8Array, alwaysBigInt extends b
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      * 
-     * @returns {BigValue}
+     * @returns {ReturnBigValueMapping<alwaysBigInt>}
      */
-    readUInt64LE(): alwaysBigInt extends true ? bigint : number {
+    readUInt64LE(): ReturnBigValueMapping<alwaysBigInt> {
         return this.readInt64(true, "little");
     };
 

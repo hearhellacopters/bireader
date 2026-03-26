@@ -1,5 +1,6 @@
 import {
     BiOptions,
+    BigValue,
     endian,
     stringOptions,
 } from "./common.js";
@@ -8,36 +9,23 @@ import { BiBaseAsync } from './core/BiBaseAsync.js';
 /**
  * Async Binary reader, includes bitfields and strings.
  *
- * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+ * @param {DataType} input - File path or a `Buffer` or `Uint8Array`.
  * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
- * @param {BiOptions["readOnly"]} options.readOnly - If you want to prevent write operations (default true in reader)
+ * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+ * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+ * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+ * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+ * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+ * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
+ * @param {BiOptions["readOnly"]?} [options.readOnly = true] - Allow data writes when reading a file (default `true` in reader)
+ * @param {BiOptions["windowSize"]?} [options.windowSize = 4096] - Size of the chunk of a file to load per read. Set to `0` to load the whole file in one async read (default `4 KiB`)
  * 
  * @since 4.0
  */
-export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt extends boolean> extends BiBaseAsync<DataType, hasBigInt> {
-
-    /**
-     * Async Binary reader, includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
-     * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["readOnly"]} options.readOnly - If you want to prevent write operations (default true in reader)
-     */
-    constructor(input: string | DataType, options: BiOptions = {}) {
+export class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType, alwaysBigInt> {
+    constructor(input: DataType, options: BiOptions<alwaysBigInt> = {}) {
         options.byteOffset = options.byteOffset ?? 0;
-        
+
         options.bitOffset = options.bitOffset ?? 0;
 
         options.endianness = options.endianness ?? "little";
@@ -46,7 +34,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
 
         options.growthIncrement = options.growthIncrement ?? 1048576;
 
-        options.enforceBigInt = options.enforceBigInt ?? false;
+        options.enforceBigInt = options.enforceBigInt ?? false as alwaysBigInt;
 
         options.readOnly = options.readOnly ?? true;
 
@@ -60,24 +48,23 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     };
 
     /**
-     * Creates and opens a new `BiReaderAsync`
-     * 
-     * Includes bitfields and strings.
+     * Creates and opens a new `BiReaderAsync`.
      *
-     * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+     * @param {DataType} input - File path or a `Buffer` or `Uint8Array`.
      * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["readonly"]} options.readonly - If you want to prevent write operations (default true in reader)
+     * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+     * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+     * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+     * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+     * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+     * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
+     * @param {BiOptions["readOnly"]?} [options.readOnly = true] - Allow data writes when reading a file (default `true` in reader)
+     * @param {BiOptions["windowSize"]?} [options.windowSize = 4096] - Size of the chunk of a file to load per read. Set to `0` to load the whole file in one async read (default `4 KiB`)
      * 
-     * @returns {Promise<BiReaderAsync<DataType, hasBigInt>>}
+     * @since 4.0
      */
-    static async create<DataType extends Buffer | Uint8Array, hasBigInt extends boolean>(input: string | DataType, options: BiOptions = {}): Promise<BiReaderAsync<DataType, hasBigInt>> {
-        const instance = new BiReaderAsync<DataType, hasBigInt>(input, options);
+    static async create<DataType, alwaysBigInt>(input: DataType, options: BiOptions<alwaysBigInt> = {}): Promise<BiReaderAsync<DataType, alwaysBigInt>> {
+        const instance = new BiReaderAsync<DataType, alwaysBigInt>(input, options);
 
         await instance.open();
 
@@ -2801,7 +2788,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async int64(): Promise<hasBigInt extends true ? bigint : number> {
+    async int64(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64();
     };
 
@@ -2810,7 +2797,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async bigint(): Promise<hasBigInt extends true ? bigint : number> {
+    async bigint(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64();
     };
 
@@ -2819,7 +2806,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async quad(): Promise<hasBigInt extends true ? bigint : number> {
+    async quad(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64();
     };
 
@@ -2828,7 +2815,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async uint64(): Promise<hasBigInt extends true ? bigint : number> {
+    async uint64(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64(true);
     };
 
@@ -2837,7 +2824,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async ubigint(): Promise<hasBigInt extends true ? bigint : number> {
+    async ubigint(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64(true);
     };
 
@@ -2846,7 +2833,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async uquad(): Promise<hasBigInt extends true ? bigint : number> {
+    async uquad(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64(true);
     };
 
@@ -2855,7 +2842,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async int64be(): Promise<hasBigInt extends true ? bigint : number> {
+    async int64be(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64(false, "big");
     };
 
@@ -2864,7 +2851,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async bigintbe(): Promise<hasBigInt extends true ? bigint : number> {
+    async bigintbe(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64(false, "big");
     };
 
@@ -2873,7 +2860,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async quadbe(): Promise<hasBigInt extends true ? bigint : number> {
+    async quadbe(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64(false, "big");
     };
 
@@ -2882,7 +2869,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async uint64be(): Promise<hasBigInt extends true ? bigint : number> {
+    async uint64be(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64(true, "big");
     };
 
@@ -2891,7 +2878,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async ubigintbe(): Promise<hasBigInt extends true ? bigint : number> {
+    async ubigintbe(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64(true, "big");
     };
 
@@ -2900,7 +2887,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async uquadbe(): Promise<hasBigInt extends true ? bigint : number> {
+    async uquadbe(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64(true, "big");
     };
 
@@ -2909,7 +2896,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async int64le(): Promise<hasBigInt extends true ? bigint : number> {
+    async int64le(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64(false, "little");
     };
 
@@ -2918,7 +2905,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async bigintle(): Promise<hasBigInt extends true ? bigint : number> {
+    async bigintle(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64(false, "little");
     };
 
@@ -2927,7 +2914,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async quadle(): Promise<hasBigInt extends true ? bigint : number> {
+    async quadle(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64(false, "little");
     };
 
@@ -2936,7 +2923,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async uint64le(): Promise<hasBigInt extends true ? bigint : number> {
+    async uint64le(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64(true, "little");
     };
 
@@ -2945,7 +2932,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async ubigintle(): Promise<hasBigInt extends true ? bigint : number> {
+    async ubigintle(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64(true, "little");
     };
 
@@ -2954,7 +2941,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    async uquadle(): Promise<hasBigInt extends true ? bigint : number> {
+    async uquadle(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
         return await this.readInt64(true, "little");
     };
 
@@ -3332,7 +3319,7 @@ export class BiReaderAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
     * @returns {Promise<string>}
     */
     async pstring4be(stripNull?: stringOptions["stripNull"]): Promise<string> {
-        return await this.pstring4(stripNull, "big" );
+        return await this.pstring4(stripNull, "big");
     };
 
     /**

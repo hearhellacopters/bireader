@@ -1,41 +1,28 @@
 import {
     BiOptions,
+    BigValue,
     endian,
-    stringOptions,
+    stringOptions
 } from "./common.js";
 import { BiBase } from './core/BiBase.js';
 
 /**
  * Binary reader, includes bitfields and strings.
  *
- * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+ * @param {DataType} input - File path or a `Buffer` or `Uint8Array`. Always found in .{@link data}
  * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start reader (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
- * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
- * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default ``true`` in reader)
+ * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+ * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+ * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+ * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+ * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+ * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
+ * @param {BiOptions["readOnly"]?} [options.readOnly = true] - Allow data writes when reading a file (default `true` in reader)
  * 
  * @since 2.0
  */
-export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends boolean> extends BiBase<DataType, alwaysBigInt> {
-
-    /**
-     * Binary reader, includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
-     * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start reader (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true`` in reader)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
-     * @param {BiOptions["readOnly"]} options.readOnly - If you want to prevent write operations (default ``true`` in reader)
-     */
-    constructor(input: string | DataType, options: BiOptions = {}) {
+export class BiReader<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBigInt> {
+    constructor(input: DataType, options: BiOptions<alwaysBigInt> = {}) {
         options.byteOffset = options.byteOffset ?? 0;
 
         options.bitOffset = options.bitOffset ?? 0;
@@ -46,7 +33,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
 
         options.growthIncrement = options.growthIncrement ?? 1048576;
 
-        options.enforceBigInt = options.enforceBigInt ?? false;
+        options.enforceBigInt = options.enforceBigInt ?? false as alwaysBigInt;
 
         options.readOnly = options.readOnly ?? true;
 
@@ -2774,7 +2761,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get int64(): alwaysBigInt extends true ? bigint : number {
+    get int64(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64();
     };
 
@@ -2783,7 +2770,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get bigint(): alwaysBigInt extends true ? bigint : number {
+    get bigint(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64();
     };
 
@@ -2792,7 +2779,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get quad(): alwaysBigInt extends true ? bigint : number {
+    get quad(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64();
     };
 
@@ -2801,7 +2788,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get uint64(): alwaysBigInt extends true ? bigint : number {
+    get uint64(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64(true);
     };
 
@@ -2810,7 +2797,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get ubigint(): alwaysBigInt extends true ? bigint : number {
+    get ubigint(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64(true);
     };
 
@@ -2819,7 +2806,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get uquad(): alwaysBigInt extends true ? bigint : number {
+    get uquad(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64(true);
     };
 
@@ -2828,7 +2815,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get int64be(): alwaysBigInt extends true ? bigint : number {
+    get int64be(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64(false, "big");
     };
 
@@ -2837,7 +2824,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get bigintbe(): alwaysBigInt extends true ? bigint : number {
+    get bigintbe(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64(false, "big");
     };
 
@@ -2846,7 +2833,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get quadbe(): alwaysBigInt extends true ? bigint : number {
+    get quadbe(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64(false, "big");
     };
 
@@ -2855,7 +2842,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get uint64be(): alwaysBigInt extends true ? bigint : number {
+    get uint64be(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64(true, "big");
     };
 
@@ -2864,7 +2851,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get ubigintbe(): alwaysBigInt extends true ? bigint : number {
+    get ubigintbe(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64(true, "big");
     };
 
@@ -2873,7 +2860,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get uquadbe(): alwaysBigInt extends true ? bigint : number {
+    get uquadbe(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64(true, "big");
     };
 
@@ -2882,7 +2869,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get int64le(): alwaysBigInt extends true ? bigint : number {
+    get int64le(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64(false, "little");
     };
 
@@ -2891,7 +2878,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get bigintle(): alwaysBigInt extends true ? bigint : number {
+    get bigintle(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64(false, "little");
     };
 
@@ -2900,7 +2887,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get quadle(): alwaysBigInt extends true ? bigint : number {
+    get quadle(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64(false, "little");
     };
 
@@ -2909,7 +2896,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get uint64le(): alwaysBigInt extends true ? bigint : number {
+    get uint64le(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64(true, "little");
     };
 
@@ -2918,7 +2905,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get ubigintle(): alwaysBigInt extends true ? bigint : number {
+    get ubigintle(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64(true, "little");
     };
 
@@ -2927,7 +2914,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
      * 
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      */
-    get uquadle(): alwaysBigInt extends true ? bigint : number {
+    get uquadle(): alwaysBigInt extends true ? bigint : BigValue {
         return this.readInt64(true, "little");
     };
 
@@ -3305,7 +3292,7 @@ export class BiReader<DataType extends Buffer | Uint8Array, alwaysBigInt extends
     * @returns {string}
     */
     pstring4be(stripNull?: stringOptions["stripNull"]): string {
-        return this.pstring4(stripNull, "big" );
+        return this.pstring4(stripNull, "big");
     };
 
     /**

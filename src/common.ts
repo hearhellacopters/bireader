@@ -3,8 +3,12 @@
 export type endian = "little" | "big";
 
 export type BigValue = number | bigint;
+// Define the conditional logic once
+export type ReturnMapping<DataType> = DataType extends string | Buffer ? Buffer : Uint8Array;
 
-export type BiOptions = {
+export type ReturnBigValueMapping<alwaysBigInt> = alwaysBigInt extends true ? bigint : BigValue;
+
+export type BiOptions<alwaysBigInt> = {
     /**
      * Byte offset to start, default is 0 
      */
@@ -30,7 +34,7 @@ export type BiOptions = {
      * 
      * Set this to ``true`` if you wish for it to always stay a ``BigInt``.
      */
-    enforceBigInt?: boolean,
+    enforceBigInt?: alwaysBigInt,
     /**
      * If you want to prevent write operations
      */

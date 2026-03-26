@@ -9,40 +9,19 @@ import { BiBase } from './core/BiBase.js';
 /**
  * Binary writer, includes bitfields and strings.
  *
- * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+ * @param {DataType} input - File path or a `Buffer` or `Uint8Array`. Always found in .{@link data}
  * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false`` in writer)
- * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
+ * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+ * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+ * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+ * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+ * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+ * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
  * 
  * @since 2.0
  */
-export class BiWriter<DataType extends Buffer | Uint8Array, alwaysBigInt extends boolean> extends BiBase<DataType, alwaysBigInt> {
-
-    /**
-     * Binary writer, includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
-     * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false`` in writer)
-     * @param {BiOptions["windowSize"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
-     */
-    constructor(input?: string | DataType, options: BiOptions = {
-        byteOffset: 0,
-        bitOffset: 0,
-        endianness: "little",
-        strict: false,
-        growthIncrement: 0,
-        enforceBigInt: false,
-        readOnly: false
-    }) {
+export class BiWriter<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBigInt> {
+    constructor(input?: DataType, options: BiOptions<alwaysBigInt> = {}) {
         options.byteOffset = options.byteOffset ?? 0;
 
         options.bitOffset = options.bitOffset ?? 0;
@@ -53,7 +32,7 @@ export class BiWriter<DataType extends Buffer | Uint8Array, alwaysBigInt extends
 
         options.growthIncrement = options.growthIncrement ?? 1048576;
 
-        options.enforceBigInt = options.enforceBigInt ?? false;
+        options.enforceBigInt = options.enforceBigInt ?? false as alwaysBigInt;
 
         options.readOnly = options.readOnly ?? false;
 

@@ -9,32 +9,20 @@ import { BiBaseAsync } from './core/BiBaseAsync.js';
 /**
  * Async Binary writer, includes bitfields and strings.
  *
- * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+ * @param {DataType} input - File path or a `Buffer` or ``Uint8Array`.
  * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+ * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+ * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+ * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+ * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+ * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+ * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
+ * @param {BiOptions["windowSize"]?} [options.windowSize = 4096] - Size of the chunk of a file to load per read. Set to `0` to load the whole file in one async read (default `4 KiB`)
  * 
  * @since 4.0
  */
-export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt extends boolean> extends BiBaseAsync<DataType, hasBigInt> {
-
-    /**
-     * Async Binary writer, includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
-     * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     */
-    constructor(input?: string | DataType, options: BiOptions = {}) {
+export class BiWriterAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType, alwaysBigInt> {
+    constructor(input?: DataType, options: BiOptions<alwaysBigInt> = {}) {
         options.byteOffset = options.byteOffset ?? 0;
         
         options.bitOffset = options.bitOffset ?? 0;
@@ -45,7 +33,7 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
 
         options.growthIncrement = options.growthIncrement ?? 1048576;
 
-        options.enforceBigInt = options.enforceBigInt ?? false;
+        options.enforceBigInt = options.enforceBigInt ?? false as alwaysBigInt;
 
         options.readOnly = options.readOnly ?? false;
 
@@ -66,24 +54,22 @@ export class BiWriterAsync<DataType extends Buffer | Uint8Array, hasBigInt exten
 
     /**
      * 
-     * Creates and opens a new `BiWriterAsync`
-     * 
-     * includes bitfields and strings.
+     * Creates and opens a new `BiWriterAsync`.
      *
-     * @param {string|Buffer|Uint8Array} input - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+     * @param {DataType} input - File path or a `Buffer` or ``Uint8Array`.
      * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
+     * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+     * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+     * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+     * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+     * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+     * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
+     * @param {BiOptions["windowSize"]?} [options.windowSize = 4096] - Size of the chunk of a file to load per read. Set to `0` to load the whole file in one async read (default `4 KiB`)
      * 
-     * @returns {Promise<BiWriterAsync<DataType, hasBigInt>>}
+     * @returns {Promise<BiWriterAsync<DataType, alwaysBigInt>>}
      */
-    static async create<DataType extends Buffer | Uint8Array, hasBigInt extends boolean>(input: string | DataType, options: BiOptions = {}): Promise<BiWriterAsync<DataType, hasBigInt>>{
-        const instance = new BiWriterAsync<DataType, hasBigInt>(input, options);
+    static async create<DataType, alwaysBigInt>(input: DataType, options: BiOptions<alwaysBigInt> = {}): Promise<BiWriterAsync<DataType, alwaysBigInt>>{
+        const instance = new BiWriterAsync<DataType, alwaysBigInt>(input, options);
 
         await instance.open();
 
