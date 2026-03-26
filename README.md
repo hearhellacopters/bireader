@@ -29,7 +29,7 @@ Feature rich binary reader ***and writer*** that keeps track of your position to
 
 ---
 
-Supported data types:
+## ✅ Supported data types
 
 - [Bitfields](#bit-field) ([u]bit{1-32}{le|be}) 1-32 bit signed or unsigned value in big or little endian order
 - [Bytes](#byte) ([u]int8, byte) 8 bit signed or unsigned value
@@ -41,7 +41,7 @@ Supported data types:
 - [Double Floats](#double-float) (doublefloat, dfloat{le|be}) 64 bit decimal value in big or little endian
 - [Strings](#strings) (string) Fixed and non-fixed length, UTF, pascal, wide pascal. Includes all `TextEncoder` types
 
-## What's New?
+## ⭐ What's New?
 
 ### v4
  * Added `BiReaderAsync` and `BiWriterAsync`. See [Async](#async) classes.
@@ -74,9 +74,118 @@ Supported data types:
 
 ``npm install bireader``
 
-Provides both CommonJS and ES modules for Node and Browser.
+Provides both CommonJS and ES modules. Works in Browser, Node.js (CJS + ESM), and provides zero-dependency binaries.
 
-### Example
+## Quick Start – The 4 Classes
+
+| Class         | Use Case                        | Style | Best For                 |
+|   ---         |         ---                     | ---   |      ---                 |
+|`BiReader`     | Most parsing tasks              | Sync  | Buffers + normal files   |
+|`BiWriter`     | Creating / editing binary files | Sync  | In-memory + normal files |
+|`BiReaderAsync`| Huge files (> 2–4 GB)           | Async | Very large files         |
+|`BiWriterAsync`| Writing huge files without OOM  | Async | Streaming / large output |
+
+### 1. BiReader + BiWriter (Sync – Recommended for 99% of use cases)
+
+```javascript
+import { BiReader, BiWriter } from 'bireader';
+
+// === Reading from Buffer / Uint8Array ===
+const data = new Uint8Array([0x01, 0x02, 0x03, 0x04 /* ... */]);
+const br = new BiReader(data);
+
+console.log(br.uint32le);        // auto-advances cursor
+console.log(br.halffloatle);
+console.log(br.readString(10));  // or use .pstring2le, .widestring, etc.
+
+// === Writing (auto-grows) ===
+const bw = new BiWriter();
+bw.uint32le = 0xCAFEBABE;
+bw.halffloatle = 3.1416;
+bw.pstring2le("Hello World");
+bw.writeBit(0b101, 3);           // bit-level control
+
+const finalBuffer = bw.data;     // or bw.toBuffer()
+```
+**Node.js file support (still sync)**
+
+```javascript
+const brFile = new BiReader('huge-but-not-gigantic.bin'); // accepts filePath
+console.log(brFile.int64le);
+```
+
+### 2. BiReaderAsync + BiWriterAsync (Async – for huge files)
+
+```javascript
+import { BiReaderAsync, BiWriterAsync } from 'bireader';
+
+// === Async Reader (random access, no full load into RAM) ===
+const brAsync = await BiReaderAsync.create('massive-50gb-file.bin');
+
+await brAsync.seek(1024 * 1024 * 1024);    // jump to 1 GB mark
+const magic = await brAsync.str();         // or .uint32le, .halffloatle, etc.
+const value = await brAsync.readUint64();  // all methods are now async
+
+await brAsync.close();
+```
+
+**Async Writer**
+
+```javascript
+const bwAsync = await BiWriterAsync.create('output-huge.bin');
+
+await bwAsync.writeUint32(0xDEADBEEF);
+await bwAsync.halffloatle(1.618);
+await bwAsync.writeString("Header data", { stringType: 'utf8', terminateValue: 0 });
+
+await bwAsync.close();   // flushes everything
+```
+
+**Important: `BiReaderAsync` / `BiWriterAsync` are Node.js only (they use `fs/promises`).**
+
+### 3. Bit-Field Example (works on all 4 classes)
+
+```javascript
+const br = new BiReader(myData);
+br.goto(0x100);
+
+// Bit-level presets (auto-advance cursor)
+console.log(br.ubit4);     // 4 bits
+console.log(br.bit8);      // signed 8 bits
+console.log(br.ubit24be);  // 24 bits big-endian
+
+// Manual bit control
+br.insetBit = 3;
+console.log(br.readBit(5));        // read any number of bits
+br.writeBit(0b10110, 5);           // write any number of bits
+```
+
+### 4. String Handling (all variants)
+
+```javascript
+const bw = new BiWriter();
+bw.strSettings = { length: 8, stringType: 'utf16le', terminateValue: 0 };
+
+bw.str = "Hello 🌍";           // uses current strSettings
+bw.pstring2le("Pascal string");
+bw.widestring("UTF-16 wide string");
+
+const br = new BiReader(bw.data);
+console.log(br.cstring());       // null-terminated
+console.log(br.pstring4be());
+```
+
+### 5. Math Helpers (XOR, shifts, etc.)
+
+```javascript
+const bw = new BiWriter(data);
+bw.xor(0xAA);                  // XOR entire buffer with key
+bw.lShift(1, 0, 8);            // left-shift first 8 bytes by 1 bit
+bw.and(0x0F, 0, 4);            // AND bytes 0-3 with 0x0F
+console.log(bw.toHex());       // nice hexdump helper
+```
+
+### 6. Real-World Complete Example (WebP parser)
 
 <details>
 <summary>Click to expand</summary>
@@ -89,7 +198,7 @@ Includes presents for quick parsing or programmable functions (examples below).
 import {BiReader, BiWriter} from 'bireader';
 
 // read example - parse a webp file
-function parse_webp(data){
+function parseWebp(data){
   const br = new BiReader(data);
   br.strSettings = {length: 4};
   br.hexdump({suppressUnicode:true}); // console.log data as hex
@@ -855,6 +964,13 @@ With 4.0 you can now use ``BiReaderAsync`` and ``BiWriterAsync`` for async opera
     <td>Class</td>
     <td>new BiWriterAsync(<b>dataOrFilePath</b>, {byteOffset, bitOffset, endianess, strict, growthIncrement, readOnly, windowSize})</td>
   </tr>
+  <th align="center" colspan="4"><i>Quick Create</i></th>
+  <tr>
+    <td>Function</td>
+    <td>create(<b>dataOrFilePath</b>, {byteOffset, bitOffset, endianess, strict, growthIncrement, readOnly, windowSize})
+    <td>Same as above</tb>
+    <td align="center">Static async function that creates and opens the class all at once.</td>
+  </tr>
 </tbody>
 </table>
 
@@ -1179,51 +1295,91 @@ Presents include C or Unicode, Ansi and multiple pascals.
         encoding,<br>
         endian<br>
         })</td>
-     <td><b>string:</b> String to write<br>length:</b> Length in uints (NOT bytes) for non-terminate UTF strings. If not supplied, reads until <code>0x00</code> or supplied terminate value (for fixed length UTF strings only)<br><b>stringType:</b> String type. Defaults to utf-8 (<code>utf-8</code>, <code>utf-16</code>, <code>utf-32</code>, <code>pascal</code>, <code>wide-pascal</code>, <code>double-wide-pascal</code> accepted)<br><b>terminateValue:</b> Terminate value. Default is <code>0x00</code> (for non-fixed length utf strings)<br><b>lengthReadSize:</b> Size of the first value that defines the length of the string. Defaults to <code>1</code> as uint8, respects supplied endian (for Pascal strings only, accepts <code>1</code>, <code>2</code> or <code>4</code> bytes)<br><b>encoding:</b> Defaults to <code>utf-8</code> (accepts all TextDecoder options)<br><b>endian:</b> for <code>utf-16</code>, <code>utf-32</code>, <code>wide-pascal</code> and <code>double-wide-pascal</code> character order</td>
+     <td>
+      <b>string:</b> String to write<br>
+      length:</b> Length in uints (NOT bytes) for non-terminate UTF strings. If not supplied, reads until <code>0x00</code> or supplied terminate value (for fixed length UTF strings only, in units NOT bytes)<br>
+      <b>stringType:</b> String type. Defaults to utf-8 (<code>utf-8</code>, <code>utf-16</code>, <code>utf-32</code>, <code>pascal</code>, <code>wide-pascal</code>, <code>double-wide-pascal</code> accepted)<br>
+      <b>terminateValue:</b> Terminate value. Default is <code>0x00</code> (for non-fixed length utf strings)<br>
+      <b>lengthReadSize:</b> Size of the first value that defines the length of the string. Defaults to <code>1</code> as uint8, respects supplied endian (for Pascal strings only, accepts <code>1</code>, <code>2</code> or <code>4</code> bytes)<br>
+      <b>encoding:</b> Defaults to <code>utf-8</code> (accepts all TextDecoder options)<br>
+      <b>endian:</b> for <code>utf-16</code>, <code>utf-32</code>, <code>wide-pascal</code> and <code>double-wide-pascal</code> character order</td>
   </tr>
   <tr>
     <td><b>Default settings</b></td>
     <td>strSettings = {length?, stringType?, terminateValue?, lengthReadSize?, lengthWriteSize?, stripNull?, encoding?, endian?}</td>
     <td>
-      <b>length:</b> Length of string for fixed length, non-terminate value utf strings<br/>
+      <b>length:</b> Length of string for fixed length, non-terminate value utf strings (in units NOT bytes)<br/>
       <b>stringType:</b> <code>utf-8</code>, <code>utf-16</code>, <code>utf-32</code>,<code>pascal</code>, <code>wide-pascal</code> or <code>double-wide-pascal</code>. Default <code>utf-8</code>.<br/>
       <b>terminateValue:</b> Number only with <code>stringType</code> of utf types.<br/>
       <b>lengthReadSize</b> For pascal strings. 1, 2 or 4 byte length read size. Default <code>1</code><br/>
       <b>lengthWriteSize:</b> For pascal strings. 1, 2 or 4 byte length write size. Default <code>1</code>.<br/>
-      <b>stripNull:</b> Removes 0x00 characters. default <code>true</code><br/>
+      <b>stripNull:</b> Removes code>0x00</code> characters. default <code>true</code><br/>
       <b>encoding:</b> TextEncoder accepted types. Default <code>utf-8</code>.<br/>
       <b>endian:</b> <code>big</code> or <code>little</code><br/>
     </td>
   </tr>
   <tr>
-    <td align="center"><b>Presets (reader)</b></td>
+    <td><b>get / set</b></td>
+    <td>str()</td>
     <td>
-    {c|utf8}string(length, terminateValue, stripNull)<br><br>
-    ansistring(length, terminateValue, stripNull)<br><br>
-    {utf16|utf32|uni}string(length, terminateValue, stripNull, *endian)<br><br>
-    pstring(lengthReadSize, stripNull, *endian)<br><br>
-    pstring{1|2|4}{be|le}(stripNull, *endian)<br><br>
-    wpstring{be|le}(lengthReadSize, stripNull, *endian)<br><br>
-    wpstring{1|2|4}{be|le}(stripNull, *endian)
-    dwpstring{be|le}(lengthReadSize, stripNull, *endian)<br><br>
-    dwpstring{1|2|4}{be|le}(stripNull, *endian)
+      Quickly read or write a string with the set <code>strSettings</code> options.
     </td>
-    <td>Based on above.<br><b>Note:</b> Presets use augments not a single object. Endian only needed when not part of function name. Does not override set endian.</td>
   </tr>
   <tr>
-  <td align="center"><b>Presets (writer)</b></td>
+    <td align="center"><b>Functions (reader)</b></td>
     <td>
-    {c|utf8}string(<b>string</b>, length, terminateValue)<br><br>
-    ansistring(<b>string</b>, length, terminateValue)<br><br>
-    {utf16|utf32|uni}string{be|le}(<b>string</b>,length, terminateValue, *endian)<br><br>
-    pstring(<b>string</b>, lengthWriteSize, *endian)<br><br>
-    pstring{1|2|4}{be|le}(<b>string</b>, *endian)<br><br>
-    wpstring{be|le}(<b>string</b>, lengthWriteSize, *endian)<br><br>
-    wpstring{1|2|4}{be|le}(<b>string</b>, *endian)
-    dwpstring{be|le}(<b>string</b>, lengthWriteSize, *endian)<br><br>
-    dwpstring{1|2|4}{be|le}(<b>string</b>, *endian)
+    {c|utf8}string(length, terminateValue, stripNull)<br>
+    ansistring(length, terminateValue, stripNull)<br>
+    pstring(lengthReadSize, stripNull, endian)<br>
+    pstring{1|2|4}{be|le}(stripNull, endian)
     </td>
-    <td>Based on above.<br><b>Note:</b> Presets use augments not a single object. Endian only needed when not part of function name. Does not override set endian.</td>
+    <td>Get a single byte string as a fixed length (pascal) or null terminated (utf) string</td>
+  </tr>
+  <tr>
+    <td align="center"><b>Functions (reader)</b></td>
+    <td>
+    {utf16|uni}string(length, terminateValue, stripNull, endian)<br>
+    wpstring{be|le}(lengthReadSize, stripNull, endian)<br>
+    wpstring{1|2|4}{be|le}(stripNull, endian)
+    </td>
+    <td>Get a wide (2 byte) string as a fixed length (pascal) or null terminated (utf) string</td>
+  </tr>
+  <tr>
+    <td align="center"><b>Functions (reader)</b></td>
+    <td>
+    utf32string{be|le}(length, terminateValue, stripNull, endian)<br>
+    dwpstring{be|le}(lengthReadSize, stripNull, endian)<br>
+    dwpstring{1|2|4}{be|le}(stripNull, endian)
+    </td>
+    <td>Get a double wide (4 byte) string as a fixed length (pascal) or null terminated (utf) string</td></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Functions (writer)</b></td>
+    <td>
+    {c|utf8}string(<b>string</b>, length, terminateValue)<br>
+    ansistring(<b>string</b>, length, terminateValue)<br>
+    pstring(<b>string</b>, lengthWriteSize, endian)<br>
+    pstring{1|2|4}{be|le}(<b>string</b>, endian)
+    </td>
+    <td>Write a single byte string as a fixed length (pascal) or null terminated (utf) string</td>
+  </tr>
+  <tr>
+    <td align="center"><b>Functions (writer)</b></td>
+    <td>
+    {utf16|uni}string{be|le}(<b>string</b>,length, terminateValue, endian)<br>
+    wpstring{be|le}(<b>string</b>, lengthWriteSize, endian)<br>
+    wpstring{1|2|4}{be|le}(<b>string</b>, endian)
+    </td>
+    <td>Write a wide (2 byte) string as a fixed length (pascal) or null terminated (utf) string</td>
+  </tr>
+  <tr>
+    <td align="center"><b>Functions (writer)</b></td>
+    <td>
+    utf32string{be|le}(<b>string</b>,length, terminateValue, endian)<br>
+    dwpstring{be|le}(<b>string</b>, lengthWriteSize, endian)<br>
+    dwpstring{1|2|4}{be|le}(<b>string</b>, endian)
+    </td>
+    <td>Write a double wide (4 byte) string as a fixed length (pascal) or null terminated (utf) string</td></td>
   </tr>
 </tbody>
 </table>
