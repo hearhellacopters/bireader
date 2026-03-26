@@ -969,7 +969,7 @@ With 4.0 you can now use ``BiReaderAsync`` and ``BiWriterAsync`` for async opera
     <td>Function</td>
     <td>create(<b>dataOrFilePath</b>, {byteOffset, bitOffset, endianess, strict, growthIncrement, readOnly, windowSize})
     <td>Same as above</tb>
-    <td align="center">Static async function that creates and opens the class all at once.</td>
+    <td>Static async function that creates and opens the class all at once.</td>
   </tr>
 </tbody>
 </table>
