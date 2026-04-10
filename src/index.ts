@@ -1,3 +1,4 @@
+// node common js
 export { BiReader } from './BiReader.js';
 export { BiWriter } from './BiWriter.js';
 export { BiReaderAsync } from './BiReaderAsync.js';

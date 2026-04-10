@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { expect } from 'chai';
-import { BiReader, BiWriter } from '../dist/index.esm.js';
+import { BiReader, BiWriter } from '../dist/esm/indexImport.js';
 
 /**
  * Base path where server is running.
@@ -35,12 +35,12 @@ const tmp = path.join(__dirname, 'test.bin');
 describe('BiReader / BiWriter – Comprehensive Test Suite', () => {
     let reader: BiReader<Uint8Array, boolean>;
     let writer: BiWriter<Uint8Array, boolean>;
-    let readerFile: BiReader<Buffer, boolean>;
-    let writerFile: BiWriter<Buffer, boolean>;
+    let readerFile: BiReader<string, boolean>;
+    let writerFile: BiWriter<string, boolean>;
 
     beforeEach(() => {
-        readerFile = new BiReader<Buffer, boolean>(tmp);
-        writerFile = new BiWriter<Buffer, boolean>(tmp);
+        readerFile = new BiReader<string, boolean>(tmp);
+        writerFile = new BiWriter<string, boolean>(tmp);
         writer = new BiWriter(new Uint8Array([
             0x01, 0x02, 0x03, 0x04,             // bytes for int16/32 tests
             0x78, 0x56, 0x34, 0x12,             // LE 0x12345678

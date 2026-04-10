@@ -1,3 +1,5 @@
+'use strict';
+
 /******************************************************************************
 Copyright (c) Microsoft Corporation.
 
@@ -1163,7 +1165,7 @@ class BiBase {
     /**
      * Get the current buffer data.
      *
-     * @type {DataType}
+     * @type {ReturnMapping<DataType>}
      */
     get data() {
         return __classPrivateFieldGet(this, _BiBase_data, "f");
@@ -1255,10 +1257,6 @@ class BiBase {
          * The settings that used when using the .str getter / setter
          */
         this.strDefaults = { stringType: "utf-8", terminateValue: 0x0 };
-        /**
-         * All int64 reads will return as bigint type
-         */
-        this.enforceBigInt = null;
         this.wasExpanded = false;
         const { byteOffset, bitOffset, endianness, strict, growthIncrement, enforceBigInt, readOnly } = options;
         if (typeof strict != "boolean") {
@@ -1268,7 +1266,7 @@ class BiBase {
         this.strict = readOnly ? true : strict;
         this.fsMode = this.readOnly ? 'r' : 'r+';
         this.enforceBigInt = !!enforceBigInt;
-        if (this.enforceBigInt && !hasBigInt) {
+        if (!hasBigInt) {
             this.enforceBigInt = false;
         }
         this.growthIncrement = growthIncrement;
@@ -1981,7 +1979,7 @@ class BiBase {
      *
      * Use ``.data`` instead if you want the full buffer data.
      *
-     * @returns {DataType} ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} ``Buffer`` or ``Uint8Array``
      */
     get() {
         if (this.growthIncrement != 0 && this.wasExpanded) {
@@ -1997,7 +1995,7 @@ class BiBase {
      *
      * Use ``.data`` instead if you want the full buffer data.
      *
-     * @returns {DataType} ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} ``Buffer`` or ``Uint8Array``
      */
     getFullBuffer() {
         return this.get();
@@ -2010,7 +2008,7 @@ class BiBase {
      *
      * Use ``.data`` instead if you want the full buffer data.
      *
-     * @returns {DataType} ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} ``Buffer`` or ``Uint8Array``
      */
     return() {
         return this.get();
@@ -2685,7 +2683,7 @@ class BiBase {
      *
      * Note: Errors on strict mode if past end of data.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
@@ -2736,7 +2734,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
@@ -2870,7 +2868,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {number} offset - Byte position to add at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default true)
      */
@@ -2928,7 +2926,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {number} offset - Byte position to add at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default true)
      */
@@ -2941,7 +2939,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     unshift(data, consume = false) {
@@ -2953,7 +2951,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     prepend(data, consume = false) {
@@ -2965,7 +2963,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     push(data, consume = false) {
@@ -2977,7 +2975,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     append(data, consume = false) {
@@ -4401,7 +4399,7 @@ class BiBase {
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      *
-     * @returns {BigValue}
+     * @returns {ReturnBigValueMapping<alwaysBigInt>}
      */
     readUInt64() {
         return this.readInt64(true);
@@ -4412,7 +4410,7 @@ class BiBase {
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      *
-     * @returns {BigValue}
+     * @returns {ReturnBigValueMapping<alwaysBigInt>}
      */
     readInt64BE() {
         return this.readInt64(false, "big");
@@ -4423,7 +4421,7 @@ class BiBase {
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      *
-     * @returns {BigValue}
+     * @returns {ReturnBigValueMapping<alwaysBigInt>}
      */
     readInt64LE() {
         return this.readInt64(false, "little");
@@ -4434,7 +4432,7 @@ class BiBase {
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      *
-     * @returns {BigValue}
+     * @returns {ReturnBigValueMapping<alwaysBigInt>}
      */
     readUInt64BE() {
         return this.readInt64(true, "big");
@@ -4445,7 +4443,7 @@ class BiBase {
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      *
-     * @returns {BigValue}
+     * @returns {ReturnBigValueMapping<alwaysBigInt>}
      */
     readUInt64LE() {
         return this.readInt64(true, "little");
@@ -5007,32 +5005,19 @@ _BiBase_offset = new WeakMap(), _BiBase_insetBit = new WeakMap(), _BiBase_data =
 /**
  * Binary reader, includes bitfields and strings.
  *
- * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+ * @param {DataType} input - File path or a `Buffer` or `Uint8Array`. Always found in .{@link data}
  * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start reader (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
- * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
- * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default ``true`` in reader)
+ * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+ * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+ * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+ * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+ * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+ * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
+ * @param {BiOptions["readOnly"]?} [options.readOnly = true] - Allow data writes when reading a file (default `true` in reader)
  *
  * @since 2.0
  */
 class BiReader extends BiBase {
-    /**
-     * Binary reader, includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
-     * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start reader (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true`` in reader)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
-     * @param {BiOptions["readOnly"]} options.readOnly - If you want to prevent write operations (default ``true`` in reader)
-     */
     constructor(input, options = {}) {
         options.byteOffset = options.byteOffset ?? 0;
         options.bitOffset = options.bitOffset ?? 0;
@@ -8524,39 +8509,19 @@ class BiReader extends BiBase {
 /**
  * Binary writer, includes bitfields and strings.
  *
- * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+ * @param {DataType} input - File path or a `Buffer` or `Uint8Array`. Always found in .{@link data}
  * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false`` in writer)
- * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
+ * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+ * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+ * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+ * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+ * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+ * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
  *
  * @since 2.0
  */
 class BiWriter extends BiBase {
-    /**
-     * Binary writer, includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
-     * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false`` in writer)
-     * @param {BiOptions["windowSize"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
-     */
-    constructor(input, options = {
-        byteOffset: 0,
-        bitOffset: 0,
-        endianness: "little",
-        strict: false,
-        growthIncrement: 0,
-        enforceBigInt: false,
-        readOnly: false
-    }) {
+    constructor(input, options = {}) {
         options.byteOffset = options.byteOffset ?? 0;
         options.bitOffset = options.bitOffset ?? 0;
         options.endianness = options.endianness ?? "little";
@@ -12017,12 +11982,14 @@ var fs;
         try {
             if (typeof require !== 'undefined') {
                 if (typeof fs === "undefined") {
-                    fs = require('fs/promises');
+                    const _fs = require('fs');
+                    fs = _fs.promises;
                 }
             }
             else {
                 if (typeof fs === "undefined") {
-                    fs = await import('fs/promises');
+                    const _fs = await import('fs');
+                    fs = _fs.promises;
                 }
             }
         }
@@ -12037,7 +12004,6 @@ async function _fileExists(filePath) {
         return true; // File exists
     }
     catch (error) {
-        // @ts-ignore
         return false;
     }
 }
@@ -12063,12 +12029,17 @@ class BiBaseAsync {
     ;
     /**
      * Get the current buffer data.
+     *
+     * For use in file mode!
      */
     async getData() {
         return await this.get();
     }
     ;
-    set setData(data) {
+    /**
+     * Set the current buffer data.
+     */
+    set data(data) {
         if (this.isBufferOrUint8Array(data)) {
             __classPrivateFieldSet(this, _BiBaseAsync_data, data, "f");
             __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_updateView).call(this);
@@ -12153,6 +12124,9 @@ class BiBaseAsync {
          * Not using a file reader.
          */
         this.isMemoryMode = false;
+        /**
+         * If the buffer was extended and needs to be trimmed
+         */
         this.wasExpanded = false;
         // ASYNC ONLY
         /**
@@ -12195,7 +12169,7 @@ class BiBaseAsync {
         this.strict = this.readOnly ? true : strict;
         this.fsMode = this.readOnly ? 'r' : 'r+';
         this.enforceBigInt = !!enforceBigInt;
-        if (this.enforceBigInt && !hasBigInt) {
+        if (!hasBigInt) {
             this.enforceBigInt = false;
         }
         this.growthIncrement = growthIncrement;
@@ -12211,7 +12185,7 @@ class BiBaseAsync {
             this.isMemoryMode = false;
         }
         else if (this.isBufferOrUint8Array(input)) {
-            this.setData = input;
+            this.data = input;
             this.isMemoryMode = true;
             this.filePath = null;
             this.windowSize = 0;
@@ -12319,7 +12293,7 @@ class BiBaseAsync {
         }
         else {
             if (this.isBufferOrUint8Array(data)) {
-                this.setData = data;
+                this.data = data;
             }
             __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_initMemory).call(this);
         }
@@ -13588,7 +13562,7 @@ class BiBaseAsync {
                 data = Buffer.from(data);
             }
         }
-        const insertLen = data?.length ?? 0;
+        const insertLen = data.length ?? 0;
         if (insertLen === 0) {
             return;
         }
@@ -13785,7 +13759,7 @@ class BiBaseAsync {
                 data = Buffer.from(data);
             }
         }
-        const insertLen = data?.length ?? 0;
+        const insertLen = data.length ?? 0;
         if (insertLen === 0) {
             return;
         }
@@ -15725,16 +15699,15 @@ async function _BiBaseAsync_extendArray(targetSize) {
     await this.flush();
     if (this.isMemoryMode) {
         const toPadd = targetSize - this.size;
-        var newData;
         if (isBuffer(__classPrivateFieldGet(this, _BiBaseAsync_data, "f"))) {
-            var paddbuffer = Buffer.alloc(toPadd);
-            newData = Buffer.concat([__classPrivateFieldGet(this, _BiBaseAsync_data, "f"), paddbuffer]);
+            const paddbuffer = Buffer.alloc(toPadd);
+            this.data = Buffer.concat([__classPrivateFieldGet(this, _BiBaseAsync_data, "f"), paddbuffer]);
         }
         else {
-            newData = new Uint8Array(this.size + toPadd);
-            newData.set(__classPrivateFieldGet(this, _BiBaseAsync_data, "f"));
+            const newBuf = new Uint8Array(this.size + toPadd);
+            newBuf.set(__classPrivateFieldGet(this, _BiBaseAsync_data, "f"));
+            this.data = newBuf;
         }
-        this.setData = newData;
         this.size = targetSize;
         this.bitSize = this.size * 8;
         this.chunks = new Array(__classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getNumChunks).call(this)).fill(null);
@@ -15768,7 +15741,7 @@ async function _BiBaseAsync_setFileSize(exactSize) {
     await this.flush();
     if (this.isMemoryMode) {
         const newData = this.data.subarray(0, exactSize);
-        this.setData = newData;
+        this.data = newData;
         this.size = exactSize;
         this.bitSize = this.size * 8;
         const newNum = Math.ceil(exactSize / this.windowSize);
@@ -15973,32 +15946,20 @@ async function _BiBaseAsync_shiftTailBackward(removeOffset, removeLen, consume =
 /**
  * Async Binary reader, includes bitfields and strings.
  *
- * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+ * @param {DataType} input - File path or a `Buffer` or `Uint8Array`.
  * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
- * @param {BiOptions["readOnly"]} options.readOnly - If you want to prevent write operations (default true in reader)
+ * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+ * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+ * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+ * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+ * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+ * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
+ * @param {BiOptions["readOnly"]?} [options.readOnly = true] - Allow data writes when reading a file (default `true` in reader)
+ * @param {BiOptions["windowSize"]?} [options.windowSize = 4096] - Size of the chunk of a file to load per read. Set to `0` to load the whole file in one async read (default `4 KiB`)
  *
  * @since 4.0
  */
 class BiReaderAsync extends BiBaseAsync {
-    /**
-     * Async Binary reader, includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
-     * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["readOnly"]} options.readOnly - If you want to prevent write operations (default true in reader)
-     */
     constructor(input, options = {}) {
         options.byteOffset = options.byteOffset ?? 0;
         options.bitOffset = options.bitOffset ?? 0;
@@ -16015,21 +15976,20 @@ class BiReaderAsync extends BiBaseAsync {
     }
     ;
     /**
-     * Creates and opens a new `BiReaderAsync`
+     * Creates and opens a new `BiReaderAsync`.
      *
-     * Includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+     * @param {DataType} input - File path or a `Buffer` or `Uint8Array`.
      * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["readonly"]} options.readonly - If you want to prevent write operations (default true in reader)
+     * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+     * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+     * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+     * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+     * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+     * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
+     * @param {BiOptions["readOnly"]?} [options.readOnly = true] - Allow data writes when reading a file (default `true` in reader)
+     * @param {BiOptions["windowSize"]?} [options.windowSize = 4096] - Size of the chunk of a file to load per read. Set to `0` to load the whole file in one async read (default `4 KiB`)
      *
-     * @returns {Promise<BiReaderAsync<DataType, hasBigInt>>}
+     * @since 4.0
      */
     static async create(input, options = {}) {
         const instance = new BiReaderAsync(input, options);
@@ -19514,30 +19474,19 @@ class BiReaderAsync extends BiBaseAsync {
 /**
  * Async Binary writer, includes bitfields and strings.
  *
- * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+ * @param {DataType} input - File path or a `Buffer` or ``Uint8Array`.
  * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+ * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+ * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+ * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+ * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+ * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+ * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
+ * @param {BiOptions["windowSize"]?} [options.windowSize = 4096] - Size of the chunk of a file to load per read. Set to `0` to load the whole file in one async read (default `4 KiB`)
  *
  * @since 4.0
  */
 class BiWriterAsync extends BiBaseAsync {
-    /**
-     * Async Binary writer, includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
-     * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     */
     constructor(input, options = {}) {
         options.byteOffset = options.byteOffset ?? 0;
         options.bitOffset = options.bitOffset ?? 0;
@@ -19557,21 +19506,19 @@ class BiWriterAsync extends BiBaseAsync {
     ;
     /**
      *
-     * Creates and opens a new `BiWriterAsync`
+     * Creates and opens a new `BiWriterAsync`.
      *
-     * includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+     * @param {DataType} input - File path or a `Buffer` or ``Uint8Array`.
      * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
+     * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+     * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+     * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+     * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+     * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+     * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
+     * @param {BiOptions["windowSize"]?} [options.windowSize = 4096] - Size of the chunk of a file to load per read. Set to `0` to load the whole file in one async read (default `4 KiB`)
      *
-     * @returns {Promise<BiWriterAsync<DataType, hasBigInt>>}
+     * @returns {Promise<BiWriterAsync<DataType, alwaysBigInt>>}
      */
     static async create(input, options = {}) {
         const instance = new BiWriterAsync(input, options);
@@ -23015,36 +22962,7 @@ class BiWriterAsync extends BiBaseAsync {
     ;
 }
 
-/**
- * Isn't usable in browser.
- * @since 3.0
- * @deprecated Use ``BiReader`` instead.
- */
-class BiReaderStream {
-    constructor() {
-        throw new Error("BiReaderStream isn't usable in browser. Use BiReader instead.");
-    }
-}
-/**
- * Isn't usable in browser.
- * @since 4.0
- * @deprecated Use ``BiReader`` instead.
- */
-class BiFileReader {
-    constructor() {
-        throw new Error("BiFileReader isn't usable in browser. Use BiReader instead.");
-    }
-}
-/**
- * Isn't usable in browser.
- * @since 3.0
- * @deprecated Use ``BiWriter`` instead.
- */
-class BiWriterStream {
-    constructor() {
-        throw new Error("BiReaderStream isn't usable in browser. Use BiReader instead.");
-    }
-}
+// node common js
 /**
  * Not in use anymore.
  * @since 3.0
@@ -23053,6 +22971,16 @@ class BiWriterStream {
 class bireader {
     constructor() {
         throw new Error("bireader is deprecated. Use BiReader instead.");
+    }
+}
+/**
+ * Not in use anymore.
+ * @since 4.0
+ * @deprecated Use ``BiReaderLegacy`` instead.
+ */
+class BiReaderStream {
+    constructor() {
+        throw new Error("BiReaderStream is deprecated. Use BiReader instead.");
     }
 }
 /**
@@ -23066,15 +22994,23 @@ class biwriter {
     }
 }
 /**
- * Isn't usable in browser.
+ * Not in use anymore.
  * @since 4.0
- * @deprecated Use ``BiWriter`` instead.
+ * @deprecated Use ``BiWriterLegacy`` instead.
  */
-class BiFileWriter {
+class BiWriterStream {
     constructor() {
-        throw new Error("BiWriterStream isn't usable in browser. Use BiWriter instead.");
+        throw new Error("BiWriterStream is deprecated. Use BiWriter instead.");
     }
 }
 
-export { BiBase, BiFileReader, BiFileWriter, BiReader, BiReaderAsync, BiReaderStream, BiWriter, BiWriterAsync, BiWriterStream, bireader, biwriter, hexdump };
-//# sourceMappingURL=index.browser.js.map
+exports.BiReader = BiReader;
+exports.BiReaderAsync = BiReaderAsync;
+exports.BiReaderStream = BiReaderStream;
+exports.BiWriter = BiWriter;
+exports.BiWriterAsync = BiWriterAsync;
+exports.BiWriterStream = BiWriterStream;
+exports.bireader = bireader;
+exports.biwriter = biwriter;
+exports.hexdump = hexdump;
+//# sourceMappingURL=index.js.map

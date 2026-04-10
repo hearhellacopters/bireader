@@ -4,6 +4,7 @@
 
 // #region Imports
 var fs: typeof import("fs");
+
 import {
     // types
     BiOptions,
@@ -161,7 +162,7 @@ export class BiBase<DataType, alwaysBigInt> {
     /**
      * All int64 reads will return as bigint type
      */
-    enforceBigInt: alwaysBigInt = null;
+    enforceBigInt: alwaysBigInt;
     /**
      * Not using a file reader.
      */
@@ -355,7 +356,7 @@ export class BiBase<DataType, alwaysBigInt> {
 
                 this.bitSize = this.size * 8;
             } catch (error) {
-                throw new Error(error);
+                throw new Error(error as string);
             }
         }
     };
@@ -371,7 +372,7 @@ export class BiBase<DataType, alwaysBigInt> {
                 try {
                     this.fd = fs.openSync(this.filePath, this.fsMode);
                 } catch (error) {
-                    throw new Error(error);
+                    throw new Error(error as string);
                 }
             }
 
@@ -384,7 +385,7 @@ export class BiBase<DataType, alwaysBigInt> {
                     throw new Error("Didn't update file buffer size. Expecting " + this.size + " but got " + bytesRead);
                 }
             } catch (error) {
-                throw new Error(error);
+                throw new Error(error as string);
             }
 
             this.data = data as DataType;
@@ -572,7 +573,7 @@ export class BiBase<DataType, alwaysBigInt> {
         try {
             this.fd = fs.openSync(this.filePath, this.fsMode);
         } catch (error) {
-            throw new Error(error);
+            throw new Error(error as string);
         }
 
         this.#updateSize();
@@ -607,7 +608,7 @@ export class BiBase<DataType, alwaysBigInt> {
         try {
             fs.closeSync(this.fd);
         } catch (error) {
-            throw new Error(error);
+            throw new Error(error as string);
         }
 
         this.fd = null;
@@ -634,7 +635,7 @@ export class BiBase<DataType, alwaysBigInt> {
         try {
             fs.writeSync(this.fd, this.#data, 0, this.#data.length);
         } catch (error) {
-            throw new Error(error);
+            throw new Error(error as string);
         }
 
         this.#updateSize();
@@ -670,7 +671,7 @@ export class BiBase<DataType, alwaysBigInt> {
 
             fs.renameSync(this.filePath, newFilePath);
         } catch (error) {
-            throw new Error(error);
+            throw new Error(error as string);
         }
 
         this.filePath = newFilePath;
@@ -699,7 +700,7 @@ export class BiBase<DataType, alwaysBigInt> {
 
             fs.unlinkSync(this.filePath);
         } catch (error) {
-            throw new Error(error);
+            throw new Error(error as string);
         }
 
         this.filePath = null;

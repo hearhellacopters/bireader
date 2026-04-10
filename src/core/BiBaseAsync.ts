@@ -6,6 +6,7 @@
 // #region Imports
 
 var fs: typeof import('fs/promises');
+
 import {
     // types
     BiOptions,
@@ -64,11 +65,15 @@ import {
         try {
             if (typeof require !== 'undefined') {
                 if (typeof fs === "undefined") {
-                    fs = require('fs/promises');
+                    const _fs = require('fs');
+
+                    fs = _fs.promises;
                 }
             } else {
                 if (typeof fs === "undefined") {
-                    fs = await import('fs/promises');
+                    const _fs = await import('fs');
+
+                    fs = _fs.promises;
                 }
             }
         } catch (error) {
@@ -83,7 +88,6 @@ async function _fileExists(filePath: string) {
 
         return true;  // File exists
     } catch (error) {
-        // @ts-ignore
         return false;
     }
 };
@@ -156,7 +160,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
     /**
      * Open file handle
      */
-    fd: import('fs/promises').FileHandle = null;
+    fd: any = null;
     /**
      * Current file path
      */
@@ -399,7 +403,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
 
                 this.bitSize = this.size * 8;
             } catch (error) {
-                throw new Error(error);
+                throw new Error(error as string);
             }
         }
     };
@@ -432,7 +436,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
         try {
             this.fd = await fs.open(this.filePath, this.fsMode);
         } catch (error) {
-            throw new Error(error);
+            throw new Error(error as string);
         }
 
         await this.#updateSize();
@@ -1183,7 +1187,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
 
             await fs.rename(this.filePath, newFilePath);
         } catch (error) {
-            throw new Error(error);
+            throw new Error(error as string);
         }
 
         this.filePath = newFilePath;
@@ -1212,7 +1216,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
 
             await fs.unlink(this.filePath);
         } catch (error) {
-            throw new Error(error);
+            throw new Error(error as string);
         }
 
         this.filePath = null;

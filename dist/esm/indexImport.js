@@ -1,38 +1,3 @@
-/******************************************************************************
-Copyright (c) Microsoft Corporation.
-
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-***************************************************************************** */
-/* global Reflect, Promise, SuppressedError, Symbol, Iterator */
-
-
-function __classPrivateFieldGet(receiver, state, kind, f) {
-    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
-    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
-    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
-}
-
-function __classPrivateFieldSet(receiver, state, value, kind, f) {
-    if (kind === "m") throw new TypeError("Private method is not writable");
-    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
-    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
-    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
-}
-
-typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
-    var e = new Error(message);
-    return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
-};
-
 // #region Types
 // #region Checks
 const testFallback = process && process.argv && process.argv.indexOf("FALLBACK=true") != -1;
@@ -1122,7 +1087,6 @@ async function _wstringAsync(encodedString, stringType, endian, terminateValue, 
 /**
  * @file BiReader / Writer base for working in sync Buffers or full file reads. Node and Browser.
  */
-var _BiBase_instances, _BiBase_offset, _BiBase_insetBit, _BiBase_data, _BiBase_view, _BiBase_updateSize, _BiBase_updateBuffer, _BiBase_updateView, _BiBase_checkSize, _BiBase_confrimSize, _BiBase_extendArray, _BiBase_findNumber;
 // #region Imports
 var fs$1;
 (async function () {
@@ -1161,12 +1125,87 @@ function _fileExists$1(filePath) {
  */
 class BiBase {
     /**
+     * Endianness of default read.
+     * @type {endian}
+     */
+    endian = "little";
+    /**
+     * Current read byte location.
+     */
+    #offset = 0;
+    /**
+     * Current read byte's bit location. 0 - 7
+     */
+    #insetBit = 0;
+    /**
+     * Size in bytes of the current buffer.
+     */
+    size = 0;
+    /**
+     * Size in bits of the current buffer.
+     */
+    bitSize = 0;
+    /**
+     * Stops the buffer extending on reading or writing outside of current size
+     */
+    strict = false;
+    /**
+     * Console log a hexdump on error.
+     */
+    errorDump = false;
+    /**
+     * Master Buffer
+     */
+    #data = null;
+    /**
+     * DataView of master Buffer
+     */
+    #view;
+    /**
+     * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
+     *
+     * Otherwise it extends just the amount of the next written value.
+     *
+     * This can greatly speed up data writes when large files are being written.
+     *
+     * NOTE: Using ``BiWriter.get`` or ``BiWriter.return`` will now remove all data after the current write position. Use ``BiWriter.data`` to get the full buffer instead.
+     */
+    growthIncrement = 1048576;
+    /**
+     * Open file description
+     */
+    fd = null;
+    /**
+     * Current file path
+     */
+    filePath = null;
+    /**
+     * File write mode
+     */
+    fsMode = "r";
+    /**
+     * The settings that used when using the .str getter / setter
+     */
+    strDefaults = { stringType: "utf-8", terminateValue: 0x0 };
+    /**
+     * All int64 reads will return as bigint type
+     */
+    enforceBigInt;
+    /**
+     * Not using a file reader.
+     */
+    isMemoryMode;
+    /**
+     * If data can not be written to the buffer.
+     */
+    readOnly;
+    /**
      * Get the current buffer data.
      *
-     * @type {DataType}
+     * @type {ReturnMapping<DataType>}
      */
     get data() {
-        return __classPrivateFieldGet(this, _BiBase_data, "f");
+        return this.#data;
     }
     ;
     /**
@@ -1176,90 +1215,22 @@ class BiBase {
      */
     set data(data) {
         if (this.isBufferOrUint8Array(data)) {
-            __classPrivateFieldSet(this, _BiBase_data, data, "f");
-            __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_updateView).call(this);
-            this.size = __classPrivateFieldGet(this, _BiBase_data, "f").length;
+            this.#data = data;
+            this.#updateView();
+            this.size = this.#data.length;
             this.bitSize = this.size * 8;
         }
     }
     ;
+    wasExpanded = false;
     /**
      * Get the DataView of current buffer data.
      */
     get view() {
-        return __classPrivateFieldGet(this, _BiBase_view, "f");
+        return this.#view;
     }
     ;
     constructor(input, options = {}) {
-        _BiBase_instances.add(this);
-        /**
-         * Endianness of default read.
-         * @type {endian}
-         */
-        this.endian = "little";
-        /**
-         * Current read byte location.
-         */
-        _BiBase_offset.set(this, 0);
-        /**
-         * Current read byte's bit location. 0 - 7
-         */
-        _BiBase_insetBit.set(this, 0);
-        /**
-         * Size in bytes of the current buffer.
-         */
-        this.size = 0;
-        /**
-         * Size in bits of the current buffer.
-         */
-        this.bitSize = 0;
-        /**
-         * Stops the buffer extending on reading or writing outside of current size
-         */
-        this.strict = false;
-        /**
-         * Console log a hexdump on error.
-         */
-        this.errorDump = false;
-        /**
-         * Master Buffer
-         */
-        _BiBase_data.set(this, null);
-        /**
-         * DataView of master Buffer
-         */
-        _BiBase_view.set(this, void 0);
-        /**
-         * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
-         *
-         * Otherwise it extends just the amount of the next written value.
-         *
-         * This can greatly speed up data writes when large files are being written.
-         *
-         * NOTE: Using ``BiWriter.get`` or ``BiWriter.return`` will now remove all data after the current write position. Use ``BiWriter.data`` to get the full buffer instead.
-         */
-        this.growthIncrement = 1048576;
-        /**
-         * Open file description
-         */
-        this.fd = null;
-        /**
-         * Current file path
-         */
-        this.filePath = null;
-        /**
-         * File write mode
-         */
-        this.fsMode = "r";
-        /**
-         * The settings that used when using the .str getter / setter
-         */
-        this.strDefaults = { stringType: "utf-8", terminateValue: 0x0 };
-        /**
-         * All int64 reads will return as bigint type
-         */
-        this.enforceBigInt = null;
-        this.wasExpanded = false;
         const { byteOffset, bitOffset, endianness, strict, growthIncrement, enforceBigInt, readOnly } = options;
         if (typeof strict != "boolean") {
             throw new Error("Strict mode must be true or false");
@@ -1268,7 +1239,7 @@ class BiBase {
         this.strict = readOnly ? true : strict;
         this.fsMode = this.readOnly ? 'r' : 'r+';
         this.enforceBigInt = !!enforceBigInt;
-        if (this.enforceBigInt && !hasBigInt) {
+        if (!hasBigInt) {
             this.enforceBigInt = false;
         }
         this.growthIncrement = growthIncrement;
@@ -1286,27 +1257,27 @@ class BiBase {
         else if (this.isBufferOrUint8Array(input)) {
             this.data = input;
             this.isMemoryMode = true;
-            this.size = __classPrivateFieldGet(this, _BiBase_data, "f").length;
-            this.bitSize = __classPrivateFieldGet(this, _BiBase_data, "f").length * 8;
+            this.size = this.#data.length;
+            this.bitSize = this.#data.length * 8;
         }
         else {
             throw new Error("Write data must be Uint8Array or Buffer");
         }
-        __classPrivateFieldSet(this, _BiBase_offset, byteOffset ?? 0, "f");
+        this.#offset = byteOffset ?? 0;
         if ((bitOffset ?? 0) != 0) {
-            __classPrivateFieldSet(this, _BiBase_offset, Math.floor(byteOffset / 8), "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, byteOffset % 8, "f");
+            this.#offset = Math.floor(byteOffset / 8);
+            this.#insetBit = byteOffset % 8;
         }
-        __classPrivateFieldSet(this, _BiBase_offset, ((Math.abs(__classPrivateFieldGet(this, _BiBase_offset, "f"))) + Math.ceil((Math.abs(__classPrivateFieldGet(this, _BiBase_insetBit, "f"))) / 8)), "f");
+        this.#offset = ((Math.abs(this.#offset)) + Math.ceil((Math.abs(this.#insetBit)) / 8));
         // Adjust byte offset based on bit overflow
-        __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + Math.floor((Math.abs(__classPrivateFieldGet(this, _BiBase_insetBit, "f"))) / 8), "f");
+        this.#offset += Math.floor((Math.abs(this.#insetBit)) / 8);
         // Adjust bit offset
-        __classPrivateFieldSet(this, _BiBase_insetBit, Math.abs(normalizeBitOffset(__classPrivateFieldGet(this, _BiBase_insetBit, "f"))) % 8, "f");
+        this.#insetBit = Math.abs(normalizeBitOffset(this.#insetBit)) % 8;
         // Ensure bit offset stays between 0-7
-        __classPrivateFieldSet(this, _BiBase_insetBit, Math.min(Math.max(__classPrivateFieldGet(this, _BiBase_insetBit, "f"), 0), 7), "f");
+        this.#insetBit = Math.min(Math.max(this.#insetBit, 0), 7);
         // Ensure offset doesn't go negative
-        __classPrivateFieldSet(this, _BiBase_offset, Math.max(__classPrivateFieldGet(this, _BiBase_offset, "f"), 0), "f");
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, __classPrivateFieldGet(this, _BiBase_offset, "f"));
+        this.#offset = Math.max(this.#offset, 0);
+        this.#confrimSize(this.#offset);
     }
     ;
     /**
@@ -1348,11 +1319,142 @@ class BiBase {
     isUint8Array(obj) {
         return isUint8Array(obj);
     }
+    /**
+     * Internal update size
+     *
+     * run after setting data
+     */
+    #updateSize() {
+        if (this.isMemoryMode) {
+            this.size = this.#data.length;
+            this.bitSize = this.size * 8;
+            return;
+        }
+        if (typeof fs$1 === "undefined") {
+            throw new Error("Can't load file outside of Node.");
+        }
+        if (this.fd != null) {
+            try {
+                const stat = fs$1.fstatSync(this.fd);
+                this.size = stat.size;
+                this.bitSize = this.size * 8;
+            }
+            catch (error) {
+                throw new Error(error);
+            }
+        }
+    }
     ;
+    /**
+     * Internal update buffer.
+     *
+     * Should come after updateSize
+     */
+    #updateBuffer() {
+        if (!this.isMemoryMode) {
+            if (this.fd == null) {
+                try {
+                    this.fd = fs$1.openSync(this.filePath, this.fsMode);
+                }
+                catch (error) {
+                    throw new Error(error);
+                }
+            }
+            const data = Buffer.alloc(this.size);
+            try {
+                const bytesRead = fs$1.readSync(this.fd, data, 0, data.length, 0);
+                if (bytesRead != this.size) {
+                    throw new Error("Didn't update file buffer size. Expecting " + this.size + " but got " + bytesRead);
+                }
+            }
+            catch (error) {
+                throw new Error(error);
+            }
+            this.data = data;
+            this.#updateSize();
+        }
+        this.#offset = this.#offset ?? 0;
+        this.#insetBit = this.#insetBit ?? 0;
+        this.#offset = ((Math.abs(this.#offset)) + Math.ceil((Math.abs(this.#insetBit)) / 8));
+        // Adjust byte offset based on bit overflow
+        this.#offset += Math.floor((Math.abs(this.#insetBit)) / 8);
+        // Adjust bit offset
+        this.#insetBit = Math.abs(normalizeBitOffset(this.#insetBit)) % 8;
+        // Ensure bit offset stays between 0-7
+        this.#insetBit = Math.min(Math.max(this.#insetBit, 0), 7);
+        // Ensure offset doesn't go negative
+        this.#offset = Math.max(this.#offset, 0);
+        this.#confrimSize(this.#offset);
+    }
     ;
+    /**
+     * Call this after everytime we set/replace `this.data`
+     */
+    #updateView() {
+        if (this.#data) {
+            this.#view = new DataView(this.#data.buffer, this.#data.byteOffset ?? 0, this.#data.byteLength);
+        }
+    }
     ;
+    /**
+     * Calls to check if expanding the buffer needs to happen
+     */
+    #checkSize(writeBytes = 0, writeBit = 0, offset = this.#offset) {
+        this.open();
+        const bits = writeBit + this.#insetBit;
+        if (bits != 0) {
+            //add bits
+            writeBytes += Math.ceil(bits / 8);
+        }
+        //if bigger extend
+        this.#confrimSize(offset + writeBytes);
+        //start read location
+        return offset;
+    }
     ;
+    /**
+     * Checks if input requires expanding the buffer
+     */
+    #confrimSize(neededSize) {
+        if (neededSize <= this.size) {
+            return;
+        }
+        var targetSize = neededSize;
+        if (targetSize > this.size) {
+            if (this.strict || this.readOnly) {
+                this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+                throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: ` + neededSize + " at " + this.#offset + " of " + this.size);
+            }
+            if (this.growthIncrement != 0) {
+                this.wasExpanded = true;
+                targetSize = Math.ceil(neededSize / this.growthIncrement) * this.growthIncrement;
+            }
+            this.#extendArray(targetSize);
+        }
+    }
     ;
+    /**
+     * Expends the buffer
+     */
+    #extendArray(targetSize) {
+        this.open();
+        if (targetSize <= this.size) {
+            return;
+        }
+        const toPadd = targetSize - this.size;
+        if (this.isBuffer(this.#data)) {
+            var paddbuffer = Buffer.alloc(toPadd);
+            this.data = Buffer.concat([this.#data, paddbuffer]);
+        }
+        else {
+            const newBuf = new Uint8Array(this.size + toPadd);
+            newBuf.set(this.#data);
+            this.data = newBuf;
+        }
+        this.size = this.#data.length;
+        this.bitSize = this.#data.length * 8;
+        return;
+    }
     ;
     ///////////////////////////////
     // #region FILE MODE
@@ -1391,8 +1493,8 @@ class BiBase {
             this.fd == null;
             this.isMemoryMode = true;
             this.data = data;
-            __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_updateSize).call(this);
-            __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_updateBuffer).call(this);
+            this.#updateSize();
+            this.#updateBuffer();
             return;
         }
         if (this.isMemoryMode) {
@@ -1413,8 +1515,8 @@ class BiBase {
         catch (error) {
             throw new Error(error);
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_updateSize).call(this);
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_updateBuffer).call(this);
+        this.#updateSize();
+        this.#updateBuffer();
     }
     ;
     /**
@@ -1422,9 +1524,9 @@ class BiBase {
      */
     close() {
         if (this.isMemoryMode) {
-            const data = __classPrivateFieldGet(this, _BiBase_data, "f");
-            __classPrivateFieldSet(this, _BiBase_data, null, "f");
-            __classPrivateFieldSet(this, _BiBase_view, null, "f");
+            const data = this.#data;
+            this.#data = null;
+            this.#view = null;
             return data;
         }
         if (this.fd === null) {
@@ -1441,9 +1543,9 @@ class BiBase {
             throw new Error(error);
         }
         this.fd = null;
-        const data = __classPrivateFieldGet(this, _BiBase_data, "f");
-        __classPrivateFieldSet(this, _BiBase_data, null, "f");
-        __classPrivateFieldSet(this, _BiBase_view, null, "f");
+        const data = this.#data;
+        this.#data = null;
+        this.#view = null;
         return data;
     }
     ;
@@ -1452,17 +1554,17 @@ class BiBase {
      */
     commit() {
         if (this.isMemoryMode || this.readOnly) {
-            return __classPrivateFieldGet(this, _BiBase_data, "f");
+            return this.#data;
         }
         // this.mode == "file"
         this.open();
         try {
-            fs$1.writeSync(this.fd, __classPrivateFieldGet(this, _BiBase_data, "f"), 0, __classPrivateFieldGet(this, _BiBase_data, "f").length);
+            fs$1.writeSync(this.fd, this.#data, 0, this.#data.length);
         }
         catch (error) {
             throw new Error(error);
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_updateSize).call(this);
+        this.#updateSize();
     }
     ;
     /**
@@ -1680,7 +1782,7 @@ class BiBase {
      * @returns {number} current byte position
      */
     get offset() {
-        return __classPrivateFieldGet(this, _BiBase_offset, "f");
+        return this.#offset;
     }
     ;
     /**
@@ -1770,7 +1872,7 @@ class BiBase {
      * @returns {number} current bit position
      */
     get bitOffset() {
-        return (__classPrivateFieldGet(this, _BiBase_offset, "f") * 8) + __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        return (this.#offset * 8) + this.#insetBit;
     }
     ;
     /**
@@ -1855,7 +1957,7 @@ class BiBase {
      * @returns {number} current bit position
      */
     get insetBit() {
-        return __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        return this.#insetBit;
     }
     ;
     /**
@@ -1914,7 +2016,7 @@ class BiBase {
      * @returns {number} size
      */
     get remain() {
-        return this.size - __classPrivateFieldGet(this, _BiBase_offset, "f");
+        return this.size - this.#offset;
     }
     ;
     /**
@@ -1959,7 +2061,7 @@ class BiBase {
      * @returns {number} size
      */
     get getLine() {
-        return Math.abs(Math.floor((__classPrivateFieldGet(this, _BiBase_offset, "f") - 1) / 16));
+        return Math.abs(Math.floor((this.#offset - 1) / 16));
     }
     ;
     /**
@@ -1981,13 +2083,13 @@ class BiBase {
      *
      * Use ``.data`` instead if you want the full buffer data.
      *
-     * @returns {DataType} ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} ``Buffer`` or ``Uint8Array``
      */
     get() {
         if (this.growthIncrement != 0 && this.wasExpanded) {
             this.trim();
         }
-        return __classPrivateFieldGet(this, _BiBase_data, "f");
+        return this.#data;
     }
     ;
     /**
@@ -1997,7 +2099,7 @@ class BiBase {
      *
      * Use ``.data`` instead if you want the full buffer data.
      *
-     * @returns {DataType} ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} ``Buffer`` or ``Uint8Array``
      */
     getFullBuffer() {
         return this.get();
@@ -2010,7 +2112,7 @@ class BiBase {
      *
      * Use ``.data`` instead if you want the full buffer data.
      *
-     * @returns {DataType} ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} ``Buffer`` or ``Uint8Array``
      */
     return() {
         return this.get();
@@ -2058,7 +2160,7 @@ class BiBase {
     */
     hexdump(options = {}) {
         const length = options?.length ?? 192;
-        const startByte = options?.startByte ?? __classPrivateFieldGet(this, _BiBase_offset, "f");
+        const startByte = options?.startByte ?? this.#offset;
         const endByte = Math.min(startByte + length, this.size);
         const newSize = endByte - startByte;
         if (startByte > this.size || endByte > this.size) {
@@ -2116,14 +2218,14 @@ class BiBase {
         }
         this.open();
         if (this.isBuffer(this.data)) {
-            var offset = this.data.subarray(__classPrivateFieldGet(this, _BiBase_offset, "f"), this.size).indexOf(bytesToFind);
+            var offset = this.data.subarray(this.#offset, this.size).indexOf(bytesToFind);
             if (offset == -1) {
                 return -1;
             }
-            return offset + __classPrivateFieldGet(this, _BiBase_offset, "f");
+            return offset + this.#offset;
         }
         // this.data == Uint8Array
-        for (let i = __classPrivateFieldGet(this, _BiBase_offset, "f"); i <= this.size - bytesToFind.length; i++) {
+        for (let i = this.#offset; i <= this.size - bytesToFind.length; i++) {
             var match = true;
             for (let j = 0; j < bytesToFind.length; j++) {
                 if (this.data[i + j] !== bytesToFind[j]) {
@@ -2153,6 +2255,44 @@ class BiBase {
         return this.findBytes(encoded);
     }
     ;
+    #findNumber(value, bits, unsigned, endian = this.endian) {
+        this.#checkSize(Math.floor(bits / 8), 0, this.#offset);
+        for (let z = this.#offset; z <= (this.size - (bits / 8)); z++) {
+            var offsetInBits = 0;
+            var value = 0;
+            for (var i = 0; i < bits;) {
+                const remaining = bits - i;
+                const bitOffset = offsetInBits & 7;
+                const currentByte = this.data[z + (offsetInBits >> 3)];
+                const read = Math.min(remaining, 8 - bitOffset);
+                if (endian == "big") {
+                    let mask = ~(0xFF << read);
+                    let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
+                    value <<= read;
+                    value |= readBits;
+                }
+                else {
+                    let mask = ~(0xFF << read);
+                    let readBits = (currentByte >> bitOffset) & mask;
+                    value |= readBits << i;
+                }
+                offsetInBits += read;
+                i += read;
+            }
+            if (unsigned || bits <= 7) {
+                value = value >>> 0;
+            }
+            else {
+                if (bits !== 32 && value & (1 << (bits - 1))) {
+                    value |= -1 ^ ((1 << bits) - 1);
+                }
+            }
+            if (value === value) {
+                return z - this.#offset; // Found the byte, return the index from current
+            }
+        }
+        return -1; // number not found
+    }
     ;
     /**
      * Searches for byte value (can be signed or unsigned) position from current read position.
@@ -2166,7 +2306,7 @@ class BiBase {
      * @param {endian} endian - endianness of value (default set endian).
      */
     findByte(value, unsigned = true, endian = this.endian) {
-        return __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_findNumber).call(this, value, 8, unsigned, endian);
+        return this.#findNumber(value, 8, unsigned, endian);
     }
     ;
     /**
@@ -2181,7 +2321,7 @@ class BiBase {
      * @param {endian} endian - endianness of value (default set endian).
      */
     findShort(value, unsigned = true, endian = this.endian) {
-        return __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_findNumber).call(this, value, 16, unsigned, endian);
+        return this.#findNumber(value, 16, unsigned, endian);
     }
     ;
     /**
@@ -2196,7 +2336,7 @@ class BiBase {
      * @param {endian} endian - endianness of value (default set endian).
      */
     findInt(value, unsigned = true, endian = this.endian) {
-        return __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_findNumber).call(this, value, 32, unsigned, endian);
+        return this.#findNumber(value, 32, unsigned, endian);
     }
     ;
     /**
@@ -2214,8 +2354,8 @@ class BiBase {
         if (!hasBigInt) {
             throw new Error("System doesn't support BigInt values.");
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 8, 0, __classPrivateFieldGet(this, _BiBase_offset, "f"));
-        for (let z = __classPrivateFieldGet(this, _BiBase_offset, "f"); z <= (this.size - 8); z++) {
+        this.#checkSize(8, 0, this.#offset);
+        for (let z = this.#offset; z <= (this.size - 8); z++) {
             var startingValue = BigInt(0);
             if (endian == "little") {
                 for (let i = 0; i < 8; i++) {
@@ -2255,8 +2395,8 @@ class BiBase {
      * @param {endian} endian - endianness of value (default set endian).
      */
     findHalfFloat(value, endian = this.endian) {
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 2, 0, __classPrivateFieldGet(this, _BiBase_offset, "f"));
-        for (let z = __classPrivateFieldGet(this, _BiBase_offset, "f"); z <= (this.size - 2); z++) {
+        this.#checkSize(2, 0, this.#offset);
+        for (let z = this.#offset; z <= (this.size - 2); z++) {
             var startingValue = 0;
             if (endian == "little") {
                 startingValue = ((this.data[z + 1] & 0xFFFF) << 8) | (this.data[z] & 0xFFFF);
@@ -2307,8 +2447,8 @@ class BiBase {
      * @param {endian} endian - endianness of value (default set endian).
      */
     findFloat(value, endian = this.endian) {
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 4, 0, __classPrivateFieldGet(this, _BiBase_offset, "f"));
-        for (let z = __classPrivateFieldGet(this, _BiBase_offset, "f"); z <= (this.size - 4); z++) {
+        this.#checkSize(4, 0, this.#offset);
+        for (let z = this.#offset; z <= (this.size - 4); z++) {
             var startingValue = 0;
             if (endian == "little") {
                 startingValue = ((this.data[z + 3] & 0xFF) << 24) |
@@ -2361,8 +2501,8 @@ class BiBase {
         if (!hasBigInt) {
             throw new Error("System doesn't support BigInt values.");
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 8, 0, __classPrivateFieldGet(this, _BiBase_offset, "f"));
-        for (let z = __classPrivateFieldGet(this, _BiBase_offset, "f"); z <= (this.size - 8); z++) {
+        this.#checkSize(8, 0, this.#offset);
+        for (let z = this.#offset; z <= (this.size - 8); z++) {
             var startingValue = BigInt(0);
             if (endian == "little") {
                 for (let i = 0; i < 8; i++) {
@@ -2417,7 +2557,7 @@ class BiBase {
      * @param {number} number - Byte to align
      */
     align(number) {
-        const a = __classPrivateFieldGet(this, _BiBase_offset, "f") % number;
+        const a = this.#offset % number;
         if (a) {
             this.skip(number - a);
         }
@@ -2431,7 +2571,7 @@ class BiBase {
      * @param {number} number - Byte to align
      */
     alignRev(number) {
-        const a = __classPrivateFieldGet(this, _BiBase_offset, "f") % number;
+        const a = this.#offset % number;
         if (a) {
             this.skip(a * -1);
         }
@@ -2446,21 +2586,21 @@ class BiBase {
      * @param {number} bits - Bits to skip
      */
     skip(bytes, bits) {
-        var newOffset = ((bytes + __classPrivateFieldGet(this, _BiBase_offset, "f")) + Math.ceil((__classPrivateFieldGet(this, _BiBase_insetBit, "f") + bits) / 8));
+        var newOffset = ((bytes + this.#offset) + Math.ceil((this.#insetBit + bits) / 8));
         if (bits && bits < 0) {
-            newOffset = Math.floor((((bytes + __classPrivateFieldGet(this, _BiBase_offset, "f")) * 8) + __classPrivateFieldGet(this, _BiBase_insetBit, "f") + bits) / 8);
+            newOffset = Math.floor((((bytes + this.#offset) * 8) + this.#insetBit + bits) / 8);
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, newOffset);
+        this.#confrimSize(newOffset);
         // Adjust byte offset based on bit overflow
-        __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + Math.floor((__classPrivateFieldGet(this, _BiBase_insetBit, "f") + bits) / 8), "f");
+        this.#offset += Math.floor((this.#insetBit + bits) / 8);
         // Adjust bit offset
-        __classPrivateFieldSet(this, _BiBase_insetBit, (__classPrivateFieldGet(this, _BiBase_insetBit, "f") + normalizeBitOffset(bits)) % 8, "f");
+        this.#insetBit = (this.#insetBit + normalizeBitOffset(bits)) % 8;
         // Adjust byte offset based on byte overflow
-        __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + bytes, "f");
+        this.#offset += bytes;
         // Ensure bit offset stays between 0-7
-        __classPrivateFieldSet(this, _BiBase_insetBit, Math.min(Math.max(__classPrivateFieldGet(this, _BiBase_insetBit, "f"), 0), 7), "f");
+        this.#insetBit = Math.min(Math.max(this.#insetBit, 0), 7);
         // Ensure offset doesn't go negative
-        __classPrivateFieldSet(this, _BiBase_offset, Math.max(__classPrivateFieldGet(this, _BiBase_offset, "f"), 0), "f");
+        this.#offset = Math.max(this.#offset, 0);
         return;
     }
     ;
@@ -2501,16 +2641,16 @@ class BiBase {
         if (bit && bit < 0) {
             newOffset = Math.floor(((byte * 8) + bit) / 8);
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, newOffset);
-        __classPrivateFieldSet(this, _BiBase_offset, byte, "f");
+        this.#confrimSize(newOffset);
+        this.#offset = byte;
         // Adjust byte offset based on bit overflow
-        __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + Math.floor(bit / 8), "f");
+        this.#offset += Math.floor(bit / 8);
         // Adjust bit offset
-        __classPrivateFieldSet(this, _BiBase_insetBit, normalizeBitOffset(bit) % 8, "f");
+        this.#insetBit = normalizeBitOffset(bit) % 8;
         // Ensure bit offset stays between 0-7
-        __classPrivateFieldSet(this, _BiBase_insetBit, Math.min(Math.max(__classPrivateFieldGet(this, _BiBase_insetBit, "f"), 0), 7), "f");
+        this.#insetBit = Math.min(Math.max(this.#insetBit, 0), 7);
         // Ensure offset doesn't go negative
-        __classPrivateFieldSet(this, _BiBase_offset, Math.max(__classPrivateFieldGet(this, _BiBase_offset, "f"), 0), "f");
+        this.#offset = Math.max(this.#offset, 0);
         return;
     }
     ;
@@ -2554,8 +2694,8 @@ class BiBase {
      * Set byte and bit position to start of data.
      */
     rewind() {
-        __classPrivateFieldSet(this, _BiBase_offset, 0, "f");
-        __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        this.#offset = 0;
+        this.#insetBit = 0;
     }
     ;
     /**
@@ -2569,8 +2709,8 @@ class BiBase {
      * Set current byte and bit position to end of data.
      */
     last() {
-        __classPrivateFieldSet(this, _BiBase_offset, this.size, "f");
-        __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+        this.#offset = this.size;
+        this.#insetBit = 0;
     }
     ;
     /**
@@ -2600,14 +2740,14 @@ class BiBase {
      * @param {boolean} consume - Move position to end of removed data (default false)
      * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    delete(startOffset = 0, endOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), consume = false) {
+    delete(startOffset = 0, endOffset = this.#offset, consume = false) {
         if (this.readOnly || this.strict) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + this.size);
         }
         this.open();
         startOffset = Math.abs(startOffset);
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        this.#confrimSize(endOffset);
         const dataRemoved = this.data.subarray(startOffset, endOffset);
         const part1 = this.data.subarray(0, startOffset);
         const part2 = this.data.subarray(endOffset, this.size);
@@ -2623,8 +2763,8 @@ class BiBase {
         this.size = this.data.length;
         this.bitSize = this.data.length * 8;
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, startOffset, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset = startOffset;
+            this.#insetBit = 0;
         }
         return dataRemoved;
     }
@@ -2637,7 +2777,7 @@ class BiBase {
      * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
     clip() {
-        return this.delete(__classPrivateFieldGet(this, _BiBase_offset, "f"), this.size, false);
+        return this.delete(this.#offset, this.size, false);
     }
     ;
     /**
@@ -2648,7 +2788,7 @@ class BiBase {
      * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
     trim() {
-        return this.delete(__classPrivateFieldGet(this, _BiBase_offset, "f"), this.size, false);
+        return this.delete(this.#offset, this.size, false);
     }
     ;
     /**
@@ -2661,7 +2801,7 @@ class BiBase {
      * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
     crop(length = 0, consume = false) {
-        return this.delete(__classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
+        return this.delete(this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -2674,7 +2814,7 @@ class BiBase {
      * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
      */
     drop(length = 0, consume = false) {
-        return this.delete(__classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
+        return this.delete(this.#offset, this.#offset + length, consume);
     }
     ;
     ///////////////////////////////
@@ -2685,11 +2825,11 @@ class BiBase {
      *
      * Note: Errors on strict mode if past end of data.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    replace(data, offset = __classPrivateFieldGet(this, _BiBase_offset, "f"), consume = false) {
+    replace(data, offset = this.#offset, consume = false) {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error("Can't replace data in readOnly mode!");
@@ -2710,7 +2850,7 @@ class BiBase {
             }
         }
         const neededSize = offset + data.length;
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, neededSize);
+        this.#confrimSize(neededSize);
         const part1 = this.data.subarray(0, neededSize - data.length);
         const part2 = this.data.subarray(neededSize, this.size);
         if (this.isBuffer(this.data)) {
@@ -2726,8 +2866,8 @@ class BiBase {
         this.size = this.data.length;
         this.bitSize = this.data.length * 8;
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, offset + data.length, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset = offset + data.length;
+            this.#insetBit = 0;
         }
     }
     ;
@@ -2736,11 +2876,11 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    overwrite(data, offset = __classPrivateFieldGet(this, _BiBase_offset, "f"), consume = false) {
+    overwrite(data, offset = this.#offset, consume = false) {
         return this.replace(data, offset, consume);
     }
     ;
@@ -2756,7 +2896,7 @@ class BiBase {
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    fill(startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false, fillValue) {
+    fill(startOffset = this.#offset, endOffset = this.size, consume = false, fillValue) {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error("Can't remove data in readonly mode!");
@@ -2782,7 +2922,7 @@ class BiBase {
         if (endOffset > this.size && this.strict) {
             throw new Error('Cannot extend data while in strict mode. Use unrestrict() to enable.');
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        this.#confrimSize(endOffset);
         const dataRemoved = this.data.subarray(startOffset, endOffset);
         // without a fill value it's a basic lift
         if (fillValue != undefined) {
@@ -2804,8 +2944,8 @@ class BiBase {
             this.bitSize = this.data.length * 8;
         }
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, endOffset, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset = endOffset;
+            this.#insetBit = 0;
         }
         return dataRemoved;
     }
@@ -2819,7 +2959,7 @@ class BiBase {
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    lift(startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false, fillValue) {
+    lift(startOffset = this.#offset, endOffset = this.size, consume = false, fillValue) {
         return this.fill(startOffset, endOffset, consume, fillValue);
     }
     ;
@@ -2833,7 +2973,7 @@ class BiBase {
      * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
     extract(length = 0, consume = false) {
-        return this.fill(__classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
+        return this.fill(this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -2846,7 +2986,7 @@ class BiBase {
      * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
     slice(length = 0, consume = false) {
-        return this.fill(__classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
+        return this.fill(this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -2859,7 +2999,7 @@ class BiBase {
      * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
      */
     wrap(length = 0, consume = false) {
-        return this.fill(__classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
+        return this.fill(this.#offset, this.#offset + length, consume);
     }
     ;
     ///////////////////////////////
@@ -2870,11 +3010,11 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {number} offset - Byte position to add at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    insert(data, offset = __classPrivateFieldGet(this, _BiBase_offset, "f"), consume = true) {
+    insert(data, offset = this.#offset, consume = true) {
         if (this.strict == true || this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Can not insert data in strict mode. Use unrestrict() to enable.`);
@@ -2918,8 +3058,8 @@ class BiBase {
         this.size = this.data.length;
         this.bitSize = this.data.length * 8;
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, offset + data.length, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset = offset + data.length;
+            this.#insetBit = 0;
         }
     }
     ;
@@ -2928,11 +3068,11 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {number} offset - Byte position to add at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    place(data, offset = __classPrivateFieldGet(this, _BiBase_offset, "f"), consume = true) {
+    place(data, offset = this.#offset, consume = true) {
         return this.insert(data, offset, consume);
     }
     ;
@@ -2941,7 +3081,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     unshift(data, consume = false) {
@@ -2953,7 +3093,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     prepend(data, consume = false) {
@@ -2965,7 +3105,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     push(data, consume = false) {
@@ -2977,7 +3117,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     append(data, consume = false) {
@@ -2995,7 +3135,7 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    xor(xorKey, startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false) {
+    xor(xorKey, startOffset = this.#offset, endOffset = this.size, consume = false) {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error("Can't write data in readonly mode!");
@@ -3007,11 +3147,11 @@ class BiBase {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
         this.open();
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        this.#confrimSize(endOffset);
         const returnData = _XOR(this.data, startOffset, Math.min(endOffset, this.size), xorKey);
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, returnData.offset, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, returnData.bitoffset, "f");
+            this.#offset = returnData.offset;
+            this.#insetBit = returnData.bitoffset;
         }
     }
     ;
@@ -3040,7 +3180,7 @@ class BiBase {
         else {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
-        return this.xor(xorKey, __classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
+        return this.xor(xorKey, this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -3051,7 +3191,7 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    or(orKey, startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false) {
+    or(orKey, startOffset = this.#offset, endOffset = this.size, consume = false) {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error("Can't write data in readonly mode!");
@@ -3063,11 +3203,11 @@ class BiBase {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
         this.open();
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        this.#confrimSize(endOffset);
         const returnData = _OR(this.data, startOffset, Math.min(endOffset, this.size), orKey);
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, returnData.offset, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, returnData.bitoffset, "f");
+            this.#offset = returnData.offset;
+            this.#insetBit = returnData.bitoffset;
         }
     }
     ;
@@ -3096,7 +3236,7 @@ class BiBase {
         else {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
-        return this.or(orKey, __classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume || false);
+        return this.or(orKey, this.#offset, this.#offset + length, consume || false);
     }
     ;
     /**
@@ -3107,7 +3247,7 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    and(andKey, startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false) {
+    and(andKey, startOffset = this.#offset, endOffset = this.size, consume = false) {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error("Can't write data in readonly mode!");
@@ -3119,11 +3259,11 @@ class BiBase {
             throw new Error("AND must be a number, string, number array or Buffer");
         }
         this.open();
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        this.#confrimSize(endOffset);
         const returnData = _AND(this.data, startOffset, Math.min(endOffset, this.size), andKey);
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, returnData.offset, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, returnData.bitoffset, "f");
+            this.#offset = returnData.offset;
+            this.#insetBit = returnData.bitoffset;
         }
     }
     ;
@@ -3152,7 +3292,7 @@ class BiBase {
         else {
             throw new Error("AND must be a number, string, Uint8Array or Buffer");
         }
-        return this.and(andKey, __classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
+        return this.and(andKey, this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -3163,7 +3303,7 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    add(addKey, startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false) {
+    add(addKey, startOffset = this.#offset, endOffset = this.size, consume = false) {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error("Can't write data in readonly mode!");
@@ -3175,11 +3315,11 @@ class BiBase {
             throw new Error("Add key must be a number, string, number array or Buffer");
         }
         this.open();
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        this.#confrimSize(endOffset);
         const returnData = _ADD(this.data, startOffset, Math.min(endOffset, this.size), addKey);
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, returnData.offset, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, returnData.bitoffset, "f");
+            this.#offset = returnData.offset;
+            this.#insetBit = returnData.bitoffset;
         }
     }
     ;
@@ -3208,7 +3348,7 @@ class BiBase {
         else {
             throw new Error("ADD must be a number, string, Uint8Array or Buffer");
         }
-        return this.add(addKey, __classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
+        return this.add(addKey, this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -3218,17 +3358,17 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    not(startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false) {
+    not(startOffset = this.#offset, endOffset = this.size, consume = false) {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error("Can't write data in readonly mode!");
         }
         this.open();
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        this.#confrimSize(endOffset);
         const returnData = _NOT(this.data, startOffset, Math.min(endOffset, this.size));
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, returnData.offset, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, returnData.bitoffset, "f");
+            this.#offset = returnData.offset;
+            this.#insetBit = returnData.bitoffset;
         }
     }
     ;
@@ -3239,7 +3379,7 @@ class BiBase {
      * @param {boolean} consume - Move current position to end of data (default false)
      */
     notThis(length = 1, consume = false) {
-        return this.not(__classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
+        return this.not(this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -3250,7 +3390,7 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    lShift(shiftKey, startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false) {
+    lShift(shiftKey, startOffset = this.#offset, endOffset = this.size, consume = false) {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error("Can't write data in readonly mode!");
@@ -3262,11 +3402,11 @@ class BiBase {
             throw new Error("Left shift must be a number, string, number array or Buffer");
         }
         this.open();
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        this.#confrimSize(endOffset);
         const returnData = _LSHIFT(this.data, startOffset, Math.min(endOffset, this.size), shiftKey);
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, returnData.offset, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, returnData.bitoffset, "f");
+            this.#offset = returnData.offset;
+            this.#insetBit = returnData.bitoffset;
         }
     }
     ;
@@ -3295,7 +3435,7 @@ class BiBase {
         else {
             throw new Error("Left shift must be a number, string, Uint8Array or Buffer");
         }
-        return this.lShift(shiftKey, __classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
+        return this.lShift(shiftKey, this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -3306,7 +3446,7 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    rShift(shiftKey, startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false) {
+    rShift(shiftKey, startOffset = this.#offset, endOffset = this.size, consume = false) {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error("Can't write data in readonly mode!");
@@ -3318,11 +3458,11 @@ class BiBase {
             throw new Error("Right shift must be a number, string, number array or Buffer");
         }
         this.open();
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
+        this.#confrimSize(endOffset);
         const returnData = _RSHIFT(this.data, startOffset, Math.min(endOffset, this.size), shiftKey);
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, returnData.offset, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, returnData.bitoffset, "f");
+            this.#offset = returnData.offset;
+            this.#insetBit = returnData.bitoffset;
         }
     }
     ;
@@ -3351,7 +3491,7 @@ class BiBase {
         else {
             throw new Error("right shift must be a number, string, Uint8Array or Buffer");
         }
-        return this.rShift(shiftKey, __classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + length, consume);
+        return this.rShift(shiftKey, this.#offset, this.#offset + length, consume);
     }
     ;
     ///////////////////////////////
@@ -3379,13 +3519,13 @@ class BiBase {
         if (bits <= 0 || bits > 32) {
             throw new Error('Bit length must be between 1 and 32. Got ' + bits);
         }
-        const sizeNeeded = Math.floor(((bits - 1) + __classPrivateFieldGet(this, _BiBase_insetBit, "f")) / 8) + __classPrivateFieldGet(this, _BiBase_offset, "f");
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, sizeNeeded);
-        const bitStart = (__classPrivateFieldGet(this, _BiBase_offset, "f") * 8) + __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        const sizeNeeded = Math.floor(((bits - 1) + this.#insetBit) / 8) + this.#offset;
+        this.#confrimSize(sizeNeeded);
+        const bitStart = (this.#offset * 8) + this.#insetBit;
         const value = _rbit(this.data, bits, bitStart, endian, unsigned);
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + Math.floor((bits + __classPrivateFieldGet(this, _BiBase_insetBit, "f")) / 8), "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, (bits + __classPrivateFieldGet(this, _BiBase_insetBit, "f")) % 8, "f");
+            this.#offset += Math.floor((bits + this.#insetBit) / 8);
+            this.#insetBit = (bits + this.#insetBit) % 8;
         }
         return value;
     }
@@ -3465,13 +3605,13 @@ class BiBase {
             throw new Error('Bit length must be between 1 and 32. Got ' + bits);
         }
         value = numberSafe(value, bits, unsigned);
-        const endOffset = Math.ceil(((bits - 1) + __classPrivateFieldGet(this, _BiBase_insetBit, "f")) / 8) + __classPrivateFieldGet(this, _BiBase_offset, "f");
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
-        const offset = (__classPrivateFieldGet(this, _BiBase_offset, "f") * 8) + __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        const endOffset = Math.ceil(((bits - 1) + this.#insetBit) / 8) + this.#offset;
+        this.#confrimSize(endOffset);
+        const offset = (this.#offset * 8) + this.#insetBit;
         _wbit(this.data, value, bits, offset, endian, unsigned);
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + Math.floor((bits + __classPrivateFieldGet(this, _BiBase_insetBit, "f")) / 8), "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, (bits + __classPrivateFieldGet(this, _BiBase_insetBit, "f")) % 8, "f");
+            this.#offset += Math.floor((bits + this.#insetBit) / 8);
+            this.#insetBit = (bits + this.#insetBit) % 8;
         }
         return;
     }
@@ -3542,12 +3682,12 @@ class BiBase {
      */
     readByte(unsigned = false, consume = true) {
         this.open();
-        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        var trueByte = this.#offset;
+        var trueBit = this.#insetBit;
         if (trueBit != 0) {
             trueByte += 1;
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 1, 0, trueByte);
+        this.#checkSize(1, 0, trueByte);
         var value;
         if (canInt8) {
             value = unsigned ? this.view.getUint8(trueByte) : this.view.getInt8(trueByte);
@@ -3556,8 +3696,8 @@ class BiBase {
             value = _rbyte(this.data, trueByte, unsigned);
         }
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 1, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset += 1;
+            this.#insetBit = 0;
         }
         return value;
     }
@@ -3606,12 +3746,12 @@ class BiBase {
             throw new Error("Can't write data in readonly mode!");
         }
         this.open();
-        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        var trueByte = this.#offset;
+        var trueBit = this.#insetBit;
         if (trueBit != 0) {
             trueByte += 1;
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 1, 0, trueByte);
+        this.#checkSize(1, 0, trueByte);
         if (canInt8) {
             if (unsigned) {
                 this.view.setUint8(trueByte, value);
@@ -3624,8 +3764,8 @@ class BiBase {
             _wbyte(this.data, numberSafe(value, 8, unsigned), trueByte, unsigned);
         }
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 1, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset += 1;
+            this.#insetBit = 0;
         }
         return;
     }
@@ -3675,12 +3815,12 @@ class BiBase {
      */
     readInt16(unsigned = false, endian = this.endian, consume = true) {
         this.open();
-        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        var trueByte = this.#offset;
+        var trueBit = this.#insetBit;
         if (trueBit != 0) {
             trueByte += 1;
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 2, 0, trueByte);
+        this.#checkSize(2, 0, trueByte);
         var value;
         if (canInt16) {
             if (unsigned) {
@@ -3694,8 +3834,8 @@ class BiBase {
             value = _rint16(this.data, trueByte, endian, unsigned);
         }
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 2, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset += 2;
+            this.#insetBit = 0;
         }
         return value;
     }
@@ -3761,12 +3901,12 @@ class BiBase {
             throw new Error("Can't write data in readonly mode!");
         }
         this.open();
-        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        var trueByte = this.#offset;
+        var trueBit = this.#insetBit;
         if (trueBit != 0) {
             trueByte += 1;
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 2, 0, trueByte);
+        this.#checkSize(2, 0, trueByte);
         if (canInt16) {
             if (unsigned) {
                 this.view.setUint16(trueByte, value, endian == "little");
@@ -3779,8 +3919,8 @@ class BiBase {
             _wint16(this.data, numberSafe(value, 16, unsigned), trueByte, endian, unsigned);
         }
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 2, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset += 2;
+            this.#insetBit = 0;
         }
         return;
     }
@@ -3843,12 +3983,12 @@ class BiBase {
      */
     readHalfFloat(endian = this.endian, consume = true) {
         this.open();
-        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        var trueByte = this.#offset;
+        var trueBit = this.#insetBit;
         if (trueBit != 0) {
             trueByte += 1;
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 2, 0, trueByte);
+        this.#checkSize(2, 0, trueByte);
         var value;
         if (canFloat16) {
             value = this.view.getFloat16(trueByte, endian == "little");
@@ -3857,8 +3997,8 @@ class BiBase {
             value = _rhalffloat(this.data, trueByte, endian);
         }
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 2, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset += 2;
+            this.#insetBit = 0;
         }
         return value;
     }
@@ -3923,12 +4063,12 @@ class BiBase {
             throw new Error("Can't write data in readonly mode!");
         }
         this.open();
-        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        var trueByte = this.#offset;
+        var trueBit = this.#insetBit;
         if (trueBit != 0) {
             trueByte += 1;
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 2, 0, trueByte);
+        this.#checkSize(2, 0, trueByte);
         if (canFloat16) {
             this.view.setFloat16(trueByte, value, endian == "little");
         }
@@ -3936,8 +4076,8 @@ class BiBase {
             _whalffloat(this.data, value, trueByte, endian);
         }
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 2, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset += 2;
+            this.#insetBit = 0;
         }
         return;
     }
@@ -4002,12 +4142,12 @@ class BiBase {
      */
     readInt32(unsigned = false, endian = this.endian, consume = true) {
         this.open();
-        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        var trueByte = this.#offset;
+        var trueBit = this.#insetBit;
         if (trueBit != 0) {
             trueByte += 1;
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 4, 0, trueByte);
+        this.#checkSize(4, 0, trueByte);
         var value;
         if (canInt32) {
             if (unsigned) {
@@ -4021,8 +4161,8 @@ class BiBase {
             value = _rint32(this.data, trueByte, endian, unsigned);
         }
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 4, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset += 4;
+            this.#insetBit = 0;
         }
         return value;
     }
@@ -4107,12 +4247,12 @@ class BiBase {
             throw new Error("Can't write data in readonly mode!");
         }
         this.open();
-        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        var trueByte = this.#offset;
+        var trueBit = this.#insetBit;
         if (trueBit != 0) {
             trueByte += 1;
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 4, 0, trueByte);
+        this.#checkSize(4, 0, trueByte);
         if (canInt32) {
             if (unsigned) {
                 this.view.setUint32(trueByte, value, endian == "little");
@@ -4125,8 +4265,8 @@ class BiBase {
             _wint32(this.data, numberSafe(value, 32, unsigned), trueByte, endian, unsigned);
         }
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 4, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset += 4;
+            this.#insetBit = 0;
         }
         return;
     }
@@ -4209,12 +4349,12 @@ class BiBase {
      */
     readFloat(endian = this.endian, consume = true) {
         this.open();
-        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        var trueByte = this.#offset;
+        var trueBit = this.#insetBit;
         if (trueBit != 0) {
             trueByte += 1;
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 4, 0, trueByte);
+        this.#checkSize(4, 0, trueByte);
         var value;
         if (canFloat32) {
             value = this.view.getFloat32(trueByte, endian == "little");
@@ -4223,8 +4363,8 @@ class BiBase {
             value = _rfloat(this.data, trueByte, endian);
         }
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 4, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset += 4;
+            this.#insetBit = 0;
         }
         return value;
     }
@@ -4289,12 +4429,12 @@ class BiBase {
             throw new Error("Can't write data in readonly mode!");
         }
         this.open();
-        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        var trueByte = this.#offset;
+        var trueBit = this.#insetBit;
         if (trueBit != 0) {
             trueByte += 1;
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 4, 0, trueByte);
+        this.#checkSize(4, 0, trueByte);
         if (canFloat32) {
             this.view.setFloat32(trueByte, value, endian == "little");
         }
@@ -4302,8 +4442,8 @@ class BiBase {
             _wfloat(this.data, value, trueByte, endian);
         }
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 4, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset += 4;
+            this.#insetBit = 0;
         }
         return;
     }
@@ -4361,12 +4501,12 @@ class BiBase {
             throw new Error("System doesn't support BigInt values.");
         }
         this.open();
-        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        var trueByte = this.#offset;
+        var trueBit = this.#insetBit;
         if (trueBit != 0) {
             trueByte += 1;
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 8, 0, trueByte);
+        this.#checkSize(8, 0, trueByte);
         var value;
         if (canBigInt64) {
             if (unsigned) {
@@ -4380,8 +4520,8 @@ class BiBase {
             value = _rint64(this.data, trueByte, endian, unsigned);
         }
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 8, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset += 8;
+            this.#insetBit = 0;
         }
         if (this.enforceBigInt == true || (typeof value == "bigint" && !isSafeInt64(value))) {
             return value;
@@ -4401,7 +4541,7 @@ class BiBase {
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      *
-     * @returns {BigValue}
+     * @returns {ReturnBigValueMapping<alwaysBigInt>}
      */
     readUInt64() {
         return this.readInt64(true);
@@ -4412,7 +4552,7 @@ class BiBase {
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      *
-     * @returns {BigValue}
+     * @returns {ReturnBigValueMapping<alwaysBigInt>}
      */
     readInt64BE() {
         return this.readInt64(false, "big");
@@ -4423,7 +4563,7 @@ class BiBase {
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      *
-     * @returns {BigValue}
+     * @returns {ReturnBigValueMapping<alwaysBigInt>}
      */
     readInt64LE() {
         return this.readInt64(false, "little");
@@ -4434,7 +4574,7 @@ class BiBase {
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      *
-     * @returns {BigValue}
+     * @returns {ReturnBigValueMapping<alwaysBigInt>}
      */
     readUInt64BE() {
         return this.readInt64(true, "big");
@@ -4445,7 +4585,7 @@ class BiBase {
      *
      * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
      *
-     * @returns {BigValue}
+     * @returns {ReturnBigValueMapping<alwaysBigInt>}
      */
     readUInt64LE() {
         return this.readInt64(true, "little");
@@ -4468,12 +4608,12 @@ class BiBase {
             throw new Error("System doesn't support BigInt values.");
         }
         this.open();
-        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        var trueByte = this.#offset;
+        var trueBit = this.#insetBit;
         if (trueBit != 0) {
             trueByte += 1;
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 8, 0, trueByte);
+        this.#checkSize(8, 0, trueByte);
         if (canBigInt64) {
             if (unsigned) {
                 this.view.setBigInt64(trueByte, BigInt(value), endian == "little");
@@ -4486,8 +4626,8 @@ class BiBase {
             _wint64(this.data, numberSafe(value, 64, unsigned), trueByte, endian, unsigned);
         }
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 8, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset += 8;
+            this.#insetBit = 0;
         }
         return;
     }
@@ -4549,12 +4689,12 @@ class BiBase {
      */
     readDoubleFloat(endian = this.endian, consume = true) {
         this.open();
-        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        var trueByte = this.#offset;
+        var trueBit = this.#insetBit;
         if (trueBit != 0) {
             trueByte += 1;
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 8, 0, trueByte);
+        this.#checkSize(8, 0, trueByte);
         var value;
         if (canFloat64) {
             value = this.view.getFloat64(trueByte, endian == "little");
@@ -4566,8 +4706,8 @@ class BiBase {
             value = _rdfloat(this.data, trueByte, endian);
         }
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 8, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset += 8;
+            this.#insetBit = 0;
         }
         return value;
     }
@@ -4630,12 +4770,12 @@ class BiBase {
             throw new Error("Can't write data in readonly mode!");
         }
         this.open();
-        var trueByte = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        var trueBit = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        var trueByte = this.#offset;
+        var trueBit = this.#insetBit;
         if (trueBit != 0) {
             trueByte += 1;
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, 8, 0, trueByte);
+        this.#checkSize(8, 0, trueByte);
         if (canFloat64) {
             this.view.setFloat64(trueByte, value, endian == "little");
         }
@@ -4643,8 +4783,8 @@ class BiBase {
             _wdfloat(this.data, value, trueByte, endian);
         }
         if (consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + 8, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, 0, "f");
+            this.#offset += 8;
+            this.#insetBit = 0;
         }
         return;
     }
@@ -4737,10 +4877,10 @@ class BiBase {
                     readLengthinBytes = length;
                     break;
             }
-            __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, readLengthinBytes);
+            this.#checkSize(readLengthinBytes);
         }
         else {
-            readLengthinBytes = this.data.length - __classPrivateFieldGet(this, _BiBase_offset, "f");
+            readLengthinBytes = this.data.length - this.#offset;
         }
         if (terminateValue != undefined && typeof terminateValue == "number") {
             terminate = terminateValue & 0xFF;
@@ -4748,12 +4888,12 @@ class BiBase {
         else {
             terminate = 0;
         }
-        const saved_offset = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        const saved_bitoffset = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        const saved_offset = this.#offset;
+        const saved_bitoffset = this.#insetBit;
         const str = _rstring(stringType, lengthReadSize, readLengthinBytes, terminate, stripNull, encoding, endian, this.readUByte.bind(this), this.readUInt16.bind(this), this.readUInt32.bind(this));
         if (!consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, saved_offset, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, saved_bitoffset, "f");
+            this.#offset = saved_offset;
+            this.#insetBit = saved_bitoffset;
         }
         return str;
     }
@@ -4850,189 +4990,35 @@ class BiBase {
                 }
                 break;
         }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, totalLength, 0, __classPrivateFieldGet(this, _BiBase_offset, "f"));
-        const savedOffset = __classPrivateFieldGet(this, _BiBase_offset, "f");
-        const savedBitOffset = __classPrivateFieldGet(this, _BiBase_insetBit, "f");
+        this.#checkSize(totalLength, 0, this.#offset);
+        const savedOffset = this.#offset;
+        const savedBitOffset = this.#insetBit;
         _wstring(encodedString, stringType, endian, terminateValue, lengthWriteSize, this.writeUByte.bind(this), this.writeUInt16.bind(this), this.writeUInt32.bind(this));
         if (!consume) {
-            __classPrivateFieldSet(this, _BiBase_offset, savedOffset, "f");
-            __classPrivateFieldSet(this, _BiBase_insetBit, savedBitOffset, "f");
+            this.#offset = savedOffset;
+            this.#insetBit = savedBitOffset;
         }
         return;
     }
     ;
 }
-_BiBase_offset = new WeakMap(), _BiBase_insetBit = new WeakMap(), _BiBase_data = new WeakMap(), _BiBase_view = new WeakMap(), _BiBase_instances = new WeakSet(), _BiBase_updateSize = function _BiBase_updateSize() {
-    if (this.isMemoryMode) {
-        this.size = __classPrivateFieldGet(this, _BiBase_data, "f").length;
-        this.bitSize = this.size * 8;
-        return;
-    }
-    if (typeof fs$1 === "undefined") {
-        throw new Error("Can't load file outside of Node.");
-    }
-    if (this.fd != null) {
-        try {
-            const stat = fs$1.fstatSync(this.fd);
-            this.size = stat.size;
-            this.bitSize = this.size * 8;
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-    }
-}, _BiBase_updateBuffer = function _BiBase_updateBuffer() {
-    if (!this.isMemoryMode) {
-        if (this.fd == null) {
-            try {
-                this.fd = fs$1.openSync(this.filePath, this.fsMode);
-            }
-            catch (error) {
-                throw new Error(error);
-            }
-        }
-        const data = Buffer.alloc(this.size);
-        try {
-            const bytesRead = fs$1.readSync(this.fd, data, 0, data.length, 0);
-            if (bytesRead != this.size) {
-                throw new Error("Didn't update file buffer size. Expecting " + this.size + " but got " + bytesRead);
-            }
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-        this.data = data;
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_updateSize).call(this);
-    }
-    __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") ?? 0, "f");
-    __classPrivateFieldSet(this, _BiBase_insetBit, __classPrivateFieldGet(this, _BiBase_insetBit, "f") ?? 0, "f");
-    __classPrivateFieldSet(this, _BiBase_offset, ((Math.abs(__classPrivateFieldGet(this, _BiBase_offset, "f"))) + Math.ceil((Math.abs(__classPrivateFieldGet(this, _BiBase_insetBit, "f"))) / 8)), "f");
-    // Adjust byte offset based on bit overflow
-    __classPrivateFieldSet(this, _BiBase_offset, __classPrivateFieldGet(this, _BiBase_offset, "f") + Math.floor((Math.abs(__classPrivateFieldGet(this, _BiBase_insetBit, "f"))) / 8), "f");
-    // Adjust bit offset
-    __classPrivateFieldSet(this, _BiBase_insetBit, Math.abs(normalizeBitOffset(__classPrivateFieldGet(this, _BiBase_insetBit, "f"))) % 8, "f");
-    // Ensure bit offset stays between 0-7
-    __classPrivateFieldSet(this, _BiBase_insetBit, Math.min(Math.max(__classPrivateFieldGet(this, _BiBase_insetBit, "f"), 0), 7), "f");
-    // Ensure offset doesn't go negative
-    __classPrivateFieldSet(this, _BiBase_offset, Math.max(__classPrivateFieldGet(this, _BiBase_offset, "f"), 0), "f");
-    __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, __classPrivateFieldGet(this, _BiBase_offset, "f"));
-}, _BiBase_updateView = function _BiBase_updateView() {
-    if (__classPrivateFieldGet(this, _BiBase_data, "f")) {
-        __classPrivateFieldSet(this, _BiBase_view, new DataView(__classPrivateFieldGet(this, _BiBase_data, "f").buffer, __classPrivateFieldGet(this, _BiBase_data, "f").byteOffset ?? 0, __classPrivateFieldGet(this, _BiBase_data, "f").byteLength), "f");
-    }
-}, _BiBase_checkSize = function _BiBase_checkSize(writeBytes = 0, writeBit = 0, offset = __classPrivateFieldGet(this, _BiBase_offset, "f")) {
-    this.open();
-    const bits = writeBit + __classPrivateFieldGet(this, _BiBase_insetBit, "f");
-    if (bits != 0) {
-        //add bits
-        writeBytes += Math.ceil(bits / 8);
-    }
-    //if bigger extend
-    __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, offset + writeBytes);
-    //start read location
-    return offset;
-}, _BiBase_confrimSize = function _BiBase_confrimSize(neededSize) {
-    if (neededSize <= this.size) {
-        return;
-    }
-    var targetSize = neededSize;
-    if (targetSize > this.size) {
-        if (this.strict || this.readOnly) {
-            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
-            throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: ` + neededSize + " at " + __classPrivateFieldGet(this, _BiBase_offset, "f") + " of " + this.size);
-        }
-        if (this.growthIncrement != 0) {
-            this.wasExpanded = true;
-            targetSize = Math.ceil(neededSize / this.growthIncrement) * this.growthIncrement;
-        }
-        __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_extendArray).call(this, targetSize);
-    }
-}, _BiBase_extendArray = function _BiBase_extendArray(targetSize) {
-    this.open();
-    if (targetSize <= this.size) {
-        return;
-    }
-    const toPadd = targetSize - this.size;
-    if (this.isBuffer(__classPrivateFieldGet(this, _BiBase_data, "f"))) {
-        var paddbuffer = Buffer.alloc(toPadd);
-        this.data = Buffer.concat([__classPrivateFieldGet(this, _BiBase_data, "f"), paddbuffer]);
-    }
-    else {
-        const newBuf = new Uint8Array(this.size + toPadd);
-        newBuf.set(__classPrivateFieldGet(this, _BiBase_data, "f"));
-        this.data = newBuf;
-    }
-    this.size = __classPrivateFieldGet(this, _BiBase_data, "f").length;
-    this.bitSize = __classPrivateFieldGet(this, _BiBase_data, "f").length * 8;
-    return;
-}, _BiBase_findNumber = function _BiBase_findNumber(value, bits, unsigned, endian = this.endian) {
-    __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_checkSize).call(this, Math.floor(bits / 8), 0, __classPrivateFieldGet(this, _BiBase_offset, "f"));
-    for (let z = __classPrivateFieldGet(this, _BiBase_offset, "f"); z <= (this.size - (bits / 8)); z++) {
-        var offsetInBits = 0;
-        var value = 0;
-        for (var i = 0; i < bits;) {
-            const remaining = bits - i;
-            const bitOffset = offsetInBits & 7;
-            const currentByte = this.data[z + (offsetInBits >> 3)];
-            const read = Math.min(remaining, 8 - bitOffset);
-            if (endian == "big") {
-                let mask = ~(0xFF << read);
-                let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
-                value <<= read;
-                value |= readBits;
-            }
-            else {
-                let mask = ~(0xFF << read);
-                let readBits = (currentByte >> bitOffset) & mask;
-                value |= readBits << i;
-            }
-            offsetInBits += read;
-            i += read;
-        }
-        if (unsigned || bits <= 7) {
-            value = value >>> 0;
-        }
-        else {
-            if (bits !== 32 && value & (1 << (bits - 1))) {
-                value |= -1 ^ ((1 << bits) - 1);
-            }
-        }
-        if (value === value) {
-            return z - __classPrivateFieldGet(this, _BiBase_offset, "f"); // Found the byte, return the index from current
-        }
-    }
-    return -1; // number not found
-};
 
 /**
  * Binary reader, includes bitfields and strings.
  *
- * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+ * @param {DataType} input - File path or a `Buffer` or `Uint8Array`. Always found in .{@link data}
  * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start reader (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true``)
- * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
- * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default ``true`` in reader)
+ * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+ * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+ * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+ * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+ * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+ * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
+ * @param {BiOptions["readOnly"]?} [options.readOnly = true] - Allow data writes when reading a file (default `true` in reader)
  *
  * @since 2.0
  */
 class BiReader extends BiBase {
-    /**
-     * Binary reader, includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
-     * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start reader (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start reader (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``true`` in reader)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
-     * @param {BiOptions["readOnly"]} options.readOnly - If you want to prevent write operations (default ``true`` in reader)
-     */
     constructor(input, options = {}) {
         options.byteOffset = options.byteOffset ?? 0;
         options.bitOffset = options.bitOffset ?? 0;
@@ -8524,39 +8510,19 @@ class BiReader extends BiBase {
 /**
  * Binary writer, includes bitfields and strings.
  *
- * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+ * @param {DataType} input - File path or a `Buffer` or `Uint8Array`. Always found in .{@link data}
  * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false`` in writer)
- * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
+ * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+ * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+ * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+ * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+ * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+ * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
  *
  * @since 2.0
  */
 class BiWriter extends BiBase {
-    /**
-     * Binary writer, includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
-     * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false`` in writer)
-     * @param {BiOptions["windowSize"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always be ``BigInt``.
-     */
-    constructor(input, options = {
-        byteOffset: 0,
-        bitOffset: 0,
-        endianness: "little",
-        strict: false,
-        growthIncrement: 0,
-        enforceBigInt: false,
-        readOnly: false
-    }) {
+    constructor(input, options = {}) {
         options.byteOffset = options.byteOffset ?? 0;
         options.bitOffset = options.bitOffset ?? 0;
         options.endianness = options.endianness ?? "little";
@@ -12008,7 +11974,6 @@ class BiWriter extends BiBase {
 /**
  * @file BiReaderAsync / Writer base for working in sync Buffers or full file reads. Node and Browser.
  */
-var _BiBaseAsync_instances, _BiBaseAsync_offset, _BiBaseAsync_insetBit, _BiBaseAsync_data, _BiBaseAsync_view, _BiBaseAsync_updateSize, _BiBaseAsync_updateView, _BiBaseAsync_initFile, _BiBaseAsync_initMemory, _BiBaseAsync_getChunkIndex, _BiBaseAsync_getNumChunks, _BiBaseAsync_preloadAllChunks, _BiBaseAsync_ensureChunkLoaded, _BiBaseAsync_performChunkLoad, _BiBaseAsync_ensureRangeLoaded, _BiBaseAsync_peekBytes, _BiBaseAsync_writeBytesAt, _BiBaseAsync_confrimSize, _BiBaseAsync_extendArray, _BiBaseAsync_setFileSize, _BiBaseAsync_invalidateFromChunk, _BiBaseAsync_shiftTailForward, _BiBaseAsync_shiftTailBackward, _BiBaseAsync_updateOffsets, _BiBaseAsync_readBytes, _BiBaseAsync_writeBytes, _BiBaseAsync_findNumber;
 // #region Imports
 var fs;
 (async function () {
@@ -12017,12 +11982,14 @@ var fs;
         try {
             if (typeof require !== 'undefined') {
                 if (typeof fs === "undefined") {
-                    fs = require('fs/promises');
+                    const _fs = require('fs');
+                    fs = _fs.promises;
                 }
             }
             else {
                 if (typeof fs === "undefined") {
-                    fs = await import('fs/promises');
+                    const _fs = await import('fs');
+                    fs = _fs.promises;
                 }
             }
         }
@@ -12037,7 +12004,6 @@ async function _fileExists(filePath) {
         return true; // File exists
     }
     catch (error) {
-        // @ts-ignore
         return false;
     }
 }
@@ -12053,149 +12019,164 @@ const view8ByteDummy = new DataView(buff8ByteDummy.buffer, buff8ByteDummy.byteOf
  */
 class BiBaseAsync {
     /**
+     * Endianness of default read.
+     * @type {endian}
+     */
+    endian = "little";
+    /**
+     * Current read byte location.
+     */
+    #offset = 0;
+    /**
+     * Current read byte's bit location. 0 - 7
+     */
+    #insetBit = 0;
+    /**
+     * Size in bytes of the current buffer.
+     */
+    size = 0;
+    /**
+     * Size in bits of the current buffer.
+     */
+    bitSize = 0;
+    /**
+     * Allows the buffer to extend reading or writing outside of current size
+     */
+    strict = false;
+    /**
+     * Console log a hexdump on error.
+     */
+    errorDump = false;
+    /**
+     * Master Buffer
+     */
+    #data = null;
+    /**
+     * DataView of master Buffer
+     */
+    #view = null;
+    /**
+     * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
+     *
+     * Otherwise it extends just the amount of the next written value.
+     *
+     * This can greatly speed up data writes when large files are being written.
+     *
+     * NOTE: Using ``BiWriterAsync.get`` or ``BiWriterAsync.return`` will now remove all data after the current write position. Use ``BiWriterAsync.data`` to get the full buffer instead.
+     */
+    growthIncrement = 1048576;
+    /**
+     * Open file handle
+     */
+    fd = null;
+    /**
+     * Current file path
+     */
+    filePath;
+    /**
+     * File write mode
+     */
+    fsMode = "r";
+    /**
+     * The settings that used when using the .str getter / setter
+     */
+    strDefaults = { stringType: "utf-8", terminateValue: 0x0 };
+    /**
+     * All int64 reads will return as bigint type
+     */
+    enforceBigInt = null;
+    /**
+     * Not using a file reader.
+     */
+    isMemoryMode = false;
+    /**
+     * If data can not be written to the buffer.
+     */
+    readOnly;
+    /**
      * Get the current buffer data.
      *
      * Use async {@link getData} while in file mode!
      */
     get data() {
-        return __classPrivateFieldGet(this, _BiBaseAsync_data, "f");
+        return this.#data;
     }
     ;
     /**
      * Get the current buffer data.
+     *
+     * For use in file mode!
      */
     async getData() {
         return await this.get();
     }
     ;
-    set setData(data) {
+    /**
+     * Set the current buffer data.
+     */
+    set data(data) {
         if (this.isBufferOrUint8Array(data)) {
-            __classPrivateFieldSet(this, _BiBaseAsync_data, data, "f");
-            __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_updateView).call(this);
-            this.size = __classPrivateFieldGet(this, _BiBaseAsync_data, "f").length;
+            this.#data = data;
+            this.#updateView();
+            this.size = this.#data.length;
             this.bitSize = this.size * 8;
         }
     }
     ;
     /**
+     * If the buffer was extended and needs to be trimmed
+     */
+    wasExpanded = false;
+    /**
      * Get the DataView of current buffer data.
      */
     get view() {
-        return __classPrivateFieldGet(this, _BiBaseAsync_view, "f");
+        return this.#view;
     }
     ;
+    // ASYNC ONLY
+    /**
+     * array of loaded data chunks
+     */
+    chunks = [];
+    /**
+     * Promises for data chunks
+     */
+    chunkPromises = [];
+    /**
+     * Edited data chunks
+     */
+    dirtyChunks = new Set();
+    /**
+     * The amount of data to "chunk" and read a time from the file
+     *
+     * When set to 0, reads whole file at once.
+     */
+    windowSize = 4096;
+    /**
+     * Data is finished loading
+     */
+    isFullyLoaded = false;
+    /**
+     * Array of all chunks to quickly load all parts
+     */
+    loadAllPromise = null;
     constructor(input, options = {}) {
-        _BiBaseAsync_instances.add(this);
-        /**
-         * Endianness of default read.
-         * @type {endian}
-         */
-        this.endian = "little";
-        /**
-         * Current read byte location.
-         */
-        _BiBaseAsync_offset.set(this, 0);
-        /**
-         * Current read byte's bit location. 0 - 7
-         */
-        _BiBaseAsync_insetBit.set(this, 0);
-        /**
-         * Size in bytes of the current buffer.
-         */
-        this.size = 0;
-        /**
-         * Size in bits of the current buffer.
-         */
-        this.bitSize = 0;
-        /**
-         * Allows the buffer to extend reading or writing outside of current size
-         */
-        this.strict = false;
-        /**
-         * Console log a hexdump on error.
-         */
-        this.errorDump = false;
-        /**
-         * Master Buffer
-         */
-        _BiBaseAsync_data.set(this, null);
-        /**
-         * DataView of master Buffer
-         */
-        _BiBaseAsync_view.set(this, null);
-        /**
-         * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
-         *
-         * Otherwise it extends just the amount of the next written value.
-         *
-         * This can greatly speed up data writes when large files are being written.
-         *
-         * NOTE: Using ``BiWriterAsync.get`` or ``BiWriterAsync.return`` will now remove all data after the current write position. Use ``BiWriterAsync.data`` to get the full buffer instead.
-         */
-        this.growthIncrement = 1048576;
-        /**
-         * Open file handle
-         */
-        this.fd = null;
-        /**
-         * File write mode
-         */
-        this.fsMode = "r";
-        /**
-         * The settings that used when using the .str getter / setter
-         */
-        this.strDefaults = { stringType: "utf-8", terminateValue: 0x0 };
-        /**
-         * All int64 reads will return as bigint type
-         */
-        this.enforceBigInt = null;
-        /**
-         * Not using a file reader.
-         */
-        this.isMemoryMode = false;
-        this.wasExpanded = false;
-        // ASYNC ONLY
-        /**
-         * array of loaded data chunks
-         */
-        this.chunks = [];
-        /**
-         * Promises for data chunks
-         */
-        this.chunkPromises = [];
-        /**
-         * Edited data chunks
-         */
-        this.dirtyChunks = new Set();
-        /**
-         * The amount of data to "chunk" and read a time from the file
-         *
-         * When set to 0, reads whole file at once.
-         */
-        this.windowSize = 4096;
-        /**
-         * Data is finished loading
-         */
-        this.isFullyLoaded = false;
-        /**
-         * Array of all chunks to quickly load all parts
-         */
-        this.loadAllPromise = null;
         const { byteOffset, bitOffset, endianness, strict, growthIncrement, enforceBigInt, readOnly, windowSize, } = options;
         if (typeof strict != "boolean") {
             throw new TypeError("Strict mode must be true or false");
         }
-        __classPrivateFieldSet(this, _BiBaseAsync_offset, byteOffset, "f");
+        this.#offset = byteOffset;
         if ((bitOffset ?? 0) != 0) {
-            __classPrivateFieldSet(this, _BiBaseAsync_offset, Math.floor(byteOffset / 8), "f");
-            __classPrivateFieldSet(this, _BiBaseAsync_insetBit, byteOffset % 8, "f");
+            this.#offset = Math.floor(byteOffset / 8);
+            this.#insetBit = byteOffset % 8;
         }
         this.windowSize = windowSize;
         this.readOnly = !!readOnly;
         this.strict = this.readOnly ? true : strict;
         this.fsMode = this.readOnly ? 'r' : 'r+';
         this.enforceBigInt = !!enforceBigInt;
-        if (this.enforceBigInt && !hasBigInt) {
+        if (!hasBigInt) {
             this.enforceBigInt = false;
         }
         this.growthIncrement = growthIncrement;
@@ -12211,11 +12192,11 @@ class BiBaseAsync {
             this.isMemoryMode = false;
         }
         else if (this.isBufferOrUint8Array(input)) {
-            this.setData = input;
+            this.data = input;
             this.isMemoryMode = true;
             this.filePath = null;
             this.windowSize = 0;
-            __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_initMemory).call(this);
+            this.#initMemory();
         }
         else {
             throw new TypeError('Source must be a file path (string) or Uint8Array/Buffer');
@@ -12262,26 +12243,523 @@ class BiBaseAsync {
         return isUint8Array(obj);
     }
     ;
+    /**
+     * Internal update size
+     *
+     * run after setting data
+     */
+    async #updateSize() {
+        if (this.isMemoryMode) {
+            this.size = this.data.length;
+            this.bitSize = this.size * 8;
+            return;
+        }
+        if (typeof fs === "undefined") {
+            throw new Error("Can't load file outside Node.");
+        }
+        if (this.fd != null) {
+            try {
+                const stat = await this.fd.stat();
+                this.size = stat.size;
+                this.bitSize = this.size * 8;
+            }
+            catch (error) {
+                throw new Error(error);
+            }
+        }
+    }
     ;
+    /**
+     * Call this after everytime we set/replace `this.data`
+     */
+    #updateView() {
+        if (this.#data) {
+            this.#view = new DataView(this.#data.buffer, this.#data.byteOffset ?? 0, this.#data.byteLength);
+        }
+    }
     ;
+    /**
+     * `this.fd` must be null and not in memory mode
+     */
+    async #initFile() {
+        if (this.isMemoryMode || this.fd != null) {
+            return;
+        }
+        if (!(await _fileExists(this.filePath))) {
+            await fs.writeFile(this.filePath, "");
+        }
+        try {
+            this.fd = await fs.open(this.filePath, this.fsMode);
+        }
+        catch (error) {
+            throw new Error(error);
+        }
+        await this.#updateSize();
+        const numChunks = this.#getNumChunks();
+        this.chunks = new Array(numChunks).fill(null);
+        this.chunkPromises = new Array(numChunks).fill(null);
+        if (this.windowSize == 0) {
+            this.loadAllPromise = this.#preloadAllChunks();
+        }
+        else {
+            this.loadAllPromise = Promise.resolve();
+        }
+    }
     ;
+    /**
+     * Not for file mode
+     */
+    #initMemory() {
+        if (!this.isMemoryMode) {
+            return;
+        }
+        if (this.isFullyLoaded) {
+            return;
+        }
+        this.size = this.data.length;
+        this.bitSize = this.size * 8;
+        const numChunks = this.#getNumChunks();
+        this.chunks = new Array(numChunks).fill(null);
+        this.chunkPromises = new Array(numChunks).fill(null);
+        this.isFullyLoaded = true;
+        this.loadAllPromise = null;
+    }
     ;
+    /**
+     * For when there is a full file read
+     */
+    #getChunkIndex(offset) {
+        return this.windowSize === 0 ? 0 : Math.floor(offset / this.windowSize);
+    }
     ;
+    /**
+     * For when there is a full file read
+     */
+    #getNumChunks() {
+        return this.windowSize === 0 ? 1 : Math.ceil(this.size / this.windowSize);
+    }
     ;
+    /**
+     * When the whole file is loaded at once
+     */
+    async #preloadAllChunks() {
+        const promises = [];
+        for (let i = 0; i < this.chunks.length; i++) {
+            promises.push(this.#ensureChunkLoaded(i));
+        }
+        await Promise.all(promises);
+        this.isFullyLoaded = true;
+    }
     ;
+    /**
+     * Checks the chunk is loaded
+     *
+     * @param {number} chunkIndex
+     */
+    async #ensureChunkLoaded(chunkIndex) {
+        if (this.windowSize === 0) {
+            chunkIndex = 0;
+        }
+        if (chunkIndex >= this.chunks.length) {
+            return null;
+        }
+        if (this.chunks[chunkIndex] !== null) {
+            return this.chunks[chunkIndex];
+        }
+        if (this.isMemoryMode) {
+            const start = chunkIndex * this.windowSize;
+            const end = Math.min(start + this.windowSize, this.size);
+            this.chunks[chunkIndex] = this.data.subarray(start, end);
+            return this.chunks[chunkIndex];
+        }
+        if (this.chunkPromises[chunkIndex]) {
+            return await this.chunkPromises[chunkIndex];
+        }
+        const promise = this.#performChunkLoad(chunkIndex);
+        this.chunkPromises[chunkIndex] = promise;
+        return await promise;
+    }
     ;
+    /**
+     * Gets needed chunk
+     *
+     * @param {number} chunkIndex
+     */
+    async #performChunkLoad(chunkIndex) {
+        const start = chunkIndex * this.windowSize;
+        const length = Math.min(this.windowSize, this.size - start);
+        const buffer = Buffer.alloc(length);
+        await this.fd.read(buffer, 0, length, start);
+        this.chunks[chunkIndex] = buffer;
+        return buffer;
+    }
     ;
+    /**
+     * Makes sure the needed size is loaded
+     *
+     * @param {number} offset
+     * @param {number} length
+     */
+    async #ensureRangeLoaded(offset, length) {
+        const needed = offset + length;
+        if (needed > this.size) {
+            if (this.strict || this.readOnly) {
+                throw new Error(`Operation exceeds file size (${needed} > ${this.size})`);
+            }
+            await this.#confrimSize(needed);
+        }
+        const startChunk = this.#getChunkIndex(offset);
+        const endChunk = this.#getChunkIndex(offset + length - 1);
+        const promises = [];
+        for (let i = startChunk; i <= endChunk && i < this.chunks.length; i++) {
+            if (this.chunks[i] === null) {
+                promises.push(this.#ensureChunkLoaded(i));
+            }
+        }
+        await Promise.all(promises);
+    }
     ;
+    /**
+     * Get bytes without changing offset
+     *
+     * @param {number} offset
+     * @param {number} length
+     */
+    async #peekBytes(offset, length) {
+        await this.open();
+        if (length <= 0) {
+            if (this.isMemoryMode) {
+                if (this.isBuffer(this.data)) {
+                    return Buffer.alloc(0);
+                }
+                else {
+                    return new Uint8Array(0);
+                }
+            }
+            else {
+                return Buffer.alloc(0);
+            }
+        }
+        await this.#ensureRangeLoaded(offset, length);
+        var result;
+        if (this.isMemoryMode) {
+            return this.data.subarray(offset, offset + length);
+        }
+        else {
+            result = Buffer.alloc(length);
+        }
+        let pos = offset;
+        let writePos = 0;
+        while (writePos < length) {
+            const chunkIndex = this.#getChunkIndex(pos);
+            const chunk = this.chunks[chunkIndex];
+            const chunkOffset = pos % this.windowSize;
+            const toCopy = Math.min(length - writePos, chunk.length - chunkOffset);
+            result.set(chunk.subarray(chunkOffset, chunkOffset + toCopy), writePos);
+            writePos += toCopy;
+            pos += toCopy;
+        }
+        return result;
+    }
     ;
+    /**
+     * write bytes internal
+     *
+     * @param {number} offset
+     * @param {Uint8Array | Buffer | number[]} data
+     */
+    async #writeBytesAt(offset, data) {
+        await this.open();
+        if (data.length === 0) {
+            return;
+        }
+        await this.#ensureRangeLoaded(offset, data.length);
+        let pos = offset;
+        let readPos = 0;
+        if (this.isMemoryMode) {
+            for (let i = 0, n = offset; i < data.length; i++, n++) {
+                this.#data[n] = data[i];
+            }
+            return;
+        }
+        while (readPos < data.length) {
+            const chunkIndex = this.#getChunkIndex(pos);
+            const chunk = this.chunks[chunkIndex];
+            const chunkOffset = pos % this.windowSize;
+            const toCopy = Math.min(data.length - readPos, chunk.length - chunkOffset);
+            var sub;
+            if (this.isBufferOrUint8Array(data)) {
+                sub = data.subarray(readPos, readPos + toCopy);
+            }
+            else {
+                sub = data.slice(readPos, readPos + toCopy);
+            }
+            chunk.set(sub, chunkOffset);
+            this.dirtyChunks.add(chunkIndex);
+            readPos += toCopy;
+            pos += toCopy;
+        }
+    }
     ;
+    /**
+     * Checks loaded size
+     *
+     * Will set `wasExpanded` if expanded
+     *
+     * @param {number} neededSize
+     */
+    async #confrimSize(neededSize) {
+        // check if the current request fits in range
+        if (neededSize <= this.size) {
+            return;
+        }
+        var targetSize = neededSize;
+        // now adjust the size if less to `growthIncrement` factor
+        if (targetSize > this.size) {
+            if (this.strict || this.readOnly) {
+                this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+                throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: ` + neededSize + " at " + this.#offset + " of " + this.size);
+            }
+            if (this.growthIncrement != 0) {
+                this.wasExpanded = true;
+                targetSize = Math.ceil(neededSize / this.growthIncrement) * this.growthIncrement;
+            }
+            await this.#extendArray(targetSize);
+        }
+    }
     ;
+    /**
+    * extends the data
+    *
+    * @param {number} targetSize
+    */
+    async #extendArray(targetSize) {
+        await this.flush();
+        if (this.isMemoryMode) {
+            const toPadd = targetSize - this.size;
+            if (isBuffer(this.#data)) {
+                const paddbuffer = Buffer.alloc(toPadd);
+                this.data = Buffer.concat([this.#data, paddbuffer]);
+            }
+            else {
+                const newBuf = new Uint8Array(this.size + toPadd);
+                newBuf.set(this.#data);
+                this.data = newBuf;
+            }
+            this.size = targetSize;
+            this.bitSize = this.size * 8;
+            this.chunks = new Array(this.#getNumChunks()).fill(null);
+            this.chunkPromises = new Array(this.#getNumChunks()).fill(null);
+            this.dirtyChunks.clear();
+        }
+        else {
+            await this.fd.truncate(targetSize);
+            this.size = targetSize;
+            this.bitSize = this.size * 8;
+            const oldNum = this.chunks.length;
+            const newNum = this.#getNumChunks();
+            this.chunks.length = newNum;
+            this.chunkPromises.length = newNum;
+            for (let i = oldNum; i < newNum; i++) {
+                this.chunks[i] = null;
+                this.chunkPromises[i] = null;
+            }
+        }
+    }
     ;
+    /**
+     * For updating file size
+     *
+     * @param {number} exactSize
+     * @returns
+     */
+    async #setFileSize(exactSize) {
+        if (exactSize === this.size) {
+            return;
+        }
+        await this.flush();
+        if (this.isMemoryMode) {
+            const newData = this.data.subarray(0, exactSize);
+            this.data = newData;
+            this.size = exactSize;
+            this.bitSize = this.size * 8;
+            const newNum = Math.ceil(exactSize / this.windowSize);
+            this.chunks = new Array(newNum).fill(null);
+            this.chunkPromises = new Array(newNum).fill(null);
+            this.dirtyChunks.clear();
+        }
+        else {
+            await this.fd.truncate(exactSize);
+            this.size = exactSize;
+            this.bitSize = this.size * 8;
+            const oldNum = this.chunks.length;
+            const newNum = Math.ceil(exactSize / this.windowSize);
+            this.chunks.length = newNum;
+            this.chunkPromises.length = newNum;
+            if (newNum < oldNum) {
+                this.dirtyChunks = new Set([...this.dirtyChunks].filter(i => i < newNum));
+            }
+            else {
+                for (let i = oldNum; i < newNum; i++) {
+                    this.chunks[i] = null;
+                    this.chunkPromises[i] = null;
+                }
+            }
+        }
+    }
     ;
+    /**
+     * removes a chunk
+     *
+     * @param {number} startChunk
+     */
+    #invalidateFromChunk(startChunk) {
+        for (let i = Math.max(0, startChunk); i < this.chunks.length; i++) {
+            this.chunks[i] = null;
+            this.chunkPromises[i] = null;
+            this.dirtyChunks.delete(i);
+        }
+    }
     ;
+    /**
+     * Pulls data back
+     *
+     * @param {number} insertOffset
+     * @param {number} insertLen
+     * @param {number} oldEnd
+     * @param {boolean} consume
+     */
+    async #shiftTailForward(insertOffset, insertLen, oldEnd, consume = false) {
+        if (insertLen <= 0) {
+            return;
+        }
+        if (this.isMemoryMode) {
+            const tailCopy = this.data.subarray(insertOffset, oldEnd);
+            this.data.set(tailCopy, insertOffset + insertLen);
+        }
+        else {
+            let readEnd = oldEnd;
+            let writeEnd = oldEnd + insertLen;
+            const buf = Buffer.alloc(Math.min(this.windowSize, this.size));
+            while (readEnd > insertOffset) {
+                const len = Math.min(this.windowSize, readEnd - insertOffset);
+                const readStart = readEnd - len;
+                const { bytesRead } = await this.fd.read(buf, 0, len, readStart);
+                const writeStart = writeEnd - len;
+                await this.fd.write(buf, 0, bytesRead, writeStart);
+                readEnd = readStart;
+                writeEnd = writeStart;
+            }
+        }
+        if (consume) {
+            this.#offset = insertOffset + insertLen;
+            this.#insetBit = 0;
+        }
+    }
     ;
+    /**
+     *
+     * @param {number} removeOffset
+     * @param {number} removeLen
+     * @param {boolean} consume
+     */
+    async #shiftTailBackward(removeOffset, removeLen, consume = false) {
+        if (removeLen <= 0) {
+            return;
+        }
+        if (this.isMemoryMode) {
+            const tailStart = removeOffset + removeLen;
+            const tailCopy = this.data.subarray(tailStart, this.size);
+            this.data.set(tailCopy, removeOffset);
+        }
+        else {
+            const oldEnd = this.size;
+            let readPos = removeOffset + removeLen;
+            let writePos = removeOffset;
+            const buf = Buffer.alloc(Math.min(this.windowSize, this.size));
+            while (readPos < oldEnd) {
+                const len = Math.min(this.windowSize, oldEnd - readPos);
+                const { bytesRead } = await this.fd.read(buf, 0, len, readPos);
+                await this.fd.write(buf, 0, bytesRead, writePos);
+                readPos += bytesRead;
+                writePos += bytesRead;
+            }
+        }
+        if (consume) {
+            this.#offset = removeOffset;
+            this.#insetBit = 0;
+        }
+    }
     ;
+    async #updateOffsets(newOffset, trueBytes, trueBits) {
+        if (newOffset < 0) {
+            throw new RangeError('Offset cannot be negative');
+        }
+        if (newOffset > this.size) {
+            if (this.strict || this.readOnly) {
+                this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
+                throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: ` + newOffset + " at " + this.#offset + " of " + this.size);
+            }
+            await this.#confrimSize(newOffset);
+        }
+        this.#offset = trueBytes;
+        // Adjust byte offset based on bit overflow
+        this.#offset += Math.floor(trueBits / 8);
+        // Adjust bit offset
+        this.#insetBit = normalizeBitOffset(trueBits) % 8;
+        // Ensure bit offset stays between 0-7
+        this.#insetBit = Math.min(Math.max(this.#insetBit, 0), 7);
+        // Ensure offset doesn't go negative
+        this.#offset = Math.max(this.#offset, 0);
+    }
     ;
+    async #readBytes(length, consume = true) {
+        await this.open();
+        if (length <= 0) {
+            return new Uint8Array(0);
+        }
+        const offSave = this.#offset;
+        var trueByte = this.#offset;
+        const trueBit = this.#insetBit;
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+        this.#offset = trueByte;
+        const data = await this.#peekBytes(trueByte, length);
+        if (consume) {
+            this.#offset += length;
+            this.#insetBit = 0;
+        }
+        else {
+            this.#offset = offSave;
+        }
+        return data;
+    }
     ;
+    async #writeBytes(data, consume = true) {
+        if (this.readOnly) {
+            throw new Error('Cannot write to read-only file');
+        }
+        await this.open();
+        if (data.length === 0) {
+            return;
+        }
+        const offSave = this.#offset;
+        var trueByte = this.#offset;
+        const trueBit = this.#insetBit;
+        if (trueBit != 0) {
+            trueByte += 1;
+        }
+        this.#offset = trueByte;
+        await this.#writeBytesAt(trueByte, data);
+        if (consume) {
+            this.#offset += data.length;
+            this.#insetBit = 0;
+        }
+        else {
+            this.#offset = offSave;
+        }
+    }
     ;
     ///////////////////////////////
     // #region FILE MODE
@@ -12315,13 +12793,13 @@ class BiBaseAsync {
      */
     async open(data) {
         if (!this.isMemoryMode) {
-            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_initFile).call(this);
+            await this.#initFile();
         }
         else {
             if (this.isBufferOrUint8Array(data)) {
-                this.setData = data;
+                this.data = data;
             }
-            __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_initMemory).call(this);
+            this.#initMemory();
         }
     }
     ;
@@ -12392,8 +12870,8 @@ class BiBaseAsync {
         try {
             await this.close();
             this.fd = null;
-            __classPrivateFieldSet(this, _BiBaseAsync_data, null, "f");
-            __classPrivateFieldSet(this, _BiBaseAsync_view, null, "f");
+            this.#data = null;
+            this.#view = null;
             await fs.rename(this.filePath, newFilePath);
         }
         catch (error) {
@@ -12584,7 +13062,7 @@ class BiBaseAsync {
      * @returns {number} current byte position
      */
     get offset() {
-        return __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+        return this.#offset;
     }
     ;
     /**
@@ -12602,7 +13080,7 @@ class BiBaseAsync {
      * @returns {number} current byte position
      */
     get tell() {
-        return __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+        return this.#offset;
     }
     ;
     /**
@@ -12611,7 +13089,7 @@ class BiBaseAsync {
      * @returns {number} current byte position
      */
     get FTell() {
-        return __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+        return this.#offset;
     }
     ;
     /**
@@ -12620,7 +13098,7 @@ class BiBaseAsync {
      * @returns {number} current byte position
      */
     get saveOffset() {
-        return __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+        return this.#offset;
     }
     ;
     /**
@@ -12629,7 +13107,7 @@ class BiBaseAsync {
      * @returns {number} current byte position
      */
     get off() {
-        return __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+        return this.#offset;
     }
     ;
     /**
@@ -12665,7 +13143,7 @@ class BiBaseAsync {
      * @returns {number} current bit position
      */
     get bitOffset() {
-        return (__classPrivateFieldGet(this, _BiBaseAsync_offset, "f") * 8) + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
+        return (this.#offset * 8) + this.#insetBit;
     }
     ;
     /**
@@ -12709,7 +13187,7 @@ class BiBaseAsync {
      * @returns {number} current bit position
      */
     get tellBits() {
-        return __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
+        return this.#insetBit;
     }
     ;
     /**
@@ -12741,7 +13219,7 @@ class BiBaseAsync {
      * @returns {number} current bit position
      */
     get insetBit() {
-        return __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
+        return this.#insetBit;
     }
     ;
     /**
@@ -12793,7 +13271,7 @@ class BiBaseAsync {
      * @returns {number} size
      */
     get remain() {
-        return this.size - __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+        return this.size - this.#offset;
     }
     ;
     /**
@@ -12838,7 +13316,7 @@ class BiBaseAsync {
      * @returns {number} size
      */
     get getLine() {
-        return Math.abs(Math.floor((__classPrivateFieldGet(this, _BiBaseAsync_offset, "f") - 1) / 16));
+        return Math.abs(Math.floor((this.#offset - 1) / 16));
     }
     ;
     /**
@@ -12872,15 +13350,15 @@ class BiBaseAsync {
             await this.trim();
         }
         if (this.isMemoryMode) {
-            return __classPrivateFieldGet(this, _BiBaseAsync_data, "f");
+            return this.#data;
         }
         const chunks = [];
-        for (let i = 0; i < __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getNumChunks).call(this); i++) {
-            const chunk = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_ensureChunkLoaded).call(this, i);
+        for (let i = 0; i < this.#getNumChunks(); i++) {
+            const chunk = await this.#ensureChunkLoaded(i);
             chunks.push(chunk);
         }
         if (this.growthIncrement != 0) {
-            return Buffer.concat(chunks).subarray(0, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"));
+            return Buffer.concat(chunks).subarray(0, this.#offset);
         }
         return Buffer.concat(chunks);
     }
@@ -12912,8 +13390,8 @@ class BiBaseAsync {
      */
     async end() {
         if (this.isMemoryMode) {
-            __classPrivateFieldSet(this, _BiBaseAsync_data, null, "f");
-            __classPrivateFieldSet(this, _BiBaseAsync_view, null, "f");
+            this.#data = null;
+            this.#view = null;
             return;
         }
         await this.commit();
@@ -12954,13 +13432,13 @@ class BiBaseAsync {
     async hexdump(options = {}) {
         await this.open();
         const length = options?.length ?? 192;
-        const startByte = options?.startByte ?? __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+        const startByte = options?.startByte ?? this.#offset;
         const endByte = Math.min(startByte + length, this.size);
         const newSize = endByte - startByte;
         if (startByte > this.size || endByte > this.size) {
             throw new RangeError("Hexdump amount is outside of data size: " + newSize + " of " + endByte);
         }
-        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, startByte, Math.min(endByte, this.size) - startByte);
+        const data = await this.#peekBytes(startByte, Math.min(endByte, this.size) - startByte);
         return _hexDump(data, options, startByte, endByte);
     }
     ;
@@ -13011,16 +13489,16 @@ class BiBaseAsync {
         if (Array.isArray(bytesToFind)) {
             bytesToFind = new Uint8Array(bytesToFind);
         }
-        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
+        const data = await this.#peekBytes(0, this.size);
         if (this.isBuffer(data)) {
-            var offset = data.subarray(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), this.size).indexOf(bytesToFind);
+            var offset = data.subarray(this.#offset, this.size).indexOf(bytesToFind);
             if (offset == -1) {
                 return -1;
             }
-            return offset + __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+            return offset + this.#offset;
         }
         // data = Uint8Array
-        for (let i = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"); i <= this.size - bytesToFind.length; i++) {
+        for (let i = this.#offset; i <= this.size - bytesToFind.length; i++) {
             var match = true;
             for (let j = 0; j < bytesToFind.length; j++) {
                 if (data[i + j] !== bytesToFind[j]) {
@@ -13050,6 +13528,43 @@ class BiBaseAsync {
         return await this.findBytes(encoded);
     }
     ;
+    #findNumber(data, value, bits, unsigned, endian = this.endian) {
+        for (let z = this.#offset; z <= (this.size - (bits / 8)); z++) {
+            var offsetInBits = 0;
+            var currentValue = 0;
+            for (var i = 0; i < bits;) {
+                const remaining = bits - i;
+                const bitOffset = offsetInBits & 7;
+                const currentByte = data[z + (offsetInBits >> 3)];
+                const read = Math.min(remaining, 8 - bitOffset);
+                if (endian == "big") {
+                    let mask = ~(0xFF << read);
+                    let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
+                    currentValue <<= read;
+                    currentValue |= readBits;
+                }
+                else {
+                    let mask = ~(0xFF << read);
+                    let readBits = (currentByte >> bitOffset) & mask;
+                    currentValue |= readBits << i;
+                }
+                offsetInBits += read;
+                i += read;
+            }
+            if (unsigned == true || bits <= 7) {
+                currentValue = currentValue >>> 0;
+            }
+            else {
+                if (currentValue & (1 << (bits - 1))) {
+                    currentValue |= -1 ^ ((1 << bits) - 1);
+                }
+            }
+            if (currentValue === value) {
+                return z - this.#offset; // Found the byte, return the index from current
+            }
+        }
+        return -1; // number not found
+    }
     /**
      * Searches for byte value (can be signed or unsigned) position from current read position.
      *
@@ -13062,8 +13577,8 @@ class BiBaseAsync {
      * @param {endian} endian - endianness of value (default set endian).
      */
     async findByte(value, unsigned = true, endian = this.endian) {
-        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
-        return __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_findNumber).call(this, data, value, 8, unsigned, endian);
+        const data = await this.#peekBytes(0, this.size);
+        return this.#findNumber(data, value, 8, unsigned, endian);
     }
     ;
     /**
@@ -13078,8 +13593,8 @@ class BiBaseAsync {
      * @param {endian} endian - endianness of value (default set endian).
      */
     async findShort(value, unsigned = true, endian = this.endian) {
-        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
-        return __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_findNumber).call(this, data, value, 16, unsigned, endian);
+        const data = await this.#peekBytes(0, this.size);
+        return this.#findNumber(data, value, 16, unsigned, endian);
     }
     ;
     /**
@@ -13094,8 +13609,8 @@ class BiBaseAsync {
      * @param {endian} endian - endianness of value (default set endian).
      */
     async findInt(value, unsigned = true, endian = this.endian) {
-        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
-        return __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_findNumber).call(this, data, value, 32, unsigned, endian);
+        const data = await this.#peekBytes(0, this.size);
+        return this.#findNumber(data, value, 32, unsigned, endian);
     }
     ;
     /**
@@ -13113,8 +13628,8 @@ class BiBaseAsync {
         if (!hasBigInt) {
             throw new Error("System doesn't support BigInt values.");
         }
-        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
-        for (let z = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"); z <= (this.size - 8); z++) {
+        const data = await this.#peekBytes(0, this.size);
+        for (let z = this.#offset; z <= (this.size - 8); z++) {
             var currentValue = BigInt(0);
             if (endian == "little") {
                 for (let i = 0; i < 8; i++) {
@@ -13154,8 +13669,8 @@ class BiBaseAsync {
      * @param {endian} endian - endianness of value (default set endian).
      */
     async findHalfFloat(value, endian = this.endian) {
-        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
-        for (let z = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"); z <= (this.size - 2); z++) {
+        const data = await this.#peekBytes(0, this.size);
+        for (let z = this.#offset; z <= (this.size - 2); z++) {
             var currentValue = 0;
             if (endian == "little") {
                 currentValue = ((data[z + 1] & 0xFFFF) << 8) | (data[z] & 0xFFFF);
@@ -13206,8 +13721,8 @@ class BiBaseAsync {
      * @param {endian} endian - endianness of value (default set endian).
      */
     async findFloat(value, endian = this.endian) {
-        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
-        for (let z = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"); z <= (this.size - 4); z++) {
+        const data = await this.#peekBytes(0, this.size);
+        for (let z = this.#offset; z <= (this.size - 4); z++) {
             var currentValue = 0;
             if (endian == "little") {
                 currentValue = ((data[z + 3] & 0xFF) << 24) |
@@ -13260,8 +13775,8 @@ class BiBaseAsync {
         if (!hasBigInt) {
             throw new Error("System doesn't support BigInt values.");
         }
-        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, 0, this.size);
-        for (let z = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"); z <= (this.size - 8); z++) {
+        const data = await this.#peekBytes(0, this.size);
+        for (let z = this.#offset; z <= (this.size - 8); z++) {
             var currentValue = BigInt(0);
             if (endian == "little") {
                 for (let i = 0; i < 8; i++) {
@@ -13316,7 +13831,7 @@ class BiBaseAsync {
      * @param {number} number - Byte to align
      */
     async align(number) {
-        const a = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") % number;
+        const a = this.#offset % number;
         if (a) {
             await this.skip(number - a);
         }
@@ -13330,7 +13845,7 @@ class BiBaseAsync {
      * @param {number} number - Byte to align
      */
     async alignRev(number) {
-        const a = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") % number;
+        const a = this.#offset % number;
         if (a) {
             await this.skip(a * -1);
         }
@@ -13346,11 +13861,11 @@ class BiBaseAsync {
      */
     async skip(bytes = 0, bits = 0) {
         await this.open();
-        var newOffset = ((bytes + __classPrivateFieldGet(this, _BiBaseAsync_offset, "f")) + Math.ceil((__classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f") + bits) / 8));
+        var newOffset = ((bytes + this.#offset) + Math.ceil((this.#insetBit + bits) / 8));
         if (bits && bits < 0) {
-            newOffset = Math.floor((((bytes + __classPrivateFieldGet(this, _BiBaseAsync_offset, "f")) * 8) + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f") + bits) / 8);
+            newOffset = Math.floor((((bytes + this.#offset) * 8) + this.#insetBit + bits) / 8);
         }
-        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_updateOffsets).call(this, newOffset, bytes, bits);
+        await this.#updateOffsets(newOffset, bytes, bits);
     }
     ;
     /**
@@ -13400,7 +13915,7 @@ class BiBaseAsync {
     async goto(byte = 0, bit = 0) {
         await this.open();
         var newOffset = byte + Math.ceil(bit / 8);
-        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_updateOffsets).call(this, newOffset, byte, bit);
+        await this.#updateOffsets(newOffset, byte, bit);
     }
     ;
     /**
@@ -13431,8 +13946,8 @@ class BiBaseAsync {
      * Set byte and bit position to start of data.
      */
     rewind() {
-        __classPrivateFieldSet(this, _BiBaseAsync_offset, 0, "f");
-        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
+        this.#offset = 0;
+        this.#insetBit = 0;
     }
     ;
     /**
@@ -13446,8 +13961,8 @@ class BiBaseAsync {
      * Set current byte and bit position to end of data.
      */
     last() {
-        __classPrivateFieldSet(this, _BiBaseAsync_offset, this.size, "f");
-        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
+        this.#offset = this.size;
+        this.#insetBit = 0;
     }
     ;
     /**
@@ -13476,7 +13991,7 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default current position)
      * @param {boolean} consume - Move position to end of removed data (default false)
      */
-    async delete(startOffset = 0, endOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), consume = false) {
+    async delete(startOffset = 0, endOffset = this.#offset, consume = false) {
         if (this.readOnly || this.strict) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + this.size);
@@ -13502,12 +14017,12 @@ class BiBaseAsync {
         if (this.readOnly || this.strict) {
             throw new Error('Cannot modify readOnly data');
         }
-        const removed = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, startOffset, removeLen);
-        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_shiftTailBackward).call(this, startOffset, removeLen, consume);
+        const removed = await this.#peekBytes(startOffset, removeLen);
+        await this.#shiftTailBackward(startOffset, removeLen, consume);
         const newSize = this.size - removeLen;
-        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_setFileSize).call(this, newSize);
-        const startChunk = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getChunkIndex).call(this, startOffset);
-        __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_invalidateFromChunk).call(this, startChunk);
+        await this.#setFileSize(newSize);
+        const startChunk = this.#getChunkIndex(startOffset);
+        this.#invalidateFromChunk(startChunk);
         return removed;
     }
     ;
@@ -13517,7 +14032,7 @@ class BiBaseAsync {
      * Note: Errors in strict mode.
      */
     async clip() {
-        return await this.delete(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), this.size, false);
+        return await this.delete(this.#offset, this.size, false);
     }
     ;
     /**
@@ -13526,7 +14041,7 @@ class BiBaseAsync {
      * Note: Errors in strict mode.
      */
     async trim() {
-        return await this.delete(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), this.size, false);
+        return await this.delete(this.#offset, this.size, false);
     }
     ;
     /**
@@ -13538,7 +14053,7 @@ class BiBaseAsync {
      * @param {boolean} consume - Move position to end of removed data (default false)
      */
     async crop(length = 0, consume = false) {
-        return await this.delete(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
+        return await this.delete(this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -13550,7 +14065,7 @@ class BiBaseAsync {
      * @param {boolean} consume - Move position to end of removed data (default false)
      */
     async drop(length = 0, consume = false) {
-        return await this.delete(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
+        return await this.delete(this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -13562,7 +14077,7 @@ class BiBaseAsync {
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    async replace(data, offset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), consume = false) {
+    async replace(data, offset = this.#offset, consume = false) {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error("Can't replace data in readOnly mode!");
@@ -13588,7 +14103,7 @@ class BiBaseAsync {
                 data = Buffer.from(data);
             }
         }
-        const insertLen = data?.length ?? 0;
+        const insertLen = data.length ?? 0;
         if (insertLen === 0) {
             return;
         }
@@ -13596,18 +14111,18 @@ class BiBaseAsync {
             if (this.strict || this.readOnly) {
                 throw new Error('Growing requires strict: false');
             }
-            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_confrimSize).call(this, offset + insertLen);
+            await this.#confrimSize(offset + insertLen);
         }
-        const savedOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
-        const savedBitOffset = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
-        __classPrivateFieldSet(this, _BiBaseAsync_offset, offset, "f");
-        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
-        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, data, consume);
+        const savedOffset = this.#offset;
+        const savedBitOffset = this.#insetBit;
+        this.#offset = offset;
+        this.#insetBit = 0;
+        await this.#writeBytes(data, consume);
         const tailStartChunk = Math.floor((offset + insertLen) / this.windowSize);
-        __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_invalidateFromChunk).call(this, tailStartChunk);
+        this.#invalidateFromChunk(tailStartChunk);
         if (!consume) {
-            __classPrivateFieldSet(this, _BiBaseAsync_offset, savedOffset, "f");
-            __classPrivateFieldSet(this, _BiBaseAsync_insetBit, savedBitOffset, "f");
+            this.#offset = savedOffset;
+            this.#insetBit = savedBitOffset;
         }
     }
     ;
@@ -13620,7 +14135,7 @@ class BiBaseAsync {
      * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Offset to add it at (defaults to current position)
      */
-    async overwrite(data, consume = false, offset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f")) {
+    async overwrite(data, consume = false, offset = this.#offset) {
         return await this.replace(data, offset, consume);
     }
     ;
@@ -13635,7 +14150,7 @@ class BiBaseAsync {
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      */
-    async fill(startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false, fillValue) {
+    async fill(startOffset = this.#offset, endOffset = this.size, consume = false, fillValue) {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error("Can't remove data in readOnly mode!");
@@ -13661,7 +14176,7 @@ class BiBaseAsync {
         if (endOffset > this.size && this.strict) {
             throw new Error('Cannot extend data while in strict mode. Use unrestrict() to enable.');
         }
-        const dataRemoved = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, startOffset, removeLen);
+        const dataRemoved = await this.#peekBytes(startOffset, removeLen);
         if (fillValue != undefined) {
             var replacement;
             if (this.isMemoryMode) {
@@ -13675,21 +14190,21 @@ class BiBaseAsync {
             else {
                 replacement = Buffer.alloc(removeLen, fillValue);
             }
-            const offsetSaver = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
-            const offsetBitSaver = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
-            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, replacement, consume);
+            const offsetSaver = this.#offset;
+            const offsetBitSaver = this.#insetBit;
+            await this.#writeBytes(replacement, consume);
             if (!consume) {
-                __classPrivateFieldSet(this, _BiBaseAsync_offset, offsetSaver, "f");
-                __classPrivateFieldSet(this, _BiBaseAsync_insetBit, offsetBitSaver, "f");
+                this.#offset = offsetSaver;
+                this.#insetBit = offsetBitSaver;
             }
             return replacement;
         }
         else {
-            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_shiftTailBackward).call(this, startOffset, removeLen, consume);
+            await this.#shiftTailBackward(startOffset, removeLen, consume);
             const newSize = this.size - removeLen;
-            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_setFileSize).call(this, newSize);
-            const startChunk = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getChunkIndex).call(this, startOffset);
-            __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_invalidateFromChunk).call(this, startChunk);
+            await this.#setFileSize(newSize);
+            const startChunk = this.#getChunkIndex(startOffset);
+            this.#invalidateFromChunk(startChunk);
         }
         return dataRemoved;
     }
@@ -13702,7 +14217,7 @@ class BiBaseAsync {
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      */
-    async lift(startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false, fillValue) {
+    async lift(startOffset = this.#offset, endOffset = this.size, consume = false, fillValue) {
         return await this.fill(startOffset, endOffset, consume, fillValue);
     }
     ;
@@ -13715,7 +14230,7 @@ class BiBaseAsync {
      * @param {number} consume - Moves offset to end of length
      */
     async extract(length = 0, consume = false) {
-        return await this.fill(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
+        return await this.fill(this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -13727,7 +14242,7 @@ class BiBaseAsync {
      * @param {number} consume - Moves offset to end of length
      */
     async slice(length = 0, consume = false) {
-        return await this.fill(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
+        return await this.fill(this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -13739,7 +14254,7 @@ class BiBaseAsync {
      * @param {number} consume - Moves offset to end of length
      */
     async wrap(length = 0, consume = false) {
-        return await this.fill(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
+        return await this.fill(this.#offset, this.#offset + length, consume);
     }
     ;
     ///////////////////////////////
@@ -13754,7 +14269,7 @@ class BiBaseAsync {
      * @param {number} offset - Byte position to add at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    async insert(data, offset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), consume = true) {
+    async insert(data, offset = this.#offset, consume = true) {
         if (this.readOnly || this.strict) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Can not insert data in strict mode. Use unrestrict() to enable.`);
@@ -13785,7 +14300,7 @@ class BiBaseAsync {
                 data = Buffer.from(data);
             }
         }
-        const insertLen = data?.length ?? 0;
+        const insertLen = data.length ?? 0;
         if (insertLen === 0) {
             return;
         }
@@ -13794,19 +14309,19 @@ class BiBaseAsync {
             if (this.strict || this.readOnly) {
                 throw new Error('Growing requires strict: false');
             }
-            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_confrimSize).call(this, offset + insertLen);
+            await this.#confrimSize(offset + insertLen);
         }
-        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_shiftTailForward).call(this, offset, insertLen, oldSize, false);
-        const savedOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
-        const savedBitOffset = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
-        __classPrivateFieldSet(this, _BiBaseAsync_offset, offset, "f");
-        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
-        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, data, consume);
+        await this.#shiftTailForward(offset, insertLen, oldSize, false);
+        const savedOffset = this.#offset;
+        const savedBitOffset = this.#insetBit;
+        this.#offset = offset;
+        this.#insetBit = 0;
+        await this.#writeBytes(data, consume);
         const tailStartChunk = Math.floor((offset + insertLen) / this.windowSize);
-        __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_invalidateFromChunk).call(this, tailStartChunk);
+        this.#invalidateFromChunk(tailStartChunk);
         if (!consume) {
-            __classPrivateFieldSet(this, _BiBaseAsync_offset, savedOffset, "f");
-            __classPrivateFieldSet(this, _BiBaseAsync_insetBit, savedBitOffset, "f");
+            this.#offset = savedOffset;
+            this.#insetBit = savedBitOffset;
         }
     }
     ;
@@ -13819,7 +14334,7 @@ class BiBaseAsync {
      * @param {number} offset - Byte position to add at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    async place(data, offset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), consume = true) {
+    async place(data, offset = this.#offset, consume = true) {
         return await this.insert(data, offset, consume);
     }
     ;
@@ -13882,7 +14397,7 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async xor(xorKey, startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false) {
+    async xor(xorKey, startOffset = this.#offset, endOffset = this.size, consume = false) {
         if (this.readOnly) {
             throw new Error("Can't write data in readOnly mode!");
         }
@@ -13892,9 +14407,9 @@ class BiBaseAsync {
         else if (!(this.isBufferOrUint8Array(xorKey) || typeof xorKey == "number")) {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
-        const bytes = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        const bytes = await this.#readBytes(Math.min(endOffset - startOffset, this.size - startOffset), consume);
         _XOR(bytes, 0, bytes.length, xorKey);
-        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, startOffset, bytes);
+        return await this.#writeBytesAt(startOffset, bytes);
     }
     ;
     /**
@@ -13921,7 +14436,7 @@ class BiBaseAsync {
         else {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
-        return await this.xor(xorKey, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
+        return await this.xor(xorKey, this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -13932,7 +14447,7 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async or(orKey, startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false) {
+    async or(orKey, startOffset = this.#offset, endOffset = this.size, consume = false) {
         if (this.readOnly) {
             throw new Error("Can't write data in readOnly mode!");
         }
@@ -13942,9 +14457,9 @@ class BiBaseAsync {
         else if (!(this.isBufferOrUint8Array(orKey) || typeof orKey == "number")) {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
-        const bytes = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        const bytes = await this.#readBytes(Math.min(endOffset - startOffset, this.size - startOffset), consume);
         _OR(bytes, 0, bytes.length, orKey);
-        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, startOffset, bytes);
+        return await this.#writeBytesAt(startOffset, bytes);
     }
     ;
     /**
@@ -13971,7 +14486,7 @@ class BiBaseAsync {
         else {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
-        return await this.or(orKey, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume || false);
+        return await this.or(orKey, this.#offset, this.#offset + length, consume || false);
     }
     ;
     /**
@@ -13982,7 +14497,7 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async and(andKey, startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false) {
+    async and(andKey, startOffset = this.#offset, endOffset = this.size, consume = false) {
         if (this.readOnly) {
             throw new Error("Can't write data in readOnly mode!");
         }
@@ -13992,9 +14507,9 @@ class BiBaseAsync {
         else if (!(typeof andKey == "object" || typeof andKey == "number")) {
             throw new Error("AND must be a number, string, number array or Buffer");
         }
-        const bytes = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        const bytes = await this.#readBytes(Math.min(endOffset - startOffset, this.size - startOffset), consume);
         _AND(bytes, 0, bytes.length, andKey);
-        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, startOffset, bytes);
+        return await this.#writeBytesAt(startOffset, bytes);
     }
     ;
     /**
@@ -14021,7 +14536,7 @@ class BiBaseAsync {
         else {
             throw new Error("AND must be a number, string, Uint8Array or Buffer");
         }
-        return await this.and(andKey, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
+        return await this.and(andKey, this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -14032,7 +14547,7 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async add(addKey, startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false) {
+    async add(addKey, startOffset = this.#offset, endOffset = this.size, consume = false) {
         if (this.readOnly) {
             throw new Error("Can't write data in readOnly mode!");
         }
@@ -14042,9 +14557,9 @@ class BiBaseAsync {
         else if (!(typeof addKey == "object" || typeof addKey == "number")) {
             throw new Error("Add key must be a number, string, number array or Buffer");
         }
-        const bytes = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        const bytes = await this.#readBytes(Math.min(endOffset - startOffset, this.size - startOffset), consume);
         _ADD(bytes, 0, bytes.length, addKey);
-        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, startOffset, bytes);
+        return await this.#writeBytesAt(startOffset, bytes);
     }
     ;
     /**
@@ -14071,7 +14586,7 @@ class BiBaseAsync {
         else {
             throw new Error("ADD must be a number, string, Uint8Array or Buffer");
         }
-        return await this.add(addKey, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
+        return await this.add(addKey, this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -14081,13 +14596,13 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async not(startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false) {
+    async not(startOffset = this.#offset, endOffset = this.size, consume = false) {
         if (this.readOnly) {
             throw new Error("Can't write data in readOnly mode!");
         }
-        const bytes = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        const bytes = await this.#readBytes(Math.min(endOffset - startOffset, this.size - startOffset), consume);
         _NOT(bytes, 0, bytes.length);
-        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, startOffset, bytes);
+        return await this.#writeBytesAt(startOffset, bytes);
     }
     ;
     /**
@@ -14097,7 +14612,7 @@ class BiBaseAsync {
      * @param {boolean} consume - Move current position to end of data (default false)
      */
     async notThis(length = 1, consume = false) {
-        return await this.not(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
+        return await this.not(this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -14108,7 +14623,7 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async lShift(shiftKey, startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false) {
+    async lShift(shiftKey, startOffset = this.#offset, endOffset = this.size, consume = false) {
         if (this.readOnly) {
             throw new Error("Can't write data in readOnly mode!");
         }
@@ -14118,9 +14633,9 @@ class BiBaseAsync {
         else if (!(typeof shiftKey == "object" || typeof shiftKey == "number")) {
             throw new Error("Left shift must be a number, string, number array or Buffer");
         }
-        const bytes = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        const bytes = await this.#readBytes(Math.min(endOffset - startOffset, this.size - startOffset), consume);
         _LSHIFT(bytes, 0, bytes.length, shiftKey);
-        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, startOffset, bytes);
+        return await this.#writeBytesAt(startOffset, bytes);
     }
     ;
     /**
@@ -14147,7 +14662,7 @@ class BiBaseAsync {
         else {
             throw new Error("Left shift must be a number, string, Uint8Array or Buffer");
         }
-        return await this.lShift(shiftKey, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
+        return await this.lShift(shiftKey, this.#offset, this.#offset + length, consume);
     }
     ;
     /**
@@ -14158,7 +14673,7 @@ class BiBaseAsync {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move current position to end of data (default false)
      */
-    async rShift(shiftKey, startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false) {
+    async rShift(shiftKey, startOffset = this.#offset, endOffset = this.size, consume = false) {
         if (this.readOnly) {
             throw new Error("Can't write data in readOnly mode!");
         }
@@ -14168,9 +14683,9 @@ class BiBaseAsync {
         else if (!(typeof shiftKey == "object" || typeof shiftKey == "number")) {
             throw new Error("Right shift must be a number, string, number array or Buffer");
         }
-        const bytes = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        const bytes = await this.#readBytes(Math.min(endOffset - startOffset, this.size - startOffset), consume);
         _RSHIFT(bytes, 0, bytes.length, shiftKey);
-        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, startOffset, bytes);
+        return await this.#writeBytesAt(startOffset, bytes);
     }
     ;
     /**
@@ -14197,7 +14712,7 @@ class BiBaseAsync {
         else {
             throw new Error("right shift must be a number, string, Uint8Array or Buffer");
         }
-        return await this.rShift(shiftKey, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
+        return await this.rShift(shiftKey, this.#offset, this.#offset + length, consume);
     }
     ;
     ///////////////////////////////
@@ -14224,17 +14739,17 @@ class BiBaseAsync {
         if (bits <= 0 || bits > 32) {
             throw new Error('Bit length must be between 1 and 32. Got ' + bits);
         }
-        const byteEnd = Math.ceil((((bits - 1) + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f")) / 8) + __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"));
+        const byteEnd = Math.ceil((((bits - 1) + this.#insetBit) / 8) + this.#offset);
         if (byteEnd > this.size) {
             throw new Error(`Not enough bytes in file (need ${byteEnd}, have ${this.size})`);
         }
-        const bitStart = (__classPrivateFieldGet(this, _BiBaseAsync_offset, "f") * 8) + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
-        const byteStart = Math.floor(((__classPrivateFieldGet(this, _BiBaseAsync_offset, "f") * 8) + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f")) / 8);
-        const temp = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, byteStart, byteEnd - byteStart);
+        const bitStart = (this.#offset * 8) + this.#insetBit;
+        const byteStart = Math.floor(((this.#offset * 8) + this.#insetBit) / 8);
+        const temp = await this.#peekBytes(byteStart, byteEnd - byteStart);
         const value = _rbit(temp, bits, bitStart % 8, endian, unsigned);
         if (consume) {
-            __classPrivateFieldSet(this, _BiBaseAsync_offset, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + Math.floor((bits + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f")) / 8), "f"); //end byte
-            __classPrivateFieldSet(this, _BiBaseAsync_insetBit, (bits + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f")) % 8, "f");
+            this.#offset += Math.floor((bits + this.#insetBit) / 8); //end byte
+            this.#insetBit = (bits + this.#insetBit) % 8;
         }
         return value;
     }
@@ -14310,13 +14825,13 @@ class BiBaseAsync {
             throw new Error('Bit length must be between 1 and 32. Got ' + bits);
         }
         value = numberSafe(value, bits, unsigned);
-        const endOffset = Math.ceil((((bits - 1) + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f")) / 8) + __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"));
-        const temp = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), Math.ceil(endOffset - __classPrivateFieldGet(this, _BiBaseAsync_offset, "f")));
-        _wbit(temp, value, bits, __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f"), endian, unsigned);
-        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), temp);
+        const endOffset = Math.ceil((((bits - 1) + this.#insetBit) / 8) + this.#offset);
+        const temp = await this.#peekBytes(this.#offset, Math.ceil(endOffset - this.#offset));
+        _wbit(temp, value, bits, this.#insetBit, endian, unsigned);
+        await this.#writeBytesAt(this.#offset, temp);
         if (consume) {
-            __classPrivateFieldSet(this, _BiBaseAsync_offset, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + Math.floor((bits + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f")) / 8), "f");
-            __classPrivateFieldSet(this, _BiBaseAsync_insetBit, (bits + __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f")) % 8, "f");
+            this.#offset += Math.floor((bits + this.#insetBit) / 8);
+            this.#insetBit = (bits + this.#insetBit) % 8;
         }
     }
     ;
@@ -14385,7 +14900,7 @@ class BiBaseAsync {
      */
     async readByte(unsigned = false, consume = true) {
         await this.open();
-        const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, 1, consume);
+        const data = await this.#readBytes(1, consume);
         var value = data[0];
         if (unsigned) {
             value = value & 0xFF;
@@ -14440,7 +14955,7 @@ class BiBaseAsync {
             throw new Error("Can't write data in readOnly mode!");
         }
         this.open();
-        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, [numberSafe(value, 8, unsigned)], consume);
+        await this.#writeBytes([numberSafe(value, 8, unsigned)], consume);
     }
     ;
     /**
@@ -14475,7 +14990,7 @@ class BiBaseAsync {
      */
     async readInt16(unsigned = false, endian = this.endian, consume = true) {
         await this.open();
-        const buf = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, 2, consume);
+        const buf = await this.#readBytes(2, consume);
         const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
         if (canInt16) {
             if (unsigned) {
@@ -14550,7 +15065,7 @@ class BiBaseAsync {
         else {
             _wint16(buff2ByteDummy, numberSafe(value, 16, unsigned), 0, endian, unsigned);
         }
-        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, buff2ByteDummy, consume);
+        return await this.#writeBytes(buff2ByteDummy, consume);
     }
     ;
     /**
@@ -14609,7 +15124,7 @@ class BiBaseAsync {
      * @param {boolean} consume - move offset after read
      */
     async readHalfFloat(endian = this.endian, consume = true) {
-        const buf = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, 2, consume);
+        const buf = await this.#readBytes(2, consume);
         const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
         if (canFloat16) {
             return view.getFloat16(0, endian == "little");
@@ -14674,7 +15189,7 @@ class BiBaseAsync {
         else {
             _whalffloat(buff2ByteDummy, value, 0, endian);
         }
-        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, buff2ByteDummy, consume);
+        return await this.#writeBytes(buff2ByteDummy, consume);
     }
     ;
     /**
@@ -14731,7 +15246,7 @@ class BiBaseAsync {
      * Read signed 32 bit integer.
      */
     async readInt32(unsigned = false, endian = this.endian, consume = true) {
-        const buf = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, 4, consume);
+        const buf = await this.#readBytes(4, consume);
         const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
         if (canInt32) {
             if (unsigned) {
@@ -14821,7 +15336,7 @@ class BiBaseAsync {
         else {
             _wint32(buff4ByteDummy, numberSafe(value, 32, unsigned), 0, endian, unsigned);
         }
-        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, buff4ByteDummy, consume);
+        return await this.#writeBytes(buff4ByteDummy, consume);
     }
     /**
      * Write signed 32 bit integer.
@@ -14899,7 +15414,7 @@ class BiBaseAsync {
      * @param {boolean} consume - move offset after read
      */
     async readFloat(endian = this.endian, consume = true) {
-        const buf = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, 4, consume);
+        const buf = await this.#readBytes(4, consume);
         const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
         if (canFloat32) {
             return view.getFloat32(0, endian == "little");
@@ -14964,7 +15479,7 @@ class BiBaseAsync {
         else {
             _wfloat(buff4ByteDummy, value, 0, endian);
         }
-        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, buff4ByteDummy, consume);
+        return await this.#writeBytes(buff4ByteDummy, consume);
     }
     ;
     /**
@@ -15019,7 +15534,7 @@ class BiBaseAsync {
         if (!hasBigInt) {
             throw new Error("System doesn't support BigInt values.");
         }
-        const buf = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, 8, consume);
+        const buf = await this.#readBytes(8, consume);
         const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
         var value;
         if (canBigInt64) {
@@ -15117,7 +15632,7 @@ class BiBaseAsync {
         else {
             _wint64(buff8ByteDummy, numberSafe(value, 64, unsigned), 0, endian, unsigned);
         }
-        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, buff8ByteDummy, consume);
+        return await this.#writeBytes(buff8ByteDummy, consume);
     }
     ;
     /**
@@ -15175,7 +15690,7 @@ class BiBaseAsync {
      * @param {endian} endian - ``big`` or ``little``
      */
     async readDoubleFloat(endian = this.endian, consume = true) {
-        const buf = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, 8, consume);
+        const buf = await this.#readBytes(8, consume);
         const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
         if (canFloat64) {
             return view.getFloat64(0, endian == "little");
@@ -15241,7 +15756,7 @@ class BiBaseAsync {
         else {
             _wdfloat(buff8ByteDummy, value, 0, endian);
         }
-        return await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, buff8ByteDummy, consume);
+        return await this.#writeBytes(buff8ByteDummy, consume);
     }
     ;
     /**
@@ -15333,13 +15848,13 @@ class BiBaseAsync {
             }
         }
         else {
-            readLengthinBytes = this.data.length - __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
+            readLengthinBytes = this.data.length - this.#offset;
         }
-        if (__classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + readLengthinBytes > this.size) {
+        if (this.#offset + readLengthinBytes > this.size) {
             if (this.strict || this.readOnly) {
                 throw new Error('Growing requires strict: false');
             }
-            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_confrimSize).call(this, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + readLengthinBytes);
+            await this.#confrimSize(this.#offset + readLengthinBytes);
         }
         if (terminateValue != undefined && typeof terminateValue == "number") {
             terminate = terminateValue & 0xFF;
@@ -15347,12 +15862,12 @@ class BiBaseAsync {
         else {
             terminate = 0;
         }
-        const saved_offset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
-        const saved_bitoffset = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
+        const saved_offset = this.#offset;
+        const saved_bitoffset = this.#insetBit;
         const str = await _rstringAsync(stringType, lengthReadSize, readLengthinBytes, terminate, stripNull, encoding, endian, this.readUByte.bind(this), this.readUInt16.bind(this), this.readUInt32.bind(this));
         if (!consume) {
-            __classPrivateFieldSet(this, _BiBaseAsync_offset, saved_offset, "f");
-            __classPrivateFieldSet(this, _BiBaseAsync_insetBit, saved_bitoffset, "f");
+            this.#offset = saved_offset;
+            this.#insetBit = saved_bitoffset;
         }
         return str;
     }
@@ -15448,557 +15963,35 @@ class BiBaseAsync {
                 }
                 break;
         }
-        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_confrimSize).call(this, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + totalLength);
-        const savedOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
-        const savedBitOffset = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
+        await this.#confrimSize(this.#offset + totalLength);
+        const savedOffset = this.#offset;
+        const savedBitOffset = this.#insetBit;
         await _wstringAsync(encodedString, stringType, endian, terminateValue, lengthWriteSize, this.writeUByte.bind(this), this.writeUInt16.bind(this), this.writeUInt32.bind(this));
         if (!consume) {
-            __classPrivateFieldSet(this, _BiBaseAsync_offset, savedOffset, "f");
-            __classPrivateFieldSet(this, _BiBaseAsync_insetBit, savedBitOffset, "f");
+            this.#offset = savedOffset;
+            this.#insetBit = savedBitOffset;
         }
     }
     ;
 }
-_BiBaseAsync_offset = new WeakMap(), _BiBaseAsync_insetBit = new WeakMap(), _BiBaseAsync_data = new WeakMap(), _BiBaseAsync_view = new WeakMap(), _BiBaseAsync_instances = new WeakSet(), _BiBaseAsync_updateSize = 
-/**
- * Internal update size
- *
- * run after setting data
- */
-async function _BiBaseAsync_updateSize() {
-    if (this.isMemoryMode) {
-        this.size = this.data.length;
-        this.bitSize = this.size * 8;
-        return;
-    }
-    if (typeof fs === "undefined") {
-        throw new Error("Can't load file outside Node.");
-    }
-    if (this.fd != null) {
-        try {
-            const stat = await this.fd.stat();
-            this.size = stat.size;
-            this.bitSize = this.size * 8;
-        }
-        catch (error) {
-            throw new Error(error);
-        }
-    }
-}, _BiBaseAsync_updateView = function _BiBaseAsync_updateView() {
-    if (__classPrivateFieldGet(this, _BiBaseAsync_data, "f")) {
-        __classPrivateFieldSet(this, _BiBaseAsync_view, new DataView(__classPrivateFieldGet(this, _BiBaseAsync_data, "f").buffer, __classPrivateFieldGet(this, _BiBaseAsync_data, "f").byteOffset ?? 0, __classPrivateFieldGet(this, _BiBaseAsync_data, "f").byteLength), "f");
-    }
-}, _BiBaseAsync_initFile = 
-/**
- * `this.fd` must be null and not in memory mode
- */
-async function _BiBaseAsync_initFile() {
-    if (this.isMemoryMode || this.fd != null) {
-        return;
-    }
-    if (!(await _fileExists(this.filePath))) {
-        await fs.writeFile(this.filePath, "");
-    }
-    try {
-        this.fd = await fs.open(this.filePath, this.fsMode);
-    }
-    catch (error) {
-        throw new Error(error);
-    }
-    await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_updateSize).call(this);
-    const numChunks = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getNumChunks).call(this);
-    this.chunks = new Array(numChunks).fill(null);
-    this.chunkPromises = new Array(numChunks).fill(null);
-    if (this.windowSize == 0) {
-        this.loadAllPromise = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_preloadAllChunks).call(this);
-    }
-    else {
-        this.loadAllPromise = Promise.resolve();
-    }
-}, _BiBaseAsync_initMemory = function _BiBaseAsync_initMemory() {
-    if (!this.isMemoryMode) {
-        return;
-    }
-    if (this.isFullyLoaded) {
-        return;
-    }
-    this.size = this.data.length;
-    this.bitSize = this.size * 8;
-    const numChunks = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getNumChunks).call(this);
-    this.chunks = new Array(numChunks).fill(null);
-    this.chunkPromises = new Array(numChunks).fill(null);
-    this.isFullyLoaded = true;
-    this.loadAllPromise = null;
-}, _BiBaseAsync_getChunkIndex = function _BiBaseAsync_getChunkIndex(offset) {
-    return this.windowSize === 0 ? 0 : Math.floor(offset / this.windowSize);
-}, _BiBaseAsync_getNumChunks = function _BiBaseAsync_getNumChunks() {
-    return this.windowSize === 0 ? 1 : Math.ceil(this.size / this.windowSize);
-}, _BiBaseAsync_preloadAllChunks = 
-/**
- * When the whole file is loaded at once
- */
-async function _BiBaseAsync_preloadAllChunks() {
-    const promises = [];
-    for (let i = 0; i < this.chunks.length; i++) {
-        promises.push(__classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_ensureChunkLoaded).call(this, i));
-    }
-    await Promise.all(promises);
-    this.isFullyLoaded = true;
-}, _BiBaseAsync_ensureChunkLoaded = 
-/**
- * Checks the chunk is loaded
- *
- * @param {number} chunkIndex
- */
-async function _BiBaseAsync_ensureChunkLoaded(chunkIndex) {
-    if (this.windowSize === 0) {
-        chunkIndex = 0;
-    }
-    if (chunkIndex >= this.chunks.length) {
-        return null;
-    }
-    if (this.chunks[chunkIndex] !== null) {
-        return this.chunks[chunkIndex];
-    }
-    if (this.isMemoryMode) {
-        const start = chunkIndex * this.windowSize;
-        const end = Math.min(start + this.windowSize, this.size);
-        this.chunks[chunkIndex] = this.data.subarray(start, end);
-        return this.chunks[chunkIndex];
-    }
-    if (this.chunkPromises[chunkIndex]) {
-        return await this.chunkPromises[chunkIndex];
-    }
-    const promise = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_performChunkLoad).call(this, chunkIndex);
-    this.chunkPromises[chunkIndex] = promise;
-    return await promise;
-}, _BiBaseAsync_performChunkLoad = 
-/**
- * Gets needed chunk
- *
- * @param {number} chunkIndex
- */
-async function _BiBaseAsync_performChunkLoad(chunkIndex) {
-    const start = chunkIndex * this.windowSize;
-    const length = Math.min(this.windowSize, this.size - start);
-    const buffer = Buffer.alloc(length);
-    await this.fd.read(buffer, 0, length, start);
-    this.chunks[chunkIndex] = buffer;
-    return buffer;
-}, _BiBaseAsync_ensureRangeLoaded = 
-/**
- * Makes sure the needed size is loaded
- *
- * @param {number} offset
- * @param {number} length
- */
-async function _BiBaseAsync_ensureRangeLoaded(offset, length) {
-    const needed = offset + length;
-    if (needed > this.size) {
-        if (this.strict || this.readOnly) {
-            throw new Error(`Operation exceeds file size (${needed} > ${this.size})`);
-        }
-        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_confrimSize).call(this, needed);
-    }
-    const startChunk = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getChunkIndex).call(this, offset);
-    const endChunk = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getChunkIndex).call(this, offset + length - 1);
-    const promises = [];
-    for (let i = startChunk; i <= endChunk && i < this.chunks.length; i++) {
-        if (this.chunks[i] === null) {
-            promises.push(__classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_ensureChunkLoaded).call(this, i));
-        }
-    }
-    await Promise.all(promises);
-}, _BiBaseAsync_peekBytes = 
-/**
- * Get bytes without changing offset
- *
- * @param {number} offset
- * @param {number} length
- */
-async function _BiBaseAsync_peekBytes(offset, length) {
-    await this.open();
-    if (length <= 0) {
-        if (this.isMemoryMode) {
-            if (this.isBuffer(this.data)) {
-                return Buffer.alloc(0);
-            }
-            else {
-                return new Uint8Array(0);
-            }
-        }
-        else {
-            return Buffer.alloc(0);
-        }
-    }
-    await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_ensureRangeLoaded).call(this, offset, length);
-    var result;
-    if (this.isMemoryMode) {
-        return this.data.subarray(offset, offset + length);
-    }
-    else {
-        result = Buffer.alloc(length);
-    }
-    let pos = offset;
-    let writePos = 0;
-    while (writePos < length) {
-        const chunkIndex = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getChunkIndex).call(this, pos);
-        const chunk = this.chunks[chunkIndex];
-        const chunkOffset = pos % this.windowSize;
-        const toCopy = Math.min(length - writePos, chunk.length - chunkOffset);
-        result.set(chunk.subarray(chunkOffset, chunkOffset + toCopy), writePos);
-        writePos += toCopy;
-        pos += toCopy;
-    }
-    return result;
-}, _BiBaseAsync_writeBytesAt = 
-/**
- * write bytes internal
- *
- * @param {number} offset
- * @param {Uint8Array | Buffer | number[]} data
- */
-async function _BiBaseAsync_writeBytesAt(offset, data) {
-    await this.open();
-    if (data.length === 0) {
-        return;
-    }
-    await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_ensureRangeLoaded).call(this, offset, data.length);
-    let pos = offset;
-    let readPos = 0;
-    if (this.isMemoryMode) {
-        for (let i = 0, n = offset; i < data.length; i++, n++) {
-            __classPrivateFieldGet(this, _BiBaseAsync_data, "f")[n] = data[i];
-        }
-        return;
-    }
-    while (readPos < data.length) {
-        const chunkIndex = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getChunkIndex).call(this, pos);
-        const chunk = this.chunks[chunkIndex];
-        const chunkOffset = pos % this.windowSize;
-        const toCopy = Math.min(data.length - readPos, chunk.length - chunkOffset);
-        var sub;
-        if (this.isBufferOrUint8Array(data)) {
-            sub = data.subarray(readPos, readPos + toCopy);
-        }
-        else {
-            sub = data.slice(readPos, readPos + toCopy);
-        }
-        chunk.set(sub, chunkOffset);
-        this.dirtyChunks.add(chunkIndex);
-        readPos += toCopy;
-        pos += toCopy;
-    }
-}, _BiBaseAsync_confrimSize = 
-/**
- * Checks loaded size
- *
- * Will set `wasExpanded` if expanded
- *
- * @param {number} neededSize
- */
-async function _BiBaseAsync_confrimSize(neededSize) {
-    // check if the current request fits in range
-    if (neededSize <= this.size) {
-        return;
-    }
-    var targetSize = neededSize;
-    // now adjust the size if less to `growthIncrement` factor
-    if (targetSize > this.size) {
-        if (this.strict || this.readOnly) {
-            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
-            throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: ` + neededSize + " at " + __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + " of " + this.size);
-        }
-        if (this.growthIncrement != 0) {
-            this.wasExpanded = true;
-            targetSize = Math.ceil(neededSize / this.growthIncrement) * this.growthIncrement;
-        }
-        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_extendArray).call(this, targetSize);
-    }
-}, _BiBaseAsync_extendArray = 
-/**
-* extends the data
-*
-* @param {number} targetSize
-*/
-async function _BiBaseAsync_extendArray(targetSize) {
-    await this.flush();
-    if (this.isMemoryMode) {
-        const toPadd = targetSize - this.size;
-        var newData;
-        if (isBuffer(__classPrivateFieldGet(this, _BiBaseAsync_data, "f"))) {
-            var paddbuffer = Buffer.alloc(toPadd);
-            newData = Buffer.concat([__classPrivateFieldGet(this, _BiBaseAsync_data, "f"), paddbuffer]);
-        }
-        else {
-            newData = new Uint8Array(this.size + toPadd);
-            newData.set(__classPrivateFieldGet(this, _BiBaseAsync_data, "f"));
-        }
-        this.setData = newData;
-        this.size = targetSize;
-        this.bitSize = this.size * 8;
-        this.chunks = new Array(__classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getNumChunks).call(this)).fill(null);
-        this.chunkPromises = new Array(__classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getNumChunks).call(this)).fill(null);
-        this.dirtyChunks.clear();
-    }
-    else {
-        await this.fd.truncate(targetSize);
-        this.size = targetSize;
-        this.bitSize = this.size * 8;
-        const oldNum = this.chunks.length;
-        const newNum = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getNumChunks).call(this);
-        this.chunks.length = newNum;
-        this.chunkPromises.length = newNum;
-        for (let i = oldNum; i < newNum; i++) {
-            this.chunks[i] = null;
-            this.chunkPromises[i] = null;
-        }
-    }
-}, _BiBaseAsync_setFileSize = 
-/**
- * For updating file size
- *
- * @param {number} exactSize
- * @returns
- */
-async function _BiBaseAsync_setFileSize(exactSize) {
-    if (exactSize === this.size) {
-        return;
-    }
-    await this.flush();
-    if (this.isMemoryMode) {
-        const newData = this.data.subarray(0, exactSize);
-        this.setData = newData;
-        this.size = exactSize;
-        this.bitSize = this.size * 8;
-        const newNum = Math.ceil(exactSize / this.windowSize);
-        this.chunks = new Array(newNum).fill(null);
-        this.chunkPromises = new Array(newNum).fill(null);
-        this.dirtyChunks.clear();
-    }
-    else {
-        await this.fd.truncate(exactSize);
-        this.size = exactSize;
-        this.bitSize = this.size * 8;
-        const oldNum = this.chunks.length;
-        const newNum = Math.ceil(exactSize / this.windowSize);
-        this.chunks.length = newNum;
-        this.chunkPromises.length = newNum;
-        if (newNum < oldNum) {
-            this.dirtyChunks = new Set([...this.dirtyChunks].filter(i => i < newNum));
-        }
-        else {
-            for (let i = oldNum; i < newNum; i++) {
-                this.chunks[i] = null;
-                this.chunkPromises[i] = null;
-            }
-        }
-    }
-}, _BiBaseAsync_invalidateFromChunk = function _BiBaseAsync_invalidateFromChunk(startChunk) {
-    for (let i = Math.max(0, startChunk); i < this.chunks.length; i++) {
-        this.chunks[i] = null;
-        this.chunkPromises[i] = null;
-        this.dirtyChunks.delete(i);
-    }
-}, _BiBaseAsync_shiftTailForward = 
-/**
- * Pulls data back
- *
- * @param {number} insertOffset
- * @param {number} insertLen
- * @param {number} oldEnd
- * @param {boolean} consume
- */
-async function _BiBaseAsync_shiftTailForward(insertOffset, insertLen, oldEnd, consume = false) {
-    if (insertLen <= 0) {
-        return;
-    }
-    if (this.isMemoryMode) {
-        const tailCopy = this.data.subarray(insertOffset, oldEnd);
-        this.data.set(tailCopy, insertOffset + insertLen);
-    }
-    else {
-        let readEnd = oldEnd;
-        let writeEnd = oldEnd + insertLen;
-        const buf = Buffer.alloc(Math.min(this.windowSize, this.size));
-        while (readEnd > insertOffset) {
-            const len = Math.min(this.windowSize, readEnd - insertOffset);
-            const readStart = readEnd - len;
-            const { bytesRead } = await this.fd.read(buf, 0, len, readStart);
-            const writeStart = writeEnd - len;
-            await this.fd.write(buf, 0, bytesRead, writeStart);
-            readEnd = readStart;
-            writeEnd = writeStart;
-        }
-    }
-    if (consume) {
-        __classPrivateFieldSet(this, _BiBaseAsync_offset, insertOffset + insertLen, "f");
-        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
-    }
-}, _BiBaseAsync_shiftTailBackward = 
-/**
- *
- * @param {number} removeOffset
- * @param {number} removeLen
- * @param {boolean} consume
- */
-async function _BiBaseAsync_shiftTailBackward(removeOffset, removeLen, consume = false) {
-    if (removeLen <= 0) {
-        return;
-    }
-    if (this.isMemoryMode) {
-        const tailStart = removeOffset + removeLen;
-        const tailCopy = this.data.subarray(tailStart, this.size);
-        this.data.set(tailCopy, removeOffset);
-    }
-    else {
-        const oldEnd = this.size;
-        let readPos = removeOffset + removeLen;
-        let writePos = removeOffset;
-        const buf = Buffer.alloc(Math.min(this.windowSize, this.size));
-        while (readPos < oldEnd) {
-            const len = Math.min(this.windowSize, oldEnd - readPos);
-            const { bytesRead } = await this.fd.read(buf, 0, len, readPos);
-            await this.fd.write(buf, 0, bytesRead, writePos);
-            readPos += bytesRead;
-            writePos += bytesRead;
-        }
-    }
-    if (consume) {
-        __classPrivateFieldSet(this, _BiBaseAsync_offset, removeOffset, "f");
-        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
-    }
-}, _BiBaseAsync_updateOffsets = async function _BiBaseAsync_updateOffsets(newOffset, trueBytes, trueBits) {
-    if (newOffset < 0) {
-        throw new RangeError('Offset cannot be negative');
-    }
-    if (newOffset > this.size) {
-        if (this.strict || this.readOnly) {
-            this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
-            throw new Error(`\x1b[33m[Strict mode]\x1b[0m: Reached end of data: ` + newOffset + " at " + __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + " of " + this.size);
-        }
-        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_confrimSize).call(this, newOffset);
-    }
-    __classPrivateFieldSet(this, _BiBaseAsync_offset, trueBytes, "f");
-    // Adjust byte offset based on bit overflow
-    __classPrivateFieldSet(this, _BiBaseAsync_offset, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + Math.floor(trueBits / 8), "f");
-    // Adjust bit offset
-    __classPrivateFieldSet(this, _BiBaseAsync_insetBit, normalizeBitOffset(trueBits) % 8, "f");
-    // Ensure bit offset stays between 0-7
-    __classPrivateFieldSet(this, _BiBaseAsync_insetBit, Math.min(Math.max(__classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f"), 0), 7), "f");
-    // Ensure offset doesn't go negative
-    __classPrivateFieldSet(this, _BiBaseAsync_offset, Math.max(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), 0), "f");
-}, _BiBaseAsync_readBytes = async function _BiBaseAsync_readBytes(length, consume = true) {
-    await this.open();
-    if (length <= 0) {
-        return new Uint8Array(0);
-    }
-    const offSave = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
-    var trueByte = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
-    const trueBit = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
-    if (trueBit != 0) {
-        trueByte += 1;
-    }
-    __classPrivateFieldSet(this, _BiBaseAsync_offset, trueByte, "f");
-    const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, trueByte, length);
-    if (consume) {
-        __classPrivateFieldSet(this, _BiBaseAsync_offset, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, "f");
-        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
-    }
-    else {
-        __classPrivateFieldSet(this, _BiBaseAsync_offset, offSave, "f");
-    }
-    return data;
-}, _BiBaseAsync_writeBytes = async function _BiBaseAsync_writeBytes(data, consume = true) {
-    if (this.readOnly) {
-        throw new Error('Cannot write to read-only file');
-    }
-    await this.open();
-    if (data.length === 0) {
-        return;
-    }
-    const offSave = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
-    var trueByte = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
-    const trueBit = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
-    if (trueBit != 0) {
-        trueByte += 1;
-    }
-    __classPrivateFieldSet(this, _BiBaseAsync_offset, trueByte, "f");
-    await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytesAt).call(this, trueByte, data);
-    if (consume) {
-        __classPrivateFieldSet(this, _BiBaseAsync_offset, __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + data.length, "f");
-        __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
-    }
-    else {
-        __classPrivateFieldSet(this, _BiBaseAsync_offset, offSave, "f");
-    }
-}, _BiBaseAsync_findNumber = function _BiBaseAsync_findNumber(data, value, bits, unsigned, endian = this.endian) {
-    for (let z = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"); z <= (this.size - (bits / 8)); z++) {
-        var offsetInBits = 0;
-        var currentValue = 0;
-        for (var i = 0; i < bits;) {
-            const remaining = bits - i;
-            const bitOffset = offsetInBits & 7;
-            const currentByte = data[z + (offsetInBits >> 3)];
-            const read = Math.min(remaining, 8 - bitOffset);
-            if (endian == "big") {
-                let mask = ~(0xFF << read);
-                let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
-                currentValue <<= read;
-                currentValue |= readBits;
-            }
-            else {
-                let mask = ~(0xFF << read);
-                let readBits = (currentByte >> bitOffset) & mask;
-                currentValue |= readBits << i;
-            }
-            offsetInBits += read;
-            i += read;
-        }
-        if (unsigned == true || bits <= 7) {
-            currentValue = currentValue >>> 0;
-        }
-        else {
-            if (currentValue & (1 << (bits - 1))) {
-                currentValue |= -1 ^ ((1 << bits) - 1);
-            }
-        }
-        if (currentValue === value) {
-            return z - __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"); // Found the byte, return the index from current
-        }
-    }
-    return -1; // number not found
-};
 
 /**
  * Async Binary reader, includes bitfields and strings.
  *
- * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+ * @param {DataType} input - File path or a `Buffer` or `Uint8Array`.
  * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
- * @param {BiOptions["readOnly"]} options.readOnly - If you want to prevent write operations (default true in reader)
+ * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+ * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+ * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+ * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+ * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+ * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
+ * @param {BiOptions["readOnly"]?} [options.readOnly = true] - Allow data writes when reading a file (default `true` in reader)
+ * @param {BiOptions["windowSize"]?} [options.windowSize = 4096] - Size of the chunk of a file to load per read. Set to `0` to load the whole file in one async read (default `4 KiB`)
  *
  * @since 4.0
  */
 class BiReaderAsync extends BiBaseAsync {
-    /**
-     * Async Binary reader, includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
-     * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["readOnly"]} options.readOnly - If you want to prevent write operations (default true in reader)
-     */
     constructor(input, options = {}) {
         options.byteOffset = options.byteOffset ?? 0;
         options.bitOffset = options.bitOffset ?? 0;
@@ -16015,21 +16008,20 @@ class BiReaderAsync extends BiBaseAsync {
     }
     ;
     /**
-     * Creates and opens a new `BiReaderAsync`
+     * Creates and opens a new `BiReaderAsync`.
      *
-     * Includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiReader.data``
+     * @param {DataType} input - File path or a `Buffer` or `Uint8Array`.
      * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["readonly"]} options.readonly - If you want to prevent write operations (default true in reader)
+     * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+     * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+     * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+     * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+     * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+     * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
+     * @param {BiOptions["readOnly"]?} [options.readOnly = true] - Allow data writes when reading a file (default `true` in reader)
+     * @param {BiOptions["windowSize"]?} [options.windowSize = 4096] - Size of the chunk of a file to load per read. Set to `0` to load the whole file in one async read (default `4 KiB`)
      *
-     * @returns {Promise<BiReaderAsync<DataType, hasBigInt>>}
+     * @since 4.0
      */
     static async create(input, options = {}) {
         const instance = new BiReaderAsync(input, options);
@@ -19514,30 +19506,19 @@ class BiReaderAsync extends BiBaseAsync {
 /**
  * Async Binary writer, includes bitfields and strings.
  *
- * @param {string|Buffer|Uint8Array} input - File path or a ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+ * @param {DataType} input - File path or a `Buffer` or ``Uint8Array`.
  * @param {BiOptions?} options - Any options to set at start
- * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
- * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
- * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
- * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
- * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
- * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
+ * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+ * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+ * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+ * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+ * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+ * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
+ * @param {BiOptions["windowSize"]?} [options.windowSize = 4096] - Size of the chunk of a file to load per read. Set to `0` to load the whole file in one async read (default `4 KiB`)
  *
  * @since 4.0
  */
 class BiWriterAsync extends BiBaseAsync {
-    /**
-     * Async Binary writer, includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
-     * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     */
     constructor(input, options = {}) {
         options.byteOffset = options.byteOffset ?? 0;
         options.bitOffset = options.bitOffset ?? 0;
@@ -19557,21 +19538,19 @@ class BiWriterAsync extends BiBaseAsync {
     ;
     /**
      *
-     * Creates and opens a new `BiWriterAsync`
+     * Creates and opens a new `BiWriterAsync`.
      *
-     * includes bitfields and strings.
-     *
-     * @param {string|Buffer|Uint8Array} input - ``Buffer`` or ``Uint8Array``. Always found in ``BiWriter.data``
+     * @param {DataType} input - File path or a `Buffer` or ``Uint8Array`.
      * @param {BiOptions?} options - Any options to set at start
-     * @param {BiOptions["byteOffset"]?} options.byteOffset - Byte offset to start writer (default ``0``)
-     * @param {BiOptions["bitOffset"]?} options.bitOffset - Bit offset 0-7 to start writer (default ``0``)
-     * @param {BiOptions["endianness"]?} options.endianness - Endianness ``big`` or ``little`` (default ``little``)
-     * @param {BiOptions["strict"]?} options.strict - Strict mode: if ``true`` does not extend supplied array on outside write (default ``false``)
-     * @param {BiOptions["growthIncrement"]?} options.growthIncrement - Amount of data to add when extending the buffer array when strict mode is false. Note: Changes logic in ``.get`` and ``.return``.
-     * @param {BiOptions["enforceBigInt"]?} options.enforceBigInt - 64 bit value reads will always stay ``BigInt``.
-     * @param {BiOptions["writeable"]} options.writeable - Allow data writes when reading a file (default true in writer)
+     * @param {BiOptions["byteOffset"]?} [options.byteOffset = 0] - Byte offset to start reader (default `0`)
+     * @param {BiOptions["bitOffset"]?} [options.bitOffset = 0] - Bit offset (overrides {@link byteOffset}) (default `0`)
+     * @param {BiOptions["endianness"]?} [options.endianness = "little"] - Endianness `big` or `little` (default `little`)
+     * @param {BiOptions["strict"]?} [options.strict = true] - Strict mode: if `true` does not extend supplied array on outside read or write (default `true`)
+     * @param {BiOptions["growthIncrement"]?} [options.growthIncrement = 1048576] - Amount of data to add when extending the buffer array when strict mode is false (default `1 MiB`)
+     * @param {BiOptions["enforceBigInt"]?} [options.enforceBigInt = false] - 64 bit value reads will always return `bigint`. (default `false`)
+     * @param {BiOptions["windowSize"]?} [options.windowSize = 4096] - Size of the chunk of a file to load per read. Set to `0` to load the whole file in one async read (default `4 KiB`)
      *
-     * @returns {Promise<BiWriterAsync<DataType, hasBigInt>>}
+     * @returns {Promise<BiWriterAsync<DataType, alwaysBigInt>>}
      */
     static async create(input, options = {}) {
         const instance = new BiWriterAsync(input, options);
@@ -23015,6 +22994,7 @@ class BiWriterAsync extends BiBaseAsync {
     ;
 }
 
+// node import
 /**
  * Not in use anymore.
  * @since 3.0
@@ -23057,4 +23037,4 @@ class BiWriterStream {
 }
 
 export { BiBase, BiReader, BiReaderAsync, BiReaderStream, BiWriter, BiWriterAsync, BiWriterStream, bireader, biwriter, hexdump };
-//# sourceMappingURL=index.esm.js.map
+//# sourceMappingURL=indexImport.js.map

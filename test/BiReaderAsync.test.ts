@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { expect, use } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { BiReaderAsync, BiWriterAsync } from '../dist/index.esm.js';
+import { BiReaderAsync, BiWriterAsync } from '../dist/esm/indexImport.js';
 
 use(chaiAsPromised);
 
@@ -38,12 +38,12 @@ const tmp = path.join(__dirname, 'test.bin');
 describe('BiReaderAsync / BiWriterAsync – Comprehensive Test Suite', async () => {
     let reader: BiReaderAsync<Uint8Array, boolean>;
     let writer: BiWriterAsync<Uint8Array, boolean>;
-    let readerFile: BiReaderAsync<Buffer, boolean>;
-    let writerFile: BiWriterAsync<Buffer, boolean>;
+    let readerFile: BiReaderAsync<string, boolean>;
+    let writerFile: BiWriterAsync<string, boolean>;
 
     beforeEach(() => {
-        readerFile = new BiReaderAsync<Buffer, boolean>(tmp);
-        writerFile = new BiWriterAsync<Buffer, boolean>(tmp);
+        readerFile = new BiReaderAsync(tmp);
+        writerFile = new BiWriterAsync(tmp);
         writer = new BiWriterAsync(new Uint8Array([
             0x01, 0x02, 0x03, 0x04,             // bytes for int16/32 tests
             0x78, 0x56, 0x34, 0x12,             // LE 0x12345678

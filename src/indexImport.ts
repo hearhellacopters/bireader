@@ -1,3 +1,4 @@
+// node import
 export { BiReader } from './BiReader.js';
 export { BiWriter } from './BiWriter.js';
 export { BiBase } from './core/BiBase.js'
