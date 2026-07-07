@@ -1993,11 +1993,11 @@ export class BiBase<DataType, alwaysBigInt> {
      * 
      * Note: Errors on strict mode if past end of data.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {Uint8Array | Buffer} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    replace(data: DataType, offset: number = this.#offset, consume: boolean = false): void {
+    replace(data: Uint8Array | Buffer, offset: number = this.#offset, consume: boolean = false): void {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
@@ -2009,13 +2009,13 @@ export class BiBase<DataType, alwaysBigInt> {
         if (this.isBuffer(data)) {
             if (this.isUint8Array(this.data)) {
                 // source is Uint8Array
-                data = new Uint8Array(data) as DataType;
+                data = new Uint8Array(data);
             }
         } else {
             // input is Uint8Array
             if (this.isBuffer(this.data)) {
                 // source is Buffer
-                data = Buffer.from(data as Uint8Array) as DataType;
+                data = Buffer.from(data as Uint8Array);
             }
         }
 
@@ -2057,11 +2057,11 @@ export class BiBase<DataType, alwaysBigInt> {
      * 
      * Note: Errors on strict mode.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {Uint8Array | Buffer} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    overwrite(data: DataType, offset: number = this.#offset, consume: boolean = false): void {
+    overwrite(data: Uint8Array | Buffer, offset: number = this.#offset, consume: boolean = false): void {
         return this.replace(data, offset, consume);
     };
 

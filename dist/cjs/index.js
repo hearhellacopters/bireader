@@ -2683,7 +2683,7 @@ class BiBase {
      *
      * Note: Errors on strict mode if past end of data.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {Uint8Array | Buffer} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
@@ -2734,7 +2734,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {Uint8Array | Buffer} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
@@ -13532,7 +13532,7 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {Uint8Array | Buffer} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
@@ -13590,7 +13590,7 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {Uint8Array | Buffer} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */

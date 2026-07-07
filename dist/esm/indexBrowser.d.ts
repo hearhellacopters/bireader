@@ -868,21 +868,21 @@ declare class BiBase<DataType, alwaysBigInt> {
      *
      * Note: Errors on strict mode if past end of data.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {Uint8Array | Buffer} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    replace(data: DataType, offset?: number, consume?: boolean): void;
+    replace(data: Uint8Array | Buffer, offset?: number, consume?: boolean): void;
     /**
      * Replaces data in data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {Uint8Array | Buffer} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    overwrite(data: DataType, offset?: number, consume?: boolean): void;
+    overwrite(data: Uint8Array | Buffer, offset?: number, consume?: boolean): void;
     /**
      * Returns part of data from current byte position to end of data unless supplied.
      *
@@ -7509,21 +7509,21 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {Uint8Array | Buffer} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    replace(data: DataType, offset?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
+    replace(data: Uint8Array | Buffer, offset?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
     /**
      * Replaces data in data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {Uint8Array | Buffer} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    overwrite(data: DataType, offset?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
+    overwrite(data: Uint8Array | Buffer, offset?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
     /**
      * Returns part of data from current byte position to end of data unless supplied.
      *
