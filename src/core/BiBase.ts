@@ -1890,9 +1890,9 @@ export class BiBase<DataType, alwaysBigInt> {
      * @param {number} startOffset - Start location (default 0)
      * @param {number} endOffset - End location (default current position)
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    delete(startOffset: number = 0, endOffset: number = this.#offset, consume: boolean = false): DataType {
+    delete(startOffset: number = 0, endOffset: number = this.#offset, consume: boolean = false): ReturnMapping<DataType> {
         if (this.readOnly || this.strict) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
@@ -1905,7 +1905,7 @@ export class BiBase<DataType, alwaysBigInt> {
 
         this.#confrimSize(endOffset);
 
-        const dataRemoved = this.data.subarray(startOffset, endOffset) as DataType;
+        const dataRemoved = this.data.subarray(startOffset, endOffset) as ReturnMapping<DataType>;
 
         const part1 = this.data.subarray(0, startOffset);
 
@@ -1941,9 +1941,9 @@ export class BiBase<DataType, alwaysBigInt> {
      * 
      * Note: Errors in strict mode.
      * 
-     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    clip(): DataType {
+    clip(): ReturnMapping<DataType> {
         return this.delete(this.#offset, this.size, false);
     };
 
@@ -1952,9 +1952,9 @@ export class BiBase<DataType, alwaysBigInt> {
      * 
      * Note: Errors in strict mode.
      * 
-     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    trim(): DataType {
+    trim(): ReturnMapping<DataType> {
         return this.delete(this.#offset, this.size, false);
     };
 
@@ -1965,9 +1965,9 @@ export class BiBase<DataType, alwaysBigInt> {
      * 
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    crop(length: number = 0, consume: boolean = false): DataType {
+    crop(length: number = 0, consume: boolean = false): ReturnMapping<DataType> {
         return this.delete(this.#offset, this.#offset + length, consume);
     };
 
@@ -1978,9 +1978,9 @@ export class BiBase<DataType, alwaysBigInt> {
      * 
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    drop(length: number = 0, consume: boolean = false): DataType {
+    drop(length: number = 0, consume: boolean = false): ReturnMapping<DataType> {
         return this.delete(this.#offset, this.#offset + length, consume);
     };
 
@@ -1993,11 +1993,11 @@ export class BiBase<DataType, alwaysBigInt> {
      * 
      * Note: Errors on strict mode if past end of data.
      * 
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    replace(data: ReturnMapping<DataType>, offset: number = this.#offset, consume: boolean = false): void {
+    replace(data: DataType, offset: number = this.#offset, consume: boolean = false): void {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
@@ -2009,34 +2009,34 @@ export class BiBase<DataType, alwaysBigInt> {
         if (this.isBuffer(data)) {
             if (this.isUint8Array(this.data)) {
                 // source is Uint8Array
-                data = new Uint8Array(data) as ReturnMapping<DataType>;
+                data = new Uint8Array(data) as DataType;
             }
         } else {
             // input is Uint8Array
             if (this.isBuffer(this.data)) {
                 // source is Buffer
-                data = Buffer.from(data);
+                data = Buffer.from(data as Uint8Array) as DataType;
             }
         }
 
-        const neededSize = offset + data.length;
+        const neededSize = offset + (data as Uint8Array | Buffer).length;
 
         this.#confrimSize(neededSize);
 
-        const part1 = this.data.subarray(0, neededSize - data.length);
+        const part1 = this.data.subarray(0, neededSize - (data as Uint8Array | Buffer).length);
 
         const part2 = this.data.subarray(neededSize, this.size);
 
         if (this.isBuffer(this.data)) {
-            this.data = Buffer.concat([part1, data, part2]) as DataType;
+            this.data = Buffer.concat([part1, (data as Uint8Array | Buffer), part2]) as DataType;
         } else {
-            const newBuf = new Uint8Array(part1.byteLength + data.byteLength + part2.byteLength);
+            const newBuf = new Uint8Array(part1.byteLength + (data as Uint8Array | Buffer).byteLength + part2.byteLength);
 
             newBuf.set(part1, 0);
 
-            newBuf.set(data, part1.byteLength);
+            newBuf.set((data as Uint8Array | Buffer), part1.byteLength);
 
-            newBuf.set(part2, part1.byteLength + data.byteLength);
+            newBuf.set(part2, part1.byteLength + (data as Uint8Array | Buffer).byteLength);
 
             this.data = newBuf as DataType;
         }
@@ -2046,7 +2046,7 @@ export class BiBase<DataType, alwaysBigInt> {
         this.bitSize = this.data.length * 8;
 
         if (consume) {
-            this.#offset = offset + data.length;
+            this.#offset = offset + (data as Uint8Array | Buffer).length;
 
             this.#insetBit = 0;
         }
@@ -2057,11 +2057,11 @@ export class BiBase<DataType, alwaysBigInt> {
      * 
      * Note: Errors on strict mode.
      * 
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    overwrite(data: ReturnMapping<DataType>, offset: number = this.#offset, consume: boolean = false): void {
+    overwrite(data: DataType, offset: number = this.#offset, consume: boolean = false): void {
         return this.replace(data, offset, consume);
     };
 
@@ -2076,9 +2076,9 @@ export class BiBase<DataType, alwaysBigInt> {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    fill(startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false, fillValue?: number): DataType {
+    fill(startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false, fillValue?: number): ReturnMapping<DataType> {
         if (this.readOnly) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
@@ -2096,12 +2096,12 @@ export class BiBase<DataType, alwaysBigInt> {
         if (removeLen <= 0) {
             if (this.isMemoryMode) {
                 if (this.isBuffer(this.data)) {
-                    return Buffer.alloc(0) as DataType;
+                    return Buffer.alloc(0) as ReturnMapping<DataType>;
                 } else {
-                    return new Uint8Array(0) as DataType;
+                    return new Uint8Array(0) as ReturnMapping<DataType>;
                 }
             } else {
-                return Buffer.alloc(0) as DataType;
+                return Buffer.alloc(0) as ReturnMapping<DataType>;
             }
         }
 
@@ -2147,7 +2147,7 @@ export class BiBase<DataType, alwaysBigInt> {
             this.#insetBit = 0;
         }
 
-        return dataRemoved as DataType;
+        return dataRemoved as ReturnMapping<DataType>;
     };
 
     /**
@@ -2157,10 +2157,10 @@ export class BiBase<DataType, alwaysBigInt> {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    lift(startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false, fillValue?: number): DataType {
-        return this.fill(startOffset, endOffset, consume, fillValue) as DataType;
+    lift(startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false, fillValue?: number): ReturnMapping<DataType> {
+        return this.fill(startOffset, endOffset, consume, fillValue) as ReturnMapping<DataType>;
     };
 
     /**
@@ -2170,9 +2170,9 @@ export class BiBase<DataType, alwaysBigInt> {
      * 
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length (default false)
-     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    extract(length: number = 0, consume: boolean = false): DataType {
+    extract(length: number = 0, consume: boolean = false): ReturnMapping<DataType> {
         return this.fill(this.#offset, this.#offset + length, consume);
     };
 
@@ -2183,9 +2183,9 @@ export class BiBase<DataType, alwaysBigInt> {
      * 
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length (default false)
-     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    slice(length: number = 0, consume: boolean = false): DataType {
+    slice(length: number = 0, consume: boolean = false): ReturnMapping<DataType> {
         return this.fill(this.#offset, this.#offset + length, consume);
     };
 
@@ -2196,9 +2196,9 @@ export class BiBase<DataType, alwaysBigInt> {
      * 
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length (default false)
-     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    wrap(length: number = 0, consume: boolean = false): DataType {
+    wrap(length: number = 0, consume: boolean = false): ReturnMapping<DataType> {
         return this.fill(this.#offset, this.#offset + length, consume);
     };
 

@@ -2738,7 +2738,7 @@ class BiBase {
      * @param {number} startOffset - Start location (default 0)
      * @param {number} endOffset - End location (default current position)
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
      */
     delete(startOffset = 0, endOffset = this.#offset, consume = false) {
         if (this.readOnly || this.strict) {
@@ -2774,7 +2774,7 @@ class BiBase {
      *
      * Note: Errors in strict mode.
      *
-     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
      */
     clip() {
         return this.delete(this.#offset, this.size, false);
@@ -2785,7 +2785,7 @@ class BiBase {
      *
      * Note: Errors in strict mode.
      *
-     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
      */
     trim() {
         return this.delete(this.#offset, this.size, false);
@@ -2798,7 +2798,7 @@ class BiBase {
      *
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
      */
     crop(length = 0, consume = false) {
         return this.delete(this.#offset, this.#offset + length, consume);
@@ -2811,7 +2811,7 @@ class BiBase {
      *
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
      */
     drop(length = 0, consume = false) {
         return this.delete(this.#offset, this.#offset + length, consume);
@@ -2825,7 +2825,7 @@ class BiBase {
      *
      * Note: Errors on strict mode if past end of data.
      *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
@@ -2876,7 +2876,7 @@ class BiBase {
      *
      * Note: Errors on strict mode.
      *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
@@ -2894,7 +2894,7 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     fill(startOffset = this.#offset, endOffset = this.size, consume = false, fillValue) {
         if (this.readOnly) {
@@ -2957,7 +2957,7 @@ class BiBase {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     lift(startOffset = this.#offset, endOffset = this.size, consume = false, fillValue) {
         return this.fill(startOffset, endOffset, consume, fillValue);
@@ -2970,7 +2970,7 @@ class BiBase {
      *
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length (default false)
-     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     extract(length = 0, consume = false) {
         return this.fill(this.#offset, this.#offset + length, consume);
@@ -2983,7 +2983,7 @@ class BiBase {
      *
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length (default false)
-     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     slice(length = 0, consume = false) {
         return this.fill(this.#offset, this.#offset + length, consume);
@@ -2996,7 +2996,7 @@ class BiBase {
      *
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length (default false)
-     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     wrap(length = 0, consume = false) {
         return this.fill(this.#offset, this.#offset + length, consume);
@@ -14265,7 +14265,7 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {number} offset - Byte position to add at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default true)
      */
@@ -14330,7 +14330,7 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {number} offset - Byte position to add at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default true)
      */
@@ -14343,7 +14343,7 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     async unshift(data, consume = false) {
@@ -14355,7 +14355,7 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     async prepend(data, consume = false) {
@@ -14367,7 +14367,7 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     async push(data, consume = false) {
@@ -14379,7 +14379,7 @@ class BiBaseAsync {
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
     async append(data, consume = false) {

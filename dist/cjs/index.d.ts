@@ -824,25 +824,25 @@ declare class BiBase<DataType, alwaysBigInt> {
      * @param {number} startOffset - Start location (default 0)
      * @param {number} endOffset - End location (default current position)
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    delete(startOffset?: number, endOffset?: number, consume?: boolean): DataType;
+    delete(startOffset?: number, endOffset?: number, consume?: boolean): ReturnMapping<DataType>;
     /**
      * Deletes part of data from current byte position to end, returns removed.
      *
      * Note: Errors in strict mode.
      *
-     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    clip(): DataType;
+    clip(): ReturnMapping<DataType>;
     /**
      * Deletes part of data from current byte position to end, returns removed.
      *
      * Note: Errors in strict mode.
      *
-     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    trim(): DataType;
+    trim(): ReturnMapping<DataType>;
     /**
      * Deletes part of data from current byte position to supplied length, returns removed.
      *
@@ -850,9 +850,9 @@ declare class BiBase<DataType, alwaysBigInt> {
      *
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    crop(length?: number, consume?: boolean): DataType;
+    crop(length?: number, consume?: boolean): ReturnMapping<DataType>;
     /**
      * Deletes part of data from current position to supplied length, returns removed.
      *
@@ -860,29 +860,29 @@ declare class BiBase<DataType, alwaysBigInt> {
      *
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {DataType} Removed data as ``Buffer`` or ``Uint8Array``
+     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
      */
-    drop(length?: number, consume?: boolean): DataType;
+    drop(length?: number, consume?: boolean): ReturnMapping<DataType>;
     /**
      * Replaces data in data.
      *
      * Note: Errors on strict mode if past end of data.
      *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    replace(data: ReturnMapping<DataType>, offset?: number, consume?: boolean): void;
+    replace(data: DataType, offset?: number, consume?: boolean): void;
     /**
      * Replaces data in data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to replace in data
+     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
      * @param {number} offset - Offset to add it at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    overwrite(data: ReturnMapping<DataType>, offset?: number, consume?: boolean): void;
+    overwrite(data: DataType, offset?: number, consume?: boolean): void;
     /**
      * Returns part of data from current byte position to end of data unless supplied.
      *
@@ -890,9 +890,9 @@ declare class BiBase<DataType, alwaysBigInt> {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): DataType;
+    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): ReturnMapping<DataType>;
     /**
      * Returns part of data from current byte position to end of data unless supplied.
      *
@@ -900,9 +900,9 @@ declare class BiBase<DataType, alwaysBigInt> {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): DataType;
+    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): ReturnMapping<DataType>;
     /**
      * Extract data from current position to length supplied.
      *
@@ -910,9 +910,9 @@ declare class BiBase<DataType, alwaysBigInt> {
      *
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length (default false)
-     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    extract(length?: number, consume?: boolean): DataType;
+    extract(length?: number, consume?: boolean): ReturnMapping<DataType>;
     /**
      * Extract data from current position to length supplied.
      *
@@ -920,9 +920,9 @@ declare class BiBase<DataType, alwaysBigInt> {
      *
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length (default false)
-     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    slice(length?: number, consume?: boolean): DataType;
+    slice(length?: number, consume?: boolean): ReturnMapping<DataType>;
     /**
      * Extract data from current position to length supplied.
      *
@@ -930,9 +930,9 @@ declare class BiBase<DataType, alwaysBigInt> {
      *
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length (default false)
-     * @returns {DataType} Selected data as ``Uint8Array`` or ``Buffer``
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
-    wrap(length?: number, consume?: boolean): DataType;
+    wrap(length?: number, consume?: boolean): ReturnMapping<DataType>;
     /**
      * Inserts data into data.
      *
@@ -7532,7 +7532,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      */
-    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<DataType>;
+    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<DataType | ReturnMapping<DataType>>;
     /**
      * Returns part of data from current byte position to end of data unless supplied.
      *
@@ -7541,7 +7541,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      */
-    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<DataType>;
+    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<ReturnMapping<DataType>>;
     /**
      * Extract data from current position to length supplied.
      *
@@ -7550,7 +7550,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length
      */
-    extract(length?: number, consume?: boolean): Promise<DataType>;
+    extract(length?: number, consume?: boolean): Promise<DataType | ReturnMapping<DataType>>;
     /**
      * Extract data from current position to length supplied.
      *
@@ -7559,7 +7559,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length
      */
-    slice(length?: number, consume?: boolean): Promise<DataType>;
+    slice(length?: number, consume?: boolean): Promise<DataType | ReturnMapping<DataType>>;
     /**
      * Extract data from current position to length supplied.
      *
@@ -7568,63 +7568,63 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length
      */
-    wrap(length?: number, consume?: boolean): Promise<DataType>;
+    wrap(length?: number, consume?: boolean): Promise<DataType | ReturnMapping<DataType>>;
     /**
      * Inserts data into data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {number} offset - Byte position to add at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    insert(data: DataType, offset?: number, consume?: boolean): Promise<void>;
+    insert(data: ReturnMapping<DataType>, offset?: number, consume?: boolean): Promise<void>;
     /**
      * Inserts data into data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {number} offset - Byte position to add at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    place(data: DataType, offset?: number, consume?: boolean): Promise<void>;
+    place(data: ReturnMapping<DataType>, offset?: number, consume?: boolean): Promise<void>;
     /**
      * Adds data to start of supplied data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    unshift(data: DataType, consume?: boolean): Promise<void>;
+    unshift(data: ReturnMapping<DataType>, consume?: boolean): Promise<void>;
     /**
      * Adds data to start of supplied data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    prepend(data: DataType, consume?: boolean): Promise<void>;
+    prepend(data: ReturnMapping<DataType>, consume?: boolean): Promise<void>;
     /**
      * Adds data to end of supplied data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    push(data: DataType, consume?: boolean): Promise<void>;
+    push(data: ReturnMapping<DataType>, consume?: boolean): Promise<void>;
     /**
      * Adds data to end of supplied data.
      *
      * Note: Errors on strict mode.
      *
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    append(data: DataType, consume?: boolean): Promise<void>;
+    append(data: ReturnMapping<DataType>, consume?: boolean): Promise<void>;
     /**
      * XOR data.
      *

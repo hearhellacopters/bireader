@@ -2648,7 +2648,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             this.#invalidateFromChunk(startChunk);
         }
 
-        return dataRemoved as DataType;
+        return dataRemoved as ReturnMapping<DataType>;
     };
 
     /**
@@ -2660,7 +2660,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      */
     async lift(startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false, fillValue?: number) {
-        return await this.fill(startOffset, endOffset, consume, fillValue) as DataType;
+        return await this.fill(startOffset, endOffset, consume, fillValue) as ReturnMapping<DataType>;
     };
 
     /**
@@ -2708,11 +2708,11 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * 
      * Note: Errors on strict mode.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {number} offset - Byte position to add at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    async insert(data: DataType, offset: number = this.#offset, consume: boolean = true) {
+    async insert(data: ReturnMapping<DataType>, offset: number = this.#offset, consume: boolean = true) {
         if (this.readOnly || this.strict) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
@@ -2731,18 +2731,18 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             if (this.isBuffer(data)) {
                 if (this.isUint8Array(this.data)) {
                     // source is Uint8Array
-                    data = new Uint8Array(data) as DataType;
+                    data = new Uint8Array(data) as ReturnMapping<DataType>;
                 }
             } else {
                 // input is Uint8Array
                 if (this.isBuffer(this.data)) {
                     // source is Buffer
-                    data = Buffer.from(data as Uint8Array) as DataType;
+                    data = Buffer.from(data as Uint8Array) as ReturnMapping<DataType>;
                 }
             }
         } else {
             if (!this.isBuffer(data)) {
-                data = Buffer.from(data as Uint8Array) as DataType;
+                data = Buffer.from(data as Uint8Array) as ReturnMapping<DataType>;
             }
         }
 
@@ -2772,7 +2772,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
 
         this.#insetBit = 0;
 
-        await this.#writeBytes(data as Buffer |Uint8Array, consume);
+        await this.#writeBytes(data as Buffer | Uint8Array, consume);
 
         const tailStartChunk = Math.floor((offset + insertLen) / this.windowSize);
 
@@ -2790,11 +2790,11 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * 
      * Note: Errors on strict mode.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {number} offset - Byte position to add at (defaults to current position)
      * @param {boolean} consume - Move current byte position to end of data (default true)
      */
-    async place(data: DataType, offset: number = this.#offset, consume: boolean = true) {
+    async place(data: ReturnMapping<DataType>, offset: number = this.#offset, consume: boolean = true) {
         return await this.insert(data, offset, consume);
     };
 
@@ -2803,10 +2803,10 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * 
      * Note: Errors on strict mode.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    async unshift(data: DataType, consume: boolean = false) {
+    async unshift(data: ReturnMapping<DataType>, consume: boolean = false) {
         return await this.insert(data, 0, consume);
     };
 
@@ -2815,10 +2815,10 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * 
      * Note: Errors on strict mode.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    async prepend(data: DataType, consume: boolean = false) {
+    async prepend(data: ReturnMapping<DataType>, consume: boolean = false) {
         return await this.unshift(data, consume);
     };
 
@@ -2827,10 +2827,10 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * 
      * Note: Errors on strict mode.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    async push(data: DataType, consume: boolean = false) {
+    async push(data: ReturnMapping<DataType>, consume: boolean = false) {
         return await this.insert(data, this.size, consume);
     };
 
@@ -2839,10 +2839,10 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * 
      * Note: Errors on strict mode.
      * 
-     * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to add to data
+     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
      * @param {boolean} consume - Move current write position to end of data (default false)
      */
-    async append(data: DataType, consume: boolean = false) {
+    async append(data: ReturnMapping<DataType>, consume: boolean = false) {
         return await this.push(data, consume);
     };
 
