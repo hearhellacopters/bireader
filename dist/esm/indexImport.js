@@ -14132,10 +14132,10 @@ class BiBaseAsync {
      * Note: Errors on strict mode.
      *
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
-     * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Offset to add it at (defaults to current position)
+     * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    async overwrite(data, consume = false, offset = this.#offset) {
+    async overwrite(data, offset = this.#offset, consume = false) {
         return await this.replace(data, offset, consume);
     }
     ;

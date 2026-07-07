@@ -7520,10 +7520,10 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * Note: Errors on strict mode.
      *
      * @param {DataType} data - ``Uint8Array`` or ``Buffer`` to replace in data
-     * @param {boolean} consume - Move current byte position to end of data (default false)
      * @param {number} offset - Offset to add it at (defaults to current position)
+     * @param {boolean} consume - Move current byte position to end of data (default false)
      */
-    overwrite(data: DataType, consume?: boolean, offset?: number): Promise<ReturnMapping<DataType>>;
+    overwrite(data: DataType, offset?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
     /**
      * Returns part of data from current byte position to end of data unless supplied.
      *
