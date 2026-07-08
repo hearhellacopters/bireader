@@ -3,9 +3,6 @@
  */
 
 // #region Imports
-import { getFs } from './getFS.js';
-var fs: typeof import("fs") = getFs();
-
 import {
     // types
     BiOptions,
@@ -61,23 +58,16 @@ import {
     _wstring,
 } from '../common.js';
 
-function _fileExists(filePath: string) {
-    try {
-        fs.accessSync(filePath, fs.constants.F_OK);
-
-        return true;  // File exists
-    } catch (error) {
-        // @ts-ignore
-        return false;
-    }
-};
-
 // #region Class
 
 /**
  * Base class for BiReader and BiWriter
  */
 export class BiBase<DataType, alwaysBigInt> {
+    /**
+     * File System
+     */
+    static fs: typeof import("fs");
     /**
      * Endianness of default read. 
      * @type {endian}
@@ -224,7 +214,8 @@ export class BiBase<DataType, alwaysBigInt> {
         this.endian = endianness;
 
         if (typeof input == "string") {
-            if (typeof Buffer === 'undefined' || typeof fs === "undefined") {
+            if (typeof Buffer === 'undefined' || typeof BiBase.fs === "undefined") {
+                console.log(Buffer); console.log(BiBase.fs);
                 throw new Error("Can't load file outside of Node.");
             }
 
@@ -313,6 +304,27 @@ export class BiBase<DataType, alwaysBigInt> {
     }
 
     /**
+     * Checks if file exists
+     * 
+     * @param {string} filePath 
+     * @returns 
+     */
+    #fileExists(filePath: string) {
+        if(BiBase.fs == undefined){
+            return false;
+        }
+
+        try {
+            BiBase.fs.accessSync(filePath, BiBase.fs.constants.F_OK);
+
+            return true;  // File exists
+        } catch (error) {
+            // @ts-ignore
+            return false;
+        }
+    };
+
+    /**
      * Internal update size
      * 
      * run after setting data
@@ -326,13 +338,13 @@ export class BiBase<DataType, alwaysBigInt> {
             return;
         }
 
-        if (typeof fs === "undefined") {
+        if (typeof BiBase.fs === "undefined") {
             throw new Error("Can't load file outside of Node.");
         }
 
         if (this.fd != null) {
             try {
-                const stat = fs.fstatSync(this.fd);
+                const stat = BiBase.fs.fstatSync(this.fd);
 
                 this.size = stat.size;
 
@@ -352,7 +364,7 @@ export class BiBase<DataType, alwaysBigInt> {
         if (!this.isMemoryMode) {
             if (this.fd == null) {
                 try {
-                    this.fd = fs.openSync(this.filePath, this.fsMode);
+                    this.fd = BiBase.fs.openSync(this.filePath, this.fsMode);
                 } catch (error) {
                     throw new Error(error as string);
                 }
@@ -361,7 +373,7 @@ export class BiBase<DataType, alwaysBigInt> {
             const data = Buffer.alloc(this.size);
 
             try {
-                const bytesRead = fs.readSync(this.fd, data, 0, data.length, 0);
+                const bytesRead = BiBase.fs.readSync(this.fd, data, 0, data.length, 0);
 
                 if (bytesRead != this.size) {
                     throw new Error("Didn't update file buffer size. Expecting " + this.size + " but got " + bytesRead);
@@ -544,16 +556,16 @@ export class BiBase<DataType, alwaysBigInt> {
             return;
         }
 
-        if (typeof fs === "undefined") {
+        if (typeof BiBase.fs === "undefined") {
             throw new Error("Can't load file outside of Node.");
         }
 
-        if (!_fileExists(this.filePath)) {
-            fs.writeFileSync(this.filePath, "");
+        if (!this.#fileExists(this.filePath)) {
+            BiBase.fs.writeFileSync(this.filePath, "");
         }
 
         try {
-            this.fd = fs.openSync(this.filePath, this.fsMode);
+            this.fd = BiBase.fs.openSync(this.filePath, this.fsMode);
         } catch (error) {
             throw new Error(error as string);
         }
@@ -581,14 +593,14 @@ export class BiBase<DataType, alwaysBigInt> {
             return; // Already closed / or not open
         }
 
-        if (typeof fs === "undefined") {
+        if (typeof BiBase.fs === "undefined") {
             throw new Error("Can't load file outside of Node.");
         }
 
         this.commit();
 
         try {
-            fs.closeSync(this.fd);
+            BiBase.fs.closeSync(this.fd);
         } catch (error) {
             throw new Error(error as string);
         }
@@ -615,7 +627,7 @@ export class BiBase<DataType, alwaysBigInt> {
         this.open();
 
         try {
-            fs.writeSync(this.fd, this.#data, 0, this.#data.length);
+            BiBase.fs.writeSync(this.fd, this.#data, 0, this.#data.length);
         } catch (error) {
             throw new Error(error as string);
         }
@@ -651,7 +663,7 @@ export class BiBase<DataType, alwaysBigInt> {
         try {
             this.close();
 
-            fs.renameSync(this.filePath, newFilePath);
+            BiBase.fs.renameSync(this.filePath, newFilePath);
         } catch (error) {
             throw new Error(error as string);
         }
@@ -680,7 +692,7 @@ export class BiBase<DataType, alwaysBigInt> {
         try {
             this.close();
 
-            fs.unlinkSync(this.filePath);
+            BiBase.fs.unlinkSync(this.filePath);
         } catch (error) {
             throw new Error(error as string);
         }

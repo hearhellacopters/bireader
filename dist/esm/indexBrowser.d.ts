@@ -1,3 +1,6 @@
+import * as fs from 'fs';
+import * as fs_promises from 'fs/promises';
+
 type endian = "little" | "big";
 type BigValue = number | bigint;
 type ReturnMapping<DataType> = DataType extends string | Buffer ? Buffer : Uint8Array;
@@ -110,14 +113,14 @@ type hexdumpOptions = {
 declare function hexdump(src: Uint8Array | Buffer, options?: hexdumpOptions): void | string;
 
 /**
- * @file BiReader / Writer base for working in sync Buffers or full file reads. Node and Browser.
- */
-
-/**
  * Base class for BiReader and BiWriter
  */
 declare class BiBase<DataType, alwaysBigInt> {
     #private;
+    /**
+     * File System
+     */
+    static fs: typeof fs;
     /**
      * Endianness of default read.
      * @type {endian}
@@ -6762,14 +6765,14 @@ declare class BiWriter<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBi
 }
 
 /**
- * @file BiReaderAsync / Writer base for working in sync Buffers or full file reads. Node and Browser.
- */
-
-/**
  * Base class for BiReader and BiWriter
  */
 declare class BiBaseAsync<DataType, alwaysBigInt> {
     #private;
+    /**
+     * File System
+     */
+    static fs: typeof fs_promises;
     /**
      * Endianness of default read.
      * @type {endian}

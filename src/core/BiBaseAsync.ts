@@ -3,8 +3,6 @@
  */
 
 // #region Imports
-import { getFsPromises } from './getFS.js';
-
 import {
     // types
     BiOptions,
@@ -57,18 +55,6 @@ import {
     _wstringAsync
 } from '../common.js';
 
-async function _fileExists(filePath: string) {
-    const fs = await getFsPromises();
-
-    try {
-        await fs.access(filePath, fs.constants.F_OK);
-
-        return true;  // File exists
-    } catch (error) {
-        return false;
-    }
-};
-
 // #region Buffer Dummies
 
 const buff2ByteDummy = new Uint8Array(2);
@@ -87,6 +73,10 @@ const view8ByteDummy = new DataView(buff8ByteDummy.buffer, buff8ByteDummy.byteOf
  * Base class for BiReader and BiWriter
  */
 export class BiBaseAsync<DataType, alwaysBigInt> {
+    /**
+     * File System
+     */
+    static fs: typeof import("fs/promises");
     /**
      * Endianness of default read. 
      * @type {endian}
@@ -354,6 +344,20 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
         return isUint8Array(obj);
     };
 
+    async #fileExists(filePath: string) {
+        if(BiBaseAsync.fs == undefined){
+            return false;
+        }
+
+        try {
+            await BiBaseAsync.fs.access(filePath, BiBaseAsync.fs.constants.F_OK);
+
+            return true;  // File exists
+        } catch (error) {
+            return false;
+        }
+    };
+
     /**
      * Internal update size
      * 
@@ -368,9 +372,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             return;
         }
 
-        const fs = await getFsPromises();
-
-        if (typeof fs === "undefined") {
+        if (typeof BiBaseAsync.fs === "undefined") {
             throw new Error("Can't load file outside Node.");
         }
 
@@ -408,14 +410,12 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             return;
         }
 
-        const fs = await getFsPromises();
-
-        if (!(await _fileExists(this.filePath))) {
-            await fs.writeFile(this.filePath, "");
+        if (!(await this.#fileExists(this.filePath))) {
+            await BiBaseAsync.fs.writeFile(this.filePath, "");
         }
 
         try {
-            this.fd = await fs.open(this.filePath, this.fsMode);
+            this.fd = await BiBaseAsync.fs.open(this.filePath, this.fsMode);
         } catch (error) {
             throw new Error(error as string);
         }
@@ -1156,9 +1156,6 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
         if (this.isMemoryMode) {
             return;
         }
-
-        const fs = await getFsPromises();
-
         try {
             await this.close();
 
@@ -1168,7 +1165,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
 
             this.#view = null;
 
-            await fs.rename(this.filePath, newFilePath);
+            await BiBaseAsync.fs.rename(this.filePath, newFilePath);
         } catch (error) {
             throw new Error(error as string);
         }
@@ -1193,13 +1190,11 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
         if (this.readOnly) {
             throw new Error("Can't delete file in readOnly mode!");
         }
-
-        const fs = await getFsPromises();
         // this.mode == "file"
         try {
             this.close();
 
-            await fs.unlink(this.filePath);
+            await BiBaseAsync.fs.unlink(this.filePath);
         } catch (error) {
             throw new Error(error as string);
         }

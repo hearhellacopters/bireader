@@ -1,10 +1,27 @@
 // node import
-export { BiReader } from './BiReader.js';
-export { BiWriter } from './BiWriter.js';
-export { BiBase } from './core/BiBase.js'
-export { BiReaderAsync } from './BiReaderAsync.js';
-export { BiWriterAsync } from './BiWriterAsync.js';
+import fs from 'fs';
+import fsp from 'fs/promises';
+import { BiReader } from './BiReader.js';
+import { BiWriter } from './BiWriter.js';
+import { BiBase } from './core/BiBase.js'
+import { BiReaderAsync } from './BiReaderAsync.js';
+import { BiWriterAsync } from './BiWriterAsync.js';
+import { BiBaseAsync } from './core/BiBaseAsync.js'
 export { hexdump } from './common.js';
+
+BiReader.fs = fs;
+BiWriter.fs = fs;
+BiBase.fs = fs;
+BiReaderAsync.fs = fsp;
+BiWriterAsync.fs = fsp;
+BiBaseAsync.fs = fsp;
+
+export {
+    BiReader,
+    BiWriter,
+    BiReaderAsync,
+    BiWriterAsync
+};
 
 /**
  * Not in use anymore.

@@ -1,5 +1,8 @@
 'use strict';
 
+var fs = require('fs');
+var fsp = require('fs/promises');
+
 /******************************************************************************
 Copyright (c) Microsoft Corporation.
 
@@ -34,70 +37,6 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
     var e = new Error(message);
     return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
 };
-
-// fs-loader.ts  (or put it at the top of your main module)
-let fsModule;
-let fsPromisesModule;
-let fsPromisesPromise;
-const isNode = () => {
-    return typeof process !== 'undefined' &&
-        process.versions?.node != null;
-};
-// ====================== SYNC ======================
-function getFs() {
-    if (fsModule !== undefined)
-        return fsModule;
-    if (!isNode()) {
-        fsModule = undefined;
-        return undefined;
-    }
-    try {
-        if (typeof require !== 'undefined' && require.cache) {
-            // CJS - truly synchronous
-            fsModule = require('node:fs');
-        }
-        else {
-            // ESM - fallback
-            throw new Error('ESM: use getFsAsync instead');
-        }
-    }
-    catch (err) {
-        console.error('Failed to load fs:', err);
-        fsModule = undefined;
-    }
-    return fsModule;
-}
-// ====================== ASYNC (fs/promises) ======================
-async function getFsPromises() {
-    if (fsPromisesModule !== undefined)
-        return fsPromisesModule;
-    if (fsPromisesPromise)
-        return fsPromisesPromise;
-    fsPromisesPromise = (async () => {
-        if (!isNode()) {
-            fsPromisesModule = undefined;
-            return undefined;
-        }
-        try {
-            if (typeof require !== 'undefined' && require.cache) {
-                // CJS
-                const fs = require('node:fs');
-                fsPromisesModule = fs.promises;
-            }
-            else {
-                // ESM - dynamic import
-                fsPromisesModule = await import('node:fs/promises');
-            }
-            return fsPromisesModule;
-        }
-        catch (err) {
-            console.error('Failed to load fs/promises:', err);
-            fsPromisesModule = undefined;
-            return undefined;
-        }
-    })();
-    return fsPromisesPromise;
-}
 
 // #region Types
 // #region Checks
@@ -1188,18 +1127,7 @@ async function _wstringAsync(encodedString, stringType, endian, terminateValue, 
 /**
  * @file BiReader / Writer base for working in sync Buffers or full file reads. Node and Browser.
  */
-var _BiBase_instances, _BiBase_offset, _BiBase_insetBit, _BiBase_data, _BiBase_view, _BiBase_updateSize, _BiBase_updateBuffer, _BiBase_updateView, _BiBase_checkSize, _BiBase_confrimSize, _BiBase_extendArray, _BiBase_findNumber;
-var fs = getFs();
-function _fileExists$1(filePath) {
-    try {
-        fs.accessSync(filePath, fs.constants.F_OK);
-        return true; // File exists
-    }
-    catch (error) {
-        // @ts-ignore
-        return false;
-    }
-}
+var _BiBase_instances, _a$1, _BiBase_offset, _BiBase_insetBit, _BiBase_data, _BiBase_view, _BiBase_fileExists, _BiBase_updateSize, _BiBase_updateBuffer, _BiBase_updateView, _BiBase_checkSize, _BiBase_confrimSize, _BiBase_extendArray, _BiBase_findNumber;
 // #region Class
 /**
  * Base class for BiReader and BiWriter
@@ -1318,7 +1246,9 @@ class BiBase {
         }
         this.endian = endianness;
         if (typeof input == "string") {
-            if (typeof Buffer === 'undefined' || typeof fs === "undefined") {
+            if (typeof Buffer === 'undefined' || typeof _a$1.fs === "undefined") {
+                console.log(Buffer);
+                console.log(_a$1.fs);
                 throw new Error("Can't load file outside of Node.");
             }
             this.filePath = input;
@@ -1395,6 +1325,7 @@ class BiBase {
     ;
     ;
     ;
+    ;
     ///////////////////////////////
     // #region FILE MODE
     ///////////////////////////////
@@ -1442,14 +1373,14 @@ class BiBase {
         if (this.fd != null) {
             return;
         }
-        if (typeof fs === "undefined") {
+        if (typeof _a$1.fs === "undefined") {
             throw new Error("Can't load file outside of Node.");
         }
-        if (!_fileExists$1(this.filePath)) {
-            fs.writeFileSync(this.filePath, "");
+        if (!__classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_fileExists).call(this, this.filePath)) {
+            _a$1.fs.writeFileSync(this.filePath, "");
         }
         try {
-            this.fd = fs.openSync(this.filePath, this.fsMode);
+            this.fd = _a$1.fs.openSync(this.filePath, this.fsMode);
         }
         catch (error) {
             throw new Error(error);
@@ -1471,12 +1402,12 @@ class BiBase {
         if (this.fd === null) {
             return; // Already closed / or not open
         }
-        if (typeof fs === "undefined") {
+        if (typeof _a$1.fs === "undefined") {
             throw new Error("Can't load file outside of Node.");
         }
         this.commit();
         try {
-            fs.closeSync(this.fd);
+            _a$1.fs.closeSync(this.fd);
         }
         catch (error) {
             throw new Error(error);
@@ -1498,7 +1429,7 @@ class BiBase {
         // this.mode == "file"
         this.open();
         try {
-            fs.writeSync(this.fd, __classPrivateFieldGet(this, _BiBase_data, "f"), 0, __classPrivateFieldGet(this, _BiBase_data, "f").length);
+            _a$1.fs.writeSync(this.fd, __classPrivateFieldGet(this, _BiBase_data, "f"), 0, __classPrivateFieldGet(this, _BiBase_data, "f").length);
         }
         catch (error) {
             throw new Error(error);
@@ -1532,7 +1463,7 @@ class BiBase {
         }
         try {
             this.close();
-            fs.renameSync(this.filePath, newFilePath);
+            _a$1.fs.renameSync(this.filePath, newFilePath);
         }
         catch (error) {
             throw new Error(error);
@@ -1557,7 +1488,7 @@ class BiBase {
         }
         try {
             this.close();
-            fs.unlinkSync(this.filePath);
+            _a$1.fs.unlinkSync(this.filePath);
         }
         catch (error) {
             throw new Error(error);
@@ -4916,18 +4847,30 @@ class BiBase {
     }
     ;
 }
-_BiBase_offset = new WeakMap(), _BiBase_insetBit = new WeakMap(), _BiBase_data = new WeakMap(), _BiBase_view = new WeakMap(), _BiBase_instances = new WeakSet(), _BiBase_updateSize = function _BiBase_updateSize() {
+_a$1 = BiBase, _BiBase_offset = new WeakMap(), _BiBase_insetBit = new WeakMap(), _BiBase_data = new WeakMap(), _BiBase_view = new WeakMap(), _BiBase_instances = new WeakSet(), _BiBase_fileExists = function _BiBase_fileExists(filePath) {
+    if (_a$1.fs == undefined) {
+        return false;
+    }
+    try {
+        _a$1.fs.accessSync(filePath, _a$1.fs.constants.F_OK);
+        return true; // File exists
+    }
+    catch (error) {
+        // @ts-ignore
+        return false;
+    }
+}, _BiBase_updateSize = function _BiBase_updateSize() {
     if (this.isMemoryMode) {
         this.size = __classPrivateFieldGet(this, _BiBase_data, "f").length;
         this.bitSize = this.size * 8;
         return;
     }
-    if (typeof fs === "undefined") {
+    if (typeof _a$1.fs === "undefined") {
         throw new Error("Can't load file outside of Node.");
     }
     if (this.fd != null) {
         try {
-            const stat = fs.fstatSync(this.fd);
+            const stat = _a$1.fs.fstatSync(this.fd);
             this.size = stat.size;
             this.bitSize = this.size * 8;
         }
@@ -4939,7 +4882,7 @@ _BiBase_offset = new WeakMap(), _BiBase_insetBit = new WeakMap(), _BiBase_data =
     if (!this.isMemoryMode) {
         if (this.fd == null) {
             try {
-                this.fd = fs.openSync(this.filePath, this.fsMode);
+                this.fd = _a$1.fs.openSync(this.filePath, this.fsMode);
             }
             catch (error) {
                 throw new Error(error);
@@ -4947,7 +4890,7 @@ _BiBase_offset = new WeakMap(), _BiBase_insetBit = new WeakMap(), _BiBase_data =
         }
         const data = Buffer.alloc(this.size);
         try {
-            const bytesRead = fs.readSync(this.fd, data, 0, data.length, 0);
+            const bytesRead = _a$1.fs.readSync(this.fd, data, 0, data.length, 0);
             if (bytesRead != this.size) {
                 throw new Error("Didn't update file buffer size. Expecting " + this.size + " but got " + bytesRead);
             }
@@ -12029,17 +11972,7 @@ class BiWriter extends BiBase {
 /**
  * @file BiReaderAsync / Writer base for working in sync Buffers or full file reads. Node and Browser.
  */
-var _BiBaseAsync_instances, _BiBaseAsync_offset, _BiBaseAsync_insetBit, _BiBaseAsync_data, _BiBaseAsync_view, _BiBaseAsync_updateSize, _BiBaseAsync_updateView, _BiBaseAsync_initFile, _BiBaseAsync_initMemory, _BiBaseAsync_getChunkIndex, _BiBaseAsync_getNumChunks, _BiBaseAsync_preloadAllChunks, _BiBaseAsync_ensureChunkLoaded, _BiBaseAsync_performChunkLoad, _BiBaseAsync_ensureRangeLoaded, _BiBaseAsync_peekBytes, _BiBaseAsync_writeBytesAt, _BiBaseAsync_confrimSize, _BiBaseAsync_extendArray, _BiBaseAsync_setFileSize, _BiBaseAsync_invalidateFromChunk, _BiBaseAsync_shiftTailForward, _BiBaseAsync_shiftTailBackward, _BiBaseAsync_updateOffsets, _BiBaseAsync_readBytes, _BiBaseAsync_writeBytes, _BiBaseAsync_findNumber;
-async function _fileExists(filePath) {
-    const fs = await getFsPromises();
-    try {
-        await fs.access(filePath, fs.constants.F_OK);
-        return true; // File exists
-    }
-    catch (error) {
-        return false;
-    }
-}
+var _BiBaseAsync_instances, _a, _BiBaseAsync_offset, _BiBaseAsync_insetBit, _BiBaseAsync_data, _BiBaseAsync_view, _BiBaseAsync_fileExists, _BiBaseAsync_updateSize, _BiBaseAsync_updateView, _BiBaseAsync_initFile, _BiBaseAsync_initMemory, _BiBaseAsync_getChunkIndex, _BiBaseAsync_getNumChunks, _BiBaseAsync_preloadAllChunks, _BiBaseAsync_ensureChunkLoaded, _BiBaseAsync_performChunkLoad, _BiBaseAsync_ensureRangeLoaded, _BiBaseAsync_peekBytes, _BiBaseAsync_writeBytesAt, _BiBaseAsync_confrimSize, _BiBaseAsync_extendArray, _BiBaseAsync_setFileSize, _BiBaseAsync_invalidateFromChunk, _BiBaseAsync_shiftTailForward, _BiBaseAsync_shiftTailBackward, _BiBaseAsync_updateOffsets, _BiBaseAsync_readBytes, _BiBaseAsync_writeBytes, _BiBaseAsync_findNumber;
 // #region Buffer Dummies
 const buff2ByteDummy = new Uint8Array(2);
 const view2ByteDummy = new DataView(buff2ByteDummy.buffer, buff2ByteDummy.byteOffset, buff2ByteDummy.byteLength);
@@ -12290,6 +12223,7 @@ class BiBaseAsync {
     ;
     ;
     ;
+    ;
     ///////////////////////////////
     // #region FILE MODE
     ///////////////////////////////
@@ -12396,13 +12330,12 @@ class BiBaseAsync {
         if (this.isMemoryMode) {
             return;
         }
-        const fs = await getFsPromises();
         try {
             await this.close();
             this.fd = null;
             __classPrivateFieldSet(this, _BiBaseAsync_data, null, "f");
             __classPrivateFieldSet(this, _BiBaseAsync_view, null, "f");
-            await fs.rename(this.filePath, newFilePath);
+            await _a.fs.rename(this.filePath, newFilePath);
         }
         catch (error) {
             throw new Error(error);
@@ -12425,11 +12358,10 @@ class BiBaseAsync {
         if (this.readOnly) {
             throw new Error("Can't delete file in readOnly mode!");
         }
-        const fs = await getFsPromises();
         // this.mode == "file"
         try {
             this.close();
-            await fs.unlink(this.filePath);
+            await _a.fs.unlink(this.filePath);
         }
         catch (error) {
             throw new Error(error);
@@ -15474,7 +15406,18 @@ class BiBaseAsync {
     }
     ;
 }
-_BiBaseAsync_offset = new WeakMap(), _BiBaseAsync_insetBit = new WeakMap(), _BiBaseAsync_data = new WeakMap(), _BiBaseAsync_view = new WeakMap(), _BiBaseAsync_instances = new WeakSet(), _BiBaseAsync_updateSize = 
+_a = BiBaseAsync, _BiBaseAsync_offset = new WeakMap(), _BiBaseAsync_insetBit = new WeakMap(), _BiBaseAsync_data = new WeakMap(), _BiBaseAsync_view = new WeakMap(), _BiBaseAsync_instances = new WeakSet(), _BiBaseAsync_fileExists = async function _BiBaseAsync_fileExists(filePath) {
+    if (_a.fs == undefined) {
+        return false;
+    }
+    try {
+        await _a.fs.access(filePath, _a.fs.constants.F_OK);
+        return true; // File exists
+    }
+    catch (error) {
+        return false;
+    }
+}, _BiBaseAsync_updateSize = 
 /**
  * Internal update size
  *
@@ -15486,8 +15429,7 @@ async function _BiBaseAsync_updateSize() {
         this.bitSize = this.size * 8;
         return;
     }
-    const fs = await getFsPromises();
-    if (typeof fs === "undefined") {
+    if (typeof _a.fs === "undefined") {
         throw new Error("Can't load file outside Node.");
     }
     if (this.fd != null) {
@@ -15512,12 +15454,11 @@ async function _BiBaseAsync_initFile() {
     if (this.isMemoryMode || this.fd != null) {
         return;
     }
-    const fs = await getFsPromises();
-    if (!(await _fileExists(this.filePath))) {
-        await fs.writeFile(this.filePath, "");
+    if (!(await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_fileExists).call(this, this.filePath))) {
+        await _a.fs.writeFile(this.filePath, "");
     }
     try {
-        this.fd = await fs.open(this.filePath, this.fsMode);
+        this.fd = await _a.fs.open(this.filePath, this.fsMode);
     }
     catch (error) {
         throw new Error(error);
@@ -23006,6 +22947,12 @@ class BiWriterAsync extends BiBaseAsync {
 }
 
 // node common js
+BiReader.fs = fs;
+BiWriter.fs = fs;
+BiBase.fs = fs;
+BiReaderAsync.fs = fsp;
+BiWriterAsync.fs = fsp;
+BiBaseAsync.fs = fsp;
 /**
  * Not in use anymore.
  * @since 3.0
