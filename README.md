@@ -818,7 +818,7 @@ Naming is shared across sync and async classes.
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>readbytes(amount, unsigned), slice(<b>length</b>, consume)<br>wrap(<b>length</b>, consume)</td>
+    <td>subarray(<b>length</b>, consume), slice(<b>length</b>, consume)<br>wrap(<b>length</b>, consume)</td>
   </tr>
   <tr>
     <td>Function</td>

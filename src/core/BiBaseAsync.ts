@@ -2,10 +2,8 @@
  * @file BiReaderAsync / Writer base for working in sync Buffers or full file reads. Node and Browser.
  */
 
-
 // #region Imports
-
-var fs: typeof import('fs/promises');
+import { getFsPromises } from './getFS.js';
 
 import {
     // types
@@ -59,30 +57,9 @@ import {
     _wstringAsync
 } from '../common.js';
 
-(async function () {
-    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-        // We are in Node.js
-        try {
-            if (typeof require !== 'undefined') {
-                if (typeof fs === "undefined") {
-                    const _fs = require('fs');
-
-                    fs = _fs.promises;
-                }
-            } else {
-                if (typeof fs === "undefined") {
-                    const _fs = await import('fs');
-
-                    fs = _fs.promises;
-                }
-            }
-        } catch (error) {
-            console.error('Failed to load fs module:', error);
-        }
-    }
-})();
-
 async function _fileExists(filePath: string) {
+    const fs = await getFsPromises();
+
     try {
         await fs.access(filePath, fs.constants.F_OK);
 
@@ -307,7 +284,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
         this.endian = endianness as endian;
 
         if (typeof input === 'string') {
-            if (typeof Buffer === 'undefined' || typeof fs === "undefined") {
+            if (typeof Buffer === 'undefined') {
                 throw new Error("Can't load file outside of Node.");
             }
 
@@ -391,6 +368,8 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             return;
         }
 
+        const fs = await getFsPromises();
+
         if (typeof fs === "undefined") {
             throw new Error("Can't load file outside Node.");
         }
@@ -428,6 +407,8 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
         if (this.isMemoryMode || this.fd != null) {
             return;
         }
+
+        const fs = await getFsPromises();
 
         if (!(await _fileExists(this.filePath))) {
             await fs.writeFile(this.filePath, "");
@@ -1176,6 +1157,8 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             return;
         }
 
+        const fs = await getFsPromises();
+
         try {
             await this.close();
 
@@ -1210,6 +1193,8 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
         if (this.readOnly) {
             throw new Error("Can't delete file in readOnly mode!");
         }
+
+        const fs = await getFsPromises();
         // this.mode == "file"
         try {
             this.close();
@@ -2578,7 +2563,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      */
     async fill(startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false, fillValue?: number) {
-        if (this.readOnly) {
+        if (this.readOnly && fillValue != undefined) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
             throw new Error("Can't remove data in readOnly mode!");
@@ -2634,18 +2619,6 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
 
                 this.#insetBit = offsetBitSaver;
             }
-
-            return replacement;
-        } else {
-            await this.#shiftTailBackward(startOffset, removeLen, consume);
-
-            const newSize = this.size - removeLen;
-
-            await this.#setFileSize(newSize);
-
-            const startChunk = this.#getChunkIndex(startOffset);
-
-            this.#invalidateFromChunk(startChunk);
         }
 
         return dataRemoved as ReturnMapping<DataType>;
@@ -2660,8 +2633,19 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      */
     async lift(startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false, fillValue?: number) {
-        return await this.fill(startOffset, endOffset, consume, fillValue) as ReturnMapping<DataType>;
+        return await this.fill(startOffset, endOffset, consume, fillValue);
     };
+
+    /**
+     * Returns part of data from current byte position to end of data unless supplied.
+     * 
+     * @param {number} startOffset - Start location (default current position)
+     * @param {number} endOffset - End location (default end of data)
+     * @param {boolean} consume - Move position to end of lifted data (default false)
+     */
+    async subarray(startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false){
+        return await this.fill(startOffset, endOffset, consume);
+    }
 
     /**
      * Extract data from current position to length supplied.
@@ -3422,9 +3406,11 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
 
     /**
      * Read unsigned byte.
+     * 
+     * @param {boolean} consume - move offset after read
      */
-    async readUByte() {
-        return await this.readByte(true);
+    async readUByte(consume: boolean = true) {
+        return await this.readByte(consume);
     };
 
     /**
@@ -3477,10 +3463,11 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * Write multiple unsigned bytes.
      * 
      * @param {number[]} values - array of values as int
+     * @param {boolean} consume - move offset after write
      */
-    async writeUBytes(values: number[]) {
+    async writeUBytes(values: number[], consume: boolean = true) {
         for (let i = 0; i < values.length; i++) {
-            await this.writeUByte(values[i]);
+            await this.writeUByte(values[i], consume);
         }
     };
 
@@ -3488,9 +3475,10 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * Write unsigned byte.
      *
      * @param {number} value - value as int 
+     * @param {boolean} consume - move offset after write
      */
-    async writeUByte(value: number) {
-        return await this.writeByte(value, true);
+    async writeUByte(value: number, consume: boolean = true) {
+        return await this.writeByte(value, consume);
     };
 
     ///////////////////////////////

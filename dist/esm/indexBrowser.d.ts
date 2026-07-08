@@ -904,6 +904,15 @@ declare class BiBase<DataType, alwaysBigInt> {
      */
     lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): ReturnMapping<DataType>;
     /**
+     * Returns part of data from current byte position to end of data unless supplied.
+     *
+     * @param {number} startOffset - Start location (default current position)
+     * @param {number} endOffset - End location (default end of data)
+     * @param {boolean} consume - Move position to end of lifted data (default false)
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
+     */
+    subarray(startOffset?: number, endOffset?: number, consume?: boolean): ReturnMapping<DataType>;
+    /**
      * Extract data from current position to length supplied.
      *
      * Note: Does not affect supplied data.
@@ -1222,9 +1231,10 @@ declare class BiBase<DataType, alwaysBigInt> {
     /**
      * Read unsigned byte.
      *
+     * @param {boolean} consume - move offset after read
      * @returns {number}
      */
-    readUByte(): number;
+    readUByte(consume?: boolean): number;
     /**
      * Read multiple bytes.
      *
@@ -1269,8 +1279,9 @@ declare class BiBase<DataType, alwaysBigInt> {
      * Write unsigned byte.
      *
      * @param {number} value - value as int
+     * @param {boolean} consume - move offset after write
      */
-    writeUByte(value: number): void;
+    writeUByte(value: number, consume?: boolean): void;
     /**
      * Read short.
      *
@@ -7541,7 +7552,15 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      */
-    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<ReturnMapping<DataType>>;
+    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<DataType | ReturnMapping<DataType>>;
+    /**
+     * Returns part of data from current byte position to end of data unless supplied.
+     *
+     * @param {number} startOffset - Start location (default current position)
+     * @param {number} endOffset - End location (default end of data)
+     * @param {boolean} consume - Move position to end of lifted data (default false)
+     */
+    subarray(startOffset?: number, endOffset?: number, consume?: boolean): Promise<DataType | ReturnMapping<DataType>>;
     /**
      * Extract data from current position to length supplied.
      *
@@ -7851,8 +7870,10 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
     readByte(unsigned?: boolean, consume?: boolean): Promise<number>;
     /**
      * Read unsigned byte.
+     *
+     * @param {boolean} consume - move offset after read
      */
-    readUByte(): Promise<number>;
+    readUByte(consume?: boolean): Promise<number>;
     /**
      * Read multiple bytes.
      *
@@ -7880,14 +7901,16 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * Write multiple unsigned bytes.
      *
      * @param {number[]} values - array of values as int
+     * @param {boolean} consume - move offset after write
      */
-    writeUBytes(values: number[]): Promise<void>;
+    writeUBytes(values: number[], consume?: boolean): Promise<void>;
     /**
      * Write unsigned byte.
      *
      * @param {number} value - value as int
+     * @param {boolean} consume - move offset after write
      */
-    writeUByte(value: number): Promise<void>;
+    writeUByte(value: number, consume?: boolean): Promise<void>;
     /**
      * Read short.
      *

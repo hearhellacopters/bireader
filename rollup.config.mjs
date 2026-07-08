@@ -4,7 +4,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import dts from 'rollup-plugin-dts';
 import nodePolyfills from 'rollup-plugin-polyfill-node';
 
-const isExternalNodeBuiltin = (id) => id.startsWith('node:') || /^(fs\/promises|fs|path|os|crypto|buffer|process|stream|util|events)/.test(id);
+const isExternalNodeBuiltin = (id) => id.startsWith('node:') || /^(fs\/promises|fs|path|os|crypto|buffer|process|stream|util|events|module)/.test(id);
 
 
 export default [
@@ -35,7 +35,10 @@ export default [
         }
       )
     ],
-    external: isExternalNodeBuiltin
+    external: [
+      "node:fs",
+      "node:fs/promises"
+    ]
   },
 
   // ── 2. ESM (Node import + modern bundlers)
@@ -56,7 +59,10 @@ export default [
         declaration: false
       })
     ],
-    external: isExternalNodeBuiltin
+    external: [
+      "node:fs",
+      "node:fs/promises"
+    ]
   },
 
   // ── 3. Browser (ESM bundle – modern bundlers/Vite/Webpack pick this)
@@ -92,7 +98,10 @@ export default [
         tsconfig: './tsconfig.d.ts.json'
       })
     ],
-    external: isExternalNodeBuiltin
+    external: [
+      "node:fs",
+      "node:fs/promises"
+    ]
   },
   {
     input: 'src/indexImport.ts',
@@ -105,7 +114,10 @@ export default [
         tsconfig: './tsconfig.d.ts.json'
       })
     ],
-    external: isExternalNodeBuiltin
+    external: [
+      "node:fs",
+      "node:fs/promises"
+    ]
   },
   {
     input: 'src/indexBrowser.ts',

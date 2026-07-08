@@ -3,7 +3,8 @@
  */
 
 // #region Imports
-var fs: typeof import("fs");
+import { getFs } from './getFS.js';
+var fs: typeof import("fs") = getFs();
 
 import {
     // types
@@ -59,25 +60,6 @@ import {
     _rstring,
     _wstring,
 } from '../common.js';
-
-(async function () {
-    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-        // We are in Node.js
-        try {
-            if (typeof require !== 'undefined') {
-                if (typeof fs === "undefined") {
-                    fs = require('fs');
-                }
-            } else {
-                if (typeof fs === "undefined") {
-                    fs = await import('fs');
-                }
-            }
-        } catch (error) {
-            console.error('Failed to load fs module:', error);
-        }
-    }
-})();
 
 function _fileExists(filePath: string) {
     try {
@@ -2079,7 +2061,7 @@ export class BiBase<DataType, alwaysBigInt> {
      * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     fill(startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false, fillValue?: number): ReturnMapping<DataType> {
-        if (this.readOnly) {
+        if (this.readOnly && fillValue != undefined) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
 
             throw new Error("Can't remove data in readonly mode!");
@@ -2160,8 +2142,20 @@ export class BiBase<DataType, alwaysBigInt> {
      * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     lift(startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false, fillValue?: number): ReturnMapping<DataType> {
-        return this.fill(startOffset, endOffset, consume, fillValue) as ReturnMapping<DataType>;
+        return this.fill(startOffset, endOffset, consume, fillValue);
     };
+
+    /**
+     * Returns part of data from current byte position to end of data unless supplied.
+     * 
+     * @param {number} startOffset - Start location (default current position)
+     * @param {number} endOffset - End location (default end of data)
+     * @param {boolean} consume - Move position to end of lifted data (default false)
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
+     */
+    subarray(startOffset: number = this.#offset, endOffset: number = this.size, consume: boolean = false): ReturnMapping<DataType>{
+        return this.fill(startOffset, endOffset, consume);
+    }
 
     /**
      * Extract data from current position to length supplied.
@@ -3001,10 +2995,11 @@ export class BiBase<DataType, alwaysBigInt> {
     /**
      * Read unsigned byte.
      * 
+     * @param {boolean} consume - move offset after read
      * @returns {number}
      */
-    readUByte(): number {
-        return this.readByte(true);
+    readUByte(consume: boolean = true): number {
+        return this.readByte(consume);
     };
 
     /**
@@ -3100,9 +3095,10 @@ export class BiBase<DataType, alwaysBigInt> {
      * Write unsigned byte.
      *
      * @param {number} value - value as int 
+     * @param {boolean} consume - move offset after write
      */
-    writeUByte(value: number): void {
-        return this.writeByte(value, true);
+    writeUByte(value: number, consume: boolean = true): void {
+        return this.writeByte(value, consume);
     };
 
     ///////////////////////////////

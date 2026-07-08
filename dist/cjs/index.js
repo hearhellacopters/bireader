@@ -35,6 +35,70 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
     return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
 };
 
+// fs-loader.ts  (or put it at the top of your main module)
+let fsModule;
+let fsPromisesModule;
+let fsPromisesPromise;
+const isNode = () => {
+    return typeof process !== 'undefined' &&
+        process.versions?.node != null;
+};
+// ====================== SYNC ======================
+function getFs() {
+    if (fsModule !== undefined)
+        return fsModule;
+    if (!isNode()) {
+        fsModule = undefined;
+        return undefined;
+    }
+    try {
+        if (typeof require !== 'undefined' && require.cache) {
+            // CJS - truly synchronous
+            fsModule = require('node:fs');
+        }
+        else {
+            // ESM - fallback
+            throw new Error('ESM: use getFsAsync instead');
+        }
+    }
+    catch (err) {
+        console.error('Failed to load fs:', err);
+        fsModule = undefined;
+    }
+    return fsModule;
+}
+// ====================== ASYNC (fs/promises) ======================
+async function getFsPromises() {
+    if (fsPromisesModule !== undefined)
+        return fsPromisesModule;
+    if (fsPromisesPromise)
+        return fsPromisesPromise;
+    fsPromisesPromise = (async () => {
+        if (!isNode()) {
+            fsPromisesModule = undefined;
+            return undefined;
+        }
+        try {
+            if (typeof require !== 'undefined' && require.cache) {
+                // CJS
+                const fs = require('node:fs');
+                fsPromisesModule = fs.promises;
+            }
+            else {
+                // ESM - dynamic import
+                fsPromisesModule = await import('node:fs/promises');
+            }
+            return fsPromisesModule;
+        }
+        catch (err) {
+            console.error('Failed to load fs/promises:', err);
+            fsPromisesModule = undefined;
+            return undefined;
+        }
+    })();
+    return fsPromisesPromise;
+}
+
 // #region Types
 // #region Checks
 const testFallback = process && process.argv && process.argv.indexOf("FALLBACK=true") != -1;
@@ -1125,31 +1189,10 @@ async function _wstringAsync(encodedString, stringType, endian, terminateValue, 
  * @file BiReader / Writer base for working in sync Buffers or full file reads. Node and Browser.
  */
 var _BiBase_instances, _BiBase_offset, _BiBase_insetBit, _BiBase_data, _BiBase_view, _BiBase_updateSize, _BiBase_updateBuffer, _BiBase_updateView, _BiBase_checkSize, _BiBase_confrimSize, _BiBase_extendArray, _BiBase_findNumber;
-// #region Imports
-var fs$1;
-(async function () {
-    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-        // We are in Node.js
-        try {
-            if (typeof require !== 'undefined') {
-                if (typeof fs$1 === "undefined") {
-                    fs$1 = require('fs');
-                }
-            }
-            else {
-                if (typeof fs$1 === "undefined") {
-                    fs$1 = await import('fs');
-                }
-            }
-        }
-        catch (error) {
-            console.error('Failed to load fs module:', error);
-        }
-    }
-})();
+var fs = getFs();
 function _fileExists$1(filePath) {
     try {
-        fs$1.accessSync(filePath, fs$1.constants.F_OK);
+        fs.accessSync(filePath, fs.constants.F_OK);
         return true; // File exists
     }
     catch (error) {
@@ -1275,7 +1318,7 @@ class BiBase {
         }
         this.endian = endianness;
         if (typeof input == "string") {
-            if (typeof Buffer === 'undefined' || typeof fs$1 === "undefined") {
+            if (typeof Buffer === 'undefined' || typeof fs === "undefined") {
                 throw new Error("Can't load file outside of Node.");
             }
             this.filePath = input;
@@ -1399,14 +1442,14 @@ class BiBase {
         if (this.fd != null) {
             return;
         }
-        if (typeof fs$1 === "undefined") {
+        if (typeof fs === "undefined") {
             throw new Error("Can't load file outside of Node.");
         }
         if (!_fileExists$1(this.filePath)) {
-            fs$1.writeFileSync(this.filePath, "");
+            fs.writeFileSync(this.filePath, "");
         }
         try {
-            this.fd = fs$1.openSync(this.filePath, this.fsMode);
+            this.fd = fs.openSync(this.filePath, this.fsMode);
         }
         catch (error) {
             throw new Error(error);
@@ -1428,12 +1471,12 @@ class BiBase {
         if (this.fd === null) {
             return; // Already closed / or not open
         }
-        if (typeof fs$1 === "undefined") {
+        if (typeof fs === "undefined") {
             throw new Error("Can't load file outside of Node.");
         }
         this.commit();
         try {
-            fs$1.closeSync(this.fd);
+            fs.closeSync(this.fd);
         }
         catch (error) {
             throw new Error(error);
@@ -1455,7 +1498,7 @@ class BiBase {
         // this.mode == "file"
         this.open();
         try {
-            fs$1.writeSync(this.fd, __classPrivateFieldGet(this, _BiBase_data, "f"), 0, __classPrivateFieldGet(this, _BiBase_data, "f").length);
+            fs.writeSync(this.fd, __classPrivateFieldGet(this, _BiBase_data, "f"), 0, __classPrivateFieldGet(this, _BiBase_data, "f").length);
         }
         catch (error) {
             throw new Error(error);
@@ -1489,7 +1532,7 @@ class BiBase {
         }
         try {
             this.close();
-            fs$1.renameSync(this.filePath, newFilePath);
+            fs.renameSync(this.filePath, newFilePath);
         }
         catch (error) {
             throw new Error(error);
@@ -1514,7 +1557,7 @@ class BiBase {
         }
         try {
             this.close();
-            fs$1.unlinkSync(this.filePath);
+            fs.unlinkSync(this.filePath);
         }
         catch (error) {
             throw new Error(error);
@@ -2755,7 +2798,7 @@ class BiBase {
      * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     fill(startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false, fillValue) {
-        if (this.readOnly) {
+        if (this.readOnly && fillValue != undefined) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error("Can't remove data in readonly mode!");
         }
@@ -2821,6 +2864,17 @@ class BiBase {
         return this.fill(startOffset, endOffset, consume, fillValue);
     }
     ;
+    /**
+     * Returns part of data from current byte position to end of data unless supplied.
+     *
+     * @param {number} startOffset - Start location (default current position)
+     * @param {number} endOffset - End location (default end of data)
+     * @param {boolean} consume - Move position to end of lifted data (default false)
+     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
+     */
+    subarray(startOffset = __classPrivateFieldGet(this, _BiBase_offset, "f"), endOffset = this.size, consume = false) {
+        return this.fill(startOffset, endOffset, consume);
+    }
     /**
      * Extract data from current position to length supplied.
      *
@@ -3563,10 +3617,11 @@ class BiBase {
     /**
      * Read unsigned byte.
      *
+     * @param {boolean} consume - move offset after read
      * @returns {number}
      */
-    readUByte() {
-        return this.readByte(true);
+    readUByte(consume = true) {
+        return this.readByte(consume);
     }
     ;
     /**
@@ -3655,9 +3710,10 @@ class BiBase {
      * Write unsigned byte.
      *
      * @param {number} value - value as int
+     * @param {boolean} consume - move offset after write
      */
-    writeUByte(value) {
-        return this.writeByte(value, true);
+    writeUByte(value, consume = true) {
+        return this.writeByte(value, consume);
     }
     ;
     ///////////////////////////////
@@ -4866,12 +4922,12 @@ _BiBase_offset = new WeakMap(), _BiBase_insetBit = new WeakMap(), _BiBase_data =
         this.bitSize = this.size * 8;
         return;
     }
-    if (typeof fs$1 === "undefined") {
+    if (typeof fs === "undefined") {
         throw new Error("Can't load file outside of Node.");
     }
     if (this.fd != null) {
         try {
-            const stat = fs$1.fstatSync(this.fd);
+            const stat = fs.fstatSync(this.fd);
             this.size = stat.size;
             this.bitSize = this.size * 8;
         }
@@ -4883,7 +4939,7 @@ _BiBase_offset = new WeakMap(), _BiBase_insetBit = new WeakMap(), _BiBase_data =
     if (!this.isMemoryMode) {
         if (this.fd == null) {
             try {
-                this.fd = fs$1.openSync(this.filePath, this.fsMode);
+                this.fd = fs.openSync(this.filePath, this.fsMode);
             }
             catch (error) {
                 throw new Error(error);
@@ -4891,7 +4947,7 @@ _BiBase_offset = new WeakMap(), _BiBase_insetBit = new WeakMap(), _BiBase_data =
         }
         const data = Buffer.alloc(this.size);
         try {
-            const bytesRead = fs$1.readSync(this.fd, data, 0, data.length, 0);
+            const bytesRead = fs.readSync(this.fd, data, 0, data.length, 0);
             if (bytesRead != this.size) {
                 throw new Error("Didn't update file buffer size. Expecting " + this.size + " but got " + bytesRead);
             }
@@ -11974,31 +12030,8 @@ class BiWriter extends BiBase {
  * @file BiReaderAsync / Writer base for working in sync Buffers or full file reads. Node and Browser.
  */
 var _BiBaseAsync_instances, _BiBaseAsync_offset, _BiBaseAsync_insetBit, _BiBaseAsync_data, _BiBaseAsync_view, _BiBaseAsync_updateSize, _BiBaseAsync_updateView, _BiBaseAsync_initFile, _BiBaseAsync_initMemory, _BiBaseAsync_getChunkIndex, _BiBaseAsync_getNumChunks, _BiBaseAsync_preloadAllChunks, _BiBaseAsync_ensureChunkLoaded, _BiBaseAsync_performChunkLoad, _BiBaseAsync_ensureRangeLoaded, _BiBaseAsync_peekBytes, _BiBaseAsync_writeBytesAt, _BiBaseAsync_confrimSize, _BiBaseAsync_extendArray, _BiBaseAsync_setFileSize, _BiBaseAsync_invalidateFromChunk, _BiBaseAsync_shiftTailForward, _BiBaseAsync_shiftTailBackward, _BiBaseAsync_updateOffsets, _BiBaseAsync_readBytes, _BiBaseAsync_writeBytes, _BiBaseAsync_findNumber;
-// #region Imports
-var fs;
-(async function () {
-    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-        // We are in Node.js
-        try {
-            if (typeof require !== 'undefined') {
-                if (typeof fs === "undefined") {
-                    const _fs = require('fs');
-                    fs = _fs.promises;
-                }
-            }
-            else {
-                if (typeof fs === "undefined") {
-                    const _fs = await import('fs');
-                    fs = _fs.promises;
-                }
-            }
-        }
-        catch (error) {
-            console.error('Failed to load fs module:', error);
-        }
-    }
-})();
 async function _fileExists(filePath) {
+    const fs = await getFsPromises();
     try {
         await fs.access(filePath, fs.constants.F_OK);
         return true; // File exists
@@ -12178,7 +12211,7 @@ class BiBaseAsync {
         }
         this.endian = endianness;
         if (typeof input === 'string') {
-            if (typeof Buffer === 'undefined' || typeof fs === "undefined") {
+            if (typeof Buffer === 'undefined') {
                 throw new Error("Can't load file outside of Node.");
             }
             this.filePath = input;
@@ -12363,6 +12396,7 @@ class BiBaseAsync {
         if (this.isMemoryMode) {
             return;
         }
+        const fs = await getFsPromises();
         try {
             await this.close();
             this.fd = null;
@@ -12391,6 +12425,7 @@ class BiBaseAsync {
         if (this.readOnly) {
             throw new Error("Can't delete file in readOnly mode!");
         }
+        const fs = await getFsPromises();
         // this.mode == "file"
         try {
             this.close();
@@ -13610,7 +13645,7 @@ class BiBaseAsync {
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      */
     async fill(startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false, fillValue) {
-        if (this.readOnly) {
+        if (this.readOnly && fillValue != undefined) {
             this.errorDump ? console.log("\x1b[31m[Error]\x1b[0m hexdump:\n" + this.hexdump({ returnString: true })) : "";
             throw new Error("Can't remove data in readOnly mode!");
         }
@@ -13656,14 +13691,6 @@ class BiBaseAsync {
                 __classPrivateFieldSet(this, _BiBaseAsync_offset, offsetSaver, "f");
                 __classPrivateFieldSet(this, _BiBaseAsync_insetBit, offsetBitSaver, "f");
             }
-            return replacement;
-        }
-        else {
-            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_shiftTailBackward).call(this, startOffset, removeLen, consume);
-            const newSize = this.size - removeLen;
-            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_setFileSize).call(this, newSize);
-            const startChunk = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getChunkIndex).call(this, startOffset);
-            __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_invalidateFromChunk).call(this, startChunk);
         }
         return dataRemoved;
     }
@@ -13680,6 +13707,16 @@ class BiBaseAsync {
         return await this.fill(startOffset, endOffset, consume, fillValue);
     }
     ;
+    /**
+     * Returns part of data from current byte position to end of data unless supplied.
+     *
+     * @param {number} startOffset - Start location (default current position)
+     * @param {number} endOffset - End location (default end of data)
+     * @param {boolean} consume - Move position to end of lifted data (default false)
+     */
+    async subarray(startOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), endOffset = this.size, consume = false) {
+        return await this.fill(startOffset, endOffset, consume);
+    }
     /**
      * Extract data from current position to length supplied.
      *
@@ -14371,9 +14408,11 @@ class BiBaseAsync {
     }
     /**
      * Read unsigned byte.
+     *
+     * @param {boolean} consume - move offset after read
      */
-    async readUByte() {
-        return await this.readByte(true);
+    async readUByte(consume = true) {
+        return await this.readByte(consume);
     }
     ;
     /**
@@ -14421,10 +14460,11 @@ class BiBaseAsync {
      * Write multiple unsigned bytes.
      *
      * @param {number[]} values - array of values as int
+     * @param {boolean} consume - move offset after write
      */
-    async writeUBytes(values) {
+    async writeUBytes(values, consume = true) {
         for (let i = 0; i < values.length; i++) {
-            await this.writeUByte(values[i]);
+            await this.writeUByte(values[i], consume);
         }
     }
     ;
@@ -14432,9 +14472,10 @@ class BiBaseAsync {
      * Write unsigned byte.
      *
      * @param {number} value - value as int
+     * @param {boolean} consume - move offset after write
      */
-    async writeUByte(value) {
-        return await this.writeByte(value, true);
+    async writeUByte(value, consume = true) {
+        return await this.writeByte(value, consume);
     }
     ;
     ///////////////////////////////
@@ -15445,6 +15486,7 @@ async function _BiBaseAsync_updateSize() {
         this.bitSize = this.size * 8;
         return;
     }
+    const fs = await getFsPromises();
     if (typeof fs === "undefined") {
         throw new Error("Can't load file outside Node.");
     }
@@ -15470,6 +15512,7 @@ async function _BiBaseAsync_initFile() {
     if (this.isMemoryMode || this.fd != null) {
         return;
     }
+    const fs = await getFsPromises();
     if (!(await _fileExists(this.filePath))) {
         await fs.writeFile(this.filePath, "");
     }
