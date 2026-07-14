@@ -1067,14 +1067,16 @@ function _wstring(encodedString, stringType, endian, terminateValue, lengthWrite
                 break;
         }
     }
-    if (stringType == "ascii" || stringType == 'utf-8') {
-        writeUByte(terminateValue);
-    }
-    else if (stringType == 'utf-16') {
-        writeUInt16(terminateValue, endian);
-    }
-    else if (stringType == 'utf-32') {
-        writeUInt32(terminateValue, endian);
+    if (terminateValue != undefined) {
+        if (stringType == "ascii" || stringType == 'utf-8') {
+            writeUByte(terminateValue);
+        }
+        else if (stringType == 'utf-16') {
+            writeUInt16(terminateValue, endian);
+        }
+        else if (stringType == 'utf-32') {
+            writeUInt32(terminateValue, endian);
+        }
     }
 }
 async function _wstringAsync(encodedString, stringType, endian, terminateValue, lengthWriteSize, writeUByte, writeUInt16, writeUInt32) {
@@ -1113,14 +1115,16 @@ async function _wstringAsync(encodedString, stringType, endian, terminateValue, 
                 break;
         }
     }
-    if (stringType == "ascii" || stringType == 'utf-8') {
-        await writeUByte(terminateValue);
-    }
-    else if (stringType == 'utf-16') {
-        await writeUInt16(terminateValue, endian);
-    }
-    else if (stringType == 'utf-32') {
-        await writeUInt32(terminateValue, endian);
+    if (terminateValue != undefined) {
+        if (stringType == "ascii" || stringType == 'utf-8') {
+            await writeUByte(terminateValue);
+        }
+        else if (stringType == 'utf-16') {
+            await writeUInt16(terminateValue, endian);
+        }
+        else if (stringType == 'utf-32') {
+            await writeUInt32(terminateValue, endian);
+        }
     }
 }
 
@@ -1140,6 +1144,15 @@ class BiBase {
      */
     get data() {
         return __classPrivateFieldGet(this, _BiBase_data, "f");
+    }
+    ;
+    /**
+     * Get the current buffer data.
+     *
+     * For use in file mode!
+     */
+    getData() {
+        return this.get();
     }
     ;
     /**
@@ -1247,9 +1260,7 @@ class BiBase {
         this.endian = endianness;
         if (typeof input == "string") {
             if (typeof Buffer === 'undefined' || typeof _a$1.fs === "undefined") {
-                console.log(Buffer);
-                console.log(_a$1.fs);
-                throw new Error("Can't load file outside of Node.");
+                throw new Error(`Can't load file outside of Node. Buffer = ${Buffer}, fs = ${_a$1.fs}.`);
             }
             this.filePath = input;
             this.isMemoryMode = false;
@@ -1429,7 +1440,8 @@ class BiBase {
         // this.mode == "file"
         this.open();
         try {
-            _a$1.fs.writeSync(this.fd, __classPrivateFieldGet(this, _BiBase_data, "f"), 0, __classPrivateFieldGet(this, _BiBase_data, "f").length);
+            _a$1.fs.writeSync(this.fd, __classPrivateFieldGet(this, _BiBase_data, "f"), 0, __classPrivateFieldGet(this, _BiBase_data, "f").length, 0);
+            _a$1.fs.ftruncateSync(this.fd, __classPrivateFieldGet(this, _BiBase_data, "f").length);
         }
         catch (error) {
             throw new Error(error);
@@ -2579,6 +2591,23 @@ class BiBase {
         }
         this.open();
         startOffset = Math.abs(startOffset);
+        const removeLen = endOffset - startOffset;
+        if (startOffset < 0 || endOffset > this.size) {
+            throw new RangeError('Remove range out of bounds');
+        }
+        if (removeLen <= 0) {
+            if (this.isMemoryMode) {
+                if (this.isBuffer(this.data)) {
+                    return Buffer.alloc(0);
+                }
+                else {
+                    return new Uint8Array(0);
+                }
+            }
+            else {
+                return Buffer.alloc(0);
+            }
+        }
         __classPrivateFieldGet(this, _BiBase_instances, "m", _BiBase_confrimSize).call(this, endOffset);
         const dataRemoved = this.data.subarray(startOffset, endOffset);
         const part1 = this.data.subarray(0, startOffset);
@@ -3552,7 +3581,7 @@ class BiBase {
      * @returns {number}
      */
     readUByte(consume = true) {
-        return this.readByte(consume);
+        return this.readByte(true, consume);
     }
     ;
     /**
@@ -3561,10 +3590,21 @@ class BiBase {
      * @param {number} amount - amount of bytes to read
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {boolean} consume - move offset after read
-     * @returns {number[]}
+     * @returns {Array<number>}
      */
     readBytes(amount, unsigned, consume = true) {
-        return Array.from({ length: amount }, () => this.readByte(unsigned, consume));
+        const data = this.subarray(__classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + amount, consume);
+        const returnArray = [];
+        for (let i = 0; i < data.length; i++) {
+            var value = data[0];
+            if (unsigned) {
+                returnArray.push(value & 0xFF);
+            }
+            else {
+                returnArray.push(value > 127 ? value - 256 : value);
+            }
+        }
+        return returnArray;
     }
     ;
     /**
@@ -3572,10 +3612,10 @@ class BiBase {
      *
      * @param {number} amount - amount of bytes to read
      * @param {boolean} consume - move offset after read
-     * @returns {number[]}
+     * @returns {ReturnMapping<DataType>}
      */
     readUBytes(amount, consume = true) {
-        return this.readBytes(amount, true, consume);
+        return this.subarray(__classPrivateFieldGet(this, _BiBase_offset, "f"), __classPrivateFieldGet(this, _BiBase_offset, "f") + amount, consume);
     }
     ;
     /**
@@ -3617,20 +3657,26 @@ class BiBase {
     /**
      * Write multiple bytes.
      *
-     * @param {number[]} values - array of values as int
+     * @param {Array<number> | Buffer | Uint8Array} values - array of values as int
      * @param {boolean} unsigned - if the value is unsigned
      * @param {boolean} consume - move offset after write
      */
     writeBytes(values, unsigned, consume = true) {
-        for (let i = 0; i < values.length; i++) {
-            this.writeByte(values[i], unsigned, consume);
+        if (this.isBufferOrUint8Array(values)) {
+            this.overwrite(values, this.offset, consume);
+            return;
+        }
+        else {
+            const data = new Uint8Array(values);
+            this.overwrite(data, this.offset, consume);
+            return;
         }
     }
     ;
     /**
      * Write multiple unsigned bytes.
      *
-     * @param {number[]} values - array of values as int
+     * @param {Array<number> | Buffer | Uint8Array} values - array of values as int
      * @param {boolean} consume - move offset after write
      */
     writeUBytes(values, consume = true) {
@@ -4798,6 +4844,9 @@ class BiBase {
                 stringType == 'utf-32') {
                 terminateValue = 0;
             }
+            if (length != undefined) {
+                terminateValue = undefined;
+            }
         }
         var maxBytes = Math.min(strUnits, maxLengthValue);
         string = string.substring(0, maxBytes);
@@ -4810,6 +4859,9 @@ class BiBase {
                 {
                     encodedString = new TextEncoder().encode(string);
                     totalLength = encodedString.byteLength + 1;
+                    if (stringType == 'utf-8' && length) {
+                        totalLength = length;
+                    }
                 }
                 break;
             case 'utf-16':
@@ -4821,6 +4873,9 @@ class BiBase {
                     }
                     encodedString = new Uint8Array(utf16Buffer.buffer);
                     totalLength = encodedString.byteLength + 2;
+                    if (stringType == 'utf-16' && length) {
+                        totalLength = length;
+                    }
                 }
                 break;
             case 'utf-32':
@@ -4832,6 +4887,9 @@ class BiBase {
                     }
                     encodedString = new Uint8Array(utf32Buffer.buffer);
                     totalLength = encodedString.byteLength + 4;
+                    if (stringType == 'utf-32' && length) {
+                        totalLength = length;
+                    }
                 }
                 break;
         }
@@ -5022,7 +5080,7 @@ class BiReader extends BiBase {
         options.bitOffset = options.bitOffset ?? 0;
         options.endianness = options.endianness ?? "little";
         options.strict = options.strict ?? true;
-        options.growthIncrement = options.growthIncrement ?? 1048576;
+        options.growthIncrement = options.growthIncrement ?? 0x100000;
         options.enforceBigInt = options.enforceBigInt ?? false;
         options.readOnly = options.readOnly ?? true;
         if (input == undefined) {
@@ -8034,7 +8092,7 @@ class BiReader extends BiBase {
     *
     * @returns {string}
     */
-    latin1tring(length, terminateValue, stripNull) {
+    latin1string(length, terminateValue, stripNull) {
         return this.string({ stringType: "utf-8", encoding: "iso-8859-1", length: length, terminateValue: terminateValue, stripNull: stripNull });
     }
     ;
@@ -8172,6 +8230,30 @@ class BiReader extends BiBase {
     }
     ;
     /**
+    * Reads Pascal string in little endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    pstringle(lengthReadSize, stripNull) {
+        return this.pstring(lengthReadSize, stripNull, "little");
+    }
+    ;
+    /**
+    * Reads Pascal string in big endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    pstringbe(lengthReadSize, stripNull) {
+        return this.pstring(lengthReadSize, stripNull, "big");
+    }
+    ;
+    /**
     * Reads Pascal string 1 byte length read.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
@@ -8287,6 +8369,30 @@ class BiReader extends BiBase {
     }
     ;
     /**
+    * Reads Wide Pascal string 1 byte length read in little endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    wpstringle(lengthReadSize, stripNull) {
+        return this.wpstring(lengthReadSize, stripNull, "little");
+    }
+    ;
+    /**
+    * Reads Wide Pascal string 1 byte length read in big endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    wpstringbe(lengthReadSize, stripNull) {
+        return this.wpstring(lengthReadSize, stripNull, "big");
+    }
+    ;
+    /**
     * Reads Wide Pascal string 1 byte length read.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
@@ -8399,6 +8505,30 @@ class BiReader extends BiBase {
     */
     dwpstring(lengthReadSize, stripNull, endian) {
         return this.string({ stringType: "double-wide-pascal", encoding: "utf-32", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 1 byte length read in little endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    dwpstringle(lengthReadSize, stripNull) {
+        return this.dwpstring(lengthReadSize, stripNull, "little");
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string 1 byte length read in big endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    dwpstringbe(lengthReadSize, stripNull) {
+        return this.dwpstring(lengthReadSize, stripNull, "big");
     }
     ;
     /**
@@ -8525,7 +8655,7 @@ class BiWriter extends BiBase {
         options.bitOffset = options.bitOffset ?? 0;
         options.endianness = options.endianness ?? "little";
         options.strict = options.strict ?? false;
-        options.growthIncrement = options.growthIncrement ?? 1048576;
+        options.growthIncrement = options.growthIncrement ?? 0x100000;
         options.enforceBigInt = options.enforceBigInt ?? false;
         options.readOnly = options.readOnly ?? false;
         const { growthIncrement, } = options;
@@ -12097,6 +12227,7 @@ class BiBaseAsync {
         // ASYNC ONLY
         /**
          * array of loaded data chunks
+         * @type {ReturnMapping<DataType>[]}
          */
         this.chunks = [];
         /**
@@ -12277,14 +12408,14 @@ class BiBaseAsync {
         if (this.loadAllPromise && !this.isFullyLoaded) {
             await this.loadAllPromise;
         }
-        if (!this.isMemoryMode && this.fd) {
+        if (this.isMemoryMode) {
+            return this.data;
+        }
+        if (this.fd) {
             const data = await this.getData();
             await this.fd.close();
             this.fd = null;
             return data;
-        }
-        if (this.isMemoryMode) {
-            return this.data;
         }
     }
     ;
@@ -13423,6 +13554,7 @@ class BiBaseAsync {
             throw new Error("\x1b[33m[Strict mode]\x1b[0m: Can not remove data in strict mode: endOffset " + endOffset + " of " + this.size);
         }
         await this.open();
+        startOffset = Math.abs(startOffset);
         const removeLen = endOffset - startOffset;
         if (startOffset < 0 || endOffset > this.size) {
             throw new RangeError('Remove range out of bounds');
@@ -13440,8 +13572,8 @@ class BiBaseAsync {
                 return Buffer.alloc(0);
             }
         }
-        if (this.readOnly || this.strict) {
-            throw new Error('Cannot modify readOnly data');
+        if (!this.readOnly && this.dirtyChunks.size > 0) {
+            await this.flush();
         }
         const removed = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, startOffset, removeLen);
         await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_shiftTailBackward).call(this, startOffset, removeLen, consume);
@@ -13539,13 +13671,19 @@ class BiBaseAsync {
             }
             await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_confrimSize).call(this, offset + insertLen);
         }
+        //if (!this.readOnly && this.dirtyChunks.size > 0) {
+        //    await this.flush();
+        //}
         const savedOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
         const savedBitOffset = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
         __classPrivateFieldSet(this, _BiBaseAsync_offset, offset, "f");
         __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
         await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, data, consume);
-        const tailStartChunk = Math.floor((offset + insertLen) / this.windowSize);
-        __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_invalidateFromChunk).call(this, tailStartChunk);
+        //if (offset + insertLen < this.size) {
+        //    const tailStartChunk = this.#getChunkIndex(offset + insertLen);
+        //    
+        //    this.#invalidateFromChunk(tailStartChunk);
+        //}
         if (!consume) {
             __classPrivateFieldSet(this, _BiBaseAsync_offset, savedOffset, "f");
             __classPrivateFieldSet(this, _BiBaseAsync_insetBit, savedBitOffset, "f");
@@ -13602,7 +13740,6 @@ class BiBaseAsync {
         if (endOffset > this.size && this.strict) {
             throw new Error('Cannot extend data while in strict mode. Use unrestrict() to enable.');
         }
-        const dataRemoved = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, startOffset, removeLen);
         if (fillValue != undefined) {
             var replacement;
             if (this.isMemoryMode) {
@@ -13624,7 +13761,14 @@ class BiBaseAsync {
                 __classPrivateFieldSet(this, _BiBaseAsync_insetBit, offsetBitSaver, "f");
             }
         }
-        return dataRemoved;
+        else {
+            const dataRemoved = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_peekBytes).call(this, startOffset, removeLen);
+            if (consume) {
+                __classPrivateFieldSet(this, _BiBaseAsync_offset, endOffset, "f");
+                __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
+            }
+            return dataRemoved;
+        }
     }
     ;
     /**
@@ -13733,20 +13877,18 @@ class BiBaseAsync {
             return;
         }
         const oldSize = this.size;
-        if (offset + insertLen > this.size) {
-            if (this.strict || this.readOnly) {
-                throw new Error('Growing requires strict: false');
-            }
-            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_confrimSize).call(this, offset + insertLen);
+        const newSize = oldSize + insertLen;
+        if (this.strict || this.readOnly) {
+            throw new Error('Growing requires strict: false');
         }
+        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_confrimSize).call(this, newSize);
+        await this.flush();
         await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_shiftTailForward).call(this, offset, insertLen, oldSize, false);
         const savedOffset = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
         const savedBitOffset = __classPrivateFieldGet(this, _BiBaseAsync_insetBit, "f");
         __classPrivateFieldSet(this, _BiBaseAsync_offset, offset, "f");
         __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
         await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, data, consume);
-        const tailStartChunk = Math.floor((offset + insertLen) / this.windowSize);
-        __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_invalidateFromChunk).call(this, tailStartChunk);
         if (!consume) {
             __classPrivateFieldSet(this, _BiBaseAsync_offset, savedOffset, "f");
             __classPrivateFieldSet(this, _BiBaseAsync_insetBit, savedBitOffset, "f");
@@ -14331,12 +14473,11 @@ class BiBaseAsync {
         const data = await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_readBytes).call(this, 1, consume);
         var value = data[0];
         if (unsigned) {
-            value = value & 0xFF;
+            return value & 0xFF;
         }
         else {
-            value = value > 127 ? value - 256 : value;
+            return value > 127 ? value - 256 : value;
         }
-        return value;
     }
     /**
      * Read unsigned byte.
@@ -14344,7 +14485,7 @@ class BiBaseAsync {
      * @param {boolean} consume - move offset after read
      */
     async readUByte(consume = true) {
-        return await this.readByte(consume);
+        return await this.readByte(true, consume);
     }
     ;
     /**
@@ -14355,12 +14496,18 @@ class BiBaseAsync {
      * @param {boolean} consume - move offset after read
      */
     async readBytes(amount, unsigned, consume = true) {
-        const array = [];
-        for (let i = 0; i < amount; i++) {
-            const value = await this.readByte(unsigned, consume);
-            array.push(value);
+        const data = await this.subarray(this.offset, this.offset + amount, consume);
+        const returnArray = [];
+        for (let i = 0; i < data.length; i++) {
+            var value = data[0];
+            if (unsigned) {
+                returnArray.push(value & 0xFF);
+            }
+            else {
+                returnArray.push(value > 127 ? value - 256 : value);
+            }
         }
-        return array;
+        return returnArray;
     }
     ;
     /**
@@ -14370,7 +14517,7 @@ class BiBaseAsync {
      * @param {boolean} consume - move offset after read
      */
     async readUBytes(amount, consume = true) {
-        return await this.readBytes(amount, true, consume);
+        return await this.subarray(this.offset, this.offset + amount, consume);
     }
     ;
     /**
@@ -14384,20 +14531,38 @@ class BiBaseAsync {
         if (this.readOnly) {
             throw new Error("Can't write data in readOnly mode!");
         }
-        this.open();
-        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, [numberSafe(value, 8, unsigned)], consume);
+        await this.open();
+        const single = new Uint8Array([numberSafe(value, 8, unsigned)]);
+        await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, single, consume);
+    }
+    ;
+    /**
+     * Write multiple bytes.
+     *
+     * @param {Array<number> | Buffer | Uint8Array} values - array of values as int
+     * @param {boolean} unsigned - if the value is unsigned
+     * @param {boolean} consume - move offset after write
+     */
+    async writeBytes(values, unsigned, consume = true) {
+        if (this.isBufferOrUint8Array(values)) {
+            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, values, consume);
+            return;
+        }
+        else {
+            const data = new Uint8Array(values);
+            await __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_writeBytes).call(this, data, consume);
+            return;
+        }
     }
     ;
     /**
      * Write multiple unsigned bytes.
      *
-     * @param {number[]} values - array of values as int
+     * @param {Array<number> | Buffer | Uint8Array} values - array of values as int
      * @param {boolean} consume - move offset after write
      */
     async writeUBytes(values, consume = true) {
-        for (let i = 0; i < values.length; i++) {
-            await this.writeUByte(values[i], consume);
-        }
+        return await this.writeBytes(values, true, consume);
     }
     ;
     /**
@@ -15358,6 +15523,9 @@ class BiBaseAsync {
                 stringType == 'utf-32') {
                 terminateValue = 0;
             }
+            if (length != undefined) {
+                terminateValue = undefined;
+            }
         }
         var maxBytes = Math.min(strUnits, maxLengthValue);
         string = string.substring(0, maxBytes);
@@ -15370,6 +15538,9 @@ class BiBaseAsync {
                 {
                     encodedString = new TextEncoder().encode(string);
                     totalLength = encodedString.byteLength + 1;
+                    if (stringType == 'utf-8' && length) {
+                        totalLength = length;
+                    }
                 }
                 break;
             case 'utf-16':
@@ -15381,6 +15552,9 @@ class BiBaseAsync {
                     }
                     encodedString = new Uint8Array(utf16Buffer.buffer);
                     totalLength = encodedString.byteLength + 2;
+                    if (stringType == 'utf-16' && length) {
+                        totalLength = length;
+                    }
                 }
                 break;
             case 'utf-32':
@@ -15392,6 +15566,9 @@ class BiBaseAsync {
                     }
                     encodedString = new Uint8Array(utf32Buffer.buffer);
                     totalLength = encodedString.byteLength + 4;
+                    if (stringType == 'utf-32' && length) {
+                        totalLength = length;
+                    }
                 }
                 break;
         }
@@ -15614,7 +15791,7 @@ async function _BiBaseAsync_peekBytes(offset, length) {
  * write bytes internal
  *
  * @param {number} offset
- * @param {Uint8Array | Buffer | number[]} data
+ * @param {Uint8Array | Buffer} data
  */
 async function _BiBaseAsync_writeBytesAt(offset, data) {
     await this.open();
@@ -15625,9 +15802,7 @@ async function _BiBaseAsync_writeBytesAt(offset, data) {
     let pos = offset;
     let readPos = 0;
     if (this.isMemoryMode) {
-        for (let i = 0, n = offset; i < data.length; i++, n++) {
-            __classPrivateFieldGet(this, _BiBaseAsync_data, "f")[n] = data[i];
-        }
+        this.data.set(data, offset);
         return;
     }
     while (readPos < data.length) {
@@ -15635,13 +15810,7 @@ async function _BiBaseAsync_writeBytesAt(offset, data) {
         const chunk = this.chunks[chunkIndex];
         const chunkOffset = pos % this.windowSize;
         const toCopy = Math.min(data.length - readPos, chunk.length - chunkOffset);
-        var sub;
-        if (this.isBufferOrUint8Array(data)) {
-            sub = data.subarray(readPos, readPos + toCopy);
-        }
-        else {
-            sub = data.slice(readPos, readPos + toCopy);
-        }
+        const sub = data.subarray ? data.subarray(readPos, readPos + toCopy) : data.slice(readPos, readPos + toCopy);
         chunk.set(sub, chunkOffset);
         this.dirtyChunks.add(chunkIndex);
         readPos += toCopy;
@@ -15728,7 +15897,7 @@ async function _BiBaseAsync_setFileSize(exactSize) {
         this.data = newData;
         this.size = exactSize;
         this.bitSize = this.size * 8;
-        const newNum = Math.ceil(exactSize / this.windowSize);
+        const newNum = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getNumChunks).call(this);
         this.chunks = new Array(newNum).fill(null);
         this.chunkPromises = new Array(newNum).fill(null);
         this.dirtyChunks.clear();
@@ -15738,7 +15907,7 @@ async function _BiBaseAsync_setFileSize(exactSize) {
         this.size = exactSize;
         this.bitSize = this.size * 8;
         const oldNum = this.chunks.length;
-        const newNum = Math.ceil(exactSize / this.windowSize);
+        const newNum = __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getNumChunks).call(this);
         this.chunks.length = newNum;
         this.chunkPromises.length = newNum;
         if (newNum < oldNum) {
@@ -15751,11 +15920,18 @@ async function _BiBaseAsync_setFileSize(exactSize) {
             }
         }
     }
+    //this.#invalidateFromChunk(0);
 }, _BiBaseAsync_invalidateFromChunk = function _BiBaseAsync_invalidateFromChunk(startChunk) {
-    for (let i = Math.max(0, startChunk); i < this.chunks.length; i++) {
+    const from = Math.max(0, startChunk);
+    for (let i = from; i < this.chunks.length; i++) {
         this.chunks[i] = null;
         this.chunkPromises[i] = null;
         this.dirtyChunks.delete(i);
+    }
+    // Extra safety for windowSize === 0
+    if (this.windowSize === 0 && this.chunks.length > 0) {
+        this.chunks[0] = null;
+        this.chunkPromises[0] = null;
     }
 }, _BiBaseAsync_shiftTailForward = 
 /**
@@ -15792,6 +15968,7 @@ async function _BiBaseAsync_shiftTailForward(insertOffset, insertLen, oldEnd, co
         __classPrivateFieldSet(this, _BiBaseAsync_offset, insertOffset + insertLen, "f");
         __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
     }
+    __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_invalidateFromChunk).call(this, __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getChunkIndex).call(this, insertOffset + insertLen));
 }, _BiBaseAsync_shiftTailBackward = 
 /**
  *
@@ -15810,7 +15987,7 @@ async function _BiBaseAsync_shiftTailBackward(removeOffset, removeLen, consume =
     }
     else {
         const oldEnd = this.size;
-        let readPos = removeOffset + removeLen;
+        let readPos = Math.min(removeOffset + removeLen, oldEnd);
         let writePos = removeOffset;
         const buf = Buffer.alloc(Math.min(this.windowSize, this.size));
         while (readPos < oldEnd) {
@@ -15820,11 +15997,16 @@ async function _BiBaseAsync_shiftTailBackward(removeOffset, removeLen, consume =
             readPos += bytesRead;
             writePos += bytesRead;
         }
+        if (writePos < oldEnd) {
+            const zeroBuf = Buffer.alloc(oldEnd - writePos);
+            await this.fd.write(zeroBuf, 0, zeroBuf.length, writePos);
+        }
     }
     if (consume) {
         __classPrivateFieldSet(this, _BiBaseAsync_offset, removeOffset, "f");
         __classPrivateFieldSet(this, _BiBaseAsync_insetBit, 0, "f");
     }
+    __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_invalidateFromChunk).call(this, __classPrivateFieldGet(this, _BiBaseAsync_instances, "m", _BiBaseAsync_getChunkIndex).call(this, removeOffset));
 }, _BiBaseAsync_updateOffsets = async function _BiBaseAsync_updateOffsets(newOffset, trueBytes, trueBits) {
     if (newOffset < 0) {
         throw new RangeError('Offset cannot be negative');
@@ -15848,7 +16030,7 @@ async function _BiBaseAsync_shiftTailBackward(removeOffset, removeLen, consume =
 }, _BiBaseAsync_readBytes = async function _BiBaseAsync_readBytes(length, consume = true) {
     await this.open();
     if (length <= 0) {
-        return new Uint8Array(0);
+        return Buffer.alloc(0);
     }
     const offSave = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
     var trueByte = __classPrivateFieldGet(this, _BiBaseAsync_offset, "f");
@@ -15949,10 +16131,10 @@ class BiReaderAsync extends BiBaseAsync {
         options.bitOffset = options.bitOffset ?? 0;
         options.endianness = options.endianness ?? "little";
         options.strict = options.strict ?? true;
-        options.growthIncrement = options.growthIncrement ?? 1048576;
+        options.growthIncrement = options.growthIncrement ?? 0x100000;
         options.enforceBigInt = options.enforceBigInt ?? false;
         options.readOnly = options.readOnly ?? true;
-        options.windowSize = options.windowSize = 4096;
+        options.windowSize = options.windowSize ?? 0x1000;
         if (input == undefined) {
             throw new Error("Can not start BiReader without data.");
         }
@@ -19237,6 +19419,30 @@ class BiReaderAsync extends BiBaseAsync {
     }
     ;
     /**
+    * Reads Wide-Pascal string in little endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async wpstringle(lengthReadSize, stripNull) {
+        return await this.wpstring(lengthReadSize, stripNull, "little");
+    }
+    ;
+    /**
+    * Reads Wide-Pascal string in big endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async wpstringbe(lengthReadSize, stripNull) {
+        return await this.wpstring(lengthReadSize, stripNull, "big");
+    }
+    ;
+    /**
     * Reads Wide-Pascal string 1 byte length read.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
@@ -19349,6 +19555,30 @@ class BiReaderAsync extends BiBaseAsync {
     */
     async dwpstring(lengthReadSize, stripNull, endian) {
         return await this.string({ stringType: "double-wide-pascal", encoding: "utf-32", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string in little endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async dwpstringle(lengthReadSize, stripNull) {
+        return await this.dwpstring(lengthReadSize, stripNull, "little");
+    }
+    ;
+    /**
+    * Reads Double Wide Pascal string in big endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async dwpstringbe(lengthReadSize, stripNull) {
+        return await this.dwpstring(lengthReadSize, stripNull, "big");
     }
     ;
     /**
@@ -19476,10 +19706,10 @@ class BiWriterAsync extends BiBaseAsync {
         options.bitOffset = options.bitOffset ?? 0;
         options.endianness = options.endianness ?? "little";
         options.strict = options.strict ?? false;
-        options.growthIncrement = options.growthIncrement ?? 1048576;
+        options.growthIncrement = options.growthIncrement ?? 0x100000;
         options.enforceBigInt = options.enforceBigInt ?? false;
         options.readOnly = options.readOnly ?? false;
-        options.windowSize = options.windowSize = 4096;
+        options.windowSize = options.windowSize ?? 0x1000;
         const { growthIncrement, } = options;
         if (input == undefined) {
             input = new Uint8Array(growthIncrement);
@@ -22513,7 +22743,7 @@ class BiWriterAsync extends BiBaseAsync {
     * @param {stringOptions["length"]} length - for fixed length utf strings
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
-    async latin1tring(string, length, terminateValue) {
+    async latin1string(string, length, terminateValue) {
         return await this.string(string, { stringType: "utf-8", encoding: "iso-8859-1", length: length, terminateValue: terminateValue });
     }
     ;

@@ -187,6 +187,12 @@ declare class BiBase<DataType, alwaysBigInt> {
      */
     get data(): ReturnMapping<DataType>;
     /**
+     * Get the current buffer data.
+     *
+     * For use in file mode!
+     */
+    getData(): ReturnMapping<DataType>;
+    /**
      * Set the current buffer data.
      *
      * @param {DataType} data
@@ -1244,17 +1250,17 @@ declare class BiBase<DataType, alwaysBigInt> {
      * @param {number} amount - amount of bytes to read
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {boolean} consume - move offset after read
-     * @returns {number[]}
+     * @returns {Array<number>}
      */
-    readBytes(amount: number, unsigned?: boolean, consume?: boolean): number[];
+    readBytes(amount: number, unsigned?: boolean, consume?: boolean): Array<number>;
     /**
      * Read multiple unsigned bytes.
      *
      * @param {number} amount - amount of bytes to read
      * @param {boolean} consume - move offset after read
-     * @returns {number[]}
+     * @returns {ReturnMapping<DataType>}
      */
-    readUBytes(amount: number, consume?: boolean): number[];
+    readUBytes(amount: number, consume?: boolean): ReturnMapping<DataType>;
     /**
      * Write byte.
      *
@@ -1266,18 +1272,18 @@ declare class BiBase<DataType, alwaysBigInt> {
     /**
      * Write multiple bytes.
      *
-     * @param {number[]} values - array of values as int
+     * @param {Array<number> | Buffer | Uint8Array} values - array of values as int
      * @param {boolean} unsigned - if the value is unsigned
      * @param {boolean} consume - move offset after write
      */
-    writeBytes(values: number[], unsigned?: boolean, consume?: boolean): void;
+    writeBytes(values: Array<number> | Buffer | Uint8Array, unsigned?: boolean, consume?: boolean): void;
     /**
      * Write multiple unsigned bytes.
      *
-     * @param {number[]} values - array of values as int
+     * @param {Array<number> | Buffer | Uint8Array} values - array of values as int
      * @param {boolean} consume - move offset after write
      */
-    writeUBytes(values: number[], consume?: boolean): void;
+    writeUBytes(values: Array<number> | Buffer | Uint8Array, consume?: boolean): void;
     /**
      * Write unsigned byte.
      *
@@ -3969,7 +3975,7 @@ declare class BiReader<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBi
     *
     * @returns {string}
     */
-    latin1tring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
+    latin1string(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string;
     /**
     * Reads UTF-16 (Unicode) string.
     *
@@ -4074,6 +4080,24 @@ declare class BiReader<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBi
     */
     pstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
     /**
+    * Reads Pascal string in little endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    pstringle(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): string;
+    /**
+    * Reads Pascal string in big endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    pstringbe(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): string;
+    /**
     * Reads Pascal string 1 byte length read.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
@@ -4159,6 +4183,24 @@ declare class BiReader<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBi
     */
     wpstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
     /**
+    * Reads Wide Pascal string 1 byte length read in little endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    wpstringle(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): string;
+    /**
+    * Reads Wide Pascal string 1 byte length read in big endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    wpstringbe(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): string;
+    /**
     * Reads Wide Pascal string 1 byte length read.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
@@ -4243,6 +4285,24 @@ declare class BiReader<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBi
     * @returns {string}
     */
     dwpstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string;
+    /**
+    * Reads Double Wide Pascal string 1 byte length read in little endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    dwpstringle(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): string;
+    /**
+    * Reads Double Wide Pascal string 1 byte length read in big endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {string}
+    */
+    dwpstringbe(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): string;
     /**
     * Reads Double Wide Pascal string 1 byte length read.
     *
@@ -6764,6 +6824,7 @@ declare class BiWriter<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBi
     dwpstring4be(string: string): void;
 }
 
+type FileHandle = fs_promises.FileHandle;
 /**
  * Base class for BiReader and BiWriter
  */
@@ -6807,7 +6868,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
     /**
      * Open file handle
      */
-    fd: any;
+    fd: FileHandle;
     /**
      * Current file path
      */
@@ -6858,6 +6919,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
     get view(): DataView<ArrayBufferLike>;
     /**
      * array of loaded data chunks
+     * @type {ReturnMapping<DataType>[]}
      */
     chunks: ReturnMapping<DataType>[];
     /**
@@ -7487,19 +7549,19 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {number} endOffset - End location (default current position)
      * @param {boolean} consume - Move position to end of removed data (default false)
      */
-    delete(startOffset?: number, endOffset?: number, consume?: boolean): Promise<DataType>;
+    delete(startOffset?: number, endOffset?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
     /**
      * Deletes part of data from current byte position to end, returns removed.
      *
      * Note: Errors in strict mode.
      */
-    clip(): Promise<DataType>;
+    clip(): Promise<ReturnMapping<DataType>>;
     /**
      * Deletes part of data from current byte position to end, returns removed.
      *
      * Note: Errors in strict mode.
      */
-    trim(): Promise<DataType>;
+    trim(): Promise<ReturnMapping<DataType>>;
     /**
      * Deletes part of data from current byte position to supplied length, returns removed.
      *
@@ -7508,7 +7570,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
      */
-    crop(length?: number, consume?: boolean): Promise<DataType>;
+    crop(length?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
     /**
      * Deletes part of data from current position to supplied length, returns removed.
      *
@@ -7517,7 +7579,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {number} length - Length of data in bytes to remove
      * @param {boolean} consume - Move position to end of removed data (default false)
      */
-    drop(length?: number, consume?: boolean): Promise<DataType>;
+    drop(length?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
     /**
      * Replaces data in data.
      *
@@ -7546,7 +7608,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      */
-    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<DataType | ReturnMapping<DataType>>;
+    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<ReturnMapping<DataType>>;
     /**
      * Returns part of data from current byte position to end of data unless supplied.
      *
@@ -7555,7 +7617,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {boolean} consume - Move position to end of lifted data (default false)
      * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
      */
-    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<DataType | ReturnMapping<DataType>>;
+    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<ReturnMapping<DataType>>;
     /**
      * Returns part of data from current byte position to end of data unless supplied.
      *
@@ -7563,7 +7625,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {number} endOffset - End location (default end of data)
      * @param {boolean} consume - Move position to end of lifted data (default false)
      */
-    subarray(startOffset?: number, endOffset?: number, consume?: boolean): Promise<DataType | ReturnMapping<DataType>>;
+    subarray(startOffset?: number, endOffset?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
     /**
      * Extract data from current position to length supplied.
      *
@@ -7572,7 +7634,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length
      */
-    extract(length?: number, consume?: boolean): Promise<DataType | ReturnMapping<DataType>>;
+    extract(length?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
     /**
      * Extract data from current position to length supplied.
      *
@@ -7581,7 +7643,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length
      */
-    slice(length?: number, consume?: boolean): Promise<DataType | ReturnMapping<DataType>>;
+    slice(length?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
     /**
      * Extract data from current position to length supplied.
      *
@@ -7590,7 +7652,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {number} length - Length of data in bytes to copy from current offset
      * @param {number} consume - Moves offset to end of length
      */
-    wrap(length?: number, consume?: boolean): Promise<DataType | ReturnMapping<DataType>>;
+    wrap(length?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
     /**
      * Inserts data into data.
      *
@@ -7884,14 +7946,14 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {boolean} consume - move offset after read
      */
-    readBytes(amount: number, unsigned?: boolean, consume?: boolean): Promise<number[]>;
+    readBytes(amount: number, unsigned?: boolean, consume?: boolean): Promise<Array<number>>;
     /**
      * Read multiple unsigned bytes.
      *
      * @param {number} amount - amount of bytes to read
      * @param {boolean} consume - move offset after read
      */
-    readUBytes(amount: number, consume?: boolean): Promise<number[]>;
+    readUBytes(amount: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
     /**
      * Write byte.
      *
@@ -7901,12 +7963,20 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      */
     writeByte(value: number, unsigned?: boolean, consume?: boolean): Promise<void>;
     /**
-     * Write multiple unsigned bytes.
+     * Write multiple bytes.
      *
-     * @param {number[]} values - array of values as int
+     * @param {Array<number> | Buffer | Uint8Array} values - array of values as int
+     * @param {boolean} unsigned - if the value is unsigned
      * @param {boolean} consume - move offset after write
      */
-    writeUBytes(values: number[], consume?: boolean): Promise<void>;
+    writeBytes(values: Array<number> | Buffer | Uint8Array, unsigned?: boolean, consume?: boolean): Promise<void>;
+    /**
+     * Write multiple unsigned bytes.
+     *
+     * @param {Array<number> | Buffer | Uint8Array} values - array of values as int
+     * @param {boolean} consume - move offset after write
+     */
+    writeUBytes(values: Array<number> | Buffer | Uint8Array, consume?: boolean): Promise<void>;
     /**
      * Write unsigned byte.
      *
@@ -10736,6 +10806,24 @@ declare class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType
     */
     wpstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string>;
     /**
+    * Reads Wide-Pascal string in little endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    wpstringle(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): Promise<string>;
+    /**
+    * Reads Wide-Pascal string in big endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    wpstringbe(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): Promise<string>;
+    /**
     * Reads Wide-Pascal string 1 byte length read.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
@@ -10820,6 +10908,24 @@ declare class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType
     * @returns {Promise<string>}
     */
     dwpstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string>;
+    /**
+    * Reads Double Wide Pascal string in little endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    dwpstringle(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): Promise<string>;
+    /**
+    * Reads Double Wide Pascal string in big endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    dwpstringbe(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): Promise<string>;
     /**
     * Reads Double Wide Pascal string 1 byte length read.
     *
@@ -13058,7 +13164,7 @@ declare class BiWriterAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType
     * @param {stringOptions["length"]} length - for fixed length utf strings
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
-    latin1tring(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]): Promise<void>;
+    latin1string(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]): Promise<void>;
     /**
     * Writes UTF-16 (Unicode) string.
     *

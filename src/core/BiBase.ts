@@ -153,6 +153,15 @@ export class BiBase<DataType, alwaysBigInt> {
     };
 
     /**
+     * Get the current buffer data.
+     * 
+     * For use in file mode!
+     */
+    getData(){
+        return this.get();
+    };
+
+    /**
      * Set the current buffer data.
      * 
      * @param {DataType} data
@@ -215,8 +224,7 @@ export class BiBase<DataType, alwaysBigInt> {
 
         if (typeof input == "string") {
             if (typeof Buffer === 'undefined' || typeof BiBase.fs === "undefined") {
-                console.log(Buffer); console.log(BiBase.fs);
-                throw new Error("Can't load file outside of Node.");
+                throw new Error(`Can't load file outside of Node. Buffer = ${Buffer}, fs = ${BiBase.fs}.`);
             }
 
             this.filePath = input;
@@ -627,7 +635,9 @@ export class BiBase<DataType, alwaysBigInt> {
         this.open();
 
         try {
-            BiBase.fs.writeSync(this.fd, this.#data, 0, this.#data.length);
+            BiBase.fs.writeSync(this.fd, this.#data, 0, this.#data.length, 0);
+
+            BiBase.fs.ftruncateSync(this.fd, this.#data.length);
         } catch (error) {
             throw new Error(error as string);
         }
@@ -1897,6 +1907,24 @@ export class BiBase<DataType, alwaysBigInt> {
 
         startOffset = Math.abs(startOffset);
 
+        const removeLen = endOffset - startOffset;
+
+        if (startOffset < 0 || endOffset > this.size) {
+            throw new RangeError('Remove range out of bounds');
+        }
+
+        if (removeLen <= 0) {
+            if (this.isMemoryMode) {
+                if (this.isBuffer(this.data)) {
+                    return Buffer.alloc(0) as ReturnMapping<DataType>;
+                } else {
+                    return new Uint8Array(0) as ReturnMapping<DataType>;
+                }
+            } else {
+                return Buffer.alloc(0) as ReturnMapping<DataType>;
+            }
+        }      
+
         this.#confrimSize(endOffset);
 
         const dataRemoved = this.data.subarray(startOffset, endOffset) as ReturnMapping<DataType>;
@@ -3011,7 +3039,7 @@ export class BiBase<DataType, alwaysBigInt> {
      * @returns {number}
      */
     readUByte(consume: boolean = true): number {
-        return this.readByte(consume);
+        return this.readByte(true, consume);
     };
 
     /**
@@ -3020,10 +3048,24 @@ export class BiBase<DataType, alwaysBigInt> {
      * @param {number} amount - amount of bytes to read
      * @param {boolean} unsigned - if value is unsigned or not
      * @param {boolean} consume - move offset after read
-     * @returns {number[]}
+     * @returns {Array<number>}
      */
-    readBytes(amount: number, unsigned?: boolean, consume: boolean = true): number[] {
-        return Array.from({ length: amount }, () => this.readByte(unsigned, consume));
+    readBytes(amount: number, unsigned?: boolean, consume: boolean = true): Array<number>{
+        const data = this.subarray(this.#offset, this.#offset + amount, consume);
+
+        const returnArray = [];
+
+        for (let i = 0; i < data.length; i++) {
+            var value = data[0];
+
+            if (unsigned) {
+                returnArray.push(value & 0xFF);
+            } else {
+                returnArray.push(value > 127 ? value - 256 : value);
+            }
+        }
+        
+        return returnArray;
     };
 
     /**
@@ -3031,10 +3073,10 @@ export class BiBase<DataType, alwaysBigInt> {
      * 
      * @param {number} amount - amount of bytes to read
      * @param {boolean} consume - move offset after read
-     * @returns {number[]}
+     * @returns {ReturnMapping<DataType>}
      */
-    readUBytes(amount: number, consume: boolean = true): number[] {
-        return this.readBytes(amount, true, consume);
+    readUBytes(amount: number, consume: boolean = true): ReturnMapping<DataType> {
+        return this.subarray(this.#offset, this.#offset + amount, consume);
     };
 
     /**
@@ -3083,23 +3125,31 @@ export class BiBase<DataType, alwaysBigInt> {
     /**
      * Write multiple bytes.
      * 
-     * @param {number[]} values - array of values as int
+     * @param {Array<number> | Buffer | Uint8Array} values - array of values as int
      * @param {boolean} unsigned - if the value is unsigned
      * @param {boolean} consume - move offset after write
      */
-    writeBytes(values: number[], unsigned?: boolean, consume: boolean = true): void {
-        for (let i = 0; i < values.length; i++) {
-            this.writeByte(values[i], unsigned, consume);
+    writeBytes(values: Array<number> | Buffer | Uint8Array, unsigned?: boolean, consume: boolean = true): void {
+        if(this.isBufferOrUint8Array(values)){
+            this.overwrite(values, this.offset, consume);
+
+            return;
+        } else {
+            const data = new Uint8Array(values);
+
+            this.overwrite(data, this.offset, consume);
+
+            return;
         }
     };
 
     /**
      * Write multiple unsigned bytes.
      * 
-     * @param {number[]} values - array of values as int
+     * @param {Array<number> | Buffer | Uint8Array} values - array of values as int
      * @param {boolean} consume - move offset after write
      */
-    writeUBytes(values: number[], consume: boolean = true): void {
+    writeUBytes(values: Array<number> | Buffer | Uint8Array, consume: boolean = true): void {
         return this.writeBytes(values, true, consume);
     };
 
@@ -4405,6 +4455,10 @@ export class BiBase<DataType, alwaysBigInt> {
             ) {
                 terminateValue = 0;
             }
+
+            if(length != undefined){
+                terminateValue = undefined;
+            }
         }
 
         var maxBytes = Math.min(strUnits, maxLengthValue);
@@ -4423,6 +4477,10 @@ export class BiBase<DataType, alwaysBigInt> {
                     encodedString = new TextEncoder().encode(string);
 
                     totalLength = encodedString.byteLength + 1;
+
+                    if(stringType =='utf-8' && length){
+                        totalLength = length;
+                    }
                 }
                 break;
             case 'utf-16':
@@ -4437,6 +4495,10 @@ export class BiBase<DataType, alwaysBigInt> {
                     encodedString = new Uint8Array(utf16Buffer.buffer);
 
                     totalLength = encodedString.byteLength + 2;
+
+                    if(stringType =='utf-16' && length){
+                        totalLength = length;
+                    }
                 }
                 break;
             case 'utf-32':
@@ -4451,6 +4513,10 @@ export class BiBase<DataType, alwaysBigInt> {
                     encodedString = new Uint8Array(utf32Buffer.buffer);
 
                     totalLength = encodedString.byteLength + 4;
+
+                    if(stringType =='utf-32' && length){
+                        totalLength = length;
+                    }
                 }
                 break;
             default:

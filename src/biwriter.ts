@@ -30,7 +30,7 @@ export class BiWriter<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBig
 
         options.strict = options.strict ?? false;
 
-        options.growthIncrement = options.growthIncrement ?? 1048576;
+        options.growthIncrement = options.growthIncrement ?? 0x100000;
 
         options.enforceBigInt = options.enforceBigInt ?? false as alwaysBigInt;
 

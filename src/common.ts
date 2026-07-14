@@ -491,7 +491,7 @@ export function _hexDump(
     for (let i = start; i < end; i += 16) {
         addr = i.toString(16).padStart(5, '0');
 
-        var row = <unknown>data.subarray(i, i + 16) as number[] || [];
+        var row = <unknown>data.subarray(i, i + 16) as Array<number> || [];
 
         var hex = Array.from(row, (byte) => byte.toString(16).padStart(2, '0')).join(' ');
 
@@ -1542,7 +1542,7 @@ export function _wstring(
     encodedString: Uint8Array,
     stringType: 'ascii' | 'utf-8' | 'utf-16' | 'utf-32' | 'pascal' | 'wide-pascal' | "double-wide-pascal",
     endian: "little" | "big",
-    terminateValue: number,
+    terminateValue: number | undefined,
     lengthWriteSize: number,
     writeUByte: (number: number) => void,
     writeUInt16: (number: number, endian: "little" | "big") => void,
@@ -1582,12 +1582,14 @@ export function _wstring(
         }
     }
 
-    if (stringType == "ascii" || stringType == 'utf-8') {
-        writeUByte(terminateValue);
-    } else if (stringType == 'utf-16') {
-        writeUInt16(terminateValue, endian);
-    } else if (stringType == 'utf-32') {
-        writeUInt32(terminateValue, endian);
+    if(terminateValue != undefined){
+        if (stringType == "ascii" || stringType == 'utf-8') {
+            writeUByte(terminateValue);
+        } else if (stringType == 'utf-16') {
+            writeUInt16(terminateValue, endian);
+        } else if (stringType == 'utf-32') {
+            writeUInt32(terminateValue, endian);
+        }
     }
 };
 
@@ -1595,7 +1597,7 @@ export async function _wstringAsync(
     encodedString: Uint8Array,
     stringType: 'ascii' | 'utf-8' | 'utf-16' | 'utf-32' | 'pascal' | 'wide-pascal' | "double-wide-pascal",
     endian: "little" | "big",
-    terminateValue: number,
+    terminateValue: number | undefined,
     lengthWriteSize: number,
     writeUByte: (number: number) => Promise<void>,
     writeUInt16: (number: number, endian: "little" | "big") => Promise<void>,
@@ -1635,11 +1637,13 @@ export async function _wstringAsync(
         }
     }
 
-    if (stringType == "ascii" || stringType == 'utf-8') {
-        await writeUByte(terminateValue);
-    } else if (stringType == 'utf-16') {
-        await writeUInt16(terminateValue, endian);
-    } else if (stringType == 'utf-32') {
-        await writeUInt32(terminateValue, endian);
+    if(terminateValue != undefined){
+        if (stringType == "ascii" || stringType == 'utf-8') {
+            await writeUByte(terminateValue);
+        } else if (stringType == 'utf-16') {
+            await writeUInt16(terminateValue, endian);
+        } else if (stringType == 'utf-32') {
+            await writeUInt32(terminateValue, endian);
+        }
     }
 };

@@ -2,7 +2,7 @@
 
 **A fast, dual-mode (sync / async) file / buffer handler with byte + bit-level access.**
 
-Feature rich binary reader ***and writer*** that keeps track of your position to quickly create file structures. Perfect for binary parsers, editors, game save files, custom formats, or any situation where you need random access + structural modifications without loading the entire file into memory. Includes shared naming conventions, programmable inputs and advanced math for easy data conversions on low level parsing. Accepts `Uint8Array`, `Buffer` or a `filePath`. Includes Sync and [Async](#async) verions.
+Feature rich binary reader ***and writer*** that keeps track of your position to quickly create file structures. Perfect for binary parsers, editors, game save files, custom formats, or any situation where you need random access + structural modifications without loading the entire file into memory. Includes shared naming conventions, programmable inputs and advanced math for easy data conversions on low level parsing. Accepts `Uint8Array`, `Buffer` or a `filePath`. Includes Sync and [Async](#async) versions.
 
 ---
 

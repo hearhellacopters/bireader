@@ -31,13 +31,13 @@ export class BiWriterAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType,
 
         options.strict = options.strict ?? false;
 
-        options.growthIncrement = options.growthIncrement ?? 1048576;
+        options.growthIncrement = options.growthIncrement ?? 0x100000;
 
         options.enforceBigInt = options.enforceBigInt ?? false as alwaysBigInt;
 
         options.readOnly = options.readOnly ?? false;
 
-        options.windowSize = options.windowSize = 4096;
+        options.windowSize = options.windowSize ?? 0x1000;
 
         const {
             growthIncrement,
@@ -3088,7 +3088,7 @@ export class BiWriterAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType,
     * @param {stringOptions["length"]} length - for fixed length utf strings
     * @param {stringOptions["terminateValue"]} terminateValue - for non-fixed length utf strings
     */
-   async latin1tring(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]) {
+   async latin1string(string: string, length?: number, terminateValue?: stringOptions["terminateValue"]) {
         return await this.string(string, { stringType: "utf-8", encoding: "iso-8859-1", length: length, terminateValue: terminateValue });
     };
 

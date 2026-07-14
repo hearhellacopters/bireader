@@ -31,7 +31,7 @@ export class BiReader<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBig
 
         options.strict = options.strict ?? true;
 
-        options.growthIncrement = options.growthIncrement ?? 1048576;
+        options.growthIncrement = options.growthIncrement ?? 0x100000;
 
         options.enforceBigInt = options.enforceBigInt ?? false as alwaysBigInt;
 
@@ -3056,7 +3056,7 @@ export class BiReader<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBig
     * 
     * @returns {string}
     */
-    latin1tring(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
+    latin1string(length?: stringOptions["length"], terminateValue?: stringOptions["terminateValue"], stripNull?: stringOptions["stripNull"]): string {
         return this.string({ stringType: "utf-8", encoding: "iso-8859-1", length: length, terminateValue: terminateValue, stripNull: stripNull });
     };
 
@@ -3194,6 +3194,30 @@ export class BiReader<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBig
     };
 
     /**
+    * Reads Pascal string in little endian.
+    * 
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    pstringle(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): string {
+        return this.pstring(lengthReadSize, stripNull, "little");
+    };
+
+    /**
+    * Reads Pascal string in big endian.
+    * 
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    pstringbe(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): string {
+        return this.pstring(lengthReadSize, stripNull, "big");
+    };
+
+    /**
     * Reads Pascal string 1 byte length read.
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
@@ -3309,6 +3333,30 @@ export class BiReader<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBig
     };
 
     /**
+    * Reads Wide Pascal string 1 byte length read in little endian.
+    * 
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    wpstringle(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): string {
+        return this.wpstring(lengthReadSize, stripNull, "little");
+    };
+
+    /**
+    * Reads Wide Pascal string 1 byte length read in big endian.
+    * 
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    wpstringbe(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): string {
+        return this.wpstring(lengthReadSize, stripNull, "big");
+    };
+
+    /**
     * Reads Wide Pascal string 1 byte length read.
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
@@ -3421,6 +3469,30 @@ export class BiReader<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBig
     */
     dwpstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): string {
         return this.string({ stringType: "double-wide-pascal", encoding: "utf-32", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
+    };
+
+    /**
+    * Reads Double Wide Pascal string 1 byte length read in little endian.
+    * 
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    dwpstringle(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): string {
+        return this.dwpstring(lengthReadSize, stripNull, "little");
+    };
+
+    /**
+    * Reads Double Wide Pascal string 1 byte length read in big endian.
+    * 
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {string}
+    */
+    dwpstringbe(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): string {
+        return this.dwpstring(lengthReadSize, stripNull, "big");
     };
 
     /**

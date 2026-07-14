@@ -32,13 +32,13 @@ export class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType,
 
         options.strict = options.strict ?? true;
 
-        options.growthIncrement = options.growthIncrement ?? 1048576;
+        options.growthIncrement = options.growthIncrement ?? 0x100000;
 
         options.enforceBigInt = options.enforceBigInt ?? false as alwaysBigInt;
 
         options.readOnly = options.readOnly ?? true;
 
-        options.windowSize = options.windowSize = 4096;
+        options.windowSize = options.windowSize ?? 0x1000;
 
         if (input == undefined) {
             throw new Error("Can not start BiReader without data.");
@@ -3336,6 +3336,30 @@ export class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType,
     };
 
     /**
+    * Reads Wide-Pascal string in little endian.
+    * 
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {Promise<string>}
+    */
+    async wpstringle(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): Promise<string>{
+        return await this.wpstring(lengthReadSize, stripNull, "little");
+    };
+
+    /**
+    * Reads Wide-Pascal string in big endian.
+    * 
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {Promise<string>}
+    */
+    async wpstringbe(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): Promise<string>{
+        return await this.wpstring(lengthReadSize, stripNull, "big");
+    };
+
+    /**
     * Reads Wide-Pascal string 1 byte length read.
     * 
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
@@ -3448,6 +3472,30 @@ export class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType,
     */
     async dwpstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
         return await this.string({ stringType: "double-wide-pascal", encoding: "utf-32", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
+    };
+
+    /**
+    * Reads Double Wide Pascal string in little endian.
+    * 
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {Promise<string>}
+    */
+    async dwpstringle(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): Promise<string>{
+        return await this.dwpstring(lengthReadSize, stripNull, "little");
+    };
+
+    /**
+    * Reads Double Wide Pascal string in big endian.
+    * 
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    * 
+    * @returns {Promise<string>}
+    */
+    async dwpstringbe(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): Promise<string>{
+        return await this.dwpstring(lengthReadSize, stripNull, "big");
     };
 
     /**
