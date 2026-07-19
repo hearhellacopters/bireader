@@ -2676,7 +2676,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * Note: Does not affect supplied data.
      * 
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
+     * @param {boolean} consume - Moves offset to end of length
      */
     async extract(length: number = 0, consume: boolean = false) {
         return await this.fill(this.#offset, this.#offset + length, consume);
@@ -2688,7 +2688,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * Note: Does not affect supplied data.
      * 
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
+     * @param {boolean} consume - Moves offset to end of length
      */
     async slice(length: number = 0, consume: boolean = false) {
         return await this.fill(this.#offset, this.#offset + length, consume);
@@ -2700,7 +2700,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * Note: Does not affect supplied data.
      * 
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
+     * @param {boolean} consume - Moves offset to end of length
      */
     async wrap(length: number = 0, consume: boolean = false) {
         return await this.fill(this.#offset, this.#offset + length, consume);

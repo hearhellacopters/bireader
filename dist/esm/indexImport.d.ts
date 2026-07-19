@@ -748,9 +748,9 @@ declare class BiBase<DataType, alwaysBigInt> {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} bytes - Bytes to skip
-     * @param {number} bits - Bits to skip
+     * @param {number?} bits - Bits to skip
      */
-    skip(bytes: number, bits?: number): void;
+    skip(bytes?: number, bits?: number): void;
     /**
     * Offset current byte or bit position.
     *
@@ -927,7 +927,7 @@ declare class BiBase<DataType, alwaysBigInt> {
      * Note: Does not affect supplied data.
      *
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length (default false)
+     * @param {boolean} consume - Moves offset to end of length (default false)
      * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     extract(length?: number, consume?: boolean): ReturnMapping<DataType>;
@@ -937,7 +937,7 @@ declare class BiBase<DataType, alwaysBigInt> {
      * Note: Does not affect supplied data.
      *
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length (default false)
+     * @param {boolean} consume - Moves offset to end of length (default false)
      * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     slice(length?: number, consume?: boolean): ReturnMapping<DataType>;
@@ -947,7 +947,7 @@ declare class BiBase<DataType, alwaysBigInt> {
      * Note: Does not affect supplied data.
      *
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length (default false)
+     * @param {boolean} consume - Moves offset to end of length (default false)
      * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     wrap(length?: number, consume?: boolean): ReturnMapping<DataType>;
@@ -7632,7 +7632,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * Note: Does not affect supplied data.
      *
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
+     * @param {boolean} consume - Moves offset to end of length
      */
     extract(length?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
     /**
@@ -7641,7 +7641,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * Note: Does not affect supplied data.
      *
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
+     * @param {boolean} consume - Moves offset to end of length
      */
     slice(length?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
     /**
@@ -7650,7 +7650,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * Note: Does not affect supplied data.
      *
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
+     * @param {boolean} consume - Moves offset to end of length
      */
     wrap(length?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
     /**

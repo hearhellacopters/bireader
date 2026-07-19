@@ -2427,9 +2427,9 @@ class BiBase {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} bytes - Bytes to skip
-     * @param {number} bits - Bits to skip
+     * @param {number?} bits - Bits to skip
      */
-    skip(bytes, bits) {
+    skip(bytes = 0, bits = 0) {
         var newOffset = ((bytes + __classPrivateFieldGet(this, _BiBase_offset, "f")) + Math.ceil((__classPrivateFieldGet(this, _BiBase_insetBit, "f") + bits) / 8));
         if (bits && bits < 0) {
             newOffset = Math.floor((((bytes + __classPrivateFieldGet(this, _BiBase_offset, "f")) * 8) + __classPrivateFieldGet(this, _BiBase_insetBit, "f") + bits) / 8);
@@ -2841,7 +2841,7 @@ class BiBase {
      * Note: Does not affect supplied data.
      *
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length (default false)
+     * @param {boolean} consume - Moves offset to end of length (default false)
      * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     extract(length = 0, consume = false) {
@@ -2854,7 +2854,7 @@ class BiBase {
      * Note: Does not affect supplied data.
      *
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length (default false)
+     * @param {boolean} consume - Moves offset to end of length (default false)
      * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     slice(length = 0, consume = false) {
@@ -2867,7 +2867,7 @@ class BiBase {
      * Note: Does not affect supplied data.
      *
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length (default false)
+     * @param {boolean} consume - Moves offset to end of length (default false)
      * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     wrap(length = 0, consume = false) {
@@ -13799,7 +13799,7 @@ class BiBaseAsync {
      * Note: Does not affect supplied data.
      *
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
+     * @param {boolean} consume - Moves offset to end of length
      */
     async extract(length = 0, consume = false) {
         return await this.fill(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
@@ -13811,7 +13811,7 @@ class BiBaseAsync {
      * Note: Does not affect supplied data.
      *
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
+     * @param {boolean} consume - Moves offset to end of length
      */
     async slice(length = 0, consume = false) {
         return await this.fill(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);
@@ -13823,7 +13823,7 @@ class BiBaseAsync {
      * Note: Does not affect supplied data.
      *
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length
+     * @param {boolean} consume - Moves offset to end of length
      */
     async wrap(length = 0, consume = false) {
         return await this.fill(__classPrivateFieldGet(this, _BiBaseAsync_offset, "f"), __classPrivateFieldGet(this, _BiBaseAsync_offset, "f") + length, consume);

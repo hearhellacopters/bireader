@@ -1729,9 +1729,9 @@ export class BiBase<DataType, alwaysBigInt> {
      * Note: Will extend array if strict mode is off and outside of max size.
      * 
      * @param {number} bytes - Bytes to skip
-     * @param {number} bits - Bits to skip
+     * @param {number?} bits - Bits to skip
      */
-    skip(bytes: number, bits?: number): void {
+    skip(bytes: number = 0, bits: number = 0): void {
         var newOffset = ((bytes + this.#offset) + Math.ceil((this.#insetBit + bits) / 8));
 
         if (bits && bits < 0) {
@@ -2203,7 +2203,7 @@ export class BiBase<DataType, alwaysBigInt> {
      * Note: Does not affect supplied data.
      * 
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length (default false)
+     * @param {boolean} consume - Moves offset to end of length (default false)
      * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     extract(length: number = 0, consume: boolean = false): ReturnMapping<DataType> {
@@ -2216,7 +2216,7 @@ export class BiBase<DataType, alwaysBigInt> {
      * Note: Does not affect supplied data.
      * 
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length (default false)
+     * @param {boolean} consume - Moves offset to end of length (default false)
      * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     slice(length: number = 0, consume: boolean = false): ReturnMapping<DataType> {
@@ -2229,7 +2229,7 @@ export class BiBase<DataType, alwaysBigInt> {
      * Note: Does not affect supplied data.
      * 
      * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {number} consume - Moves offset to end of length (default false)
+     * @param {boolean} consume - Moves offset to end of length (default false)
      * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
      */
     wrap(length: number = 0, consume: boolean = false): ReturnMapping<DataType> {
