@@ -23233,4 +23233,4 @@ exports.BiWriterStream = BiWriterStream;
 exports.bireader = bireader;
 exports.biwriter = biwriter;
 exports.hexdump = hexdump;
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=index.cjs.map

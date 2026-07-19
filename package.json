@@ -1,6 +1,6 @@
 {
   "name": "bireader",
-  "version": "4.0.10",
+  "version": "4.0.11",
   "description": "Read and write binary data in JavaScript",
   "type": "module",
   "main": "./dist/cjs/index.js",
@@ -12,7 +12,7 @@
   },
   "exports": {
     ".": {
-      "require": "./dist/cjs/index.js",
+      "require": "./dist/cjs/index.cjs",
       "import": "./dist/esm/indexImport.js",
       "browser": "./dist/esm/indexBrowser.js"
     }
