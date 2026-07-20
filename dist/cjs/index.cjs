@@ -2454,7 +2454,7 @@ class BiBase {
     * Note: Will extend array if strict mode is off and outside of max size.
     *
     * @param {number} bytes - Bytes to skip
-    * @param {number} bits - Bits to skip
+    * @param {number?} bits - Bits to skip
     */
     jump(bytes, bits) {
         this.skip(bytes, bits);
@@ -2466,7 +2466,7 @@ class BiBase {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} bytes - Bytes to skip
-     * @param {number} bits - Bits to skip
+     * @param {number?} bits - Bits to skip
      */
     seek(bytes, bits) {
         return this.skip(bytes, bits);
@@ -2504,7 +2504,7 @@ class BiBase {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
+     * @param {number?} bit - bit to set to
      */
     FSeek(byte, bit) {
         return this.goto(byte, bit);
@@ -2516,7 +2516,7 @@ class BiBase {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
+     * @param {number?} bit - bit to set to
      */
     pointer(byte, bit) {
         return this.goto(byte, bit);
@@ -2528,7 +2528,7 @@ class BiBase {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
+     * @param {number?} bit - bit to set to
      */
     warp(byte, bit) {
         return this.goto(byte, bit);
@@ -13431,7 +13431,7 @@ class BiBaseAsync {
     * Note: Will extend array if strict mode is off and outside of max size.
     *
     * @param {number} bytes - Bytes to skip
-    * @param {number} bits - Bits to skip
+    * @param {number?} bits - Bits to skip
     */
     async jump(bytes, bits) {
         await this.skip(bytes, bits);
@@ -13443,7 +13443,7 @@ class BiBaseAsync {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
+     * @param {number?} bit - bit to set to
      */
     async FSeek(byte, bit) {
         await this.goto(byte, bit);
@@ -13455,7 +13455,7 @@ class BiBaseAsync {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} bytes - Bytes to skip
-     * @param {number} bits - Bits to skip
+     * @param {number?} bits - Bits to skip
      */
     async seek(bytes, bits) {
         await this.skip(bytes, bits);
@@ -13481,7 +13481,7 @@ class BiBaseAsync {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
+     * @param {number?} bit - bit to set to
      */
     async pointer(byte, bit) {
         await this.goto(byte, bit);
@@ -13493,7 +13493,7 @@ class BiBaseAsync {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
+     * @param {number?} bit - bit to set to
      */
     async warp(byte, bit) {
         await this.goto(byte, bit);

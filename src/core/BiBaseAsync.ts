@@ -2264,7 +2264,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
     * Note: Will extend array if strict mode is off and outside of max size.
     * 
     * @param {number} bytes - Bytes to skip
-    * @param {number} bits - Bits to skip
+    * @param {number?} bits - Bits to skip
     */
     async jump(bytes: number, bits?: number) {
         await this.skip(bytes, bits);
@@ -2276,7 +2276,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * Note: Will extend array if strict mode is off and outside of max size.
      * 
      * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
+     * @param {number?} bit - bit to set to
      */
     async FSeek(byte: number, bit?: number) {
         await this.goto(byte, bit)
@@ -2288,7 +2288,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * Note: Will extend array if strict mode is off and outside of max size.
      * 
      * @param {number} bytes - Bytes to skip
-     * @param {number} bits - Bits to skip
+     * @param {number?} bits - Bits to skip
      */
     async seek(bytes: number, bits?: number) {
         await this.skip(bytes, bits)
@@ -2316,7 +2316,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * Note: Will extend array if strict mode is off and outside of max size.
      * 
      * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
+     * @param {number?} bit - bit to set to
      */
     async pointer(byte: number, bit?: number) {
         await this.goto(byte, bit)
@@ -2328,7 +2328,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * Note: Will extend array if strict mode is off and outside of max size.
      * 
      * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
+     * @param {number?} bit - bit to set to
      */
     async warp(byte: number, bit?: number) {
         await this.goto(byte, bit)

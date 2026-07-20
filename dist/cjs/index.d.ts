@@ -757,7 +757,7 @@ declare class BiBase<DataType, alwaysBigInt> {
     * Note: Will extend array if strict mode is off and outside of max size.
     *
     * @param {number} bytes - Bytes to skip
-    * @param {number} bits - Bits to skip
+    * @param {number?} bits - Bits to skip
     */
     jump(bytes: number, bits?: number): void;
     /**
@@ -766,7 +766,7 @@ declare class BiBase<DataType, alwaysBigInt> {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} bytes - Bytes to skip
-     * @param {number} bits - Bits to skip
+     * @param {number?} bits - Bits to skip
      */
     seek(bytes: number, bits?: number): void;
     /**
@@ -784,7 +784,7 @@ declare class BiBase<DataType, alwaysBigInt> {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
+     * @param {number?} bit - bit to set to
      */
     FSeek(byte: number, bit?: number): void;
     /**
@@ -793,7 +793,7 @@ declare class BiBase<DataType, alwaysBigInt> {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
+     * @param {number?} bit - bit to set to
      */
     pointer(byte: number, bit?: number): void;
     /**
@@ -802,7 +802,7 @@ declare class BiBase<DataType, alwaysBigInt> {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
+     * @param {number?} bit - bit to set to
      */
     warp(byte: number, bit?: number): void;
     /**
@@ -7472,7 +7472,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
     * Note: Will extend array if strict mode is off and outside of max size.
     *
     * @param {number} bytes - Bytes to skip
-    * @param {number} bits - Bits to skip
+    * @param {number?} bits - Bits to skip
     */
     jump(bytes: number, bits?: number): Promise<void>;
     /**
@@ -7481,7 +7481,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
+     * @param {number?} bit - bit to set to
      */
     FSeek(byte: number, bit?: number): Promise<void>;
     /**
@@ -7490,7 +7490,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} bytes - Bytes to skip
-     * @param {number} bits - Bits to skip
+     * @param {number?} bits - Bits to skip
      */
     seek(bytes: number, bits?: number): Promise<void>;
     /**
@@ -7508,7 +7508,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
+     * @param {number?} bit - bit to set to
      */
     pointer(byte: number, bit?: number): Promise<void>;
     /**
@@ -7517,7 +7517,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
      * Note: Will extend array if strict mode is off and outside of max size.
      *
      * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
+     * @param {number?} bit - bit to set to
      */
     warp(byte: number, bit?: number): Promise<void>;
     /**
