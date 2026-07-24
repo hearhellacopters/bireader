@@ -46,7 +46,7 @@ export class BiWriterAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType,
         if (input == undefined) {
             input = new Uint8Array(growthIncrement) as DataType;
 
-            console.warn(`BiWriter started without data. Creating Uint8Array with growthIncrement.`);
+            console.warn(`BiWriterAsync started without data. Creating Uint8Array with growthIncrement.`);
         }
 
         super(input, options);
@@ -3336,7 +3336,7 @@ export class BiWriterAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType,
     * @param {string} string - text string
     */
     async wpstring1be(string: string) {
-        return await this.wpstring1(string, "little");
+        return await this.wpstring1(string, "big");
     };
 
     /**
@@ -3345,7 +3345,7 @@ export class BiWriterAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType,
     * @param {string} string - text string
     */
     async wpstring1le(string: string) {
-        return await this.wpstring1(string, "big");
+        return await this.wpstring1(string, "little");
     };
 
     /**

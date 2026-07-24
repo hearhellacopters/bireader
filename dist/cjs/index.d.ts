@@ -10721,6 +10721,24 @@ declare class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType
     */
     pstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string>;
     /**
+    * Reads Pascal string in little endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    pstringle(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): Promise<string>;
+    /**
+    * Reads Pascal string in big endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    pstringbe(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): Promise<string>;
+    /**
     * Reads Pascal string 1 byte length read.
     *
     * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters

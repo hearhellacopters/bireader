@@ -58,7 +58,7 @@ export class biwriter {
  */
 export class BiWriterStream {
     constructor() {
-        throw new Error("BiReaderStream isn't usable in browser. Use BiReader instead.");
+        throw new Error("BiWriterStream isn't usable in browser. Use BiWriter instead.");
     }
 };
 
@@ -69,6 +69,6 @@ export class BiWriterStream {
  */
 export class BiFileWriter {
     constructor() {
-        throw new Error("BiWriterStream isn't usable in browser. Use BiWriter instead.");
+        throw new Error("BiFileWriter isn't usable in browser. Use BiWriter instead.");
     }
 };

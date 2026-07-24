@@ -56,20 +56,6 @@ import {
 } from '../common.js';
 type FileHandle = import('fs/promises').FileHandle;
 
-// #region Buffer Dummies
-
-const buff2ByteDummy = new Uint8Array(2);
-
-const view2ByteDummy = new DataView(buff2ByteDummy.buffer, buff2ByteDummy.byteOffset, buff2ByteDummy.byteLength);
-
-const buff4ByteDummy = new Uint8Array(4);
-
-const view4ByteDummy = new DataView(buff4ByteDummy.buffer, buff4ByteDummy.byteOffset, buff4ByteDummy.byteLength);
-
-const buff8ByteDummy = new Uint8Array(8);
-
-const view8ByteDummy = new DataView(buff8ByteDummy.buffer, buff8ByteDummy.byteOffset, buff8ByteDummy.byteLength);
-
 /**
  * Base class for BiReader and BiWriter
  */
@@ -245,15 +231,17 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             throw new TypeError("Strict mode must be true or false");
         }
 
-        this.#offset = byteOffset;
+        this.#offset = byteOffset ?? 0;
 
         if((bitOffset ?? 0) != 0){
-            this.#offset = Math.floor(byteOffset / 8);
+            this.#offset += Math.floor(bitOffset / 8);
 
-            this.#insetBit = byteOffset % 8;
+            this.#insetBit = normalizeBitOffset(bitOffset);
         }
 
-        this.windowSize = windowSize;
+        this.#offset = Math.max(this.#offset, 0);
+
+        this.windowSize = windowSize ?? this.windowSize;
 
         this.readOnly = !!readOnly;
 
@@ -267,7 +255,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             this.enforceBigInt = false as alwaysBigInt;
         }
 
-        this.growthIncrement = growthIncrement;
+        this.growthIncrement = growthIncrement ?? this.growthIncrement;
 
         if (typeof endianness != "string" || !(endianness == "big" || endianness == "little")) {
             throw new TypeError("Endian must be big or little");
@@ -540,7 +528,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
     async #performChunkLoad(chunkIndex: number) {
         const start = chunkIndex * this.windowSize;
 
-        const length = Math.min(this.windowSize, this.size - start);
+        const length = this.windowSize === 0 ? this.size : Math.min(this.windowSize, this.size - start);
 
         const buffer = Buffer.alloc(length);
 
@@ -623,9 +611,13 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
 
             const chunk = this.chunks[chunkIndex];
 
-            const chunkOffset = pos % this.windowSize;
+            const chunkOffset = pos - (chunkIndex * this.windowSize);
 
             const toCopy = Math.min(length - writePos, chunk.length - chunkOffset);
+
+            if (toCopy <= 0) {
+                throw new Error(`Chunk cache out of sync while reading at ${pos} (chunk ${chunkIndex}, chunk size ${chunk.length}).`);
+            }
 
             result.set(chunk.subarray(chunkOffset, chunkOffset + toCopy), writePos);
 
@@ -667,9 +659,13 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
 
             const chunk = this.chunks[chunkIndex];
 
-            const chunkOffset = pos % this.windowSize;
+            const chunkOffset = pos - (chunkIndex * this.windowSize);
 
             const toCopy = Math.min(data.length - readPos, chunk.length - chunkOffset);
+
+            if (toCopy <= 0) {
+                throw new Error(`Chunk cache out of sync while writing at ${pos} (chunk ${chunkIndex}, chunk size ${chunk.length}).`);
+            }
 
             const sub = data.subarray ? data.subarray(readPos, readPos + toCopy) : data.slice(readPos, readPos + toCopy);
 
@@ -747,6 +743,8 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
 
             this.dirtyChunks.clear();
         } else {
+            const oldSize = this.size;
+
             await this.fd.truncate(targetSize);
 
             this.size = targetSize;
@@ -765,6 +763,18 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
                 this.chunks[i] = null;
 
                 this.chunkPromises[i] = null;
+            }
+
+            // The chunk containing the old end of the file may be cached with a
+            // partial (short) buffer. Drop it so it reloads at its full new extent.
+            if (oldSize > 0) {
+                const boundaryChunk = this.#getChunkIndex(oldSize - 1);
+
+                if (boundaryChunk < this.chunks.length) {
+                    this.chunks[boundaryChunk] = null;
+
+                    this.chunkPromises[boundaryChunk] = null;
+                }
             }
         }
     };
@@ -822,6 +832,20 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
                     this.chunkPromises[i] = null;
                 }
             }
+
+            // The chunk containing the new end of the file may be cached with a
+            // stale buffer whose length no longer matches the file. Drop it.
+            if (exactSize > 0) {
+                const boundaryChunk = this.#getChunkIndex(exactSize - 1);
+
+                if (boundaryChunk < this.chunks.length) {
+                    this.chunks[boundaryChunk] = null;
+
+                    this.chunkPromises[boundaryChunk] = null;
+
+                    this.dirtyChunks.delete(boundaryChunk);
+                }
+            }
         }
 
         //this.#invalidateFromChunk(0);
@@ -872,10 +896,12 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
 
             let writeEnd = oldEnd + insertLen;
 
-            const buf = Buffer.alloc(Math.min(this.windowSize, this.size));
+            const step = this.windowSize || 65536;
+
+            const buf = Buffer.alloc(Math.min(step, this.size));
 
             while (readEnd > insertOffset) {
-                const len = Math.min(this.windowSize, readEnd - insertOffset);
+                const len = Math.min(step, readEnd - insertOffset);
 
                 const readStart = readEnd - len;
 
@@ -924,10 +950,12 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
 
             let writePos = removeOffset;
 
-            const buf = Buffer.alloc(Math.min(this.windowSize, this.size));
+            const step = this.windowSize || 65536;
+
+            const buf = Buffer.alloc(Math.min(step, this.size));
 
             while (readPos < oldEnd) {
-                const len = Math.min(this.windowSize, oldEnd - readPos);
+                const len = Math.min(step, oldEnd - readPos);
 
                 const { bytesRead } = await this.fd.read(buf, 0, len, readPos);
 
@@ -1206,7 +1234,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
         }
         // this.mode == "file"
         try {
-            this.close();
+            await this.close();
 
             await BiBaseAsync.fs.unlink(this.filePath);
         } catch (error) {
@@ -2874,11 +2902,19 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             throw new Error("XOR must be a number, string, Uint8Array or Buffer");
         }
 
-        const bytes = await this.#readBytes(Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        const opLength = Math.min(endOffset, this.size) - startOffset;
+
+        const bytes = await this.#peekBytes(startOffset, opLength);
 
         _XOR(bytes, 0, bytes.length, xorKey);
 
-        return await this.#writeBytesAt(startOffset, bytes);
+        await this.#writeBytesAt(startOffset, bytes);
+
+        if (consume) {
+            this.#offset = startOffset + Math.max(opLength, 0);
+
+            this.#insetBit = 0;
+        }
     };
 
     /**
@@ -2927,11 +2963,19 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             throw new Error("OR must be a number, string, Uint8Array or Buffer");
         }
 
-        const bytes = await this.#readBytes(Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        const opLength = Math.min(endOffset, this.size) - startOffset;
+
+        const bytes = await this.#peekBytes(startOffset, opLength);
 
         _OR(bytes, 0, bytes.length, orKey);
 
-        return await this.#writeBytesAt(startOffset, bytes);
+        await this.#writeBytesAt(startOffset, bytes);
+
+        if (consume) {
+            this.#offset = startOffset + Math.max(opLength, 0);
+
+            this.#insetBit = 0;
+        }
     };
 
     /**
@@ -2980,11 +3024,19 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             throw new Error("AND must be a number, string, number array or Buffer");
         }
 
-        const bytes = await this.#readBytes(Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        const opLength = Math.min(endOffset, this.size) - startOffset;
+
+        const bytes = await this.#peekBytes(startOffset, opLength);
 
         _AND(bytes, 0, bytes.length, andKey);
 
-        return await this.#writeBytesAt(startOffset, bytes);
+        await this.#writeBytesAt(startOffset, bytes);
+
+        if (consume) {
+            this.#offset = startOffset + Math.max(opLength, 0);
+
+            this.#insetBit = 0;
+        }
     };
 
     /**
@@ -3033,11 +3085,19 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             throw new Error("Add key must be a number, string, number array or Buffer");
         }
 
-        const bytes = await this.#readBytes(Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        const opLength = Math.min(endOffset, this.size) - startOffset;
+
+        const bytes = await this.#peekBytes(startOffset, opLength);
 
         _ADD(bytes, 0, bytes.length, addKey);
 
-        return await this.#writeBytesAt(startOffset, bytes);
+        await this.#writeBytesAt(startOffset, bytes);
+
+        if (consume) {
+            this.#offset = startOffset + Math.max(opLength, 0);
+
+            this.#insetBit = 0;
+        }
     };
 
     /**
@@ -3079,11 +3139,19 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             throw new Error("Can't write data in readOnly mode!");
         }
 
-        const bytes = await this.#readBytes(Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        const opLength = Math.min(endOffset, this.size) - startOffset;
+
+        const bytes = await this.#peekBytes(startOffset, opLength);
 
         _NOT(bytes, 0, bytes.length);
 
-        return await this.#writeBytesAt(startOffset, bytes);
+        await this.#writeBytesAt(startOffset, bytes);
+
+        if (consume) {
+            this.#offset = startOffset + Math.max(opLength, 0);
+
+            this.#insetBit = 0;
+        }
     };
 
     /**
@@ -3115,11 +3183,19 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             throw new Error("Left shift must be a number, string, number array or Buffer");
         }
 
-        const bytes = await this.#readBytes(Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        const opLength = Math.min(endOffset, this.size) - startOffset;
+
+        const bytes = await this.#peekBytes(startOffset, opLength);
 
         _LSHIFT(bytes, 0, bytes.length, shiftKey);
 
-        return await this.#writeBytesAt(startOffset, bytes);
+        await this.#writeBytesAt(startOffset, bytes);
+
+        if (consume) {
+            this.#offset = startOffset + Math.max(opLength, 0);
+
+            this.#insetBit = 0;
+        }
     };
 
     /**
@@ -3168,11 +3244,19 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             throw new Error("Right shift must be a number, string, number array or Buffer");
         }
 
-        const bytes = await this.#readBytes(Math.min(endOffset - startOffset, this.size - startOffset), consume);
+        const opLength = Math.min(endOffset, this.size) - startOffset;
+
+        const bytes = await this.#peekBytes(startOffset, opLength);
 
         _RSHIFT(bytes, 0, bytes.length, shiftKey);
 
-        return await this.#writeBytesAt(startOffset, bytes);
+        await this.#writeBytesAt(startOffset, bytes);
+
+        if (consume) {
+            this.#offset = startOffset + Math.max(opLength, 0);
+
+            this.#insetBit = 0;
+        }
     };
 
     /**
@@ -3231,7 +3315,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             throw new Error('Bit length must be between 1 and 32. Got ' + bits);
         }
 
-        const byteEnd = Math.ceil((((bits - 1) + this.#insetBit) / 8) + this.#offset);
+        const byteEnd = Math.ceil((bits + this.#insetBit) / 8) + this.#offset;
 
         if (byteEnd > this.size) {
             throw new Error(`Not enough bytes in file (need ${byteEnd}, have ${this.size})`);
@@ -3331,9 +3415,9 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
 
         value = numberSafe(value, bits, unsigned);
 
-        const endOffset = Math.ceil((((bits - 1) + this.#insetBit) / 8) + this.#offset);
+        const endOffset = Math.ceil((bits + this.#insetBit) / 8) + this.#offset;
 
-        const temp = await this.#peekBytes(this.#offset, Math.ceil(endOffset - this.#offset)) as Buffer | Uint8Array;
+        const temp = await this.#peekBytes(this.#offset, endOffset - this.#offset) as Buffer | Uint8Array;
 
         _wbit(temp, value, bits, this.#insetBit, endian, unsigned);
 
@@ -3446,7 +3530,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
         const returnArray: Array<number> = [];
 
         for (let i = 0; i < data.length; i++) {
-            var value = data[0];
+            var value = data[i];
 
             if (unsigned) {
                 returnArray.push(value & 0xFF);
@@ -3525,7 +3609,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
      * @param {boolean} consume - move offset after write
      */
     async writeUByte(value: number, consume: boolean = true) {
-        return await this.writeByte(value, consume);
+        return await this.writeByte(value, true, consume);
     };
 
     ///////////////////////////////
@@ -3609,17 +3693,21 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             throw new Error("Can't write data in readOnly mode!");
         }
 
+        const buf = new Uint8Array(2);
+
+        const view = new DataView(buf.buffer);
+
         if (canInt16) {
             if (unsigned) {
-                view2ByteDummy.setUint16(0, value, endian == "little");
+                view.setUint16(0, value, endian == "little");
             } else {
-                view2ByteDummy.setInt16(0, value, endian == "little");
+                view.setInt16(0, value, endian == "little");
             }
         } else {
-            _wint16(buff2ByteDummy, numberSafe(value, 16, unsigned), 0, endian, unsigned);
+            _wint16(buf, numberSafe(value, 16, unsigned), 0, endian, unsigned);
         }
 
-        return await this.#writeBytes(buff2ByteDummy, consume);
+        return await this.#writeBytes(buf, consume);
     };
 
     /**
@@ -3740,13 +3828,17 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             throw new Error("Can't write data in readOnly mode!");
         }
 
+        const buf = new Uint8Array(2);
+
+        const view = new DataView(buf.buffer);
+
         if (canFloat16) {
-            view2ByteDummy.setFloat16(0, value, endian == "little");
+            view.setFloat16(0, value, endian == "little");
         } else {
-            _whalffloat(buff2ByteDummy, value, 0, endian);
+            _whalffloat(buf, value, 0, endian);
         }
 
-        return await this.#writeBytes(buff2ByteDummy, consume);
+        return await this.#writeBytes(buf, consume);
     };
 
     /**
@@ -3885,17 +3977,21 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             throw new Error("Can't write data in readOnly mode!");
         }
 
+        const buf = new Uint8Array(4);
+
+        const view = new DataView(buf.buffer);
+
         if (canInt32) {
             if (unsigned) {
-                view4ByteDummy.setUint32(0, value, endian == "little");
+                view.setUint32(0, value, endian == "little");
             } else {
-                view4ByteDummy.setInt32(0, value, endian == "little");
+                view.setInt32(0, value, endian == "little");
             }
         } else {
-            _wint32(buff4ByteDummy, numberSafe(value, 32, unsigned), 0, endian, unsigned);
+            _wint32(buf, numberSafe(value, 32, unsigned), 0, endian, unsigned);
         }
 
-        return await this.#writeBytes(buff4ByteDummy, consume);
+        return await this.#writeBytes(buf, consume);
     }
 
     /**
@@ -4036,13 +4132,17 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             throw new Error("Can't write data in readOnly mode!");
         }
 
+        const buf = new Uint8Array(4);
+
+        const view = new DataView(buf.buffer);
+
         if (canFloat32) {
-            view4ByteDummy.setFloat32(0, value, endian == "little");
+            view.setFloat32(0, value, endian == "little");
         } else {
-            _wfloat(buff4ByteDummy, value, 0, endian);
+            _wfloat(buf, value, 0, endian);
         }
 
-        return await this.#writeBytes(buff4ByteDummy, consume);
+        return await this.#writeBytes(buf, consume);
     };
 
     /**
@@ -4188,17 +4288,21 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             throw new Error("System doesn't support BigInt values.");
         }
 
+        const buf = new Uint8Array(8);
+
+        const view = new DataView(buf.buffer);
+
         if (canBigInt64) {
             if (unsigned) {
-                view8ByteDummy.setBigUint64(0, BigInt(value), endian == "little");
+                view.setBigUint64(0, BigInt(value), endian == "little");
             } else {
-                view8ByteDummy.setBigInt64(0, BigInt(value), endian == "little");
+                view.setBigInt64(0, BigInt(value), endian == "little");
             }
         } else {
-            _wint64(buff8ByteDummy, numberSafe(value, 64, unsigned), 0, endian, unsigned);
+            _wint64(buf, numberSafe(value, 64, unsigned), 0, endian, unsigned);
         }
 
-        return await this.#writeBytes(buff8ByteDummy, consume);
+        return await this.#writeBytes(buf, consume);
     };
 
     /**
@@ -4320,13 +4424,17 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
             throw new Error("Can't write data in readOnly mode!");
         }
 
+        const buf = new Uint8Array(8);
+
+        const view = new DataView(buf.buffer);
+
         if (canFloat64) {
-            view8ByteDummy.setFloat64(0, value, endian == "little");
+            view.setFloat64(0, value, endian == "little");
         } else {
-            _wdfloat(buff8ByteDummy, value, 0, endian);
+            _wdfloat(buf, value, 0, endian);
         }
 
-        return await this.#writeBytes(buff8ByteDummy, consume);
+        return await this.#writeBytes(buf, consume);
     };
 
     /**
@@ -4428,7 +4536,7 @@ export class BiBaseAsync<DataType, alwaysBigInt> {
                     break;
             }
         } else {
-            readLengthinBytes = this.data.length - this.#offset;
+            readLengthinBytes = this.size - this.#offset;
         }
 
         if (this.#offset + readLengthinBytes > this.size) {

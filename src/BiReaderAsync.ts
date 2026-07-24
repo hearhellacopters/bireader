@@ -41,7 +41,7 @@ export class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType,
         options.windowSize = options.windowSize ?? 0x1000;
 
         if (input == undefined) {
-            throw new Error("Can not start BiReader without data.");
+            throw new Error("Can not start BiReaderAsync without data.");
         }
 
         super(input, options);
@@ -3218,6 +3218,30 @@ export class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType,
     */
     async pstring(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"], endian?: stringOptions["endian"]): Promise<string> {
         return await this.string({ stringType: "pascal", encoding: "utf-8", lengthReadSize: lengthReadSize, stripNull: stripNull, endian: endian });
+    };
+
+    /**
+    * Reads Pascal string in little endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async pstringle(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.pstring(lengthReadSize, stripNull, "little");
+    };
+
+    /**
+    * Reads Pascal string in big endian.
+    *
+    * @param {stringOptions["lengthReadSize"]} lengthReadSize - 1, 2 or 4 byte length write size (default 1)
+    * @param {stringOptions["stripNull"]} stripNull - removes 0x00 characters
+    *
+    * @returns {Promise<string>}
+    */
+    async pstringbe(lengthReadSize?: stringOptions["lengthReadSize"], stripNull?: stringOptions["stripNull"]): Promise<string> {
+        return await this.pstring(lengthReadSize, stripNull, "big");
     };
 
     /**

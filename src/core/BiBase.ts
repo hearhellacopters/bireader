@@ -214,7 +214,7 @@ export class BiBase<DataType, alwaysBigInt> {
             this.enforceBigInt = false as alwaysBigInt;
         }
 
-        this.growthIncrement = growthIncrement;
+        this.growthIncrement = growthIncrement ?? this.growthIncrement;
 
         if (typeof endianness != "string" || !(endianness == "big" || endianness == "little")) {
             throw new TypeError("Endian must be big or little");
@@ -245,18 +245,13 @@ export class BiBase<DataType, alwaysBigInt> {
         this.#offset = byteOffset ?? 0;
 
         if((bitOffset ?? 0) != 0){
-            this.#offset = Math.floor(byteOffset / 8);
+            this.#offset += Math.floor(bitOffset / 8);
 
-            this.#insetBit = byteOffset % 8;
+            this.#insetBit = bitOffset % 8;
         }
-        
-        this.#offset = ((Math.abs(this.#offset)) + Math.ceil((Math.abs(this.#insetBit)) / 8))
-        // Adjust byte offset based on bit overflow
-        this.#offset += Math.floor((Math.abs(this.#insetBit)) / 8);
-        // Adjust bit offset
-        this.#insetBit = Math.abs(normalizeBitOffset(this.#insetBit)) % 8;
+
         // Ensure bit offset stays between 0-7
-        this.#insetBit = Math.min(Math.max(this.#insetBit, 0), 7);
+        this.#insetBit = normalizeBitOffset(this.#insetBit);
         // Ensure offset doesn't go negative
         this.#offset = Math.max(this.#offset, 0);
 
@@ -399,13 +394,8 @@ export class BiBase<DataType, alwaysBigInt> {
 
         this.#insetBit = this.#insetBit ?? 0;
 
-        this.#offset = ((Math.abs(this.#offset)) + Math.ceil((Math.abs(this.#insetBit)) / 8));
-        // Adjust byte offset based on bit overflow
-        this.#offset += Math.floor((Math.abs(this.#insetBit)) / 8);
-        // Adjust bit offset
-        this.#insetBit = Math.abs(normalizeBitOffset(this.#insetBit)) % 8;
         // Ensure bit offset stays between 0-7
-        this.#insetBit = Math.min(Math.max(this.#insetBit, 0), 7);
+        this.#insetBit = normalizeBitOffset(this.#insetBit);
         // Ensure offset doesn't go negative
         this.#offset = Math.max(this.#offset, 0);
 
@@ -543,7 +533,7 @@ export class BiBase<DataType, alwaysBigInt> {
 
             this.filePath = null;
 
-            this.fd == null;
+            this.fd = null;
 
             this.isMemoryMode = true;
 
@@ -1370,7 +1360,7 @@ export class BiBase<DataType, alwaysBigInt> {
         for (let z = this.#offset; z <= (this.size - (bits / 8)); z++) {
             var offsetInBits = 0;
 
-            var value = 0;
+            var currentValue = 0;
 
             for (var i = 0; i < bits;) {
                 const remaining = bits - i;
@@ -1386,15 +1376,15 @@ export class BiBase<DataType, alwaysBigInt> {
 
                     let readBits = (currentByte >> (8 - read - bitOffset)) & mask;
 
-                    value <<= read;
+                    currentValue <<= read;
 
-                    value |= readBits;
+                    currentValue |= readBits;
                 } else {
                     let mask = ~(0xFF << read);
 
                     let readBits = (currentByte >> bitOffset) & mask;
 
-                    value |= readBits << i;
+                    currentValue |= readBits << i;
                 }
 
                 offsetInBits += read;
@@ -1403,15 +1393,15 @@ export class BiBase<DataType, alwaysBigInt> {
             }
 
             if (unsigned || bits <= 7) {
-                value = value >>> 0;
+                currentValue = currentValue >>> 0;
             } else {
-                if (bits !== 32 && value & (1 << (bits - 1))) {
-                    value |= -1 ^ ((1 << bits) - 1);
+                if (bits !== 32 && currentValue & (1 << (bits - 1))) {
+                    currentValue |= -1 ^ ((1 << bits) - 1);
                 }
             }
 
-            if (value === value) {
-                return z - this.#offset; // Found the byte, return the index from current
+            if (currentValue === value) {
+                return z; // Found the number, return the index
             }
         }
 
@@ -2822,7 +2812,7 @@ export class BiBase<DataType, alwaysBigInt> {
             throw new Error('Bit length must be between 1 and 32. Got ' + bits);
         }
 
-        const sizeNeeded = Math.floor(((bits - 1) + this.#insetBit) / 8) + this.#offset;
+        const sizeNeeded = Math.ceil((bits + this.#insetBit) / 8) + this.#offset;
 
         this.#confrimSize(sizeNeeded);
 
@@ -2920,7 +2910,7 @@ export class BiBase<DataType, alwaysBigInt> {
 
         value = numberSafe(value, bits, unsigned);
 
-        const endOffset = Math.ceil(((bits - 1) + this.#insetBit) / 8) + this.#offset;
+        const endOffset = Math.ceil((bits + this.#insetBit) / 8) + this.#offset;
 
         this.#confrimSize(endOffset);
 
@@ -3024,7 +3014,7 @@ export class BiBase<DataType, alwaysBigInt> {
         }
 
         if (consume) {
-            this.#offset += 1;
+            this.#offset = trueByte + 1;
 
             this.#insetBit = 0;
         }
@@ -3056,7 +3046,7 @@ export class BiBase<DataType, alwaysBigInt> {
         const returnArray = [];
 
         for (let i = 0; i < data.length; i++) {
-            var value = data[0];
+            var value = data[i];
 
             if (unsigned) {
                 returnArray.push(value & 0xFF);
@@ -3114,7 +3104,7 @@ export class BiBase<DataType, alwaysBigInt> {
         }
 
         if (consume) {
-            this.#offset += 1;
+            this.#offset = trueByte + 1;
 
             this.#insetBit = 0;
         }
@@ -3160,7 +3150,7 @@ export class BiBase<DataType, alwaysBigInt> {
      * @param {boolean} consume - move offset after write
      */
     writeUByte(value: number, consume: boolean = true): void {
-        return this.writeByte(value, consume);
+        return this.writeByte(value, true, consume);
     };
 
     ///////////////////////////////
@@ -3201,7 +3191,7 @@ export class BiBase<DataType, alwaysBigInt> {
         }
 
         if (consume) {
-            this.#offset += 2;
+            this.#offset = trueByte + 2;
 
             this.#insetBit = 0;
         }
@@ -3294,7 +3284,7 @@ export class BiBase<DataType, alwaysBigInt> {
         }
 
         if (consume) {
-            this.#offset += 2;
+            this.#offset = trueByte + 2;
 
             this.#insetBit = 0;
         }
@@ -3381,7 +3371,7 @@ export class BiBase<DataType, alwaysBigInt> {
         }
 
         if (consume) {
-            this.#offset += 2;
+            this.#offset = trueByte + 2;
 
             this.#insetBit = 0;
         }
@@ -3469,7 +3459,7 @@ export class BiBase<DataType, alwaysBigInt> {
         }
 
         if (consume) {
-            this.#offset += 2;
+            this.#offset = trueByte + 2;
 
             this.#insetBit = 0;
         }
@@ -3562,7 +3552,7 @@ export class BiBase<DataType, alwaysBigInt> {
         }
 
         if (consume) {
-            this.#offset += 4;
+            this.#offset = trueByte + 4;
 
             this.#insetBit = 0;
         }
@@ -3674,7 +3664,7 @@ export class BiBase<DataType, alwaysBigInt> {
         }
 
         if (consume) {
-            this.#offset += 4;
+            this.#offset = trueByte + 4;
 
             this.#insetBit = 0;
         }
@@ -3781,7 +3771,7 @@ export class BiBase<DataType, alwaysBigInt> {
         }
 
         if (consume) {
-            this.#offset += 4;
+            this.#offset = trueByte + 4;
 
             this.#insetBit = 0;
         }
@@ -3869,7 +3859,7 @@ export class BiBase<DataType, alwaysBigInt> {
         }
 
         if (consume) {
-            this.#offset += 4;
+            this.#offset = trueByte + 4;
 
             this.#insetBit = 0;
         }
@@ -3956,7 +3946,7 @@ export class BiBase<DataType, alwaysBigInt> {
         }
 
         if (consume) {
-            this.#offset += 8;
+            this.#offset = trueByte + 8;
 
             this.#insetBit = 0;
         }
@@ -4060,16 +4050,16 @@ export class BiBase<DataType, alwaysBigInt> {
 
         if (canBigInt64) {
             if (unsigned) {
-                this.view.setBigInt64(trueByte, BigInt(value), endian == "little");
-            } else {
                 this.view.setBigUint64(trueByte, BigInt(value), endian == "little");
+            } else {
+                this.view.setBigInt64(trueByte, BigInt(value), endian == "little");
             }
         } else {
             _wint64(this.data, numberSafe(value, 64, unsigned), trueByte, endian, unsigned);
         }
 
         if (consume) {
-            this.#offset += 8;
+            this.#offset = trueByte + 8;
 
             this.#insetBit = 0;
         }
@@ -4159,7 +4149,7 @@ export class BiBase<DataType, alwaysBigInt> {
         }
 
         if (consume) {
-            this.#offset += 8;
+            this.#offset = trueByte + 8;
 
             this.#insetBit = 0;
         }
@@ -4245,7 +4235,7 @@ export class BiBase<DataType, alwaysBigInt> {
         }
 
         if (consume) {
-            this.#offset += 8;
+            this.#offset = trueByte + 8;
 
             this.#insetBit = 0;
         }

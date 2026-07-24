@@ -108,7 +108,7 @@ export type hexdumpOptions = {
 
 // #region Checks
 
-const testFallback = process && process.argv && process.argv.indexOf("FALLBACK=true") != -1;
+const testFallback = typeof process !== 'undefined' && process.argv && process.argv.indexOf("FALLBACK=true") != -1;
 
 export const canInt8 = testFallback ? false : "getUint8" in DataView.prototype && "getInt8" in DataView.prototype && "setUint8" in DataView.prototype && "setInt8" in DataView.prototype;
 
@@ -233,7 +233,7 @@ export function floatSafe<DataType extends number | bigint>(
 
     switch (bits) {
         case 16:
-            min = 5.96e-08;
+            min = -65504;
 
             max = 65504;
 
@@ -594,7 +594,7 @@ export function _hexDump(
                         if (_hexCheck(byte3, 2) == 2) {
                             if (i + 3 <= end) {
                                 //check fourth byte
-                                const byte4 = data[i + 2] as number;
+                                const byte4 = data[i + 3] as number;
 
                                 if (_hexCheck(byte4, 2) == 2) {
                                     const charCode = (((byte4 & 0xFF) << 24) | ((byte3 & 0xFF) << 16) | ((byte2 & 0xFF) << 8) | (byte & 0xFF));
