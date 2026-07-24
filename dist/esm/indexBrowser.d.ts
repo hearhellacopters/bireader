@@ -4496,12 +4496,6 @@ declare class BiWriterAsync<DataType extends string | Uint8Array | Buffer = Uint
     /** Write 32 unsigned bits (big-endian). */
     ubit32be(value: number): Promise<void>;
     /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    writeUInt32BE(value: number): Promise<void>;
-    /**
     * Writes string, use options object for different types.
     *
     * @param {string} string - text string

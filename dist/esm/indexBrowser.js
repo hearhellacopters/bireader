@@ -7472,45 +7472,6 @@ class BiWriterAsync extends BiEngine {
     /** Write 32 unsigned bits (big-endian). */
     async ubit32be(value) { await this.bit(value, 32, true, "big"); }
     // #endregion Generated mechanical aliases
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    async writeUInt32BE(value) {
-        await this.writeInt32(value, true, "big");
-    }
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
-    ;
     ;
     //
     // #region string
