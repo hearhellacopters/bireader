@@ -4,7 +4,7 @@ import {
     endian,
     stringOptions,
 } from "./common.js";
-import { BiBaseAsync } from './core/BiBaseAsync.js';
+import { BiEngine } from './core/engine/engine.js';
 
 /**
  * Async Binary reader, includes bitfields and strings.
@@ -22,29 +22,22 @@ import { BiBaseAsync } from './core/BiBaseAsync.js';
  * 
  * @since 4.0
  */
-export class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType, alwaysBigInt> {
+export class BiReaderAsync<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiEngine<alwaysBigInt> {
     constructor(input: DataType, options: BiOptions<alwaysBigInt> = {}) {
-        options.byteOffset = options.byteOffset ?? 0;
-
-        options.bitOffset = options.bitOffset ?? 0;
-
-        options.endianness = options.endianness ?? "little";
-
-        options.strict = options.strict ?? true;
-
-        options.growthIncrement = options.growthIncrement ?? 0x100000;
-
-        options.enforceBigInt = options.enforceBigInt ?? false as alwaysBigInt;
-
-        options.readOnly = options.readOnly ?? true;
-
-        options.windowSize = options.windowSize ?? 0x1000;
-
         if (input == undefined) {
             throw new Error("Can not start BiReaderAsync without data.");
         }
-
-        super(input, options);
+        // Merge over defaults into a fresh object; never mutate the caller's options.
+        super(input, {
+            byteOffset: options.byteOffset ?? 0,
+            bitOffset: options.bitOffset ?? 0,
+            endianness: options.endianness ?? "little",
+            strict: options.strict ?? true,
+            growthIncrement: options.growthIncrement ?? 0x100000,
+            enforceBigInt: options.enforceBigInt ?? false as alwaysBigInt,
+            readOnly: options.readOnly ?? true,
+            windowSize: options.windowSize ?? 0x1000,
+        });
     };
 
     /**
@@ -63,7 +56,7 @@ export class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType,
      * 
      * @since 4.0
      */
-    static async create<DataType, alwaysBigInt>(input: DataType, options: BiOptions<alwaysBigInt> = {}): Promise<BiReaderAsync<DataType, alwaysBigInt>> {
+    static async create<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false>(input: DataType, options: BiOptions<alwaysBigInt> = {}): Promise<BiReaderAsync<DataType, alwaysBigInt>> {
         const instance = new BiReaderAsync<DataType, alwaysBigInt>(input, options);
 
         await instance.open();
@@ -151,2857 +144,827 @@ export class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType,
     async bitle(bits: number, unsigned?: boolean): Promise<number> {
         return await this.bit(bits, unsigned, "little");
     };
-
-    /**
-     * Bit field reader. Reads 1 bit.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit1(): Promise<number> {
-        return await this.bit(1);
-    };
-
-    /**
-     * Bit field reader. Reads 1 bit.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit1le(): Promise<number> {
-        return await this.bit(1, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 1 bit.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit1be(): Promise<number> {
-        return await this.bit(1, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 1 bit.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit1(): Promise<number> {
-        return await this.bit(1, true);
-    };
-
-    /**
-     * Bit field reader. Reads 1 bit.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit1le(): Promise<number> {
-        return await this.bit(1, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 1 bit.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit1be(): Promise<number> {
-        return await this.bit(1, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 2 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit2(): Promise<number> {
-        return await this.bit(2);
-    };
-
-    /**
-     * Bit field reader. Reads 2 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit2le(): Promise<number> {
-        return await this.bit(2, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 2 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit2be(): Promise<number> {
-        return await this.bit(2, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 2 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit2(): Promise<number> {
-        return await this.bit(2, true);
-    };
-
-    /**
-     * Bit field reader. Reads 2 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit2le(): Promise<number> {
-        return await this.bit(2, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 2 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit2be(): Promise<number> {
-        return await this.bit(2, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 3 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit3(): Promise<number> {
-        return await this.bit(3);
-    };
-
-    /**
-     * Bit field reader. Reads 3 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit3le(): Promise<number> {
-        return await this.bit(3, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 3 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit3be(): Promise<number> {
-        return await this.bit(3, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 3 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit3(): Promise<number> {
-        return await this.bit(3, true);
-    };
-
-    /**
-     * Bit field reader. Reads 3 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit3le(): Promise<number> {
-        return await this.bit(3, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 3 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit3be(): Promise<number> {
-        return await this.bit(3, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 4 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit4(): Promise<number> {
-        return await this.bit(4);
-    };
-
-    /**
-     * Bit field reader. Reads 4 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit4le(): Promise<number> {
-        return await this.bit(4, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 4 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit4be(): Promise<number> {
-        return await this.bit(4, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 4 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit4(): Promise<number> {
-        return await this.bit(4, true);
-    };
-
-    /**
-     * Bit field reader. Reads 4 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit4le(): Promise<number> {
-        return await this.bit(4, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 4 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit4be(): Promise<number> {
-        return await this.bit(4, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 5 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit5(): Promise<number> {
-        return await this.bit(5);
-    };
-
-    /**
-     * Bit field reader. Reads 5 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit5le(): Promise<number> {
-        return await this.bit(5, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 5 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit5be(): Promise<number> {
-        return await this.bit(5, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 5 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit5(): Promise<number> {
-        return await this.bit(5, true);
-    };
-
-    /**
-     * Bit field reader. Reads 5 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit5le(): Promise<number> {
-        return await this.bit(5, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 5 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit5be(): Promise<number> {
-        return await this.bit(5, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 6 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit6(): Promise<number> {
-        return await this.bit(6);
-    };
-
-    /**
-     * Bit field reader. Reads 6 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit6le(): Promise<number> {
-        return await this.bit(6, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 6 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit6be(): Promise<number> {
-        return await this.bit(6, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 6 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit6(): Promise<number> {
-        return await this.bit(6, true);
-    };
-
-    /**
-     * Bit field reader. Reads 6 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit6le(): Promise<number> {
-        return await this.bit(6, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 6 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit6be(): Promise<number> {
-        return await this.bit(6, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 7 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit7(): Promise<number> {
-        return await this.bit(7);
-    };
-
-    /**
-     * Bit field reader. Reads 7 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit7le(): Promise<number> {
-        return await this.bit(7, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 7 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit7be(): Promise<number> {
-        return await this.bit(7, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 7 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit7(): Promise<number> {
-        return await this.bit(7, true);
-    };
-
-    /**
-     * Bit field reader. Reads 7 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit7le(): Promise<number> {
-        return await this.bit(7, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 7 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit7be(): Promise<number> {
-        return await this.bit(7, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 8 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit8(): Promise<number> {
-        return await this.bit(8);
-    };
-
-    /**
-     * Bit field reader. Reads 8 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit8le(): Promise<number> {
-        return await this.bit(8, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 8 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit8be(): Promise<number> {
-        return await this.bit(8, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 8 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit8(): Promise<number> {
-        return await this.bit(8, true);
-    };
-
-    /**
-     * Bit field reader. Reads 8 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit8le(): Promise<number> {
-        return await this.bit(8, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 8 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit8be(): Promise<number> {
-        return await this.bit(8, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 9 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit9(): Promise<number> {
-        return await this.bit(9);
-    };
-
-    /**
-     * Bit field reader. Reads 9 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit9le(): Promise<number> {
-        return await this.bit(9, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 9 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit9be(): Promise<number> {
-        return await this.bit(9, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 9 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit9(): Promise<number> {
-        return await this.bit(9, true);
-    };
-
-    /**
-     * Bit field reader. Reads 9 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit9le(): Promise<number> {
-        return await this.bit(9, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 9 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit9be(): Promise<number> {
-        return await this.bit(9, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 10 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit10(): Promise<number> {
-        return await this.bit(10);
-    };
-
-    /**
-     * Bit field reader. Reads 10 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit10le(): Promise<number> {
-        return await this.bit(10, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 10 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit10be(): Promise<number> {
-        return await this.bit(10, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 10 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit10(): Promise<number> {
-        return await this.bit(10, true);
-    };
-
-    /**
-     * Bit field reader. Reads 10 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit10le(): Promise<number> {
-        return await this.bit(10, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 10 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit10be(): Promise<number> {
-        return await this.bit(10, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 11 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit11(): Promise<number> {
-        return await this.bit(11);
-    };
-
-    /**
-     * Bit field reader. Reads 11 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit11le(): Promise<number> {
-        return await this.bit(11, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 11 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit11be(): Promise<number> {
-        return await this.bit(11, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 11 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit11(): Promise<number> {
-        return await this.bit(11, true);
-    };
-
-    /**
-     * Bit field reader. Reads 11 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit11le(): Promise<number> {
-        return await this.bit(11, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 11 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit11be(): Promise<number> {
-        return await this.bit(11, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 12 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit12(): Promise<number> {
-        return await this.bit(12);
-    };
-
-    /**
-     * Bit field reader. Reads 12 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit12le(): Promise<number> {
-        return await this.bit(12, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 12 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit12be(): Promise<number> {
-        return await this.bit(12, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 12 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit12(): Promise<number> {
-        return await this.bit(12, true);
-    };
-
-    /**
-     * Bit field reader. Reads 12 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit12le(): Promise<number> {
-        return await this.bit(12, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 12 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit12be(): Promise<number> {
-        return await this.bit(12, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 13 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit13(): Promise<number> {
-        return await this.bit(13);
-    };
-
-    /**
-     * Bit field reader. Reads 13 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit13le(): Promise<number> {
-        return await this.bit(13, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 13 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit13be(): Promise<number> {
-        return await this.bit(13, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 13 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit13(): Promise<number> {
-        return await this.bit(13, true);
-    };
-
-    /**
-     * Bit field reader. Reads 13 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit13le(): Promise<number> {
-        return await this.bit(13, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 13 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit13be(): Promise<number> {
-        return await this.bit(13, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 14 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit14(): Promise<number> {
-        return await this.bit(14);
-    };
-
-    /**
-     * Bit field reader. Reads 14 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit14le(): Promise<number> {
-        return await this.bit(14, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 14 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit14be(): Promise<number> {
-        return await this.bit(14, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 14 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit14(): Promise<number> {
-        return await this.bit(14, true);
-    };
-
-    /**
-     * Bit field reader. Reads 14 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit14le(): Promise<number> {
-        return await this.bit(14, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 14 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit14be(): Promise<number> {
-        return await this.bit(14, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 15 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit15(): Promise<number> {
-        return await this.bit(15);
-    };
-
-    /**
-     * Bit field reader. Reads 15 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {promise<number>}
-     */
-    async bit15le(): Promise<number> {
-        return await this.bit(15, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 15 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {promise<number>}
-     */
-    async bit15be(): Promise<number> {
-        return await this.bit(15, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 15 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit15(): Promise<number> {
-        return await this.bit(15, true);
-    };
-
-    /**
-     * Bit field reader. Reads 15 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit15le(): Promise<number> {
-        return await this.bit(15, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 15 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit15be(): Promise<number> {
-        return await this.bit(15, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 16 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit16(): Promise<number> {
-        return await this.bit(16);
-    };
-
-    /**
-     * Bit field reader. Reads 16 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit16le(): Promise<number> {
-        return await this.bit(16, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 16 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit16be(): Promise<number> {
-        return await this.bit(16, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 16 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit16(): Promise<number> {
-        return await this.bit(16, true);
-    };
-
-    /**
-     * Bit field reader. Reads 16 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit16le(): Promise<number> {
-        return await this.bit(16, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 16 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit16be(): Promise<number> {
-        return await this.bit(16, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 17 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit17(): Promise<number> {
-        return await this.bit(17);
-    };
-
-    /**
-     * Bit field reader. Reads 17 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit17le(): Promise<number> {
-        return await this.bit(17, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 17 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit17be(): Promise<number> {
-        return await this.bit(17, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 17 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit17(): Promise<number> {
-        return await this.bit(17, true);
-    };
-
-    /**
-     * Bit field reader. Reads 17 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit17le(): Promise<number> {
-        return await this.bit(17, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 17 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit17be(): Promise<number> {
-        return await this.bit(17, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 18 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit18(): Promise<number> {
-        return await this.bit(18);
-    };
-
-    /**
-     * Bit field reader. Reads 18 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit18le(): Promise<number> {
-        return await this.bit(18, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 18 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit18be(): Promise<number> {
-        return await this.bit(18, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 18 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit18(): Promise<number> {
-        return await this.bit(18, true);
-    };
-
-    /**
-     * Bit field reader. Reads 18 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit18le(): Promise<number> {
-        return await this.bit(18, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 18 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit18be(): Promise<number> {
-        return await this.bit(18, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 19 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit19(): Promise<number> {
-        return await this.bit(19);
-    };
-
-    /**
-     * Bit field reader. Reads 19 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit19le(): Promise<number> {
-        return await this.bit(19, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 19 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit19be(): Promise<number> {
-        return await this.bit(19, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 19 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit19(): Promise<number> {
-        return await this.bit(19, true);
-    };
-
-    /**
-     * Bit field reader. Reads 19 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit19le(): Promise<number> {
-        return await this.bit(19, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 19 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit19be(): Promise<number> {
-        return await this.bit(19, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 20 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit20(): Promise<number> {
-        return await this.bit(20);
-    };
-
-    /**
-     * Bit field reader. Reads 20 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit20le(): Promise<number> {
-        return await this.bit(20, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 20 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit20be(): Promise<number> {
-        return await this.bit(20, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 20 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit20(): Promise<number> {
-        return await this.bit(20, true);
-    };
-
-    /**
-     * Bit field reader. Reads 20 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit20le(): Promise<number> {
-        return await this.bit(20, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 20 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit20be(): Promise<number> {
-        return await this.bit(20, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 21 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit21(): Promise<number> {
-        return await this.bit(21);
-    };
-
-    /**
-     * Bit field reader. Reads 21 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit21le(): Promise<number> {
-        return await this.bit(21, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 21 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit21be(): Promise<number> {
-        return await this.bit(21, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 21 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit21(): Promise<number> {
-        return await this.bit(21, true);
-    };
-
-    /**
-     * Bit field reader. Reads 21 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit21le(): Promise<number> {
-        return await this.bit(21, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 21 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit21be(): Promise<number> {
-        return await this.bit(21, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 22 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit22(): Promise<number> {
-        return await this.bit(22);
-    };
-
-    /**
-     * Bit field reader. Reads 22 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit22le(): Promise<number> {
-        return await this.bit(22, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 22 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit22be(): Promise<number> {
-        return await this.bit(22, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 22 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit22(): Promise<number> {
-        return await this.bit(22, true);
-    };
-
-    /**
-     * Bit field reader. Reads 22 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit22le(): Promise<number> {
-        return await this.bit(22, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 22 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit22be(): Promise<number> {
-        return await this.bit(22, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 23 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit23(): Promise<number> {
-        return await this.bit(23);
-    };
-
-    /**
-     * Bit field reader. Reads 23 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit23le(): Promise<number> {
-        return await this.bit(23, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 23 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit23be(): Promise<number> {
-        return await this.bit(23, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 23 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit23(): Promise<number> {
-        return await this.bit(23, true);
-    };
-
-    /**
-     * Bit field reader. Reads 23 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit23le(): Promise<number> {
-        return await this.bit(23, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 23 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit23be(): Promise<number> {
-        return await this.bit(23, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 24 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit24(): Promise<number> {
-        return await this.bit(24);
-    };
-
-    /**
-     * Bit field reader. Reads 24 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit24le(): Promise<number> {
-        return await this.bit(24, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 24 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit24be(): Promise<number> {
-        return await this.bit(24, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 24 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit24(): Promise<number> {
-        return await this.bit(24, true);
-    };
-
-    /**
-     * Bit field reader. Reads 24 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit24le(): Promise<number> {
-        return await this.bit(24, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 24 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit24be(): Promise<number> {
-        return await this.bit(24, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 25 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit25(): Promise<number> {
-        return await this.bit(25);
-    };
-
-    /**
-     * Bit field reader. Reads 25 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit25le(): Promise<number> {
-        return await this.bit(25, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 25 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit25be(): Promise<number> {
-        return await this.bit(25, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 25 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit25(): Promise<number> {
-        return await this.bit(25, true);
-    };
-
-    /**
-     * Bit field reader. Reads 25 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit25le(): Promise<number> {
-        return await this.bit(25, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 25 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit25be(): Promise<number> {
-        return await this.bit(25, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 26 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit26(): Promise<number> {
-        return await this.bit(26);
-    };
-
-    /**
-     * Bit field reader. Reads 26 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit26le(): Promise<number> {
-        return await this.bit(26, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 26 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit26be(): Promise<number> {
-        return await this.bit(26, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 26 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit26(): Promise<number> {
-        return await this.bit(26, true);
-    };
-
-    /**
-     * Bit field reader. Reads 26 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit26le(): Promise<number> {
-        return await this.bit(26, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 26 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit26be(): Promise<number> {
-        return await this.bit(26, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 27 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit27(): Promise<number> {
-        return await this.bit(27);
-    };
-
-    /**
-     * Bit field reader. Reads 27 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit27le(): Promise<number> {
-        return await this.bit(27, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 27 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit27be(): Promise<number> {
-        return await this.bit(27, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 27 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit27(): Promise<number> {
-        return await this.bit(27, true);
-    };
-
-    /**
-     * Bit field reader. Reads 27 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit27le(): Promise<number> {
-        return await this.bit(27, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 27 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit27be(): Promise<number> {
-        return await this.bit(27, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 28 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit28(): Promise<number> {
-        return await this.bit(28);
-    };
-
-    /**
-     * Bit field reader. Reads 28 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit28le(): Promise<number> {
-        return await this.bit(28, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 28 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit28be(): Promise<number> {
-        return await this.bit(28, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 28 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit28(): Promise<number> {
-        return await this.bit(28, true);
-    };
-
-    /**
-     * Bit field reader. Reads 28 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit28le(): Promise<number> {
-        return await this.bit(28, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 28 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit28be(): Promise<number> {
-        return await this.bit(28, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 29 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit29(): Promise<number> {
-        return await this.bit(29);
-    };
-
-    /**
-     * Bit field reader. Reads 29 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit29le(): Promise<number> {
-        return await this.bit(29, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 29 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit29be(): Promise<number> {
-        return await this.bit(29, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 29 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit29(): Promise<number> {
-        return await this.bit(29, true);
-    };
-
-    /**
-     * Bit field reader. Reads 29 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit29le(): Promise<number> {
-        return await this.bit(29, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 29 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit29be(): Promise<number> {
-        return await this.bit(29, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 30 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit30(): Promise<number> {
-        return await this.bit(30);
-    };
-
-    /**
-     * Bit field reader. Reads 30 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit30le(): Promise<number> {
-        return await this.bit(30, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 30 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit30be(): Promise<number> {
-        return await this.bit(30, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 30 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit30(): Promise<number> {
-        return await this.bit(30, true);
-    };
-
-    /**
-     * Bit field reader. Reads 30 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit30le(): Promise<number> {
-        return await this.bit(30, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 30 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit30be(): Promise<number> {
-        return await this.bit(30, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 31 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit31(): Promise<number> {
-        return await this.bit(31);
-    };
-
-    /**
-     * Bit field reader. Reads 31 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit31le(): Promise<number> {
-        return await this.bit(31, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 31 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit31be(): Promise<number> {
-        return await this.bit(31, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 31 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit31(): Promise<number> {
-        return await this.bit(31, true);
-    };
-
-    /**
-     * Bit field reader. Reads 31 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit31le(): Promise<number> {
-        return await this.bit(31, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 31 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit31be(): Promise<number> {
-        return await this.bit(31, true, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 32 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit32(): Promise<number> {
-        return await this.bit(32);
-    };
-
-    /**
-     * Bit field reader. Reads 32 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit32le(): Promise<number> {
-        return await this.bit(32, undefined, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 32 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async bit32be(): Promise<number> {
-        return await this.bit(32, undefined, "big");
-    };
-
-    /**
-     * Bit field reader. Reads 32 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit32(): Promise<number> {
-        return await this.bit(32, true);
-    };
-
-    /**
-     * Bit field reader. Reads 32 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit32le(): Promise<number> {
-        return await this.bit(32, true, "little");
-    };
-
-    /**
-     * Bit field reader. Reads 32 bits.
-     * 
-     * Note: When returning to a byte read, remaining bits are dropped.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubit32be(): Promise<number> {
-        return await this.bit(32, true, "big");
-    };
-
     //
-    // #region byte read
+    // #region Generated mechanical aliases
     //
 
-    /**
-     * Read byte.
-     * 
-     * @returns {Promise<number>}
-     */
-    async byte(): Promise<number> {
-        return await this.readByte();
-    };
-
-    /**
-     * Read byte.
-     * 
-     * @returns {Promise<number>}
-     */
-    async int8(): Promise<number> {
-        return await this.readByte();
-    };
-
-    /**
-     * Read unsigned byte.
-     * 
-     * @returns {Promise<number>}
-     */
-    async uint8(): Promise<number> {
-        return await this.readByte(true);
-    };
-
-    /**
-     * Read unsigned byte.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ubyte(): Promise<number> {
-        return await this.readByte(true);
-    };
-
-    //
-    // #region short16 read
-    //
-
-    /**
-     * Read short.
-     * 
-     * @returns {Promise<number>}
-     */
-    async int16(): Promise<number> {
-        return await this.readInt16();
-    };
-
-    /**
-     * Read short.
-     * 
-     * @returns {Promise<number>}
-     */
-    async short(): Promise<number> {
-        return await this.readInt16();
-    };
-
-    /**
-     * Read short.
-     * 
-     * @returns {Promise<number>}
-     */
-    async word(): Promise<number> {
-        return await this.readInt16();
-    };
-
-    /**
-     * Read unsigned short.
-     * 
-     * @returns {Promise<number>}
-     */
-    async uint16(): Promise<number> {
-        return await this.readInt16(true);
-    };
-
-    /**
-     * Read unsigned short.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ushort(): Promise<number> {
-        return this.readInt16(true);
-    };
-
-    /**
-     * Read unsigned short.
-     * 
-     * @returns {Promise<number>}
-     */
-    async uword(): Promise<number> {
-        return await this.readInt16(true);
-    };
-
-    /**
-     * Read unsigned short in little endian.
-     * 
-     * @returns {Promise<number>}
-     */
-    async uint16le(): Promise<number> {
-        return await this.readInt16(true, "little");
-    };
-
-    /**
-     * Read unsigned short in little endian.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ushortle(): Promise<number> {
-        return await this.readInt16(true, "little");
-    };
-
-    /**
-     * Read unsigned short in little endian.
-     * 
-     * @returns {Promise<number>}
-     */
-    async uwordle(): Promise<number> {
-        return await this.readInt16(true, "little");
-    };
-
-    /**
-     * Read signed short in little endian.
-     * 
-     * @returns {Promise<number>}
-     */
-    async int16le(): Promise<number> {
-        return await this.readInt16(false, "little");
-    };
-
-    /**
-     * Read signed short in little endian.
-     * 
-     * @returns {Promise<number>}
-     */
-    async shortle(): Promise<number> {
-        return await this.readInt16(false, "little");
-    };
-
-    /**
-     * Read signed short in little endian.
-     * 
-     * @returns {Promise<number>}
-     */
-    async wordle(): Promise<number> {
-        return await this.readInt16(false, "little");
-    };
-
-    /**
-     * Read unsigned short in big endian.
-     * 
-     * @returns {Promise<number>}
-     */
-    async uint16be(): Promise<number> {
-        return await this.readInt16(true, "big");
-    };
-
-    /**
-     * Read unsigned short in big endian.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ushortbe(): Promise<number> {
-        return await this.readInt16(true, "big");
-    };
-
-    /**
-     * Read unsigned short in big endian.
-     * 
-     * @returns {Promise<number>}
-     */
-    async uwordbe(): Promise<number> {
-        return await this.readInt16(true, "big");
-    };
-
-    /**
-     * Read signed short in big endian.
-     * 
-     * @returns {Promise<number>}
-     */
-    async int16be(): Promise<number> {
-        return await this.readInt16(false, "big");
-    };
-
-    /**
-     * Read signed short in big endian.
-     * 
-     * @returns {Promise<number>}
-     */
-    async shortbe(): Promise<number> {
-        return await this.readInt16(false, "big");
-    };
-
-    /**
-     * Read signed short in big endian.
-     * 
-     * @returns {Promise<number>}
-     */
-    async wordbe(): Promise<number> {
-        return await this.readInt16(false, "big");
-    };
-
-    //
-    // #region half float read
-    //
-
-    /**
-     * Read half float.
-     * 
-     * @returns {Promise<number>}
-     */
-    async halffloat(): Promise<number> {
-        return await this.readHalfFloat();
-    };
-
-    /**
-     * Read half float
-     * 
-     * @returns {Promise<number>}
-     */
-    async half(): Promise<number> {
-        return await this.readHalfFloat();
-    };
-
-    /**
-     * Read half float.
-     * 
-     * @returns {Promise<number>}
-     */
-    async halffloatbe(): Promise<number> {
-        return await this.readHalfFloat("big");
-    };
-
-    /**
-     * Read half float.
-     * 
-     * @returns {Promise<number>}
-     */
-    async halfbe(): Promise<number> {
-        return await this.readHalfFloat("big");
-    };
-
-    /**
-     * Read half float.
-     * 
-     * @returns {Promise<number>}
-     */
-    async halffloatle(): Promise<number> {
-        return await this.readHalfFloat("little");
-    };
-
-    /**
-     * Read half float.
-     * 
-     * @returns {Promise<number>}
-     */
-    async halfle(): Promise<number> {
-        return await this.readHalfFloat("little");
-    };
-
-    //
-    // #region int read
-    //
-
-    /**
-     * Read 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async int(): Promise<number> {
-        return await this.readInt32();
-    };
-
-    /**
-     * Read 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async double(): Promise<number> {
-        return await this.readInt32();
-    };
-
-    /**
-     * Read 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async int32(): Promise<number> {
-        return await this.readInt32();
-    };
-
-    /**
-     * Read 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async long(): Promise<number> {
-        return await this.readInt32();
-    };
-
-    /**
-     * Read unsigned 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async uint(): Promise<number> {
-        return await this.readInt32(true);
-    };
-
-    /**
-     * Read unsigned 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async udouble(): Promise<number> {
-        return await this.readInt32(true);
-    };
-
-    /**
-     * Read unsigned 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async uint32(): Promise<number> {
-        return await this.readInt32(true);
-    };
-
-    /**
-     * Read unsigned 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ulong(): Promise<number> {
-        return await this.readInt32(true);
-    };
-
-    /**
-     * Read signed 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async intbe(): Promise<number> {
-        return await this.readInt32(false, "big");
-    };
-
-    /**
-     * Read signed 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async doublebe(): Promise<number> {
-        return await this.readInt32(false, "big");
-    };
-
-    /**
-     * Read signed 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async int32be(): Promise<number> {
-        return await this.readInt32(false, "big");
-    };
-
-    /**
-     * Read signed 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async longbe(): Promise<number> {
-        return await this.readInt32(false, "big");
-    };
-
-    /**
-     * Read unsigned 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async uintbe(): Promise<number> {
-        return await this.readInt32(true, "big");
-    };
-
-    /**
-     * Read unsigned 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async udoublebe(): Promise<number> {
-        return await this.readInt32(true, "big");
-    };
-
-    /**
-     * Read unsigned 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async uint32be(): Promise<number> {
-        return await this.readInt32(true, "big");
-    };
-
-    /**
-     * Read unsigned 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ulongbe(): Promise<number> {
-        return await this.readInt32(true, "big");
-    };
-
-    /**
-     * Read signed 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async intle(): Promise<number> {
-        return await this.readInt32(false, "little");
-    };
-
-    /**
-     * Read signed 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async doublele(): Promise<number> {
-        return await this.readInt32(false, "little");
-    };
-
-    /**
-     * Read signed 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async int32le(): Promise<number> {
-        return await this.readInt32(false, "little");
-    };
-
-    /**
-     * Read signed 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async longle(): Promise<number> {
-        return await this.readInt32(false, "little");
-    };
-
-    /**
-     * Read signed 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async uintle(): Promise<number> {
-        return await this.readInt32(true, "little");
-    };
-
-    /**
-     * Read signed 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async udoublele(): Promise<number> {
-        return await this.readInt32(true, "little");
-    };
-
-    /**
-     * Read signed 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async uint32le(): Promise<number> {
-        return await this.readInt32(true, "little");
-    };
-
-    /**
-     * Read signed 32 bit integer.
-     * 
-     * @returns {Promise<number>}
-     */
-    async ulongle(): Promise<number> {
-        return await this.readInt32(true, "little");
-    };
-
-    //
-    // #region float read
-    //
-
-    /**
-     * Read float.
-     * 
-     * @returns {Promise<number>}
-     */
-    async float(): Promise<number> {
-        return await this.readFloat();
-    };
-
-    /**
-     * Read float.
-     * 
-     * @returns {Promise<number>}
-     */
-    async floatbe(): Promise<number> {
-        return await this.readFloat("big");
-    };
-
-    /**
-     * Read float.
-     * 
-     * @returns {Promise<number>}
-     */
-    async floatle(): Promise<number> {
-        return await this.readFloat("little");
-    };
-
-    //
-    // #region int64 reader
-    //
-
-    /**
-     * Read signed 64 bit integer
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async int64(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64();
-    };
-
-    /**
-     * Read signed 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async bigint(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64();
-    };
-
-    /**
-     * Read signed 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async quad(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64();
-    };
-
-    /**
-     * Read unsigned 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async uint64(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64(true);
-    };
-
-    /**
-     * Read unsigned 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async ubigint(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64(true);
-    };
-
-    /**
-     * Read unsigned 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async uquad(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64(true);
-    };
-
-    /**
-     * Read signed 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async int64be(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64(false, "big");
-    };
-
-    /**
-     * Read signed 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async bigintbe(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64(false, "big");
-    };
-
-    /**
-     * Read signed 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async quadbe(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64(false, "big");
-    };
-
-    /**
-     * Read unsigned 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async uint64be(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64(true, "big");
-    };
-
-    /**
-     * Read unsigned 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async ubigintbe(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64(true, "big");
-    };
-
-    /**
-     * Read unsigned 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async uquadbe(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64(true, "big");
-    };
-
-    /**
-     * Read signed 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async int64le(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64(false, "little");
-    };
-
-    /**
-     * Read signed 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async bigintle(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64(false, "little");
-    };
-
-    /**
-     * Read signed 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async quadle(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64(false, "little");
-    };
-
-    /**
-     * Read unsigned 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async uint64le(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64(true, "little");
-    };
-
-    /**
-     * Read unsigned 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async ubigintle(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64(true, "little");
-    };
-
-    /**
-     * Read unsigned 64 bit integer.
-     * 
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    async uquadle(): Promise<alwaysBigInt extends true ? bigint : BigValue> {
-        return await this.readInt64(true, "little");
-    };
-
-    //
-    // #region doublefloat reader
-    //
-
-    /**
-     * Read double float.
-     * 
-     * @returns {Promise<number>}
-     */
-    async doublefloat(): Promise<number> {
-        return await this.readDoubleFloat();
-    };
-
-    /**
-     * Read double float.
-     * 
-     * @returns {Promise<number>}
-     */
-    async dfloat(): Promise<number> {
-        return await this.readDoubleFloat();
-    };
-
-    /**
-     * Read double float.
-     * 
-     * @returns {Promise<number>}
-     */
-    async dfloatbe(): Promise<number> {
-        return await this.readDoubleFloat("big");
-    };
-
-    /**
-     * Read double float.
-     * 
-     * @returns {Promise<number>}
-     */
-    async doublefloatbe(): Promise<number> {
-        return await this.readDoubleFloat("big");
-    };
-
-    /**
-     * Read double float.
-     * 
-     * @returns {Promise<number>}
-     */
-    async dfloatle(): Promise<number> {
-        return await this.readDoubleFloat("little");
-    };
-
-    /**
-     * Read double float.
-     * 
-     * @returns {Promise<number>}
-     */
-    async doublefloatle(): Promise<number> {
-        return await this.readDoubleFloat("little");
-    };
+    // ==== GENERATED from scripts/alias-spec.mjs by `npm run apply:aliases` - do not edit by hand ====
+    // Behaviour is verified by test/aliases.parity.test.ts.
+
+    /** Read a signed 8-bit integer. */
+    async byte(): Promise<number> { return await this.readByte(); }
+
+    /** Read a signed 8-bit integer. */
+    async int8(): Promise<number> { return await this.readByte(); }
+
+    /** Read an unsigned 8-bit integer. */
+    async uint8(): Promise<number> { return await this.readByte(true); }
+
+    /** Read an unsigned 8-bit integer. */
+    async ubyte(): Promise<number> { return await this.readByte(true); }
+
+    /** Read a signed 16-bit integer. */
+    async int16(): Promise<number> { return await this.readInt16(); }
+
+    /** Read a signed 16-bit integer. */
+    async short(): Promise<number> { return await this.readInt16(); }
+
+    /** Read a signed 16-bit integer. */
+    async word(): Promise<number> { return await this.readInt16(); }
+
+    /** Read an unsigned 16-bit integer. */
+    async uint16(): Promise<number> { return await this.readInt16(true); }
+
+    /** Read an unsigned 16-bit integer. */
+    async ushort(): Promise<number> { return await this.readInt16(true); }
+
+    /** Read an unsigned 16-bit integer. */
+    async uword(): Promise<number> { return await this.readInt16(true); }
+
+    /** Read a signed 16-bit integer (little-endian). */
+    async int16le(): Promise<number> { return await this.readInt16(false, "little"); }
+
+    /** Read a signed 16-bit integer (little-endian). */
+    async shortle(): Promise<number> { return await this.readInt16(false, "little"); }
+
+    /** Read a signed 16-bit integer (little-endian). */
+    async wordle(): Promise<number> { return await this.readInt16(false, "little"); }
+
+    /** Read an unsigned 16-bit integer (little-endian). */
+    async uint16le(): Promise<number> { return await this.readInt16(true, "little"); }
+
+    /** Read an unsigned 16-bit integer (little-endian). */
+    async ushortle(): Promise<number> { return await this.readInt16(true, "little"); }
+
+    /** Read an unsigned 16-bit integer (little-endian). */
+    async uwordle(): Promise<number> { return await this.readInt16(true, "little"); }
+
+    /** Read a signed 16-bit integer (big-endian). */
+    async int16be(): Promise<number> { return await this.readInt16(false, "big"); }
+
+    /** Read a signed 16-bit integer (big-endian). */
+    async shortbe(): Promise<number> { return await this.readInt16(false, "big"); }
+
+    /** Read a signed 16-bit integer (big-endian). */
+    async wordbe(): Promise<number> { return await this.readInt16(false, "big"); }
+
+    /** Read an unsigned 16-bit integer (big-endian). */
+    async uint16be(): Promise<number> { return await this.readInt16(true, "big"); }
+
+    /** Read an unsigned 16-bit integer (big-endian). */
+    async ushortbe(): Promise<number> { return await this.readInt16(true, "big"); }
+
+    /** Read an unsigned 16-bit integer (big-endian). */
+    async uwordbe(): Promise<number> { return await this.readInt16(true, "big"); }
+
+    /** Read a signed 32-bit integer. */
+    async int(): Promise<number> { return await this.readInt32(); }
+
+    /** Read a signed 32-bit integer. */
+    async dword(): Promise<number> { return await this.readInt32(); }
+
+    /** Read a signed 32-bit integer. */
+    async int32(): Promise<number> { return await this.readInt32(); }
+
+    /** Read a signed 32-bit integer. */
+    async long(): Promise<number> { return await this.readInt32(); }
+
+    /** Read an unsigned 32-bit integer. */
+    async uint(): Promise<number> { return await this.readInt32(true); }
+
+    /** Read an unsigned 32-bit integer. */
+    async udword(): Promise<number> { return await this.readInt32(true); }
+
+    /** Read an unsigned 32-bit integer. */
+    async uint32(): Promise<number> { return await this.readInt32(true); }
+
+    /** Read an unsigned 32-bit integer. */
+    async ulong(): Promise<number> { return await this.readInt32(true); }
+
+    /** Read a signed 32-bit integer (little-endian). */
+    async intle(): Promise<number> { return await this.readInt32(false, "little"); }
+
+    /** Read a signed 32-bit integer (little-endian). */
+    async dwordle(): Promise<number> { return await this.readInt32(false, "little"); }
+
+    /** Read a signed 32-bit integer (little-endian). */
+    async int32le(): Promise<number> { return await this.readInt32(false, "little"); }
+
+    /** Read a signed 32-bit integer (little-endian). */
+    async longle(): Promise<number> { return await this.readInt32(false, "little"); }
+
+    /** Read an unsigned 32-bit integer (little-endian). */
+    async uintle(): Promise<number> { return await this.readInt32(true, "little"); }
+
+    /** Read an unsigned 32-bit integer (little-endian). */
+    async udwordle(): Promise<number> { return await this.readInt32(true, "little"); }
+
+    /** Read an unsigned 32-bit integer (little-endian). */
+    async uint32le(): Promise<number> { return await this.readInt32(true, "little"); }
+
+    /** Read an unsigned 32-bit integer (little-endian). */
+    async ulongle(): Promise<number> { return await this.readInt32(true, "little"); }
+
+    /** Read a signed 32-bit integer (big-endian). */
+    async intbe(): Promise<number> { return await this.readInt32(false, "big"); }
+
+    /** Read a signed 32-bit integer (big-endian). */
+    async dwordbe(): Promise<number> { return await this.readInt32(false, "big"); }
+
+    /** Read a signed 32-bit integer (big-endian). */
+    async int32be(): Promise<number> { return await this.readInt32(false, "big"); }
+
+    /** Read a signed 32-bit integer (big-endian). */
+    async longbe(): Promise<number> { return await this.readInt32(false, "big"); }
+
+    /** Read an unsigned 32-bit integer (big-endian). */
+    async uintbe(): Promise<number> { return await this.readInt32(true, "big"); }
+
+    /** Read an unsigned 32-bit integer (big-endian). */
+    async udwordbe(): Promise<number> { return await this.readInt32(true, "big"); }
+
+    /** Read an unsigned 32-bit integer (big-endian). */
+    async uint32be(): Promise<number> { return await this.readInt32(true, "big"); }
+
+    /** Read an unsigned 32-bit integer (big-endian). */
+    async ulongbe(): Promise<number> { return await this.readInt32(true, "big"); }
+
+    /** Read a signed 64-bit integer. */
+    async int64(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(); }
+
+    /** Read a signed 64-bit integer. */
+    async bigint(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(); }
+
+    /** Read a signed 64-bit integer. */
+    async quad(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(); }
+
+    /** Read an unsigned 64-bit integer. */
+    async uint64(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(true); }
+
+    /** Read an unsigned 64-bit integer. */
+    async ubigint(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(true); }
+
+    /** Read an unsigned 64-bit integer. */
+    async uquad(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(true); }
+
+    /** Read a signed 64-bit integer (little-endian). */
+    async int64le(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(false, "little"); }
+
+    /** Read a signed 64-bit integer (little-endian). */
+    async bigintle(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(false, "little"); }
+
+    /** Read a signed 64-bit integer (little-endian). */
+    async quadle(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(false, "little"); }
+
+    /** Read an unsigned 64-bit integer (little-endian). */
+    async uint64le(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(true, "little"); }
+
+    /** Read an unsigned 64-bit integer (little-endian). */
+    async ubigintle(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(true, "little"); }
+
+    /** Read an unsigned 64-bit integer (little-endian). */
+    async uquadle(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(true, "little"); }
+
+    /** Read a signed 64-bit integer (big-endian). */
+    async int64be(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(false, "big"); }
+
+    /** Read a signed 64-bit integer (big-endian). */
+    async bigintbe(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(false, "big"); }
+
+    /** Read a signed 64-bit integer (big-endian). */
+    async quadbe(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(false, "big"); }
+
+    /** Read an unsigned 64-bit integer (big-endian). */
+    async uint64be(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(true, "big"); }
+
+    /** Read an unsigned 64-bit integer (big-endian). */
+    async ubigintbe(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(true, "big"); }
+
+    /** Read an unsigned 64-bit integer (big-endian). */
+    async uquadbe(): Promise<alwaysBigInt extends true ? bigint : BigValue> { return await this.readInt64(true, "big"); }
+
+    /** Read a 32-bit float. */
+    async float(): Promise<number> { return await this.readFloat(); }
+
+    /** Read a 32-bit float (little-endian). */
+    async floatle(): Promise<number> { return await this.readFloat("little"); }
+
+    /** Read a 32-bit float (big-endian). */
+    async floatbe(): Promise<number> { return await this.readFloat("big"); }
+
+    /** Read a 16-bit float. */
+    async halffloat(): Promise<number> { return await this.readHalfFloat(); }
+
+    /** Read a 16-bit float. */
+    async half(): Promise<number> { return await this.readHalfFloat(); }
+
+    /** Read a 16-bit float (little-endian). */
+    async halffloatle(): Promise<number> { return await this.readHalfFloat("little"); }
+
+    /** Read a 16-bit float (little-endian). */
+    async halfle(): Promise<number> { return await this.readHalfFloat("little"); }
+
+    /** Read a 16-bit float (big-endian). */
+    async halffloatbe(): Promise<number> { return await this.readHalfFloat("big"); }
+
+    /** Read a 16-bit float (big-endian). */
+    async halfbe(): Promise<number> { return await this.readHalfFloat("big"); }
+
+    /** Read a 64-bit float. */
+    async doublefloat(): Promise<number> { return await this.readDoubleFloat(); }
+
+    /** Read a 64-bit float. */
+    async dfloat(): Promise<number> { return await this.readDoubleFloat(); }
+
+    /** Read a 64-bit float (little-endian). */
+    async doublefloatle(): Promise<number> { return await this.readDoubleFloat("little"); }
+
+    /** Read a 64-bit float (little-endian). */
+    async dfloatle(): Promise<number> { return await this.readDoubleFloat("little"); }
+
+    /** Read a 64-bit float (big-endian). */
+    async doublefloatbe(): Promise<number> { return await this.readDoubleFloat("big"); }
+
+    /** Read a 64-bit float (big-endian). */
+    async dfloatbe(): Promise<number> { return await this.readDoubleFloat("big"); }
+
+    /** Read 1 signed bit. */
+    async bit1(): Promise<number> { return await this.bit(1); }
+
+    /** Read 1 unsigned bit. */
+    async ubit1(): Promise<number> { return await this.bit(1, true); }
+
+    /** Read 1 signed bit (little-endian). */
+    async bit1le(): Promise<number> { return await this.bit(1, undefined, "little"); }
+
+    /** Read 1 unsigned bit (little-endian). */
+    async ubit1le(): Promise<number> { return await this.bit(1, true, "little"); }
+
+    /** Read 1 signed bit (big-endian). */
+    async bit1be(): Promise<number> { return await this.bit(1, undefined, "big"); }
+
+    /** Read 1 unsigned bit (big-endian). */
+    async ubit1be(): Promise<number> { return await this.bit(1, true, "big"); }
+
+    /** Read 2 signed bits. */
+    async bit2(): Promise<number> { return await this.bit(2); }
+
+    /** Read 2 unsigned bits. */
+    async ubit2(): Promise<number> { return await this.bit(2, true); }
+
+    /** Read 2 signed bits (little-endian). */
+    async bit2le(): Promise<number> { return await this.bit(2, undefined, "little"); }
+
+    /** Read 2 unsigned bits (little-endian). */
+    async ubit2le(): Promise<number> { return await this.bit(2, true, "little"); }
+
+    /** Read 2 signed bits (big-endian). */
+    async bit2be(): Promise<number> { return await this.bit(2, undefined, "big"); }
+
+    /** Read 2 unsigned bits (big-endian). */
+    async ubit2be(): Promise<number> { return await this.bit(2, true, "big"); }
+
+    /** Read 3 signed bits. */
+    async bit3(): Promise<number> { return await this.bit(3); }
+
+    /** Read 3 unsigned bits. */
+    async ubit3(): Promise<number> { return await this.bit(3, true); }
+
+    /** Read 3 signed bits (little-endian). */
+    async bit3le(): Promise<number> { return await this.bit(3, undefined, "little"); }
+
+    /** Read 3 unsigned bits (little-endian). */
+    async ubit3le(): Promise<number> { return await this.bit(3, true, "little"); }
+
+    /** Read 3 signed bits (big-endian). */
+    async bit3be(): Promise<number> { return await this.bit(3, undefined, "big"); }
+
+    /** Read 3 unsigned bits (big-endian). */
+    async ubit3be(): Promise<number> { return await this.bit(3, true, "big"); }
+
+    /** Read 4 signed bits. */
+    async bit4(): Promise<number> { return await this.bit(4); }
+
+    /** Read 4 unsigned bits. */
+    async ubit4(): Promise<number> { return await this.bit(4, true); }
+
+    /** Read 4 signed bits (little-endian). */
+    async bit4le(): Promise<number> { return await this.bit(4, undefined, "little"); }
+
+    /** Read 4 unsigned bits (little-endian). */
+    async ubit4le(): Promise<number> { return await this.bit(4, true, "little"); }
+
+    /** Read 4 signed bits (big-endian). */
+    async bit4be(): Promise<number> { return await this.bit(4, undefined, "big"); }
+
+    /** Read 4 unsigned bits (big-endian). */
+    async ubit4be(): Promise<number> { return await this.bit(4, true, "big"); }
+
+    /** Read 5 signed bits. */
+    async bit5(): Promise<number> { return await this.bit(5); }
+
+    /** Read 5 unsigned bits. */
+    async ubit5(): Promise<number> { return await this.bit(5, true); }
+
+    /** Read 5 signed bits (little-endian). */
+    async bit5le(): Promise<number> { return await this.bit(5, undefined, "little"); }
+
+    /** Read 5 unsigned bits (little-endian). */
+    async ubit5le(): Promise<number> { return await this.bit(5, true, "little"); }
+
+    /** Read 5 signed bits (big-endian). */
+    async bit5be(): Promise<number> { return await this.bit(5, undefined, "big"); }
+
+    /** Read 5 unsigned bits (big-endian). */
+    async ubit5be(): Promise<number> { return await this.bit(5, true, "big"); }
+
+    /** Read 6 signed bits. */
+    async bit6(): Promise<number> { return await this.bit(6); }
+
+    /** Read 6 unsigned bits. */
+    async ubit6(): Promise<number> { return await this.bit(6, true); }
+
+    /** Read 6 signed bits (little-endian). */
+    async bit6le(): Promise<number> { return await this.bit(6, undefined, "little"); }
+
+    /** Read 6 unsigned bits (little-endian). */
+    async ubit6le(): Promise<number> { return await this.bit(6, true, "little"); }
+
+    /** Read 6 signed bits (big-endian). */
+    async bit6be(): Promise<number> { return await this.bit(6, undefined, "big"); }
+
+    /** Read 6 unsigned bits (big-endian). */
+    async ubit6be(): Promise<number> { return await this.bit(6, true, "big"); }
+
+    /** Read 7 signed bits. */
+    async bit7(): Promise<number> { return await this.bit(7); }
+
+    /** Read 7 unsigned bits. */
+    async ubit7(): Promise<number> { return await this.bit(7, true); }
+
+    /** Read 7 signed bits (little-endian). */
+    async bit7le(): Promise<number> { return await this.bit(7, undefined, "little"); }
+
+    /** Read 7 unsigned bits (little-endian). */
+    async ubit7le(): Promise<number> { return await this.bit(7, true, "little"); }
+
+    /** Read 7 signed bits (big-endian). */
+    async bit7be(): Promise<number> { return await this.bit(7, undefined, "big"); }
+
+    /** Read 7 unsigned bits (big-endian). */
+    async ubit7be(): Promise<number> { return await this.bit(7, true, "big"); }
+
+    /** Read 8 signed bits. */
+    async bit8(): Promise<number> { return await this.bit(8); }
+
+    /** Read 8 unsigned bits. */
+    async ubit8(): Promise<number> { return await this.bit(8, true); }
+
+    /** Read 8 signed bits (little-endian). */
+    async bit8le(): Promise<number> { return await this.bit(8, undefined, "little"); }
+
+    /** Read 8 unsigned bits (little-endian). */
+    async ubit8le(): Promise<number> { return await this.bit(8, true, "little"); }
+
+    /** Read 8 signed bits (big-endian). */
+    async bit8be(): Promise<number> { return await this.bit(8, undefined, "big"); }
+
+    /** Read 8 unsigned bits (big-endian). */
+    async ubit8be(): Promise<number> { return await this.bit(8, true, "big"); }
+
+    /** Read 9 signed bits. */
+    async bit9(): Promise<number> { return await this.bit(9); }
+
+    /** Read 9 unsigned bits. */
+    async ubit9(): Promise<number> { return await this.bit(9, true); }
+
+    /** Read 9 signed bits (little-endian). */
+    async bit9le(): Promise<number> { return await this.bit(9, undefined, "little"); }
+
+    /** Read 9 unsigned bits (little-endian). */
+    async ubit9le(): Promise<number> { return await this.bit(9, true, "little"); }
+
+    /** Read 9 signed bits (big-endian). */
+    async bit9be(): Promise<number> { return await this.bit(9, undefined, "big"); }
+
+    /** Read 9 unsigned bits (big-endian). */
+    async ubit9be(): Promise<number> { return await this.bit(9, true, "big"); }
+
+    /** Read 10 signed bits. */
+    async bit10(): Promise<number> { return await this.bit(10); }
+
+    /** Read 10 unsigned bits. */
+    async ubit10(): Promise<number> { return await this.bit(10, true); }
+
+    /** Read 10 signed bits (little-endian). */
+    async bit10le(): Promise<number> { return await this.bit(10, undefined, "little"); }
+
+    /** Read 10 unsigned bits (little-endian). */
+    async ubit10le(): Promise<number> { return await this.bit(10, true, "little"); }
+
+    /** Read 10 signed bits (big-endian). */
+    async bit10be(): Promise<number> { return await this.bit(10, undefined, "big"); }
+
+    /** Read 10 unsigned bits (big-endian). */
+    async ubit10be(): Promise<number> { return await this.bit(10, true, "big"); }
+
+    /** Read 11 signed bits. */
+    async bit11(): Promise<number> { return await this.bit(11); }
+
+    /** Read 11 unsigned bits. */
+    async ubit11(): Promise<number> { return await this.bit(11, true); }
+
+    /** Read 11 signed bits (little-endian). */
+    async bit11le(): Promise<number> { return await this.bit(11, undefined, "little"); }
+
+    /** Read 11 unsigned bits (little-endian). */
+    async ubit11le(): Promise<number> { return await this.bit(11, true, "little"); }
+
+    /** Read 11 signed bits (big-endian). */
+    async bit11be(): Promise<number> { return await this.bit(11, undefined, "big"); }
+
+    /** Read 11 unsigned bits (big-endian). */
+    async ubit11be(): Promise<number> { return await this.bit(11, true, "big"); }
+
+    /** Read 12 signed bits. */
+    async bit12(): Promise<number> { return await this.bit(12); }
+
+    /** Read 12 unsigned bits. */
+    async ubit12(): Promise<number> { return await this.bit(12, true); }
+
+    /** Read 12 signed bits (little-endian). */
+    async bit12le(): Promise<number> { return await this.bit(12, undefined, "little"); }
+
+    /** Read 12 unsigned bits (little-endian). */
+    async ubit12le(): Promise<number> { return await this.bit(12, true, "little"); }
+
+    /** Read 12 signed bits (big-endian). */
+    async bit12be(): Promise<number> { return await this.bit(12, undefined, "big"); }
+
+    /** Read 12 unsigned bits (big-endian). */
+    async ubit12be(): Promise<number> { return await this.bit(12, true, "big"); }
+
+    /** Read 13 signed bits. */
+    async bit13(): Promise<number> { return await this.bit(13); }
+
+    /** Read 13 unsigned bits. */
+    async ubit13(): Promise<number> { return await this.bit(13, true); }
+
+    /** Read 13 signed bits (little-endian). */
+    async bit13le(): Promise<number> { return await this.bit(13, undefined, "little"); }
+
+    /** Read 13 unsigned bits (little-endian). */
+    async ubit13le(): Promise<number> { return await this.bit(13, true, "little"); }
+
+    /** Read 13 signed bits (big-endian). */
+    async bit13be(): Promise<number> { return await this.bit(13, undefined, "big"); }
+
+    /** Read 13 unsigned bits (big-endian). */
+    async ubit13be(): Promise<number> { return await this.bit(13, true, "big"); }
+
+    /** Read 14 signed bits. */
+    async bit14(): Promise<number> { return await this.bit(14); }
+
+    /** Read 14 unsigned bits. */
+    async ubit14(): Promise<number> { return await this.bit(14, true); }
+
+    /** Read 14 signed bits (little-endian). */
+    async bit14le(): Promise<number> { return await this.bit(14, undefined, "little"); }
+
+    /** Read 14 unsigned bits (little-endian). */
+    async ubit14le(): Promise<number> { return await this.bit(14, true, "little"); }
+
+    /** Read 14 signed bits (big-endian). */
+    async bit14be(): Promise<number> { return await this.bit(14, undefined, "big"); }
+
+    /** Read 14 unsigned bits (big-endian). */
+    async ubit14be(): Promise<number> { return await this.bit(14, true, "big"); }
+
+    /** Read 15 signed bits. */
+    async bit15(): Promise<number> { return await this.bit(15); }
+
+    /** Read 15 unsigned bits. */
+    async ubit15(): Promise<number> { return await this.bit(15, true); }
+
+    /** Read 15 signed bits (little-endian). */
+    async bit15le(): Promise<number> { return await this.bit(15, undefined, "little"); }
+
+    /** Read 15 unsigned bits (little-endian). */
+    async ubit15le(): Promise<number> { return await this.bit(15, true, "little"); }
+
+    /** Read 15 signed bits (big-endian). */
+    async bit15be(): Promise<number> { return await this.bit(15, undefined, "big"); }
+
+    /** Read 15 unsigned bits (big-endian). */
+    async ubit15be(): Promise<number> { return await this.bit(15, true, "big"); }
+
+    /** Read 16 signed bits. */
+    async bit16(): Promise<number> { return await this.bit(16); }
+
+    /** Read 16 unsigned bits. */
+    async ubit16(): Promise<number> { return await this.bit(16, true); }
+
+    /** Read 16 signed bits (little-endian). */
+    async bit16le(): Promise<number> { return await this.bit(16, undefined, "little"); }
+
+    /** Read 16 unsigned bits (little-endian). */
+    async ubit16le(): Promise<number> { return await this.bit(16, true, "little"); }
+
+    /** Read 16 signed bits (big-endian). */
+    async bit16be(): Promise<number> { return await this.bit(16, undefined, "big"); }
+
+    /** Read 16 unsigned bits (big-endian). */
+    async ubit16be(): Promise<number> { return await this.bit(16, true, "big"); }
+
+    /** Read 17 signed bits. */
+    async bit17(): Promise<number> { return await this.bit(17); }
+
+    /** Read 17 unsigned bits. */
+    async ubit17(): Promise<number> { return await this.bit(17, true); }
+
+    /** Read 17 signed bits (little-endian). */
+    async bit17le(): Promise<number> { return await this.bit(17, undefined, "little"); }
+
+    /** Read 17 unsigned bits (little-endian). */
+    async ubit17le(): Promise<number> { return await this.bit(17, true, "little"); }
+
+    /** Read 17 signed bits (big-endian). */
+    async bit17be(): Promise<number> { return await this.bit(17, undefined, "big"); }
+
+    /** Read 17 unsigned bits (big-endian). */
+    async ubit17be(): Promise<number> { return await this.bit(17, true, "big"); }
+
+    /** Read 18 signed bits. */
+    async bit18(): Promise<number> { return await this.bit(18); }
+
+    /** Read 18 unsigned bits. */
+    async ubit18(): Promise<number> { return await this.bit(18, true); }
+
+    /** Read 18 signed bits (little-endian). */
+    async bit18le(): Promise<number> { return await this.bit(18, undefined, "little"); }
+
+    /** Read 18 unsigned bits (little-endian). */
+    async ubit18le(): Promise<number> { return await this.bit(18, true, "little"); }
+
+    /** Read 18 signed bits (big-endian). */
+    async bit18be(): Promise<number> { return await this.bit(18, undefined, "big"); }
+
+    /** Read 18 unsigned bits (big-endian). */
+    async ubit18be(): Promise<number> { return await this.bit(18, true, "big"); }
+
+    /** Read 19 signed bits. */
+    async bit19(): Promise<number> { return await this.bit(19); }
+
+    /** Read 19 unsigned bits. */
+    async ubit19(): Promise<number> { return await this.bit(19, true); }
+
+    /** Read 19 signed bits (little-endian). */
+    async bit19le(): Promise<number> { return await this.bit(19, undefined, "little"); }
+
+    /** Read 19 unsigned bits (little-endian). */
+    async ubit19le(): Promise<number> { return await this.bit(19, true, "little"); }
+
+    /** Read 19 signed bits (big-endian). */
+    async bit19be(): Promise<number> { return await this.bit(19, undefined, "big"); }
+
+    /** Read 19 unsigned bits (big-endian). */
+    async ubit19be(): Promise<number> { return await this.bit(19, true, "big"); }
+
+    /** Read 20 signed bits. */
+    async bit20(): Promise<number> { return await this.bit(20); }
+
+    /** Read 20 unsigned bits. */
+    async ubit20(): Promise<number> { return await this.bit(20, true); }
+
+    /** Read 20 signed bits (little-endian). */
+    async bit20le(): Promise<number> { return await this.bit(20, undefined, "little"); }
+
+    /** Read 20 unsigned bits (little-endian). */
+    async ubit20le(): Promise<number> { return await this.bit(20, true, "little"); }
+
+    /** Read 20 signed bits (big-endian). */
+    async bit20be(): Promise<number> { return await this.bit(20, undefined, "big"); }
+
+    /** Read 20 unsigned bits (big-endian). */
+    async ubit20be(): Promise<number> { return await this.bit(20, true, "big"); }
+
+    /** Read 21 signed bits. */
+    async bit21(): Promise<number> { return await this.bit(21); }
+
+    /** Read 21 unsigned bits. */
+    async ubit21(): Promise<number> { return await this.bit(21, true); }
+
+    /** Read 21 signed bits (little-endian). */
+    async bit21le(): Promise<number> { return await this.bit(21, undefined, "little"); }
+
+    /** Read 21 unsigned bits (little-endian). */
+    async ubit21le(): Promise<number> { return await this.bit(21, true, "little"); }
+
+    /** Read 21 signed bits (big-endian). */
+    async bit21be(): Promise<number> { return await this.bit(21, undefined, "big"); }
+
+    /** Read 21 unsigned bits (big-endian). */
+    async ubit21be(): Promise<number> { return await this.bit(21, true, "big"); }
+
+    /** Read 22 signed bits. */
+    async bit22(): Promise<number> { return await this.bit(22); }
+
+    /** Read 22 unsigned bits. */
+    async ubit22(): Promise<number> { return await this.bit(22, true); }
+
+    /** Read 22 signed bits (little-endian). */
+    async bit22le(): Promise<number> { return await this.bit(22, undefined, "little"); }
+
+    /** Read 22 unsigned bits (little-endian). */
+    async ubit22le(): Promise<number> { return await this.bit(22, true, "little"); }
+
+    /** Read 22 signed bits (big-endian). */
+    async bit22be(): Promise<number> { return await this.bit(22, undefined, "big"); }
+
+    /** Read 22 unsigned bits (big-endian). */
+    async ubit22be(): Promise<number> { return await this.bit(22, true, "big"); }
+
+    /** Read 23 signed bits. */
+    async bit23(): Promise<number> { return await this.bit(23); }
+
+    /** Read 23 unsigned bits. */
+    async ubit23(): Promise<number> { return await this.bit(23, true); }
+
+    /** Read 23 signed bits (little-endian). */
+    async bit23le(): Promise<number> { return await this.bit(23, undefined, "little"); }
+
+    /** Read 23 unsigned bits (little-endian). */
+    async ubit23le(): Promise<number> { return await this.bit(23, true, "little"); }
+
+    /** Read 23 signed bits (big-endian). */
+    async bit23be(): Promise<number> { return await this.bit(23, undefined, "big"); }
+
+    /** Read 23 unsigned bits (big-endian). */
+    async ubit23be(): Promise<number> { return await this.bit(23, true, "big"); }
+
+    /** Read 24 signed bits. */
+    async bit24(): Promise<number> { return await this.bit(24); }
+
+    /** Read 24 unsigned bits. */
+    async ubit24(): Promise<number> { return await this.bit(24, true); }
+
+    /** Read 24 signed bits (little-endian). */
+    async bit24le(): Promise<number> { return await this.bit(24, undefined, "little"); }
+
+    /** Read 24 unsigned bits (little-endian). */
+    async ubit24le(): Promise<number> { return await this.bit(24, true, "little"); }
+
+    /** Read 24 signed bits (big-endian). */
+    async bit24be(): Promise<number> { return await this.bit(24, undefined, "big"); }
+
+    /** Read 24 unsigned bits (big-endian). */
+    async ubit24be(): Promise<number> { return await this.bit(24, true, "big"); }
+
+    /** Read 25 signed bits. */
+    async bit25(): Promise<number> { return await this.bit(25); }
+
+    /** Read 25 unsigned bits. */
+    async ubit25(): Promise<number> { return await this.bit(25, true); }
+
+    /** Read 25 signed bits (little-endian). */
+    async bit25le(): Promise<number> { return await this.bit(25, undefined, "little"); }
+
+    /** Read 25 unsigned bits (little-endian). */
+    async ubit25le(): Promise<number> { return await this.bit(25, true, "little"); }
+
+    /** Read 25 signed bits (big-endian). */
+    async bit25be(): Promise<number> { return await this.bit(25, undefined, "big"); }
+
+    /** Read 25 unsigned bits (big-endian). */
+    async ubit25be(): Promise<number> { return await this.bit(25, true, "big"); }
+
+    /** Read 26 signed bits. */
+    async bit26(): Promise<number> { return await this.bit(26); }
+
+    /** Read 26 unsigned bits. */
+    async ubit26(): Promise<number> { return await this.bit(26, true); }
+
+    /** Read 26 signed bits (little-endian). */
+    async bit26le(): Promise<number> { return await this.bit(26, undefined, "little"); }
+
+    /** Read 26 unsigned bits (little-endian). */
+    async ubit26le(): Promise<number> { return await this.bit(26, true, "little"); }
+
+    /** Read 26 signed bits (big-endian). */
+    async bit26be(): Promise<number> { return await this.bit(26, undefined, "big"); }
+
+    /** Read 26 unsigned bits (big-endian). */
+    async ubit26be(): Promise<number> { return await this.bit(26, true, "big"); }
+
+    /** Read 27 signed bits. */
+    async bit27(): Promise<number> { return await this.bit(27); }
+
+    /** Read 27 unsigned bits. */
+    async ubit27(): Promise<number> { return await this.bit(27, true); }
+
+    /** Read 27 signed bits (little-endian). */
+    async bit27le(): Promise<number> { return await this.bit(27, undefined, "little"); }
+
+    /** Read 27 unsigned bits (little-endian). */
+    async ubit27le(): Promise<number> { return await this.bit(27, true, "little"); }
+
+    /** Read 27 signed bits (big-endian). */
+    async bit27be(): Promise<number> { return await this.bit(27, undefined, "big"); }
+
+    /** Read 27 unsigned bits (big-endian). */
+    async ubit27be(): Promise<number> { return await this.bit(27, true, "big"); }
+
+    /** Read 28 signed bits. */
+    async bit28(): Promise<number> { return await this.bit(28); }
+
+    /** Read 28 unsigned bits. */
+    async ubit28(): Promise<number> { return await this.bit(28, true); }
+
+    /** Read 28 signed bits (little-endian). */
+    async bit28le(): Promise<number> { return await this.bit(28, undefined, "little"); }
+
+    /** Read 28 unsigned bits (little-endian). */
+    async ubit28le(): Promise<number> { return await this.bit(28, true, "little"); }
+
+    /** Read 28 signed bits (big-endian). */
+    async bit28be(): Promise<number> { return await this.bit(28, undefined, "big"); }
+
+    /** Read 28 unsigned bits (big-endian). */
+    async ubit28be(): Promise<number> { return await this.bit(28, true, "big"); }
+
+    /** Read 29 signed bits. */
+    async bit29(): Promise<number> { return await this.bit(29); }
+
+    /** Read 29 unsigned bits. */
+    async ubit29(): Promise<number> { return await this.bit(29, true); }
+
+    /** Read 29 signed bits (little-endian). */
+    async bit29le(): Promise<number> { return await this.bit(29, undefined, "little"); }
+
+    /** Read 29 unsigned bits (little-endian). */
+    async ubit29le(): Promise<number> { return await this.bit(29, true, "little"); }
+
+    /** Read 29 signed bits (big-endian). */
+    async bit29be(): Promise<number> { return await this.bit(29, undefined, "big"); }
+
+    /** Read 29 unsigned bits (big-endian). */
+    async ubit29be(): Promise<number> { return await this.bit(29, true, "big"); }
+
+    /** Read 30 signed bits. */
+    async bit30(): Promise<number> { return await this.bit(30); }
+
+    /** Read 30 unsigned bits. */
+    async ubit30(): Promise<number> { return await this.bit(30, true); }
+
+    /** Read 30 signed bits (little-endian). */
+    async bit30le(): Promise<number> { return await this.bit(30, undefined, "little"); }
+
+    /** Read 30 unsigned bits (little-endian). */
+    async ubit30le(): Promise<number> { return await this.bit(30, true, "little"); }
+
+    /** Read 30 signed bits (big-endian). */
+    async bit30be(): Promise<number> { return await this.bit(30, undefined, "big"); }
+
+    /** Read 30 unsigned bits (big-endian). */
+    async ubit30be(): Promise<number> { return await this.bit(30, true, "big"); }
+
+    /** Read 31 signed bits. */
+    async bit31(): Promise<number> { return await this.bit(31); }
+
+    /** Read 31 unsigned bits. */
+    async ubit31(): Promise<number> { return await this.bit(31, true); }
+
+    /** Read 31 signed bits (little-endian). */
+    async bit31le(): Promise<number> { return await this.bit(31, undefined, "little"); }
+
+    /** Read 31 unsigned bits (little-endian). */
+    async ubit31le(): Promise<number> { return await this.bit(31, true, "little"); }
+
+    /** Read 31 signed bits (big-endian). */
+    async bit31be(): Promise<number> { return await this.bit(31, undefined, "big"); }
+
+    /** Read 31 unsigned bits (big-endian). */
+    async ubit31be(): Promise<number> { return await this.bit(31, true, "big"); }
+
+    /** Read 32 signed bits. */
+    async bit32(): Promise<number> { return await this.bit(32); }
+
+    /** Read 32 unsigned bits. */
+    async ubit32(): Promise<number> { return await this.bit(32, true); }
+
+    /** Read 32 signed bits (little-endian). */
+    async bit32le(): Promise<number> { return await this.bit(32, undefined, "little"); }
+
+    /** Read 32 unsigned bits (little-endian). */
+    async ubit32le(): Promise<number> { return await this.bit(32, true, "little"); }
+
+    /** Read 32 signed bits (big-endian). */
+    async bit32be(): Promise<number> { return await this.bit(32, undefined, "big"); }
+
+    /** Read 32 unsigned bits (big-endian). */
+    async ubit32be(): Promise<number> { return await this.bit(32, true, "big"); }
+
+    // #endregion Generated mechanical aliases
 
     //
     // #region string reader

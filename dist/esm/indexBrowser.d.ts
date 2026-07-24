@@ -3,7 +3,6 @@ import * as fs_promises from 'fs/promises';
 
 type endian = "little" | "big";
 type BigValue = number | bigint;
-type ReturnMapping<DataType> = DataType extends string | Buffer ? Buffer : Uint8Array;
 type ReturnBigValueMapping<alwaysBigInt> = alwaysBigInt extends true ? bigint : BigValue;
 type BiOptions<alwaysBigInt> = {
     /**
@@ -113,1719 +112,275 @@ type hexdumpOptions = {
 declare function hexdump(src: Uint8Array | Buffer, options?: hexdumpOptions): void | string;
 
 /**
- * Base class for BiReader and BiWriter
+ * @file Phase-2 engine brick: synchronous byte sources.
+ *
+ * The sync counterpart of `source.ts` - a uniform surface for `BiSyncEngine`
+ * (`BiReader` / `BiWriter`). Sync file mode is deliberately simple: like the legacy
+ * `BiBase`, `FileSyncSource` loads the whole file into a buffer, operates in memory,
+ * and writes it back on flush. (The chunked/windowed approach is async-only.)
+ *
+ * Written strict-null-safe from the start.
  */
-declare class BiBase<DataType, alwaysBigInt> {
-    #private;
-    /**
-     * File System
-     */
-    static fs: typeof fs;
-    /**
-     * Endianness of default read.
-     * @type {endian}
-     */
-    endian: endian;
-    /**
-     * Size in bytes of the current buffer.
-     */
-    size: number;
-    /**
-     * Size in bits of the current buffer.
-     */
-    bitSize: number;
-    /**
-     * Stops the buffer extending on reading or writing outside of current size
-     */
-    strict: boolean;
-    /**
-     * Console log a hexdump on error.
-     */
-    errorDump: boolean;
-    /**
-     * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
-     *
-     * Otherwise it extends just the amount of the next written value.
-     *
-     * This can greatly speed up data writes when large files are being written.
-     *
-     * NOTE: Using ``BiWriter.get`` or ``BiWriter.return`` will now remove all data after the current write position. Use ``BiWriter.data`` to get the full buffer instead.
-     */
-    growthIncrement: number;
-    /**
-     * Open file description
-     */
-    fd: number;
-    /**
-     * Current file path
-     */
-    filePath: string;
-    /**
-     * File write mode
-     */
-    fsMode: "r+" | "r";
-    /**
-     * The settings that used when using the .str getter / setter
-     */
-    strDefaults: stringOptions;
-    /**
-     * All int64 reads will return as bigint type
-     */
-    enforceBigInt: alwaysBigInt;
-    /**
-     * Not using a file reader.
-     */
-    isMemoryMode: boolean;
-    /**
-     * If data can not be written to the buffer.
-     */
-    readOnly: boolean;
-    /**
-     * Get the current buffer data.
-     *
-     * @type {ReturnMapping<DataType>}
-     */
-    get data(): ReturnMapping<DataType>;
-    /**
-     * Get the current buffer data.
-     *
-     * For use in file mode!
-     */
-    getData(): ReturnMapping<DataType>;
-    /**
-     * Set the current buffer data.
-     *
-     * @param {DataType} data
-     */
-    set data(data: DataType);
-    wasExpanded: boolean;
-    /**
-     * Get the DataView of current buffer data.
-     */
-    get view(): DataView<ArrayBufferLike>;
-    constructor(input?: DataType, options?: BiOptions<alwaysBigInt>);
-    /**
-     * Settings for when using .str
-     *
-     * @param {stringOptions} settings options to use with .str
-     */
-    set strSettings(settings: stringOptions);
-    /**
-     * Checks if obj is an Uint8Array or a Buffer
-     */
-    isBufferOrUint8Array(obj: any): obj is Buffer | Uint8Array;
-    /**
-     * Checks if obj is a Buffer
-     */
-    isBuffer(obj: any): obj is Buffer;
-    /**
-     * Checks if obj is an Uint8Array
-     */
-    isUint8Array(obj: any): obj is Uint8Array;
-    /**
-     * Enables writing and expanding (changes strict AND readonly)
-     *
-     * @param {boolean} mode - True to enable writing and expanding (changes strict AND readonly)
-     */
-    writeMode(mode?: boolean): void;
-    /**
-     * Opens the file in `file` mode. Must be run before reading or writing.
-     *
-     * Can be used to pass new data to a loaded class, shifting to memory mode.
-     */
-    open(data?: ReturnMapping<DataType>): void;
-    /**
-     * commit data and removes it.
-     */
-    close(): ReturnMapping<DataType>;
-    /**
-     * Write data buffer back to file
-     */
-    commit(): ReturnMapping<DataType>;
-    /**
-     * syncs the data to file
-     */
+interface SyncSource {
+    readonly size: number;
+    readonly readOnly: boolean;
+    read(offset: number, length: number): Uint8Array;
+    write(offset: number, data: Uint8Array): void;
+    resize(size: number): void;
     flush(): void;
-    /**
-     * Renames the file you are working on.
-     *
-     * Must be full file path and file name.
-     *
-     * Keeps write / read position.
-     *
-     * Note: This is permanent and can't be undone.
-     *
-     * @param {string} newFilePath - New full file path and name.
-     */
-    renameFile(newFilePath: string): void;
-    /**
-     * Deletes the working file.
-     *
-     * Note: This is permanent and can't be undone.
-     *
-     * It doesn't send the file to the recycling bin for recovery.
-     */
-    deleteFile(): void;
-    /**
-     *
-     * Change endian, defaults to little.
-     *
-     * Can be changed at any time, doesn't loose position.
-     *
-     * @param {endian} endian - endianness ``big`` or ``little``
-     */
-    endianness(endian: endian): void;
-    /**
-     * Sets endian to big.
-     */
-    bigEndian(): void;
-    /**
-     * Sets endian to big.
-     */
-    big(): void;
-    /**
-     * Sets endian to big.
-     */
-    be(): void;
-    /**
-     * Sets endian to little.
-     */
-    littleEndian(): void;
-    /**
-     * Sets endian to little.
-     */
-    little(): void;
-    /**
-     * Sets endian to little.
-     */
-    le(): void;
-    /**
-     * Size in bytes of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get length(): number;
-    /**
-     * Size in bytes of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get len(): number;
-    /**
-     * Size in bytes of the current buffer.
-     *
-     *  @returns {number} size
-     */
-    get fileSize(): number;
-    /**
-     * Size in bytes of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get FileSize(): number;
-    /**
-     * Size in bits of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get lengthBits(): number;
-    /**
-     * Size in bits of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get sizeBits(): number;
-    /**
-     * Size in bits of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get fileBitSize(): number;
-    /**
-     * Size in bytes of the current buffer.
-     *
-     *  @returns {number} size
-     */
-    get fileSizeBits(): number;
-    /**
-     * Size in bits of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get lenBits(): number;
-    /**
-     * Get the current byte position.
-     *
-     * @returns {number} current byte position
-     */
+    close(): void;
+}
+
+type Endian$1 = 'little' | 'big';
+interface BiSyncEngineOptions {
+    endianness?: Endian$1;
+    enforceBigInt?: boolean;
+    strict?: boolean;
+    readOnly?: boolean;
+    growthIncrement?: number;
+    byteOffset?: number;
+    bitOffset?: number;
+}
+declare class BiSyncEngine<alwaysBigInt extends boolean = false> {
+    #private;
+    /** File system (node:fs), injected by the entry point for file mode. */
+    static fs: typeof fs;
+    endian: Endian$1;
+    enforceBigInt: boolean;
+    strict: boolean;
+    readOnly: boolean;
+    growthIncrement: number;
+    filePath: string | null;
+    errorDump: boolean;
+    strDefaults: stringOptions;
+    constructor(input: string | Uint8Array, options?: BiSyncEngineOptions);
+    get isMemoryMode(): boolean;
+    get source(): SyncSource;
+    open(data?: Uint8Array): void;
+    get size(): number;
     get offset(): number;
-    /**
-     * Get the current byte position;
-     *
-     * @returns {number} current byte position
-     */
-    get off(): number;
-    /**
-     * Get the current byte position.
-     *
-     * @returns {number} current byte position
-     */
-    get getOffset(): number;
-    /**
-     * Get the current byte position.
-     *
-     * @returns {number} current byte position
-     */
-    get tell(): number;
-    /**
-     * Get the current byte position.
-     *
-     * @returns {number} current byte position
-     */
-    get FTell(): number;
-    /**
-     * Get the current byte position;
-     *
-     * @returns {number} current byte position
-     */
-    get saveOffset(): number;
-    /**
-     * Get the current byte position;
-     *
-     * @returns {number} current byte position
-     */
-    get byteOffset(): number;
-    /**
-     * Set the current byte position.
-     *
-     * Same as {@link goto}
-     */
     set offset(value: number);
-    /**
-     * Set the current byte position.
-     *
-     * Same as {@link goto}
-     */
-    set setOffset(value: number);
-    /**
-     * Set the current byte position.
-     *
-     * Same as {@link goto}
-     */
-    set setByteOffset(value: number);
-    /**
-     * Get the current bit position.
-     *
-     * @returns {number} current bit position
-     */
-    get bitOffset(): number;
-    /**
-     * Get the current bit position.
-     *
-     * @returns {number} current bit position
-     */
-    get offsetBits(): number;
-    /**
-     * Get the current bit position.
-     *
-     * @returns {number} current bit position
-     */
-    get getBitOffset(): number;
-    /**
-     * Get the current bit position.
-     *
-     * @returns {number} current bit position
-     */
-    get saveBitOffset(): number;
-    /**
-     * Get the current bit position.
-     *
-     * @returns {number} current bit position
-     */
-    get FTellBits(): number;
-    /**
-     * Get the current bit position.
-     *
-     * @returns {number} current bit position
-     */
-    get tellBits(): number;
-    /**
-     * Get the current bit position.
-     *
-     * @returns {number} current bit position
-     */
-    get offBits(): number;
-    /**
-     * Set the current bit position.
-     *
-     * Same as {@link goto}
-     */
-    set bitOffset(value: number);
-    /**
-     * Set the current bit position.
-     */
-    set setOffsetBits(value: number);
-    /**
-     * Set the current bit position.
-     */
-    set setBitOffset(value: number);
-    /**
-     * Get the current bit position with in the current byte (0-7).
-     *
-     * @returns {number} current bit position
-     */
     get insetBit(): number;
-    /**
-     * Get the current bit position with in the current byte (0-7).
-     *
-     * @returns {number} current bit position
-     */
-    get getInsetBit(): number;
-    /**
-     * Set the current bit position with in the current byte (0-7).
-     */
     set insetBit(value: number);
-    /**
-     * Get the current bit position with in the current byte (0-7).
-     *
-     * @returns {number} current bit position
-     */
-    get saveInsetBit(): number;
-    /**
-     * Get the current bit position with in the current byte (0-7).
-     *
-     * @returns {number} current bit position
-     */
-    get inBit(): number;
-    /**
-     * Get the current bit position with in the current byte (0-7).
-     *
-     * @returns {number} current bit position
-     */
-    get bitTell(): number;
-    /**
-     * Set the current bit position with in the byte (0-7).
-     */
-    set setInsetBit(value: number);
-    /**
-     * Size in bytes of current read position to the end of the data.
-     *
-     * @returns {number} size
-     */
-    get remain(): number;
-    /**
-     * Size in bytes of current read position to the end of the data.
-     *
-     * @returns {number} size
-     */
-    get remainBytes(): number;
-    /**
-     * Size in bytes of current read position to the end of the data.
-     *
-     * @returns {number} size
-     */
-    get FEoF(): number;
-    /**
-     * Size in bits of current read position to the end of the data.
-     *
-     * @returns {number} size
-     */
-    get remainBits(): number;
-    /**
-     * Size in bits of current read position to the end of the data.
-     *
-     * @returns {number} size
-     */
-    get FEoFBits(): number;
-    /**
-     * Row line of the file (16 bytes per row).
-     *
-     * @returns {number} size
-     */
-    get getLine(): number;
-    /**
-     * Row line of the file (16 bytes per row).
-     *
-     * @returns {number} size
-     */
-    get row(): number;
-    /**
-     * Returns current data.
-     *
-     * Note: Will remove all data after current position if ``growthIncrement`` was set and you expanded data past the end once.
-     *
-     * Use ``.data`` instead if you want the full buffer data.
-     *
-     * @returns {ReturnMapping<DataType>} ``Buffer`` or ``Uint8Array``
-     */
-    get(): ReturnMapping<DataType>;
-    /**
-     * Returns current data.
-     *
-     * Note: Will remove all data after current position if ``growthIncrement`` was set and you expanded data past the end once.
-     *
-     * Use ``.data`` instead if you want the full buffer data.
-     *
-     * @returns {ReturnMapping<DataType>} ``Buffer`` or ``Uint8Array``
-     */
-    getFullBuffer(): ReturnMapping<DataType>;
-    /**
-     * Returns current data.
-     *
-     * Note: Will remove all data after current position if ``growthIncrement`` was set and you expanded data past the end once.
-     *
-     * Use ``.data`` instead if you want the full buffer data.
-     *
-     * @returns {ReturnMapping<DataType>} ``Buffer`` or ``Uint8Array``
-     */
-    return(): ReturnMapping<DataType>;
-    /**
-     * Returns and remove data.
-     *
-     * Commits any changes to file when editing a file.
-     */
-    end(): ReturnMapping<DataType>;
-    /**
-     * removes data.
-     *
-     * Commits any changes to file when editing a file.
-     */
-    done(): ReturnMapping<DataType>;
-    /**
-     * removes data.
-     *
-     * Commits any changes to file when editing a file.
-     */
-    finished(): ReturnMapping<DataType>;
-    /**
-    * Creates hex dump string. Will console log or return string if set in options.
-    *
-    * @param {object} options
-    * @param {hexdumpOptions?} options - hex dump options
-    * @param {number?} options.length - number of bytes to log, default ``192`` or end of data
-    * @param {number?} options.startByte - byte to start dump (default ``0``)
-    * @param {boolean?} options.suppressUnicode - Suppress unicode character preview for even columns.
-    * @param {boolean?} options.returnString - Returns the hex dump string instead of logging it.
-    */
-    hexdump(options?: hexdumpOptions): void | string;
-    /**
-     * Turn hexdump on error off (default on).
-     */
-    errorDumpOff(): void;
-    /**
-     * Turn hexdump on error on (default on).
-     */
-    errorDumpOn(): void;
-    /**
-     * Disallows extending data if position is outside of max size.
-     */
-    restrict(): void;
-    /**
-     * Allows extending data if position is outside of max size.
-     */
-    unrestrict(): void;
-    /**
-     * Searches for position of array of byte values from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {Uint8Array | Buffer | Array<number>} bytesToFind
-     */
-    findBytes(bytesToFind: Uint8Array | Buffer | Array<number>): number;
-    /**
-     * Searches for byte position of string from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {string} string - String to search for.
-     * @param {1|2|4} bytesPerChar - how many bytes each character should take up
-     */
-    findString(string: string, bytesPerChar?: number): number;
-    /**
-     * Searches for byte value (can be signed or unsigned) position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findByte(value: number, unsigned?: boolean, endian?: endian): number;
-    /**
-     * Searches for short value (can be signed or unsigned) position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findShort(value: number, unsigned?: boolean, endian?: endian): number;
-    /**
-     * Searches for integer value (can be signed or unsigned) position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findInt(value: number, unsigned?: boolean, endian?: endian): number;
-    /**
-     * Searches for 64 bit value (can be signed or unsigned) position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {BigValue} value - Number to search for.
-     * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findInt64(value: BigValue, unsigned?: boolean, endian?: endian): number;
-    /**
-     * Searches for half float value position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findHalfFloat(value: number, endian?: endian): number;
-    /**
-     * Searches for float value position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findFloat(value: number, endian?: endian): number;
-    /**
-     * Searches for double float value position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findDoubleFloat(value: number, endian?: endian): number;
-    /**
-     * Aligns current byte position.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} number - Byte to align
-     */
-    align(number: number): void;
-    /**
-     * Reverse aligns current byte position.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} number - Byte to align
-     */
-    alignRev(number: number): void;
-    /**
-     * Offset current byte or bit position.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} bytes - Bytes to skip
-     * @param {number?} bits - Bits to skip
-     */
-    skip(bytes?: number, bits?: number): void;
-    /**
-    * Offset current byte or bit position.
-    *
-    * Note: Will extend array if strict mode is off and outside of max size.
-    *
-    * @param {number} bytes - Bytes to skip
-    * @param {number?} bits - Bits to skip
-    */
-    jump(bytes: number, bits?: number): void;
-    /**
-     * Offset current byte or bit position.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} bytes - Bytes to skip
-     * @param {number?} bits - Bits to skip
-     */
-    seek(bytes: number, bits?: number): void;
-    /**
-     * Change position directly to address.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
-     */
-    goto(byte?: number, bit?: number): void;
-    /**
-     * Change position directly to address.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} byte - byte to set to
-     * @param {number?} bit - bit to set to
-     */
-    FSeek(byte: number, bit?: number): void;
-    /**
-     * Change position directly to address.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} byte - byte to set to
-     * @param {number?} bit - bit to set to
-     */
-    pointer(byte: number, bit?: number): void;
-    /**
-     * Change position directly to address.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} byte - byte to set to
-     * @param {number?} bit - bit to set to
-     */
-    warp(byte: number, bit?: number): void;
-    /**
-     * Set byte and bit position to start of data.
-     */
-    rewind(): void;
-    /**
-     * Set byte and bit position to start of data.
-     */
-    gotoStart(): void;
-    /**
-     * Set current byte and bit position to end of data.
-     */
-    last(): void;
-    /**
-     * Set current byte and bit position to end of data.
-     */
-    gotoEnd(): void;
-    /**
-     * Set byte and bit position to start of data.
-     */
-    EoF(): void;
-    /**
-     * Deletes part of data from start to current byte position unless supplied, returns removed.
-     *
-     * Note: Errors in strict mode.
-     *
-     * @param {number} startOffset - Start location (default 0)
-     * @param {number} endOffset - End location (default current position)
-     * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
-     */
-    delete(startOffset?: number, endOffset?: number, consume?: boolean): ReturnMapping<DataType>;
-    /**
-     * Deletes part of data from current byte position to end, returns removed.
-     *
-     * Note: Errors in strict mode.
-     *
-     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
-     */
-    clip(): ReturnMapping<DataType>;
-    /**
-     * Deletes part of data from current byte position to end, returns removed.
-     *
-     * Note: Errors in strict mode.
-     *
-     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
-     */
-    trim(): ReturnMapping<DataType>;
-    /**
-     * Deletes part of data from current byte position to supplied length, returns removed.
-     *
-     * Note: Errors in strict mode.
-     *
-     * @param {number} length - Length of data in bytes to remove
-     * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
-     */
-    crop(length?: number, consume?: boolean): ReturnMapping<DataType>;
-    /**
-     * Deletes part of data from current position to supplied length, returns removed.
-     *
-     * Note: Only works in strict mode.
-     *
-     * @param {number} length - Length of data in bytes to remove
-     * @param {boolean} consume - Move position to end of removed data (default false)
-     * @returns {ReturnMapping<DataType>} Removed data as ``Buffer`` or ``Uint8Array``
-     */
-    drop(length?: number, consume?: boolean): ReturnMapping<DataType>;
-    /**
-     * Replaces data in data.
-     *
-     * Note: Errors on strict mode if past end of data.
-     *
-     * @param {Uint8Array | Buffer} data - ``Uint8Array`` or ``Buffer`` to replace in data
-     * @param {number} offset - Offset to add it at (defaults to current position)
-     * @param {boolean} consume - Move current byte position to end of data (default false)
-     */
-    replace(data: Uint8Array | Buffer, offset?: number, consume?: boolean): void;
-    /**
-     * Replaces data in data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {Uint8Array | Buffer} data - ``Uint8Array`` or ``Buffer`` to replace in data
-     * @param {number} offset - Offset to add it at (defaults to current position)
-     * @param {boolean} consume - Move current byte position to end of data (default false)
-     */
-    overwrite(data: Uint8Array | Buffer, offset?: number, consume?: boolean): void;
-    /**
-     * Returns part of data from current byte position to end of data unless supplied.
-     *
-     * @param {number} startOffset - Start location (default current position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move position to end of lifted data (default false)
-     * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
-     */
-    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): ReturnMapping<DataType>;
-    /**
-     * Returns part of data from current byte position to end of data unless supplied.
-     *
-     * @param {number} startOffset - Start location (default current position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move position to end of lifted data (default false)
-     * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
-     */
-    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): ReturnMapping<DataType>;
-    /**
-     * Returns part of data from current byte position to end of data unless supplied.
-     *
-     * @param {number} startOffset - Start location (default current position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move position to end of lifted data (default false)
-     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
-     */
-    subarray(startOffset?: number, endOffset?: number, consume?: boolean): ReturnMapping<DataType>;
-    /**
-     * Extract data from current position to length supplied.
-     *
-     * Note: Does not affect supplied data.
-     *
-     * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {boolean} consume - Moves offset to end of length (default false)
-     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
-     */
-    extract(length?: number, consume?: boolean): ReturnMapping<DataType>;
-    /**
-     * Extract data from current position to length supplied.
-     *
-     * Note: Does not affect supplied data.
-     *
-     * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {boolean} consume - Moves offset to end of length (default false)
-     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
-     */
-    slice(length?: number, consume?: boolean): ReturnMapping<DataType>;
-    /**
-     * Extract data from current position to length supplied.
-     *
-     * Note: Does not affect supplied data.
-     *
-     * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {boolean} consume - Moves offset to end of length (default false)
-     * @returns {ReturnMapping<DataType>} Selected data as ``Uint8Array`` or ``Buffer``
-     */
-    wrap(length?: number, consume?: boolean): ReturnMapping<DataType>;
-    /**
-     * Inserts data into data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {number} offset - Byte position to add at (defaults to current position)
-     * @param {boolean} consume - Move current byte position to end of data (default true)
-     */
-    insert(data: ReturnMapping<DataType>, offset?: number, consume?: boolean): void;
-    /**
-     * Inserts data into data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {number} offset - Byte position to add at (defaults to current position)
-     * @param {boolean} consume - Move current byte position to end of data (default true)
-     */
-    place(data: ReturnMapping<DataType>, offset?: number, consume?: boolean): void;
-    /**
-     * Adds data to start of supplied data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current write position to end of data (default false)
-     */
-    unshift(data: ReturnMapping<DataType>, consume?: boolean): void;
-    /**
-     * Adds data to start of supplied data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current write position to end of data (default false)
-     */
-    prepend(data: ReturnMapping<DataType>, consume?: boolean): void;
-    /**
-     * Adds data to end of supplied data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current write position to end of data (default false)
-     */
-    push(data: ReturnMapping<DataType>, consume?: boolean): void;
-    /**
-     * Adds data to end of supplied data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current write position to end of data (default false)
-     */
-    append(data: ReturnMapping<DataType>, consume?: boolean): void;
-    /**
-     * XOR data.
-     *
-     * @param {number|string|Uint8Array|Buffer} xorKey - Value, string or array to XOR
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    xor(xorKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
-    /**
-     * XOR data.
-     *
-     * @param {number|string|Uint8Array|Buffer} xorKey - Value, string or array to XOR
-     * @param {number} length - Length in bytes to XOR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    xorThis(xorKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
-    /**
-     * OR data
-     *
-     * @param {number|string|Uint8Array|Buffer} orKey - Value, string or array to OR
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    or(orKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
-    /**
-     * OR data.
-     *
-     * @param {number|string|Uint8Array|Buffer} orKey - Value, string or array to OR
-     * @param {number} length - Length in bytes to OR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    orThis(orKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
-    /**
-     * AND data.
-     *
-     * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    and(andKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
-    /**
-     * AND data.
-     *
-     * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
-     * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    andThis(andKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
-    /**
-     * Add value to data.
-     *
-     * @param {number|string|Uint8Array|Buffer} addKey - Value, string or array to add to data
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    add(addKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
-    /**
-     * Add value to data.
-     *
-     * @param {number|string|Uint8Array|Buffer} addKey - Value, string or array to add to data
-     * @param {number} length - Length in bytes to add from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    addThis(addKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
-    /**
-     * Not data.
-     *
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    not(startOffset?: number, endOffset?: number, consume?: boolean): void;
-    /**
-     * Not data.
-     *
-     * @param {number} length - Length in bytes to NOT from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    notThis(length?: number, consume?: boolean): void;
-    /**
-     * Left shift data.
-     *
-     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to left shift data
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    lShift(shiftKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
-    /**
-     * Left shift data.
-     *
-     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to left shift data
-     * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    lShiftThis(shiftKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
-    /**
-     * Right shift data.
-     *
-     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to right shift data
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    rShift(shiftKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): void;
-    /**
-     * Right shift data.
-     *
-     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to right shift data
-     * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    rShiftThis(shiftKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): void;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after read
-     * @returns {number}
-     */
-    readBit(bits?: number, unsigned?: boolean, endian?: endian, consume?: boolean): number;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @returns {number}
-     */
-    readUBitBE(bits: number): number;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @returns {number}
-     */
-    readUBitLE(bits: number): number;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
-     */
-    readBitBE(bits: number, unsigned?: boolean): number;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns {number}
-     */
-    readBitLE(bits: number, unsigned?: boolean): number;
-    /**
-     *
-     * Write bits, must have at least value and number of bits.
-     *
-     * ``Note``: When returning to a byte write, remaining bits are skipped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - number of bits to write
-     * @param {boolean} unsigned - if value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after write
-     */
-    writeBit(value: number, bits: number, unsigned?: boolean, endian?: endian, consume?: boolean): void;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @returns number
-     */
-    writeUBitBE(value: number, bits: number): void;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @returns number
-     */
-    writeUBitLE(value: number, bits: number): void;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns number
-     */
-    writeBitBE(value: number, bits: number, unsigned?: boolean): void;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns number
-     */
-    writeBitLE(value: number, bits: number, unsigned?: boolean): void;
-    /**
-     * Read byte.
-     *
-     * @param {boolean} unsigned - if the value is unsigned or not
-     * @param {boolean} consume - move offset after read
-     * @returns {number}
-     */
+    get bitOffset(): number;
+    set bitOffset(value: number);
     readByte(unsigned?: boolean, consume?: boolean): number;
-    /**
-     * Read unsigned byte.
-     *
-     * @param {boolean} consume - move offset after read
-     * @returns {number}
-     */
-    readUByte(consume?: boolean): number;
-    /**
-     * Read multiple bytes.
-     *
-     * @param {number} amount - amount of bytes to read
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @param {boolean} consume - move offset after read
-     * @returns {Array<number>}
-     */
-    readBytes(amount: number, unsigned?: boolean, consume?: boolean): Array<number>;
-    /**
-     * Read multiple unsigned bytes.
-     *
-     * @param {number} amount - amount of bytes to read
-     * @param {boolean} consume - move offset after read
-     * @returns {ReturnMapping<DataType>}
-     */
-    readUBytes(amount: number, consume?: boolean): ReturnMapping<DataType>;
-    /**
-     * Write byte.
-     *
-     * @param {number} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {boolean} consume - move offset after write
-     */
+    readInt16(unsigned?: boolean, endian?: Endian$1, consume?: boolean): number;
+    readInt32(unsigned?: boolean, endian?: Endian$1, consume?: boolean): number;
+    readInt64(unsigned?: boolean, endian?: Endian$1, consume?: boolean): ReturnBigValueMapping<alwaysBigInt>;
+    readHalfFloat(endian?: Endian$1, consume?: boolean): number;
+    readFloat(endian?: Endian$1, consume?: boolean): number;
+    readDoubleFloat(endian?: Endian$1, consume?: boolean): number;
     writeByte(value: number, unsigned?: boolean, consume?: boolean): void;
-    /**
-     * Write multiple bytes.
-     *
-     * @param {Array<number> | Buffer | Uint8Array} values - array of values as int
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {boolean} consume - move offset after write
-     */
-    writeBytes(values: Array<number> | Buffer | Uint8Array, unsigned?: boolean, consume?: boolean): void;
-    /**
-     * Write multiple unsigned bytes.
-     *
-     * @param {Array<number> | Buffer | Uint8Array} values - array of values as int
-     * @param {boolean} consume - move offset after write
-     */
-    writeUBytes(values: Array<number> | Buffer | Uint8Array, consume?: boolean): void;
-    /**
-     * Write unsigned byte.
-     *
-     * @param {number} value - value as int
-     * @param {boolean} consume - move offset after write
-     */
-    writeUByte(value: number, consume?: boolean): void;
-    /**
-     * Read short.
-     *
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after read
-     * @returns {number}
-     */
-    readInt16(unsigned?: boolean, endian?: endian, consume?: boolean): number;
-    /**
-     * Read unsigned short.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     *
-     * @returns {number}
-     */
-    readUInt16(endian?: endian): number;
-    /**
-     * Read unsigned short in little endian.
-     *
-     * @returns {number}
-     */
-    readUInt16LE(): number;
-    /**
-     * Read unsigned short in big endian.
-     *
-     * @returns {number}
-     */
-    readUInt16BE(): number;
-    /**
-     * Read signed short in little endian.
-     *
-     * @returns {number}
-     */
-    readInt16LE(): number;
-    /**
-    * Read signed short in big endian.
-    *
-    * @returns {number}
-    */
-    readInt16BE(): number;
-    /**
-     * Write int16.
-     *
-     * @param {number} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after write
-     */
-    writeInt16(value: number, unsigned?: boolean, endian?: endian, consume?: boolean): void;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt16(value: number, endian?: endian): void;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    writeUInt16BE(value: number): void;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    writeUInt16LE(value: number): void;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    writeInt16LE(value: number): void;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    writeInt16BE(value: number): void;
-    /**
-     * Read 16 bit float.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after read
-     * @returns {number}
-     */
-    readHalfFloat(endian?: endian, consume?: boolean): number;
-    /**
-     * Read 16 bit float.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after read
-     * @returns {number}
-     */
-    readFloat16(endian?: endian, consume?: boolean): number;
-    /**
-    * Read 16 bit float.
-    *
-    * @returns {number}
-    */
-    readHalfFloatBE(): number;
-    /**
-    * Read 16 bit float.
-    *
-    * @returns {number}
-    */
-    readFloat16BE(): number;
-    /**
-     * Read 16 bit float.
-     *
-     * @returns {number}
-     */
-    readHalfFloatLE(): number;
-    /**
-     * Read 16 bit float.
-     *
-     * @returns {number}
-     */
-    readFloat16LE(): number;
-    /**
-     * Writes 16 bit float.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after write
-     */
-    writeHalfFloat(value: number, endian?: endian, consume?: boolean): void;
-    /**
-     * Writes 16 bit float.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after write
-     */
-    writeFloat16(value: number, endian?: endian, consume?: boolean): void;
-    /**
-     * Writes 16 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeHalfFloatBE(value: number): void;
-    /**
-     * Writes 16 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloat16BE(value: number): void;
-    /**
-     * Writes 16 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeHalfFloatLE(value: number): void;
-    /**
-     * Writes 16 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloat16LE(value: number): void;
-    /**
-     * Read 32 bit integer.
-     *
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after read
-     * @returns {number}
-     */
-    readInt32(unsigned?: boolean, endian?: endian, consume?: boolean): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
-     */
-    readInt(endian?: endian): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    readInt32BE(): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    readInt32LE(): number;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
-     */
-    readUInt32(endian?: endian): number;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
-     */
-    readUInt(endian?: endian): number;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    readUInt32BE(): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    readUInt32LE(): number;
-    /**
-     * Write 32 bit integer.
-     *
-     * @param {number} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after write
-     */
-    writeInt32(value: number, unsigned?: boolean, endian?: endian, consume?: boolean): void;
-    /**
-     * Write signed 32 bit integer.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeInt(value: number, endian?: endian): void;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    writeInt32LE(value: number): void;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    writeInt32BE(value: number): void;
-    /**
-     * Write unsigned 32 bit integer.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt(value: number, endian?: endian): void;
-    /**
-     * Write unsigned 32 bit integer.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt32(value: number, endian?: endian): void;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    writeUInt32BE(value: number): void;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    writeUInt32LE(value: number): void;
-    /**
-     * Read 32 bit float.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after read
-     * @returns {number}
-     */
-    readFloat(endian?: endian, consume?: boolean): number;
-    /**
-     * Read 32 bit float.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after read
-     * @returns {number}
-     */
-    readFloat32(endian?: endian, consume?: boolean): number;
-    /**
-     * Read 32 bit float.
-     *
-     * @returns {number}
-     */
-    readFloatBE(): number;
-    /**
-     * Read 32 bit float.
-     *
-     * @returns {number}
-     */
-    readFloat32BE(): number;
-    /**
-     * Read 32 bit float.
-     *
-     * @returns {number}
-     */
-    readFloatLE(): number;
-    /**
-     * Read 32 bit float.
-     *
-     * @returns {number}
-     */
-    readFloat32LE(): number;
-    /**
-     * Write 32 bit float.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after write
-     */
-    writeFloat(value: number, endian?: endian, consume?: boolean): void;
-    /**
-     * Write 32 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloatLE(value: number): void;
-    /**
-     * Write 32 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloat32LE(value: number): void;
-    /**
-     * Write 32 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloat32BE(value: number): void;
-    /**
-     * Write 32 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloatBE(value: number): void;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after read
-     */
-    readInt64(unsigned?: boolean, endian?: endian, consume?: boolean): ReturnBigValueMapping<alwaysBigInt>;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {ReturnBigValueMapping<alwaysBigInt>}
-     */
-    readUInt64(): ReturnBigValueMapping<alwaysBigInt>;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {ReturnBigValueMapping<alwaysBigInt>}
-     */
-    readInt64BE(): ReturnBigValueMapping<alwaysBigInt>;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {ReturnBigValueMapping<alwaysBigInt>}
-     */
-    readInt64LE(): ReturnBigValueMapping<alwaysBigInt>;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {ReturnBigValueMapping<alwaysBigInt>}
-     */
-    readUInt64BE(): ReturnBigValueMapping<alwaysBigInt>;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @returns {ReturnBigValueMapping<alwaysBigInt>}
-     */
-    readUInt64LE(): ReturnBigValueMapping<alwaysBigInt>;
-    /**
-     * Write 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after write
-     */
-    writeInt64(value: BigValue, unsigned?: boolean, endian?: endian, consume?: boolean): void;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt64(value: BigValue, endian?: endian): void;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeInt64LE(value: BigValue): void;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeInt64BE(value: BigValue): void;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeUInt64LE(value: BigValue): void;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeUInt64BE(value: BigValue): void;
-    /**
-     * Read 64 bit float.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
-     */
-    readDoubleFloat(endian?: endian, consume?: boolean): number;
-    /**
-     * Read 64 bit float.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @returns {number}
-     */
-    readFloat64(endian?: endian): number;
-    /**
-     * Read 64 bit float.
-     *
-     * @returns {number}
-     */
-    readDoubleFloatBE(): number;
-    /**
-     * Read 64 bit float.
-     *
-     * @returns {number}
-     */
-    readFloat64BE(): number;
-    /**
-     * Read 64 bit float.
-     *
-     * @returns {number}
-     */
-    readDoubleFloatLE(): number;
-    /**
-     * Read 64 bit float.
-     *
-     * @returns {number}
-     */
-    readFloat64LE(): number;
-    /**
-     * Writes 64 bit float.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeDoubleFloat(value: number, endian?: endian, consume?: boolean): void;
-    /**
-     * Writes 64 bit float.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeFloat64(value: number, endian?: endian): void;
-    /**
-     * Writes 64 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeDoubleFloatBE(value: number): void;
-    /**
-     * Writes 64 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloat64BE(value: number): void;
-    /**
-     * Writes 64 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeDoubleFloatLE(value: number): void;
-    /**
-     * Writes 64 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloat64LE(value: number): void;
-    /**
-    * Reads string, use options object for different types.
-    *
-    * @param {stringOptions} options
-    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings (in units NOT bytes)
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
-    * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
-    * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
-    * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal, double-wide-pascal and utf-16, utf-32
-    * @param {boolean} consume - move offset after read
-    * @returns {string}
-    */
+    writeInt16(value: number, unsigned?: boolean, endian?: Endian$1, consume?: boolean): void;
+    writeInt32(value: number, unsigned?: boolean, endian?: Endian$1, consume?: boolean): void;
+    writeInt64(value: number | bigint, unsigned?: boolean, endian?: Endian$1, consume?: boolean): void;
+    writeHalfFloat(value: number, endian?: Endian$1, consume?: boolean): void;
+    writeFloat(value: number, endian?: Endian$1, consume?: boolean): void;
+    writeDoubleFloat(value: number, endian?: Endian$1, consume?: boolean): void;
+    readBit(bits: number, unsigned?: boolean, endian?: Endian$1, consume?: boolean): number;
+    writeBit(value: number, bits: number, unsigned?: boolean, endian?: Endian$1, consume?: boolean): void;
+    readBytes(amount: number, unsigned?: boolean, consume?: boolean): number[];
+    readUBytes(amount: number, consume?: boolean): Uint8Array;
+    writeBytes(values: number[] | Uint8Array, unsigned?: boolean, consume?: boolean): void;
+    writeUBytes(values: number[] | Uint8Array, consume?: boolean): void;
+    goto(byte?: number, bit?: number): void;
+    skip(bytes?: number, bits?: number): void;
+    rewind(): void;
+    last(): void;
+    align(n: number): void;
+    alignRev(n: number): void;
+    insert(data: Uint8Array, offset?: number, consume?: boolean): void;
+    place(data: Uint8Array, offset?: number, consume?: boolean): void;
+    unshift(data: Uint8Array, consume?: boolean): void;
+    prepend(data: Uint8Array, consume?: boolean): void;
+    push(data: Uint8Array, consume?: boolean): void;
+    append(data: Uint8Array, consume?: boolean): void;
+    delete(startOffset?: number, endOffset?: number, consume?: boolean): Uint8Array;
+    clip(): Uint8Array;
+    trim(): Uint8Array;
+    crop(length?: number, consume?: boolean): Uint8Array;
+    drop(length?: number, consume?: boolean): Uint8Array;
+    replace(data: Uint8Array, offset?: number, consume?: boolean): void;
+    overwrite(data: Uint8Array, offset?: number, consume?: boolean): void;
+    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Uint8Array;
+    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Uint8Array;
+    subarray(startOffset?: number, endOffset?: number, consume?: boolean): Uint8Array;
+    extract(length?: number, consume?: boolean): Uint8Array;
+    slice(length?: number, consume?: boolean): Uint8Array;
+    wrap(length?: number, consume?: boolean): Uint8Array;
     readString(options?: stringOptions, consume?: boolean): string;
-    /**
-    * Writes string, use options object for different types.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions?} options
-    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
-    * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
-    * @param {stringOptions["lengthWriteSize"]?} options.lengthWriteSize - for pascal strings. 1, 2 or 4 byte length write size
-    * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal, double-wide-pascal and utf-16, utf-32
-    * @param {boolean} consume - move offset after write
-    */
-    writeString(string: string, options?: stringOptions, consume?: boolean): void;
+    writeString(str: string, options?: stringOptions, consume?: boolean): void;
+    xor(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): void;
+    or(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): void;
+    and(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): void;
+    add(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): void;
+    not(start?: number, end?: number, consume?: boolean): void;
+    lShift(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): void;
+    rShift(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): void;
+    xorThis(key: number | string | Uint8Array, length?: number, consume?: boolean): void;
+    orThis(key: number | string | Uint8Array, length?: number, consume?: boolean): void;
+    andThis(key: number | string | Uint8Array, length?: number, consume?: boolean): void;
+    addThis(key: number | string | Uint8Array, length?: number, consume?: boolean): void;
+    notThis(length?: number, consume?: boolean): void;
+    lShiftThis(key: number | string | Uint8Array, length?: number, consume?: boolean): void;
+    rShiftThis(key: number | string | Uint8Array, length?: number, consume?: boolean): void;
+    findBytes(bytesToFind: Uint8Array | number[]): number;
+    findString(str: string, bytesPerChar?: 1 | 2 | 4): number;
+    findByte(value: number, unsigned?: boolean, endian?: Endian$1): number;
+    findShort(value: number, unsigned?: boolean, endian?: Endian$1): number;
+    findInt(value: number, unsigned?: boolean, endian?: Endian$1): number;
+    endianness(endian: Endian$1): void;
+    bigEndian(): void;
+    big(): void;
+    be(): void;
+    littleEndian(): void;
+    little(): void;
+    le(): void;
+    readUByte(consume?: boolean): number;
+    readUInt16(endian?: Endian$1): number;
+    readUInt16LE(): number;
+    readUInt16BE(): number;
+    readInt16LE(): number;
+    readInt16BE(): number;
+    readInt(endian?: Endian$1): number;
+    readUInt(endian?: Endian$1): number;
+    readUInt32(endian?: Endian$1): number;
+    readInt32LE(): number;
+    readInt32BE(): number;
+    readUInt32LE(): number;
+    readUInt32BE(): number;
+    readFloat32(endian?: Endian$1, consume?: boolean): number;
+    readFloatLE(): number;
+    readFloatBE(): number;
+    readFloat32LE(): number;
+    readFloat32BE(): number;
+    readFloat16(endian?: Endian$1, consume?: boolean): number;
+    readHalfFloatLE(): number;
+    readHalfFloatBE(): number;
+    readFloat16LE(): number;
+    readFloat16BE(): number;
+    readFloat64(endian?: Endian$1, consume?: boolean): number;
+    readDoubleFloatLE(): number;
+    readDoubleFloatBE(): number;
+    readFloat64LE(): number;
+    readFloat64BE(): number;
+    readUInt64(): ReturnBigValueMapping<alwaysBigInt>;
+    readInt64LE(): ReturnBigValueMapping<alwaysBigInt>;
+    readInt64BE(): ReturnBigValueMapping<alwaysBigInt>;
+    readUInt64LE(): ReturnBigValueMapping<alwaysBigInt>;
+    readUInt64BE(): ReturnBigValueMapping<alwaysBigInt>;
+    readUBitBE(bits: number): number;
+    readUBitLE(bits: number): number;
+    readBitBE(bits: number, unsigned?: boolean): number;
+    readBitLE(bits: number, unsigned?: boolean): number;
+    writeUByte(value: number, consume?: boolean): void;
+    writeUInt16(value: number, endian?: Endian$1): void;
+    writeUInt16LE(value: number): void;
+    writeUInt16BE(value: number): void;
+    writeInt16LE(value: number): void;
+    writeInt16BE(value: number): void;
+    writeInt(value: number, endian?: Endian$1): void;
+    writeUInt(value: number, endian?: Endian$1): void;
+    writeUInt32(value: number, endian?: Endian$1): void;
+    writeInt32LE(value: number): void;
+    writeInt32BE(value: number): void;
+    writeUInt32LE(value: number): void;
+    writeUInt32BE(value: number): void;
+    writeFloat32(value: number, endian?: Endian$1, consume?: boolean): void;
+    writeFloatLE(value: number): void;
+    writeFloatBE(value: number): void;
+    writeFloat32LE(value: number): void;
+    writeFloat32BE(value: number): void;
+    writeFloat16(value: number, endian?: Endian$1, consume?: boolean): void;
+    writeHalfFloatLE(value: number): void;
+    writeHalfFloatBE(value: number): void;
+    writeFloat16LE(value: number): void;
+    writeFloat16BE(value: number): void;
+    writeFloat64(value: number, endian?: Endian$1, consume?: boolean): void;
+    writeDoubleFloatLE(value: number): void;
+    writeDoubleFloatBE(value: number): void;
+    writeFloat64LE(value: number): void;
+    writeFloat64BE(value: number): void;
+    writeUInt64(value: number | bigint, endian?: Endian$1): void;
+    writeInt64LE(value: number | bigint): void;
+    writeInt64BE(value: number | bigint): void;
+    writeUInt64LE(value: number | bigint): void;
+    writeUInt64BE(value: number | bigint): void;
+    writeUBitBE(value: number, bits: number): void;
+    writeUBitLE(value: number, bits: number): void;
+    writeBitBE(value: number, bits: number, unsigned?: boolean): void;
+    writeBitLE(value: number, bits: number, unsigned?: boolean): void;
+    get bitSize(): number;
+    get length(): number;
+    get len(): number;
+    get fileSize(): number;
+    get FileSize(): number;
+    get lengthBits(): number;
+    get sizeBits(): number;
+    get fileBitSize(): number;
+    get fileSizeBits(): number;
+    get lenBits(): number;
+    get off(): number;
+    get getOffset(): number;
+    get tell(): number;
+    get FTell(): number;
+    get saveOffset(): number;
+    get byteOffset(): number;
+    set setOffset(value: number);
+    set setByteOffset(value: number);
+    get offsetBits(): number;
+    get getBitOffset(): number;
+    get saveBitOffset(): number;
+    get FTellBits(): number;
+    get tellBits(): number;
+    get offBits(): number;
+    set setOffsetBits(value: number);
+    set setBitOffset(value: number);
+    get getInsetBit(): number;
+    get saveInsetBit(): number;
+    get inBit(): number;
+    get bitTell(): number;
+    set setInsetBit(value: number);
+    get remain(): number;
+    get remainBytes(): number;
+    get FEoF(): number;
+    get remainBits(): number;
+    get FEoFBits(): number;
+    get getLine(): number;
+    get row(): number;
+    jump(bytes: number, bits?: number): void;
+    seek(bytes: number, bits?: number): void;
+    FSeek(byte: number, bit?: number): void;
+    pointer(byte: number, bit?: number): void;
+    warp(byte: number, bit?: number): void;
+    gotoStart(): void;
+    gotoEnd(): void;
+    EoF(): void;
+    isBufferOrUint8Array(obj: any): obj is Uint8Array;
+    isBuffer(obj: any): obj is Uint8Array;
+    isUint8Array(obj: any): boolean;
+    restrict(): void;
+    unrestrict(): void;
+    errorDumpOff(): void;
+    errorDumpOn(): void;
+    set strSettings(settings: stringOptions);
+    hexdump(options?: hexdumpOptions): void | string;
+    get data(): Uint8Array | null;
+    get view(): DataView | null;
+    commit(): void;
+    flush(): void;
+    get(): Uint8Array;
+    getData(): Uint8Array;
+    getFullBuffer(): Uint8Array;
+    return(): Uint8Array;
+    end(): Uint8Array | void;
+    done(): Uint8Array | void;
+    finished(): Uint8Array | void;
+    close(): Uint8Array | void;
+    writeMode(mode?: boolean): void;
+    renameFile(newFilePath: string): void;
+    deleteFile(): void;
 }
 
 /**
@@ -1843,7 +398,7 @@ declare class BiBase<DataType, alwaysBigInt> {
  *
  * @since 2.0
  */
-declare class BiReader<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBigInt> {
+declare class BiReader<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiSyncEngine<alwaysBigInt> {
     constructor(input: DataType, options?: BiOptions<alwaysBigInt>);
     /**
      * Bit field reader.
@@ -1904,2016 +459,548 @@ declare class BiReader<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBi
      * @returns {number}
      */
     bitle(bits: number, unsigned?: boolean): number;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit1(): number;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit1le(): number;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit1be(): number;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit1(): number;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit1le(): number;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit1be(): number;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit2(): number;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit2le(): number;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit2be(): number;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit2(): number;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit2le(): number;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit2be(): number;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit3(): number;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit3le(): number;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit3be(): number;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit3(): number;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit3le(): number;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit3be(): number;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit4(): number;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit4le(): number;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit4be(): number;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit4(): number;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit4le(): number;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit4be(): number;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit5(): number;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit5le(): number;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit5be(): number;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit5(): number;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit5le(): number;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit5be(): number;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit6(): number;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit6le(): number;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit6be(): number;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit6(): number;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit6le(): number;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit6be(): number;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit7(): number;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit7le(): number;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit7be(): number;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit7(): number;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit7le(): number;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit7be(): number;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit8(): number;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit8le(): number;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit8be(): number;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit8(): number;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit8le(): number;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit8be(): number;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit9(): number;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit9le(): number;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit9be(): number;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit9(): number;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit9le(): number;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit9be(): number;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit10(): number;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit10le(): number;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit10be(): number;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit10(): number;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit10le(): number;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit10be(): number;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit11(): number;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit11le(): number;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit11be(): number;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit11(): number;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit11le(): number;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit11be(): number;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit12(): number;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit12le(): number;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit12be(): number;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit12(): number;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit12le(): number;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit12be(): number;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit13(): number;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit13le(): number;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit13be(): number;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit13(): number;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit13le(): number;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit13be(): number;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit14(): number;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit14le(): number;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit14be(): number;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit14(): number;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit14le(): number;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit14be(): number;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit15(): number;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit15le(): number;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit15be(): number;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit15(): number;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit15le(): number;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit15be(): number;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit16(): number;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit16le(): number;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit16be(): number;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit16(): number;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit16le(): number;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit16be(): number;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit17(): number;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit17le(): number;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit17be(): number;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit17(): number;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit17le(): number;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit17be(): number;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit18(): number;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit18le(): number;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit18be(): number;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit18(): number;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit18le(): number;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit18be(): number;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit19(): number;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit19le(): number;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit19be(): number;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit19(): number;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit19le(): number;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit19be(): number;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit20(): number;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit20le(): number;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit20be(): number;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit20(): number;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit20le(): number;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit20be(): number;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit21(): number;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit21le(): number;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit21be(): number;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit21(): number;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit21le(): number;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit21be(): number;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit22(): number;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit22le(): number;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit22be(): number;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit22(): number;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit22le(): number;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit22be(): number;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit23(): number;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit23le(): number;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit23be(): number;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit23(): number;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit23le(): number;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit23be(): number;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit24(): number;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit24le(): number;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit24be(): number;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit24(): number;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit24le(): number;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit24be(): number;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit25(): number;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit25le(): number;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit25be(): number;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit25(): number;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit25le(): number;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit25be(): number;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit26(): number;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit26le(): number;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit26be(): number;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit26(): number;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit26le(): number;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit26be(): number;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit27(): number;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit27le(): number;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit27be(): number;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit27(): number;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit27le(): number;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit27be(): number;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit28(): number;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit28le(): number;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit28be(): number;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit28(): number;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit28le(): number;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit28be(): number;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit29(): number;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit29le(): number;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit29be(): number;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit29(): number;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit29le(): number;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit29be(): number;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit30(): number;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit30le(): number;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit30be(): number;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit30(): number;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit30le(): number;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit30be(): number;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit31(): number;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit31le(): number;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit31be(): number;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit31(): number;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit31le(): number;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit31be(): number;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit32(): number;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit32le(): number;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get bit32be(): number;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit32(): number;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit32le(): number;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {number}
-     */
-    get ubit32be(): number;
-    /**
-     * Read byte.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 8-bit integer. */
     get byte(): number;
-    /**
-     * Read byte.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 8-bit integer. */
     get int8(): number;
-    /**
-     * Read unsigned byte.
-     *
-     * @returns {number}
-     */
+    /** Read an unsigned 8-bit integer. */
     get uint8(): number;
-    /**
-     * Read unsigned byte.
-     *
-     * @returns {number}
-     */
+    /** Read an unsigned 8-bit integer. */
     get ubyte(): number;
-    /**
-     * Read short.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 16-bit integer. */
     get int16(): number;
-    /**
-     * Read short.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 16-bit integer. */
     get short(): number;
-    /**
-     * Read short.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 16-bit integer. */
     get word(): number;
-    /**
-     * Read unsigned short.
-     *
-     * @returns {number}
-     */
+    /** Read an unsigned 16-bit integer. */
     get uint16(): number;
-    /**
-     * Read unsigned short.
-     *
-     * @returns {number}
-     */
+    /** Read an unsigned 16-bit integer. */
     get ushort(): number;
-    /**
-     * Read unsigned short.
-     *
-     * @returns {number}
-     */
+    /** Read an unsigned 16-bit integer. */
     get uword(): number;
-    /**
-     * Read unsigned short in little endian.
-     *
-     * @returns {number}
-     */
-    get uint16le(): number;
-    /**
-     * Read unsigned short in little endian.
-     *
-     * @returns {number}
-     */
-    get ushortle(): number;
-    /**
-     * Read unsigned short in little endian.
-     *
-     * @returns {number}
-     */
-    get uwordle(): number;
-    /**
-     * Read signed short in little endian.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 16-bit integer (little-endian). */
     get int16le(): number;
-    /**
-     * Read signed short in little endian.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 16-bit integer (little-endian). */
     get shortle(): number;
-    /**
-     * Read signed short in little endian.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 16-bit integer (little-endian). */
     get wordle(): number;
-    /**
-     * Read unsigned short in big endian.
-     *
-     * @returns {number}
-     */
-    get uint16be(): number;
-    /**
-     * Read unsigned short in big endian.
-     *
-     * @returns {number}
-     */
-    get ushortbe(): number;
-    /**
-     * Read unsigned short in big endian.
-     *
-     * @returns {number}
-     */
-    get uwordbe(): number;
-    /**
-     * Read signed short in big endian.
-     *
-     * @returns {number}
-     */
+    /** Read an unsigned 16-bit integer (little-endian). */
+    get uint16le(): number;
+    /** Read an unsigned 16-bit integer (little-endian). */
+    get ushortle(): number;
+    /** Read an unsigned 16-bit integer (little-endian). */
+    get uwordle(): number;
+    /** Read a signed 16-bit integer (big-endian). */
     get int16be(): number;
-    /**
-     * Read signed short in big endian.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 16-bit integer (big-endian). */
     get shortbe(): number;
-    /**
-     * Read signed short in big endian.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 16-bit integer (big-endian). */
     get wordbe(): number;
-    /**
-     * Read half float.
-     *
-     * @returns {number}
-     */
-    get halffloat(): number;
-    /**
-     * Read half float
-     *
-     * @returns {number}
-     */
-    get half(): number;
-    /**
-     * Read half float.
-     *
-     * @returns {number}
-     */
-    get halffloatbe(): number;
-    /**
-     * Read half float.
-     *
-     * @returns {number}
-     */
-    get halfbe(): number;
-    /**
-     * Read half float.
-     *
-     * @returns {number}
-     */
-    get halffloatle(): number;
-    /**
-     * Read half float.
-     *
-     * @returns {number}
-     */
-    get halfle(): number;
-    /**
-     * Read 32 bit integer.
-     *
-     * @returns {number}
-     */
+    /** Read an unsigned 16-bit integer (big-endian). */
+    get uint16be(): number;
+    /** Read an unsigned 16-bit integer (big-endian). */
+    get ushortbe(): number;
+    /** Read an unsigned 16-bit integer (big-endian). */
+    get uwordbe(): number;
+    /** Read a signed 32-bit integer. */
     get int(): number;
-    /**
-     * Read 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get double(): number;
-    /**
-     * Read 32 bit integer.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 32-bit integer. */
+    get dword(): number;
+    /** Read a signed 32-bit integer. */
     get int32(): number;
-    /**
-     * Read 32 bit integer.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 32-bit integer. */
     get long(): number;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
+    /** Read an unsigned 32-bit integer. */
     get uint(): number;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get udouble(): number;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
+    /** Read an unsigned 32-bit integer. */
+    get udword(): number;
+    /** Read an unsigned 32-bit integer. */
     get uint32(): number;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
+    /** Read an unsigned 32-bit integer. */
     get ulong(): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get intbe(): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get doublebe(): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get int32be(): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get longbe(): number;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get uintbe(): number;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get udoublebe(): number;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get uint32be(): number;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get ulongbe(): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 32-bit integer (little-endian). */
     get intle(): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get doublele(): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 32-bit integer (little-endian). */
+    get dwordle(): number;
+    /** Read a signed 32-bit integer (little-endian). */
     get int32le(): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 32-bit integer (little-endian). */
     get longle(): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
+    /** Read an unsigned 32-bit integer (little-endian). */
     get uintle(): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
-    get udoublele(): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
+    /** Read an unsigned 32-bit integer (little-endian). */
+    get udwordle(): number;
+    /** Read an unsigned 32-bit integer (little-endian). */
     get uint32le(): number;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {number}
-     */
+    /** Read an unsigned 32-bit integer (little-endian). */
     get ulongle(): number;
-    /**
-     * Read float.
-     *
-     * @returns {number}
-     */
-    get float(): number;
-    /**
-     * Read float.
-     *
-     * @returns {number}
-     */
-    get floatbe(): number;
-    /**
-     * Read float.
-     *
-     * @returns {number}
-     */
-    get floatle(): number;
-    /**
-     * Read signed 64 bit integer
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read a signed 32-bit integer (big-endian). */
+    get intbe(): number;
+    /** Read a signed 32-bit integer (big-endian). */
+    get dwordbe(): number;
+    /** Read a signed 32-bit integer (big-endian). */
+    get int32be(): number;
+    /** Read a signed 32-bit integer (big-endian). */
+    get longbe(): number;
+    /** Read an unsigned 32-bit integer (big-endian). */
+    get uintbe(): number;
+    /** Read an unsigned 32-bit integer (big-endian). */
+    get udwordbe(): number;
+    /** Read an unsigned 32-bit integer (big-endian). */
+    get uint32be(): number;
+    /** Read an unsigned 32-bit integer (big-endian). */
+    get ulongbe(): number;
+    /** Read a signed 64-bit integer. */
     get int64(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read a signed 64-bit integer. */
     get bigint(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read a signed 64-bit integer. */
     get quad(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read an unsigned 64-bit integer. */
     get uint64(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read an unsigned 64-bit integer. */
     get ubigint(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read an unsigned 64-bit integer. */
     get uquad(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get int64be(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get bigintbe(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get quadbe(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get uint64be(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get ubigintbe(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    get uquadbe(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read a signed 64-bit integer (little-endian). */
     get int64le(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read a signed 64-bit integer (little-endian). */
     get bigintle(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read a signed 64-bit integer (little-endian). */
     get quadle(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read an unsigned 64-bit integer (little-endian). */
     get uint64le(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read an unsigned 64-bit integer (little-endian). */
     get ubigintle(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read an unsigned 64-bit integer (little-endian). */
     get uquadle(): alwaysBigInt extends true ? bigint : BigValue;
-    /**
-     * Read double float.
-     *
-     * @returns {number}
-     */
+    /** Read a signed 64-bit integer (big-endian). */
+    get int64be(): alwaysBigInt extends true ? bigint : BigValue;
+    /** Read a signed 64-bit integer (big-endian). */
+    get bigintbe(): alwaysBigInt extends true ? bigint : BigValue;
+    /** Read a signed 64-bit integer (big-endian). */
+    get quadbe(): alwaysBigInt extends true ? bigint : BigValue;
+    /** Read an unsigned 64-bit integer (big-endian). */
+    get uint64be(): alwaysBigInt extends true ? bigint : BigValue;
+    /** Read an unsigned 64-bit integer (big-endian). */
+    get ubigintbe(): alwaysBigInt extends true ? bigint : BigValue;
+    /** Read an unsigned 64-bit integer (big-endian). */
+    get uquadbe(): alwaysBigInt extends true ? bigint : BigValue;
+    /** Read a 32-bit float. */
+    get float(): number;
+    /** Read a 32-bit float (little-endian). */
+    get floatle(): number;
+    /** Read a 32-bit float (big-endian). */
+    get floatbe(): number;
+    /** Read a 16-bit float. */
+    get halffloat(): number;
+    /** Read a 16-bit float. */
+    get half(): number;
+    /** Read a 16-bit float (little-endian). */
+    get halffloatle(): number;
+    /** Read a 16-bit float (little-endian). */
+    get halfle(): number;
+    /** Read a 16-bit float (big-endian). */
+    get halffloatbe(): number;
+    /** Read a 16-bit float (big-endian). */
+    get halfbe(): number;
+    /** Read a 64-bit float. */
     get doublefloat(): number;
-    /**
-     * Read double float.
-     *
-     * @returns {number}
-     */
+    /** Read a 64-bit float. */
     get dfloat(): number;
-    /**
-     * Read double float.
-     *
-     * @returns {number}
-     */
-    get dfloatbe(): number;
-    /**
-     * Read double float.
-     *
-     * @returns {number}
-     */
-    get doublefloatbe(): number;
-    /**
-     * Read double float.
-     *
-     * @returns {number}
-     */
-    get dfloatle(): number;
-    /**
-     * Read double float.
-     *
-     * @returns {number}
-     */
+    /** Read a 64-bit float (little-endian). */
     get doublefloatle(): number;
+    /** Read a 64-bit float (little-endian). */
+    get dfloatle(): number;
+    /** Read a 64-bit float (big-endian). */
+    get doublefloatbe(): number;
+    /** Read a 64-bit float (big-endian). */
+    get dfloatbe(): number;
+    /** Read 1 signed bit. */
+    get bit1(): number;
+    /** Read 1 unsigned bit. */
+    get ubit1(): number;
+    /** Read 1 signed bit (little-endian). */
+    get bit1le(): number;
+    /** Read 1 unsigned bit (little-endian). */
+    get ubit1le(): number;
+    /** Read 1 signed bit (big-endian). */
+    get bit1be(): number;
+    /** Read 1 unsigned bit (big-endian). */
+    get ubit1be(): number;
+    /** Read 2 signed bits. */
+    get bit2(): number;
+    /** Read 2 unsigned bits. */
+    get ubit2(): number;
+    /** Read 2 signed bits (little-endian). */
+    get bit2le(): number;
+    /** Read 2 unsigned bits (little-endian). */
+    get ubit2le(): number;
+    /** Read 2 signed bits (big-endian). */
+    get bit2be(): number;
+    /** Read 2 unsigned bits (big-endian). */
+    get ubit2be(): number;
+    /** Read 3 signed bits. */
+    get bit3(): number;
+    /** Read 3 unsigned bits. */
+    get ubit3(): number;
+    /** Read 3 signed bits (little-endian). */
+    get bit3le(): number;
+    /** Read 3 unsigned bits (little-endian). */
+    get ubit3le(): number;
+    /** Read 3 signed bits (big-endian). */
+    get bit3be(): number;
+    /** Read 3 unsigned bits (big-endian). */
+    get ubit3be(): number;
+    /** Read 4 signed bits. */
+    get bit4(): number;
+    /** Read 4 unsigned bits. */
+    get ubit4(): number;
+    /** Read 4 signed bits (little-endian). */
+    get bit4le(): number;
+    /** Read 4 unsigned bits (little-endian). */
+    get ubit4le(): number;
+    /** Read 4 signed bits (big-endian). */
+    get bit4be(): number;
+    /** Read 4 unsigned bits (big-endian). */
+    get ubit4be(): number;
+    /** Read 5 signed bits. */
+    get bit5(): number;
+    /** Read 5 unsigned bits. */
+    get ubit5(): number;
+    /** Read 5 signed bits (little-endian). */
+    get bit5le(): number;
+    /** Read 5 unsigned bits (little-endian). */
+    get ubit5le(): number;
+    /** Read 5 signed bits (big-endian). */
+    get bit5be(): number;
+    /** Read 5 unsigned bits (big-endian). */
+    get ubit5be(): number;
+    /** Read 6 signed bits. */
+    get bit6(): number;
+    /** Read 6 unsigned bits. */
+    get ubit6(): number;
+    /** Read 6 signed bits (little-endian). */
+    get bit6le(): number;
+    /** Read 6 unsigned bits (little-endian). */
+    get ubit6le(): number;
+    /** Read 6 signed bits (big-endian). */
+    get bit6be(): number;
+    /** Read 6 unsigned bits (big-endian). */
+    get ubit6be(): number;
+    /** Read 7 signed bits. */
+    get bit7(): number;
+    /** Read 7 unsigned bits. */
+    get ubit7(): number;
+    /** Read 7 signed bits (little-endian). */
+    get bit7le(): number;
+    /** Read 7 unsigned bits (little-endian). */
+    get ubit7le(): number;
+    /** Read 7 signed bits (big-endian). */
+    get bit7be(): number;
+    /** Read 7 unsigned bits (big-endian). */
+    get ubit7be(): number;
+    /** Read 8 signed bits. */
+    get bit8(): number;
+    /** Read 8 unsigned bits. */
+    get ubit8(): number;
+    /** Read 8 signed bits (little-endian). */
+    get bit8le(): number;
+    /** Read 8 unsigned bits (little-endian). */
+    get ubit8le(): number;
+    /** Read 8 signed bits (big-endian). */
+    get bit8be(): number;
+    /** Read 8 unsigned bits (big-endian). */
+    get ubit8be(): number;
+    /** Read 9 signed bits. */
+    get bit9(): number;
+    /** Read 9 unsigned bits. */
+    get ubit9(): number;
+    /** Read 9 signed bits (little-endian). */
+    get bit9le(): number;
+    /** Read 9 unsigned bits (little-endian). */
+    get ubit9le(): number;
+    /** Read 9 signed bits (big-endian). */
+    get bit9be(): number;
+    /** Read 9 unsigned bits (big-endian). */
+    get ubit9be(): number;
+    /** Read 10 signed bits. */
+    get bit10(): number;
+    /** Read 10 unsigned bits. */
+    get ubit10(): number;
+    /** Read 10 signed bits (little-endian). */
+    get bit10le(): number;
+    /** Read 10 unsigned bits (little-endian). */
+    get ubit10le(): number;
+    /** Read 10 signed bits (big-endian). */
+    get bit10be(): number;
+    /** Read 10 unsigned bits (big-endian). */
+    get ubit10be(): number;
+    /** Read 11 signed bits. */
+    get bit11(): number;
+    /** Read 11 unsigned bits. */
+    get ubit11(): number;
+    /** Read 11 signed bits (little-endian). */
+    get bit11le(): number;
+    /** Read 11 unsigned bits (little-endian). */
+    get ubit11le(): number;
+    /** Read 11 signed bits (big-endian). */
+    get bit11be(): number;
+    /** Read 11 unsigned bits (big-endian). */
+    get ubit11be(): number;
+    /** Read 12 signed bits. */
+    get bit12(): number;
+    /** Read 12 unsigned bits. */
+    get ubit12(): number;
+    /** Read 12 signed bits (little-endian). */
+    get bit12le(): number;
+    /** Read 12 unsigned bits (little-endian). */
+    get ubit12le(): number;
+    /** Read 12 signed bits (big-endian). */
+    get bit12be(): number;
+    /** Read 12 unsigned bits (big-endian). */
+    get ubit12be(): number;
+    /** Read 13 signed bits. */
+    get bit13(): number;
+    /** Read 13 unsigned bits. */
+    get ubit13(): number;
+    /** Read 13 signed bits (little-endian). */
+    get bit13le(): number;
+    /** Read 13 unsigned bits (little-endian). */
+    get ubit13le(): number;
+    /** Read 13 signed bits (big-endian). */
+    get bit13be(): number;
+    /** Read 13 unsigned bits (big-endian). */
+    get ubit13be(): number;
+    /** Read 14 signed bits. */
+    get bit14(): number;
+    /** Read 14 unsigned bits. */
+    get ubit14(): number;
+    /** Read 14 signed bits (little-endian). */
+    get bit14le(): number;
+    /** Read 14 unsigned bits (little-endian). */
+    get ubit14le(): number;
+    /** Read 14 signed bits (big-endian). */
+    get bit14be(): number;
+    /** Read 14 unsigned bits (big-endian). */
+    get ubit14be(): number;
+    /** Read 15 signed bits. */
+    get bit15(): number;
+    /** Read 15 unsigned bits. */
+    get ubit15(): number;
+    /** Read 15 signed bits (little-endian). */
+    get bit15le(): number;
+    /** Read 15 unsigned bits (little-endian). */
+    get ubit15le(): number;
+    /** Read 15 signed bits (big-endian). */
+    get bit15be(): number;
+    /** Read 15 unsigned bits (big-endian). */
+    get ubit15be(): number;
+    /** Read 16 signed bits. */
+    get bit16(): number;
+    /** Read 16 unsigned bits. */
+    get ubit16(): number;
+    /** Read 16 signed bits (little-endian). */
+    get bit16le(): number;
+    /** Read 16 unsigned bits (little-endian). */
+    get ubit16le(): number;
+    /** Read 16 signed bits (big-endian). */
+    get bit16be(): number;
+    /** Read 16 unsigned bits (big-endian). */
+    get ubit16be(): number;
+    /** Read 17 signed bits. */
+    get bit17(): number;
+    /** Read 17 unsigned bits. */
+    get ubit17(): number;
+    /** Read 17 signed bits (little-endian). */
+    get bit17le(): number;
+    /** Read 17 unsigned bits (little-endian). */
+    get ubit17le(): number;
+    /** Read 17 signed bits (big-endian). */
+    get bit17be(): number;
+    /** Read 17 unsigned bits (big-endian). */
+    get ubit17be(): number;
+    /** Read 18 signed bits. */
+    get bit18(): number;
+    /** Read 18 unsigned bits. */
+    get ubit18(): number;
+    /** Read 18 signed bits (little-endian). */
+    get bit18le(): number;
+    /** Read 18 unsigned bits (little-endian). */
+    get ubit18le(): number;
+    /** Read 18 signed bits (big-endian). */
+    get bit18be(): number;
+    /** Read 18 unsigned bits (big-endian). */
+    get ubit18be(): number;
+    /** Read 19 signed bits. */
+    get bit19(): number;
+    /** Read 19 unsigned bits. */
+    get ubit19(): number;
+    /** Read 19 signed bits (little-endian). */
+    get bit19le(): number;
+    /** Read 19 unsigned bits (little-endian). */
+    get ubit19le(): number;
+    /** Read 19 signed bits (big-endian). */
+    get bit19be(): number;
+    /** Read 19 unsigned bits (big-endian). */
+    get ubit19be(): number;
+    /** Read 20 signed bits. */
+    get bit20(): number;
+    /** Read 20 unsigned bits. */
+    get ubit20(): number;
+    /** Read 20 signed bits (little-endian). */
+    get bit20le(): number;
+    /** Read 20 unsigned bits (little-endian). */
+    get ubit20le(): number;
+    /** Read 20 signed bits (big-endian). */
+    get bit20be(): number;
+    /** Read 20 unsigned bits (big-endian). */
+    get ubit20be(): number;
+    /** Read 21 signed bits. */
+    get bit21(): number;
+    /** Read 21 unsigned bits. */
+    get ubit21(): number;
+    /** Read 21 signed bits (little-endian). */
+    get bit21le(): number;
+    /** Read 21 unsigned bits (little-endian). */
+    get ubit21le(): number;
+    /** Read 21 signed bits (big-endian). */
+    get bit21be(): number;
+    /** Read 21 unsigned bits (big-endian). */
+    get ubit21be(): number;
+    /** Read 22 signed bits. */
+    get bit22(): number;
+    /** Read 22 unsigned bits. */
+    get ubit22(): number;
+    /** Read 22 signed bits (little-endian). */
+    get bit22le(): number;
+    /** Read 22 unsigned bits (little-endian). */
+    get ubit22le(): number;
+    /** Read 22 signed bits (big-endian). */
+    get bit22be(): number;
+    /** Read 22 unsigned bits (big-endian). */
+    get ubit22be(): number;
+    /** Read 23 signed bits. */
+    get bit23(): number;
+    /** Read 23 unsigned bits. */
+    get ubit23(): number;
+    /** Read 23 signed bits (little-endian). */
+    get bit23le(): number;
+    /** Read 23 unsigned bits (little-endian). */
+    get ubit23le(): number;
+    /** Read 23 signed bits (big-endian). */
+    get bit23be(): number;
+    /** Read 23 unsigned bits (big-endian). */
+    get ubit23be(): number;
+    /** Read 24 signed bits. */
+    get bit24(): number;
+    /** Read 24 unsigned bits. */
+    get ubit24(): number;
+    /** Read 24 signed bits (little-endian). */
+    get bit24le(): number;
+    /** Read 24 unsigned bits (little-endian). */
+    get ubit24le(): number;
+    /** Read 24 signed bits (big-endian). */
+    get bit24be(): number;
+    /** Read 24 unsigned bits (big-endian). */
+    get ubit24be(): number;
+    /** Read 25 signed bits. */
+    get bit25(): number;
+    /** Read 25 unsigned bits. */
+    get ubit25(): number;
+    /** Read 25 signed bits (little-endian). */
+    get bit25le(): number;
+    /** Read 25 unsigned bits (little-endian). */
+    get ubit25le(): number;
+    /** Read 25 signed bits (big-endian). */
+    get bit25be(): number;
+    /** Read 25 unsigned bits (big-endian). */
+    get ubit25be(): number;
+    /** Read 26 signed bits. */
+    get bit26(): number;
+    /** Read 26 unsigned bits. */
+    get ubit26(): number;
+    /** Read 26 signed bits (little-endian). */
+    get bit26le(): number;
+    /** Read 26 unsigned bits (little-endian). */
+    get ubit26le(): number;
+    /** Read 26 signed bits (big-endian). */
+    get bit26be(): number;
+    /** Read 26 unsigned bits (big-endian). */
+    get ubit26be(): number;
+    /** Read 27 signed bits. */
+    get bit27(): number;
+    /** Read 27 unsigned bits. */
+    get ubit27(): number;
+    /** Read 27 signed bits (little-endian). */
+    get bit27le(): number;
+    /** Read 27 unsigned bits (little-endian). */
+    get ubit27le(): number;
+    /** Read 27 signed bits (big-endian). */
+    get bit27be(): number;
+    /** Read 27 unsigned bits (big-endian). */
+    get ubit27be(): number;
+    /** Read 28 signed bits. */
+    get bit28(): number;
+    /** Read 28 unsigned bits. */
+    get ubit28(): number;
+    /** Read 28 signed bits (little-endian). */
+    get bit28le(): number;
+    /** Read 28 unsigned bits (little-endian). */
+    get ubit28le(): number;
+    /** Read 28 signed bits (big-endian). */
+    get bit28be(): number;
+    /** Read 28 unsigned bits (big-endian). */
+    get ubit28be(): number;
+    /** Read 29 signed bits. */
+    get bit29(): number;
+    /** Read 29 unsigned bits. */
+    get ubit29(): number;
+    /** Read 29 signed bits (little-endian). */
+    get bit29le(): number;
+    /** Read 29 unsigned bits (little-endian). */
+    get ubit29le(): number;
+    /** Read 29 signed bits (big-endian). */
+    get bit29be(): number;
+    /** Read 29 unsigned bits (big-endian). */
+    get ubit29be(): number;
+    /** Read 30 signed bits. */
+    get bit30(): number;
+    /** Read 30 unsigned bits. */
+    get ubit30(): number;
+    /** Read 30 signed bits (little-endian). */
+    get bit30le(): number;
+    /** Read 30 unsigned bits (little-endian). */
+    get ubit30le(): number;
+    /** Read 30 signed bits (big-endian). */
+    get bit30be(): number;
+    /** Read 30 unsigned bits (big-endian). */
+    get ubit30be(): number;
+    /** Read 31 signed bits. */
+    get bit31(): number;
+    /** Read 31 unsigned bits. */
+    get ubit31(): number;
+    /** Read 31 signed bits (little-endian). */
+    get bit31le(): number;
+    /** Read 31 unsigned bits (little-endian). */
+    get ubit31le(): number;
+    /** Read 31 signed bits (big-endian). */
+    get bit31be(): number;
+    /** Read 31 unsigned bits (big-endian). */
+    get ubit31be(): number;
+    /** Read 32 signed bits. */
+    get bit32(): number;
+    /** Read 32 unsigned bits. */
+    get ubit32(): number;
+    /** Read 32 signed bits (little-endian). */
+    get bit32le(): number;
+    /** Read 32 unsigned bits (little-endian). */
+    get ubit32le(): number;
+    /** Read 32 signed bits (big-endian). */
+    get bit32be(): number;
+    /** Read 32 unsigned bits (big-endian). */
+    get ubit32be(): number;
     /**
     * Reads string, use options object for different types.
     *
@@ -4394,7 +1481,7 @@ declare class BiReader<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBi
  *
  * @since 2.0
  */
-declare class BiWriter<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBigInt> {
+declare class BiWriter<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiSyncEngine<alwaysBigInt> {
     constructor(input?: DataType, options?: BiOptions<alwaysBigInt>);
     /**
      * Bit field writer.
@@ -4461,2016 +1548,548 @@ declare class BiWriter<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBi
      * @returns {number}
      */
     bitle(value: number, bits: number, unsigned?: boolean): void;
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit1(value: number);
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit1le(value: number);
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit1be(value: number);
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit1(value: number);
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit1le(value: number);
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit1be(value: number);
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit2(value: number);
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit2le(value: number);
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit2be(value: number);
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit2(value: number);
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit2le(value: number);
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit2be(value: number);
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit3(value: number);
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit3le(value: number);
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit3be(value: number);
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit3(value: number);
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit3le(value: number);
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit3be(value: number);
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit4(value: number);
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit4le(value: number);
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit4be(value: number);
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit4(value: number);
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit4le(value: number);
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit4be(value: number);
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit5(value: number);
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit5le(value: number);
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit5be(value: number);
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit5(value: number);
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit5le(value: number);
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit5be(value: number);
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit6(value: number);
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit6le(value: number);
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit6be(value: number);
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit6(value: number);
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit6le(value: number);
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit6be(value: number);
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit7(value: number);
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit7le(value: number);
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit7be(value: number);
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit7(value: number);
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit7le(value: number);
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit7be(value: number);
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit8(value: number);
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit8le(value: number);
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit8be(value: number);
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit8(value: number);
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit8le(value: number);
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit8be(value: number);
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit9(value: number);
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit9le(value: number);
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit9be(value: number);
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit9(value: number);
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit9le(value: number);
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit9be(value: number);
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit10(value: number);
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit10le(value: number);
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit10be(value: number);
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit10(value: number);
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit10le(value: number);
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit10be(value: number);
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit11(value: number);
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit11le(value: number);
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit11be(value: number);
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit11(value: number);
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit11le(value: number);
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit11be(value: number);
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit12(value: number);
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit12le(value: number);
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit12be(value: number);
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit12(value: number);
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit12le(value: number);
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit12be(value: number);
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit13(value: number);
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit13le(value: number);
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit13be(value: number);
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit13(value: number);
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit13le(value: number);
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit13be(value: number);
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit14(value: number);
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit14le(value: number);
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit14be(value: number);
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit14(value: number);
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit14le(value: number);
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit14be(value: number);
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit15(value: number);
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit15le(value: number);
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit15be(value: number);
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit15(value: number);
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit15le(value: number);
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit15be(value: number);
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit16(value: number);
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit16le(value: number);
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit16be(value: number);
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit16(value: number);
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit16le(value: number);
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit16be(value: number);
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit17(value: number);
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit17le(value: number);
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit17be(value: number);
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit17(value: number);
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit17le(value: number);
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit17be(value: number);
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit18(value: number);
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit18le(value: number);
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit18be(value: number);
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit18(value: number);
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit18le(value: number);
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit18be(value: number);
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit19(value: number);
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit19le(value: number);
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit19be(value: number);
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit19(value: number);
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit19le(value: number);
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit19be(value: number);
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit20(value: number);
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit20le(value: number);
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit20be(value: number);
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit20(value: number);
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit20le(value: number);
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit20be(value: number);
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit21(value: number);
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit21le(value: number);
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit21be(value: number);
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit21(value: number);
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit21le(value: number);
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit21be(value: number);
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit22(value: number);
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit22le(value: number);
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit22be(value: number);
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit22(value: number);
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit22le(value: number);
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit22be(value: number);
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit23(value: number);
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit23le(value: number);
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit23be(value: number);
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit23(value: number);
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit23le(value: number);
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit23be(value: number);
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit24(value: number);
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit24le(value: number);
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit24be(value: number);
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit24(value: number);
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit24le(value: number);
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit24be(value: number);
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit25(value: number);
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit25le(value: number);
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit25be(value: number);
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit25(value: number);
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit25le(value: number);
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit25be(value: number);
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit26(value: number);
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit26le(value: number);
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit26be(value: number);
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit26(value: number);
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit26le(value: number);
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit26be(value: number);
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit27(value: number);
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit27le(value: number);
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit27be(value: number);
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit27(value: number);
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit27le(value: number);
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit27be(value: number);
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit28(value: number);
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit28le(value: number);
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit28be(value: number);
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit28(value: number);
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit28le(value: number);
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit28be(value: number);
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit29(value: number);
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit29le(value: number);
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit29be(value: number);
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit29(value: number);
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit29le(value: number);
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit29be(value: number);
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit30(value: number);
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit30le(value: number);
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit30be(value: number);
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit30(value: number);
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit30le(value: number);
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit30be(value: number);
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit31(value: number);
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit31le(value: number);
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit31be(value: number);
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit31(value: number);
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit31le(value: number);
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit31be(value: number);
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit32(value: number);
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit32le(value: number);
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set bit32be(value: number);
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit32(value: number);
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit32le(value: number);
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    set ubit32be(value: number);
-    /**
-     * Write byte.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 8-bit integer. */
     set byte(value: number);
-    /**
-     * Write byte.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 8-bit integer. */
     set int8(value: number);
-    /**
-     * Write unsigned byte.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 8-bit integer. */
     set uint8(value: number);
-    /**
-     * Write unsigned byte.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 8-bit integer. */
     set ubyte(value: number);
-    /**
-     * Write int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 16-bit integer. */
     set int16(value: number);
-    /**
-     * Write int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 16-bit integer. */
     set short(value: number);
-    /**
-     * Write int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 16-bit integer. */
     set word(value: number);
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 16-bit integer. */
     set uint16(value: number);
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 16-bit integer. */
     set ushort(value: number);
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 16-bit integer. */
     set uword(value: number);
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    set int16be(value: number);
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    set shortbe(value: number);
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    set wordbe(value: number);
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    set uint16be(value: number);
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    set ushortbe(value: number);
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    set uwordbe(value: number);
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 16-bit integer (little-endian). */
     set int16le(value: number);
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 16-bit integer (little-endian). */
     set shortle(value: number);
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 16-bit integer (little-endian). */
     set wordle(value: number);
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 16-bit integer (little-endian). */
     set uint16le(value: number);
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 16-bit integer (little-endian). */
     set ushortle(value: number);
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 16-bit integer (little-endian). */
     set uwordle(value: number);
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    set half(value: number);
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    set halffloat(value: number);
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    set halffloatbe(value: number);
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    set halfbe(value: number);
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    set halffloatle(value: number);
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    set halfle(value: number);
-    /**
-     * Write int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 16-bit integer (big-endian). */
+    set int16be(value: number);
+    /** Write a signed 16-bit integer (big-endian). */
+    set shortbe(value: number);
+    /** Write a signed 16-bit integer (big-endian). */
+    set wordbe(value: number);
+    /** Write an unsigned 16-bit integer (big-endian). */
+    set uint16be(value: number);
+    /** Write an unsigned 16-bit integer (big-endian). */
+    set ushortbe(value: number);
+    /** Write an unsigned 16-bit integer (big-endian). */
+    set uwordbe(value: number);
+    /** Write a signed 32-bit integer. */
     set int(value: number);
-    /**
-    * Write int32.
-    *
-    * @param {number} value - value as int
-    */
+    /** Write a signed 32-bit integer. */
+    set dword(value: number);
+    /** Write a signed 32-bit integer. */
     set int32(value: number);
-    /**
-     * Write int32.
-     *
-     * @param {number} value - value as int
-     */
-    set double(value: number);
-    /**
-     * Write int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 32-bit integer. */
     set long(value: number);
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set uint32(value: number);
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 32-bit integer. */
     set uint(value: number);
-    /**
-    * Write unsigned int32.
-    *
-    * @param {number} value - value as int
-    */
-    set udouble(value: number);
-    /**
-    * Write unsigned int32.
-    *
-    * @param {number} value - value as int
-    */
+    /** Write an unsigned 32-bit integer. */
+    set udword(value: number);
+    /** Write an unsigned 32-bit integer. */
+    set uint32(value: number);
+    /** Write an unsigned 32-bit integer. */
     set ulong(value: number);
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    set int32le(value: number);
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 32-bit integer (little-endian). */
     set intle(value: number);
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    set doublele(value: number);
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 32-bit integer (little-endian). */
+    set dwordle(value: number);
+    /** Write a signed 32-bit integer (little-endian). */
+    set int32le(value: number);
+    /** Write a signed 32-bit integer (little-endian). */
     set longle(value: number);
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set uint32le(value: number);
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 32-bit integer (little-endian). */
     set uintle(value: number);
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set udoublele(value: number);
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 32-bit integer (little-endian). */
+    set udwordle(value: number);
+    /** Write an unsigned 32-bit integer (little-endian). */
+    set uint32le(value: number);
+    /** Write an unsigned 32-bit integer (little-endian). */
     set ulongle(value: number);
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 32-bit integer (big-endian). */
     set intbe(value: number);
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 32-bit integer (big-endian). */
+    set dwordbe(value: number);
+    /** Write a signed 32-bit integer (big-endian). */
     set int32be(value: number);
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    set doublebe(value: number);
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 32-bit integer (big-endian). */
     set longbe(value: number);
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set uint32be(value: number);
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 32-bit integer (big-endian). */
     set uintbe(value: number);
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    set udoublebe(value: number);
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 32-bit integer (big-endian). */
+    set udwordbe(value: number);
+    /** Write an unsigned 32-bit integer (big-endian). */
+    set uint32be(value: number);
+    /** Write an unsigned 32-bit integer (big-endian). */
     set ulongbe(value: number);
-    /**
-    * Write float.
-    *
-    * @param {number} value - value as int
-    */
-    set float(value: number);
-    /**
-     * Write float.
-     *
-     * @param {number} value - value as int
-     */
-    set floatle(value: number);
-    /**
-    * Write float.
-    *
-    * @param {number} value - value as int
-    */
-    set floatbe(value: number);
-    /**
-     * Write 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write a signed 64-bit integer. */
     set int64(value: BigValue);
-    /**
-    * Write 64 bit integer.
-    *
-    * @param {BigValue} value - value as int
-    */
-    set quad(value: BigValue);
-    /**
-     * Write 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write a signed 64-bit integer. */
     set bigint(value: BigValue);
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write a signed 64-bit integer. */
+    set quad(value: BigValue);
+    /** Write an unsigned 64-bit integer. */
     set uint64(value: BigValue);
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write an unsigned 64-bit integer. */
     set ubigint(value: BigValue);
-    /**
-    * Write unsigned 64 bit integer.
-    *
-    * @param {BigValue} value - value as int
-    */
+    /** Write an unsigned 64-bit integer. */
     set uquad(value: BigValue);
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write a signed 64-bit integer (little-endian). */
     set int64le(value: BigValue);
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write a signed 64-bit integer (little-endian). */
     set bigintle(value: BigValue);
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write a signed 64-bit integer (little-endian). */
     set quadle(value: BigValue);
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write an unsigned 64-bit integer (little-endian). */
     set uint64le(value: BigValue);
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write an unsigned 64-bit integer (little-endian). */
     set ubigintle(value: BigValue);
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write an unsigned 64-bit integer (little-endian). */
     set uquadle(value: BigValue);
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write a signed 64-bit integer (big-endian). */
     set int64be(value: BigValue);
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write a signed 64-bit integer (big-endian). */
     set bigintbe(value: BigValue);
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write a signed 64-bit integer (big-endian). */
     set quadbe(value: BigValue);
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write an unsigned 64-bit integer (big-endian). */
     set uint64be(value: BigValue);
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write an unsigned 64-bit integer (big-endian). */
     set ubigintbe(value: BigValue);
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
+    /** Write an unsigned 64-bit integer (big-endian). */
     set uquadbe(value: BigValue);
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a 32-bit float. */
+    set float(value: number);
+    /** Write a 32-bit float (little-endian). */
+    set floatle(value: number);
+    /** Write a 32-bit float (big-endian). */
+    set floatbe(value: number);
+    /** Write a 16-bit float. */
+    set halffloat(value: number);
+    /** Write a 16-bit float. */
+    set half(value: number);
+    /** Write a 16-bit float (little-endian). */
+    set halffloatle(value: number);
+    /** Write a 16-bit float (little-endian). */
+    set halfle(value: number);
+    /** Write a 16-bit float (big-endian). */
+    set halffloatbe(value: number);
+    /** Write a 16-bit float (big-endian). */
+    set halfbe(value: number);
+    /** Write a 64-bit float. */
     set doublefloat(value: number);
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a 64-bit float. */
     set dfloat(value: number);
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    set dfloatbe(value: number);
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    set doublefloatbe(value: number);
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    set dfloatle(value: number);
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a 64-bit float (little-endian). */
     set doublefloatle(value: number);
+    /** Write a 64-bit float (little-endian). */
+    set dfloatle(value: number);
+    /** Write a 64-bit float (big-endian). */
+    set doublefloatbe(value: number);
+    /** Write a 64-bit float (big-endian). */
+    set dfloatbe(value: number);
+    /** Write 1 signed bit. */
+    set bit1(value: number);
+    /** Write 1 unsigned bit. */
+    set ubit1(value: number);
+    /** Write 1 signed bit (little-endian). */
+    set bit1le(value: number);
+    /** Write 1 unsigned bit (little-endian). */
+    set ubit1le(value: number);
+    /** Write 1 signed bit (big-endian). */
+    set bit1be(value: number);
+    /** Write 1 unsigned bit (big-endian). */
+    set ubit1be(value: number);
+    /** Write 2 signed bits. */
+    set bit2(value: number);
+    /** Write 2 unsigned bits. */
+    set ubit2(value: number);
+    /** Write 2 signed bits (little-endian). */
+    set bit2le(value: number);
+    /** Write 2 unsigned bits (little-endian). */
+    set ubit2le(value: number);
+    /** Write 2 signed bits (big-endian). */
+    set bit2be(value: number);
+    /** Write 2 unsigned bits (big-endian). */
+    set ubit2be(value: number);
+    /** Write 3 signed bits. */
+    set bit3(value: number);
+    /** Write 3 unsigned bits. */
+    set ubit3(value: number);
+    /** Write 3 signed bits (little-endian). */
+    set bit3le(value: number);
+    /** Write 3 unsigned bits (little-endian). */
+    set ubit3le(value: number);
+    /** Write 3 signed bits (big-endian). */
+    set bit3be(value: number);
+    /** Write 3 unsigned bits (big-endian). */
+    set ubit3be(value: number);
+    /** Write 4 signed bits. */
+    set bit4(value: number);
+    /** Write 4 unsigned bits. */
+    set ubit4(value: number);
+    /** Write 4 signed bits (little-endian). */
+    set bit4le(value: number);
+    /** Write 4 unsigned bits (little-endian). */
+    set ubit4le(value: number);
+    /** Write 4 signed bits (big-endian). */
+    set bit4be(value: number);
+    /** Write 4 unsigned bits (big-endian). */
+    set ubit4be(value: number);
+    /** Write 5 signed bits. */
+    set bit5(value: number);
+    /** Write 5 unsigned bits. */
+    set ubit5(value: number);
+    /** Write 5 signed bits (little-endian). */
+    set bit5le(value: number);
+    /** Write 5 unsigned bits (little-endian). */
+    set ubit5le(value: number);
+    /** Write 5 signed bits (big-endian). */
+    set bit5be(value: number);
+    /** Write 5 unsigned bits (big-endian). */
+    set ubit5be(value: number);
+    /** Write 6 signed bits. */
+    set bit6(value: number);
+    /** Write 6 unsigned bits. */
+    set ubit6(value: number);
+    /** Write 6 signed bits (little-endian). */
+    set bit6le(value: number);
+    /** Write 6 unsigned bits (little-endian). */
+    set ubit6le(value: number);
+    /** Write 6 signed bits (big-endian). */
+    set bit6be(value: number);
+    /** Write 6 unsigned bits (big-endian). */
+    set ubit6be(value: number);
+    /** Write 7 signed bits. */
+    set bit7(value: number);
+    /** Write 7 unsigned bits. */
+    set ubit7(value: number);
+    /** Write 7 signed bits (little-endian). */
+    set bit7le(value: number);
+    /** Write 7 unsigned bits (little-endian). */
+    set ubit7le(value: number);
+    /** Write 7 signed bits (big-endian). */
+    set bit7be(value: number);
+    /** Write 7 unsigned bits (big-endian). */
+    set ubit7be(value: number);
+    /** Write 8 signed bits. */
+    set bit8(value: number);
+    /** Write 8 unsigned bits. */
+    set ubit8(value: number);
+    /** Write 8 signed bits (little-endian). */
+    set bit8le(value: number);
+    /** Write 8 unsigned bits (little-endian). */
+    set ubit8le(value: number);
+    /** Write 8 signed bits (big-endian). */
+    set bit8be(value: number);
+    /** Write 8 unsigned bits (big-endian). */
+    set ubit8be(value: number);
+    /** Write 9 signed bits. */
+    set bit9(value: number);
+    /** Write 9 unsigned bits. */
+    set ubit9(value: number);
+    /** Write 9 signed bits (little-endian). */
+    set bit9le(value: number);
+    /** Write 9 unsigned bits (little-endian). */
+    set ubit9le(value: number);
+    /** Write 9 signed bits (big-endian). */
+    set bit9be(value: number);
+    /** Write 9 unsigned bits (big-endian). */
+    set ubit9be(value: number);
+    /** Write 10 signed bits. */
+    set bit10(value: number);
+    /** Write 10 unsigned bits. */
+    set ubit10(value: number);
+    /** Write 10 signed bits (little-endian). */
+    set bit10le(value: number);
+    /** Write 10 unsigned bits (little-endian). */
+    set ubit10le(value: number);
+    /** Write 10 signed bits (big-endian). */
+    set bit10be(value: number);
+    /** Write 10 unsigned bits (big-endian). */
+    set ubit10be(value: number);
+    /** Write 11 signed bits. */
+    set bit11(value: number);
+    /** Write 11 unsigned bits. */
+    set ubit11(value: number);
+    /** Write 11 signed bits (little-endian). */
+    set bit11le(value: number);
+    /** Write 11 unsigned bits (little-endian). */
+    set ubit11le(value: number);
+    /** Write 11 signed bits (big-endian). */
+    set bit11be(value: number);
+    /** Write 11 unsigned bits (big-endian). */
+    set ubit11be(value: number);
+    /** Write 12 signed bits. */
+    set bit12(value: number);
+    /** Write 12 unsigned bits. */
+    set ubit12(value: number);
+    /** Write 12 signed bits (little-endian). */
+    set bit12le(value: number);
+    /** Write 12 unsigned bits (little-endian). */
+    set ubit12le(value: number);
+    /** Write 12 signed bits (big-endian). */
+    set bit12be(value: number);
+    /** Write 12 unsigned bits (big-endian). */
+    set ubit12be(value: number);
+    /** Write 13 signed bits. */
+    set bit13(value: number);
+    /** Write 13 unsigned bits. */
+    set ubit13(value: number);
+    /** Write 13 signed bits (little-endian). */
+    set bit13le(value: number);
+    /** Write 13 unsigned bits (little-endian). */
+    set ubit13le(value: number);
+    /** Write 13 signed bits (big-endian). */
+    set bit13be(value: number);
+    /** Write 13 unsigned bits (big-endian). */
+    set ubit13be(value: number);
+    /** Write 14 signed bits. */
+    set bit14(value: number);
+    /** Write 14 unsigned bits. */
+    set ubit14(value: number);
+    /** Write 14 signed bits (little-endian). */
+    set bit14le(value: number);
+    /** Write 14 unsigned bits (little-endian). */
+    set ubit14le(value: number);
+    /** Write 14 signed bits (big-endian). */
+    set bit14be(value: number);
+    /** Write 14 unsigned bits (big-endian). */
+    set ubit14be(value: number);
+    /** Write 15 signed bits. */
+    set bit15(value: number);
+    /** Write 15 unsigned bits. */
+    set ubit15(value: number);
+    /** Write 15 signed bits (little-endian). */
+    set bit15le(value: number);
+    /** Write 15 unsigned bits (little-endian). */
+    set ubit15le(value: number);
+    /** Write 15 signed bits (big-endian). */
+    set bit15be(value: number);
+    /** Write 15 unsigned bits (big-endian). */
+    set ubit15be(value: number);
+    /** Write 16 signed bits. */
+    set bit16(value: number);
+    /** Write 16 unsigned bits. */
+    set ubit16(value: number);
+    /** Write 16 signed bits (little-endian). */
+    set bit16le(value: number);
+    /** Write 16 unsigned bits (little-endian). */
+    set ubit16le(value: number);
+    /** Write 16 signed bits (big-endian). */
+    set bit16be(value: number);
+    /** Write 16 unsigned bits (big-endian). */
+    set ubit16be(value: number);
+    /** Write 17 signed bits. */
+    set bit17(value: number);
+    /** Write 17 unsigned bits. */
+    set ubit17(value: number);
+    /** Write 17 signed bits (little-endian). */
+    set bit17le(value: number);
+    /** Write 17 unsigned bits (little-endian). */
+    set ubit17le(value: number);
+    /** Write 17 signed bits (big-endian). */
+    set bit17be(value: number);
+    /** Write 17 unsigned bits (big-endian). */
+    set ubit17be(value: number);
+    /** Write 18 signed bits. */
+    set bit18(value: number);
+    /** Write 18 unsigned bits. */
+    set ubit18(value: number);
+    /** Write 18 signed bits (little-endian). */
+    set bit18le(value: number);
+    /** Write 18 unsigned bits (little-endian). */
+    set ubit18le(value: number);
+    /** Write 18 signed bits (big-endian). */
+    set bit18be(value: number);
+    /** Write 18 unsigned bits (big-endian). */
+    set ubit18be(value: number);
+    /** Write 19 signed bits. */
+    set bit19(value: number);
+    /** Write 19 unsigned bits. */
+    set ubit19(value: number);
+    /** Write 19 signed bits (little-endian). */
+    set bit19le(value: number);
+    /** Write 19 unsigned bits (little-endian). */
+    set ubit19le(value: number);
+    /** Write 19 signed bits (big-endian). */
+    set bit19be(value: number);
+    /** Write 19 unsigned bits (big-endian). */
+    set ubit19be(value: number);
+    /** Write 20 signed bits. */
+    set bit20(value: number);
+    /** Write 20 unsigned bits. */
+    set ubit20(value: number);
+    /** Write 20 signed bits (little-endian). */
+    set bit20le(value: number);
+    /** Write 20 unsigned bits (little-endian). */
+    set ubit20le(value: number);
+    /** Write 20 signed bits (big-endian). */
+    set bit20be(value: number);
+    /** Write 20 unsigned bits (big-endian). */
+    set ubit20be(value: number);
+    /** Write 21 signed bits. */
+    set bit21(value: number);
+    /** Write 21 unsigned bits. */
+    set ubit21(value: number);
+    /** Write 21 signed bits (little-endian). */
+    set bit21le(value: number);
+    /** Write 21 unsigned bits (little-endian). */
+    set ubit21le(value: number);
+    /** Write 21 signed bits (big-endian). */
+    set bit21be(value: number);
+    /** Write 21 unsigned bits (big-endian). */
+    set ubit21be(value: number);
+    /** Write 22 signed bits. */
+    set bit22(value: number);
+    /** Write 22 unsigned bits. */
+    set ubit22(value: number);
+    /** Write 22 signed bits (little-endian). */
+    set bit22le(value: number);
+    /** Write 22 unsigned bits (little-endian). */
+    set ubit22le(value: number);
+    /** Write 22 signed bits (big-endian). */
+    set bit22be(value: number);
+    /** Write 22 unsigned bits (big-endian). */
+    set ubit22be(value: number);
+    /** Write 23 signed bits. */
+    set bit23(value: number);
+    /** Write 23 unsigned bits. */
+    set ubit23(value: number);
+    /** Write 23 signed bits (little-endian). */
+    set bit23le(value: number);
+    /** Write 23 unsigned bits (little-endian). */
+    set ubit23le(value: number);
+    /** Write 23 signed bits (big-endian). */
+    set bit23be(value: number);
+    /** Write 23 unsigned bits (big-endian). */
+    set ubit23be(value: number);
+    /** Write 24 signed bits. */
+    set bit24(value: number);
+    /** Write 24 unsigned bits. */
+    set ubit24(value: number);
+    /** Write 24 signed bits (little-endian). */
+    set bit24le(value: number);
+    /** Write 24 unsigned bits (little-endian). */
+    set ubit24le(value: number);
+    /** Write 24 signed bits (big-endian). */
+    set bit24be(value: number);
+    /** Write 24 unsigned bits (big-endian). */
+    set ubit24be(value: number);
+    /** Write 25 signed bits. */
+    set bit25(value: number);
+    /** Write 25 unsigned bits. */
+    set ubit25(value: number);
+    /** Write 25 signed bits (little-endian). */
+    set bit25le(value: number);
+    /** Write 25 unsigned bits (little-endian). */
+    set ubit25le(value: number);
+    /** Write 25 signed bits (big-endian). */
+    set bit25be(value: number);
+    /** Write 25 unsigned bits (big-endian). */
+    set ubit25be(value: number);
+    /** Write 26 signed bits. */
+    set bit26(value: number);
+    /** Write 26 unsigned bits. */
+    set ubit26(value: number);
+    /** Write 26 signed bits (little-endian). */
+    set bit26le(value: number);
+    /** Write 26 unsigned bits (little-endian). */
+    set ubit26le(value: number);
+    /** Write 26 signed bits (big-endian). */
+    set bit26be(value: number);
+    /** Write 26 unsigned bits (big-endian). */
+    set ubit26be(value: number);
+    /** Write 27 signed bits. */
+    set bit27(value: number);
+    /** Write 27 unsigned bits. */
+    set ubit27(value: number);
+    /** Write 27 signed bits (little-endian). */
+    set bit27le(value: number);
+    /** Write 27 unsigned bits (little-endian). */
+    set ubit27le(value: number);
+    /** Write 27 signed bits (big-endian). */
+    set bit27be(value: number);
+    /** Write 27 unsigned bits (big-endian). */
+    set ubit27be(value: number);
+    /** Write 28 signed bits. */
+    set bit28(value: number);
+    /** Write 28 unsigned bits. */
+    set ubit28(value: number);
+    /** Write 28 signed bits (little-endian). */
+    set bit28le(value: number);
+    /** Write 28 unsigned bits (little-endian). */
+    set ubit28le(value: number);
+    /** Write 28 signed bits (big-endian). */
+    set bit28be(value: number);
+    /** Write 28 unsigned bits (big-endian). */
+    set ubit28be(value: number);
+    /** Write 29 signed bits. */
+    set bit29(value: number);
+    /** Write 29 unsigned bits. */
+    set ubit29(value: number);
+    /** Write 29 signed bits (little-endian). */
+    set bit29le(value: number);
+    /** Write 29 unsigned bits (little-endian). */
+    set ubit29le(value: number);
+    /** Write 29 signed bits (big-endian). */
+    set bit29be(value: number);
+    /** Write 29 unsigned bits (big-endian). */
+    set ubit29be(value: number);
+    /** Write 30 signed bits. */
+    set bit30(value: number);
+    /** Write 30 unsigned bits. */
+    set ubit30(value: number);
+    /** Write 30 signed bits (little-endian). */
+    set bit30le(value: number);
+    /** Write 30 unsigned bits (little-endian). */
+    set ubit30le(value: number);
+    /** Write 30 signed bits (big-endian). */
+    set bit30be(value: number);
+    /** Write 30 unsigned bits (big-endian). */
+    set ubit30be(value: number);
+    /** Write 31 signed bits. */
+    set bit31(value: number);
+    /** Write 31 unsigned bits. */
+    set ubit31(value: number);
+    /** Write 31 signed bits (little-endian). */
+    set bit31le(value: number);
+    /** Write 31 unsigned bits (little-endian). */
+    set ubit31le(value: number);
+    /** Write 31 signed bits (big-endian). */
+    set bit31be(value: number);
+    /** Write 31 unsigned bits (big-endian). */
+    set ubit31be(value: number);
+    /** Write 32 signed bits. */
+    set bit32(value: number);
+    /** Write 32 unsigned bits. */
+    set ubit32(value: number);
+    /** Write 32 signed bits (little-endian). */
+    set bit32le(value: number);
+    /** Write 32 unsigned bits (little-endian). */
+    set ubit32le(value: number);
+    /** Write 32 signed bits (big-endian). */
+    set bit32be(value: number);
+    /** Write 32 unsigned bits (big-endian). */
+    set ubit32be(value: number);
     /**
     * Writes string, use options object for different types.
     *
@@ -6824,1631 +2443,319 @@ declare class BiWriter<DataType, alwaysBigInt> extends BiBase<DataType, alwaysBi
     dwpstring4be(string: string): void;
 }
 
-type FileHandle = fs_promises.FileHandle;
 /**
- * Base class for BiReader and BiWriter
+ * @file Phase-2 engine brick: the byte-source abstraction.
+ *
+ * Part of the planned decomposition (see ./README.md). The two engine god-classes
+ * currently interleave three concerns: WHERE bytes live (memory vs. file), HOW the
+ * cursor moves, and HOW values are coded. `Source` isolates the first: a uniform
+ * async surface for reading/writing/growing a backing store, so `BiEngine` can be
+ * written once against this interface instead of branching on `isMemoryMode`
+ * everywhere (the pattern behind several v4 file-mode bugs).
  */
-declare class BiBaseAsync<DataType, alwaysBigInt> {
-    #private;
-    /**
-     * File System
-     */
-    static fs: typeof fs_promises;
-    /**
-     * Endianness of default read.
-     * @type {endian}
-     */
-    endian: endian;
-    /**
-     * Size in bytes of the current buffer.
-     */
-    size: number;
-    /**
-     * Size in bits of the current buffer.
-     */
-    bitSize: number;
-    /**
-     * Allows the buffer to extend reading or writing outside of current size
-     */
-    strict: boolean;
-    /**
-     * Console log a hexdump on error.
-     */
-    errorDump: boolean;
-    /**
-     * When the data buffer needs to be extended while strict mode is ``false``, this will be the amount it extends.
-     *
-     * Otherwise it extends just the amount of the next written value.
-     *
-     * This can greatly speed up data writes when large files are being written.
-     *
-     * NOTE: Using ``BiWriterAsync.get`` or ``BiWriterAsync.return`` will now remove all data after the current write position. Use ``BiWriterAsync.data`` to get the full buffer instead.
-     */
-    growthIncrement: number;
-    /**
-     * Open file handle
-     */
-    fd: FileHandle;
-    /**
-     * Current file path
-     */
-    filePath: string;
-    /**
-     * File write mode
-     */
-    fsMode: "r+" | "r";
-    /**
-     * The settings that used when using the .str getter / setter
-     */
-    strDefaults: stringOptions;
-    /**
-     * All int64 reads will return as bigint type
-     */
-    enforceBigInt: alwaysBigInt;
-    /**
-     * Not using a file reader.
-     */
-    isMemoryMode: boolean;
-    /**
-     * If data can not be written to the buffer.
-     */
-    readOnly: boolean;
-    /**
-     * Get the current buffer data.
-     *
-     * Use async {@link getData} while in file mode!
-     */
-    get data(): ReturnMapping<DataType>;
-    /**
-     * Get the current buffer data.
-     *
-     * For use in file mode!
-     */
-    getData(): Promise<ReturnMapping<DataType> | Buffer<ArrayBuffer>>;
-    /**
-     * Set the current buffer data.
-     */
-    set data(data: DataType);
-    /**
-     * If the buffer was extended and needs to be trimmed
-     */
-    wasExpanded: boolean;
-    /**
-     * Get the DataView of current buffer data.
-     */
-    get view(): DataView<ArrayBufferLike>;
-    /**
-     * array of loaded data chunks
-     * @type {ReturnMapping<DataType>[]}
-     */
-    chunks: ReturnMapping<DataType>[];
-    /**
-     * Promises for data chunks
-     */
-    chunkPromises: Promise<ReturnMapping<DataType>>[];
-    /**
-     * Edited data chunks
-     */
-    dirtyChunks: Set<number>;
-    /**
-     * The amount of data to "chunk" and read a time from the file
-     *
-     * When set to 0, reads whole file at once.
-     */
-    windowSize: number;
-    /**
-     * Data is finished loading
-     */
-    isFullyLoaded: boolean;
-    /**
-     * Array of all chunks to quickly load all parts
-     */
-    loadAllPromise: Promise<void>;
-    constructor(input: DataType, options?: BiOptions<alwaysBigInt>);
-    /**
-     * Settings for when using .str
-     *
-     * @param {stringOptions} settings options to use with .str
-     */
-    set strSettings(settings: stringOptions);
-    /**
-     * Checks if obj is an Uint8Array or a Buffer
-     */
-    isBufferOrUint8Array(obj: any): obj is Buffer | Uint8Array;
-    /**
-     * Checks if obj is a Buffer
-     */
-    isBuffer(obj: any): obj is Buffer;
-    /**
-     * Checks if obj is an Uint8Array
-     */
-    isUint8Array(obj: any): obj is Uint8Array;
-    /**
-     * Enables writing and expanding (changes strict AND readOnly)
-     *
-     * @param {boolean} mode - True to enable writing and expanding (changes strict AND readOnly)
-     */
-    writeMode(mode?: boolean): Promise<void>;
-    /**
-     * Opens the file in `file` mode. Must be run before reading or writing.
-     *
-     * Can be used to pass new data to a loaded class, shifting to memory mode.
-     */
-    open(data?: DataType): Promise<void>;
-    /**
-     * commit data and removes it.
-     */
-    close(): Promise<ReturnMapping<DataType>>;
-    /**
-     * Write data buffer back to file
-     */
-    commit(): Promise<void>;
-    /**
-     * Write data buffer back to file
-     */
+interface Source {
+    /** Current size in bytes. */
+    readonly size: number;
+    /** Whether writes are permitted. */
+    readonly readOnly: boolean;
+    /** Read exactly `length` bytes at absolute `offset` (no cursor involved). */
+    read(offset: number, length: number): Promise<Uint8Array>;
+    /** Write `data` at absolute `offset` (no cursor involved). */
+    write(offset: number, data: Uint8Array): Promise<void>;
+    /** Grow or shrink the backing store to exactly `size` bytes. */
+    resize(size: number): Promise<void>;
+    /** Flush any buffered writes to the backing store. */
     flush(): Promise<void>;
-    /**
-     * Renames the file you are working on.
-     *
-     * Must be full file path and file name.
-     *
-     * Keeps write / read position.
-     *
-     * Note: This is permanent and can't be undone.
-     *
-     * @param {string} newFilePath - New full file path and name.
-     */
-    renameFile(newFilePath: string): Promise<void>;
-    /**
-     * Deletes the working file.
-     *
-     * Note: This is permanent and can't be undone.
-     *
-     * It doesn't send the file to the recycling bin for recovery.
-     */
-    deleteFile(): Promise<void>;
-    /**
-     *
-     * Change endian, defaults to little.
-     *
-     * Can be changed at any time, doesn't loose position.
-     *
-     * @param {endian} endian - endianness ``big`` or ``little``
-     */
-    endianness(endian: endian): void;
-    /**
-     * Sets endian to big.
-     */
-    bigEndian(): void;
-    /**
-     * Sets endian to big.
-     */
-    big(): void;
-    /**
-     * Sets endian to big.
-     */
-    be(): void;
-    /**
-     * Sets endian to little.
-     */
-    littleEndian(): void;
-    /**
-     * Sets endian to little.
-     */
-    little(): void;
-    /**
-     * Sets endian to little.
-     */
-    le(): void;
-    /**
-     * Size in bytes of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get length(): number;
-    /**
-     * Size in bytes of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get len(): number;
-    /**
-     * Size in bits of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get sizeBits(): number;
-    /**
-     * Size in bytes of the current buffer.
-     *
-     *  @returns {number} size
-     */
-    get fileSize(): number;
-    /**
-     * Size in bytes of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get FileSize(): number;
-    /**
-     * Size in bits of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get lengthBits(): number;
-    /**
-     * Size in bits of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get fileBitSize(): number;
-    /**
-     * Size in bytes of the current buffer.
-     *
-     *  @returns {number} size
-     */
-    get fileSizeBits(): number;
-    /**
-     * Size in bits of the current buffer.
-     *
-     * @returns {number} size
-     */
-    get lenBits(): number;
-    /**
-     * Get the current byte position.
-     *
-     * @returns {number} current byte position
-     */
+    /** Release resources (close file handle, drop caches). Idempotent. */
+    close(): Promise<void>;
+}
+
+type Endian = 'little' | 'big';
+interface BiEngineOptions {
+    endianness?: Endian;
+    enforceBigInt?: boolean;
+    strict?: boolean;
+    readOnly?: boolean;
+    growthIncrement?: number;
+    windowSize?: number;
+    byteOffset?: number;
+    bitOffset?: number;
+}
+declare class BiEngine<alwaysBigInt extends boolean = false> {
+    #private;
+    /** File system (fs/promises), injected by the entry point for file mode. */
+    static fs: typeof fs_promises;
+    endian: Endian;
+    enforceBigInt: boolean;
+    strict: boolean;
+    readOnly: boolean;
+    growthIncrement: number;
+    windowSize: number;
+    filePath: string | null;
+    errorDump: boolean;
+    strDefaults: stringOptions;
+    constructor(input: string | Uint8Array, options?: BiEngineOptions);
+    get isMemoryMode(): boolean;
+    /** The live Source (throws if not yet opened). */
+    get source(): Source;
+    /** Open the source. Optionally swap to a new in-memory buffer. */
+    open(data?: Uint8Array): Promise<void>;
+    get size(): number;
     get offset(): number;
-    /**
-     * Get the current byte position.
-     *
-     * @returns {number} current byte position
-     */
-    get getOffset(): number;
-    /**
-     * Get the current byte position.
-     *
-     * @returns {number} current byte position
-     */
-    get tell(): number;
-    /**
-     * Get the current byte position.
-     *
-     * @returns {number} current byte position
-     */
-    get FTell(): number;
-    /**
-     * Get the current byte position;
-     *
-     * @returns {number} current byte position
-     */
-    get saveOffset(): number;
-    /**
-     * Get the current byte position;
-     *
-     * @returns {number} current byte position
-     */
-    get off(): number;
-    /**
-     * Get the current byte position;
-     *
-     * @returns {number} current byte position
-     */
-    get byteOffset(): number;
-    /**
-     * Set the current byte position.
-     *
-     * same as {@link goto}
-     */
-    setOffset(value: number): Promise<void>;
-    /**
-     * Set the current byte position.
-     *
-     * same as {@link goto}
-     */
-    setByteOffset(value: number): Promise<void>;
-    /**
-     * Get the current bit position.
-     *
-     * @returns {number} current bit position
-     */
-    get bitOffset(): number;
-    /**
-     * Get the current bit position.
-     *
-     * @returns {number} current bit position
-     */
-    get offsetBits(): number;
-    /**
-     * Get the current bit position.
-     *
-     * @returns {number} current bit position
-     */
-    get getBitOffset(): number;
-    /**
-     * Get the current bit position.
-     *
-     * @returns {number} current bit position
-     */
-    get saveBitOffset(): number;
-    /**
-     * Get the current bit position.
-     *
-     * @returns {number} current bit position
-     */
-    get FTellBits(): number;
-    /**
-     * Get the current bit position (0-7).
-     *
-     * @returns {number} current bit position
-     */
-    get tellBits(): number;
-    /**
-     * Get the current bit position.
-     *
-     * @returns {number} current bit position
-     */
-    get offBits(): number;
-    /**
-     * Set the current bit position.
-     */
-    setOffsetBits(value: number): Promise<void>;
-    /**
-     * Set the current bit position.
-     */
-    setBitOffset(value: number): Promise<void>;
-    /**
-     * Get the current bit position with in the current byte (0-7).
-     *
-     * @returns {number} current bit position
-     */
     get insetBit(): number;
-    /**
-     * Get the current bit position with in the current byte (0-7).
-     *
-     * @returns {number} current bit position
-     */
-    get saveInsetBit(): number;
-    /**
-     * Get the current bit position with in the current byte (0-7).
-     *
-     * @returns {number} current bit position
-     */
-    get inBit(): number;
-    /**
-     * Get the current bit position with in the current byte (0-7).
-     *
-     * @returns {number} current bit position
-     */
-    get bitTell(): number;
-    /**
-     * Get the current bit position with in the current byte (0-7).
-     *
-     * @returns {number} current bit position
-     */
-    get getInsetBit(): number;
-    /**
-     * Set the current bit position with in the current byte (0-7).
-     */
-    setInsetBit(value: number): Promise<void>;
-    /**
-     * Size in bytes of current read position to the end of the data.
-     *
-     * @returns {number} size
-     */
-    get remain(): number;
-    /**
-     * Size in bytes of current read position to the end of the data.
-     *
-     * @returns {number} size
-     */
-    get remainBytes(): number;
-    /**
-     * Size in bytes of current read position to the end of the data.
-     *
-     * @returns {number} size
-     */
-    get FEoF(): number;
-    /**
-     * Size in bits of current read position to the end of the data.
-     *
-     * @returns {number} size
-     */
-    get remainBits(): number;
-    /**
-     * Size in bits of current read position to the end of the data.
-     *
-     * @returns {number} size
-     */
-    get FEoFBits(): number;
-    /**
-     * Row line of the file (16 bytes per row).
-     *
-     * @returns {number} size
-     */
-    get getLine(): number;
-    /**
-     * Row line of the file (16 bytes per row).
-     *
-     * @returns {number} size
-     */
-    get row(): number;
-    /**
-     * Returns current data.
-     *
-     * Note: Will remove all data after current position if ``growthIncrement`` was set.
-     */
-    get(): Promise<ReturnMapping<DataType> | Buffer<ArrayBuffer>>;
-    /**
-     * Returns current data.
-     *
-     * Note: Will remove all data after current position if ``growthIncrement`` was set and you expanded data past the end once.
-     *
-     * Use ``.data`` instead if you want the full buffer data.
-     */
-    getFullBuffer(): Promise<ReturnMapping<DataType> | Buffer<ArrayBuffer>>;
-    /**
-     * Returns current data.
-     *
-     * Note: Will remove all data after current position if ``growthIncrement`` was set.
-     */
-    return(): Promise<ReturnMapping<DataType> | Buffer<ArrayBuffer>>;
-    /**
-     * Removes data.
-     *
-     * Commits any changes to file when editing a file.
-     */
-    end(): Promise<void>;
-    /**
-     * Removes data.
-     *
-     * Commits any changes to file when editing a file.
-     */
-    done(): Promise<void>;
-    /**
-     * Removes data.
-     *
-     * Commits any changes to file when editing a file.
-     */
-    finished(): Promise<void>;
-    /**
-    * Creates hex dump string. Will console log or return string if set in options.
-    *
-    * @param {object} options
-    * @param {hexdumpOptions?} options - hex dump options
-    * @param {hexdumpOptions["length"]} options.length - number of bytes to log, default ``192`` or end of data
-    * @param {hexdumpOptions["startByte"]} options.startByte - byte to start dump (default ``0``)
-    * @param {hexdumpOptions["suppressUnicode"]} options.suppressUnicode - Suppress unicode character preview for even columns.
-    * @param {hexdumpOptions["returnString"]} options.returnString - Returns the hex dump string instead of logging it.
-    */
-    hexdump(options?: hexdumpOptions): Promise<string>;
-    /**
-     * Turn hexdump on error off (default on).
-     */
-    errorDumpOff(): void;
-    /**
-     * Turn hexdump on error on (default on).
-     */
-    errorDumpOn(): void;
-    /**
-     * Disallows extending data if position is outside of max size.
-     */
-    restrict(): void;
-    /**
-     * Allows extending data if position is outside of max size.
-     */
-    unrestrict(): void;
-    /**
-     * Searches for position of array of byte values from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {Uint8Array | Buffer | Array<number>} bytesToFind
-     */
-    findBytes(bytesToFind: Uint8Array | Buffer | Array<number>): Promise<number>;
-    /**
-     * Searches for byte position of string from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {string} string - String to search for.
-     * @param {1|2|4} bytesPerChar - how many bytes each character should take up
-     */
-    findString(string: string, bytesPerChar?: number): Promise<number>;
-    /**
-     * Searches for byte value (can be signed or unsigned) position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findByte(value: number, unsigned?: boolean, endian?: endian): Promise<number>;
-    /**
-     * Searches for short value (can be signed or unsigned) position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findShort(value: number, unsigned?: boolean, endian?: endian): Promise<number>;
-    /**
-     * Searches for integer value (can be signed or unsigned) position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findInt(value: number, unsigned?: boolean, endian?: endian): Promise<number>;
-    /**
-     * Searches for 64 bit value (can be signed or unsigned) position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {BigValue} value - Number to search for.
-     * @param {boolean} unsigned - If the number is unsigned (default true)
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findInt64(value: BigValue, unsigned?: boolean, endian?: endian): Promise<number>;
-    /**
-     * Searches for half float value position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findHalfFloat(value: number, endian?: endian): Promise<number>;
-    /**
-     * Searches for float value position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findFloat(value: number, endian?: endian): Promise<number>;
-    /**
-     * Searches for double float value position from current read position.
-     *
-     * Returns -1 if not found.
-     *
-     * Does not change current read position.
-     *
-     * @param {number} value - Number to search for.
-     * @param {endian} endian - endianness of value (default set endian).
-     */
-    findDoubleFloat(value: number, endian?: endian): Promise<number>;
-    /**
-     * Aligns current byte position.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} number - Byte to align
-     */
-    align(number: number): Promise<void>;
-    /**
-     * Reverse aligns current byte position.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} number - Byte to align
-     */
-    alignRev(number: number): Promise<void>;
-    /**
-     * Offset current byte or bit position.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} bytes - Bytes to skip
-     * @param {number} bits - Bits to skip
-     */
-    skip(bytes?: number, bits?: number): Promise<void>;
-    /**
-    * Offset current byte or bit position.
-    *
-    * Note: Will extend array if strict mode is off and outside of max size.
-    *
-    * @param {number} bytes - Bytes to skip
-    * @param {number?} bits - Bits to skip
-    */
-    jump(bytes: number, bits?: number): Promise<void>;
-    /**
-     * Change position directly to address.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} byte - byte to set to
-     * @param {number?} bit - bit to set to
-     */
-    FSeek(byte: number, bit?: number): Promise<void>;
-    /**
-     * Offset current byte or bit position.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} bytes - Bytes to skip
-     * @param {number?} bits - Bits to skip
-     */
-    seek(bytes: number, bits?: number): Promise<void>;
-    /**
-     * Change position directly to address.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} byte - byte to set to
-     * @param {number} bit - bit to set to
-     */
-    goto(byte?: number, bit?: number): Promise<void>;
-    /**
-     * Change position directly to address.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} byte - byte to set to
-     * @param {number?} bit - bit to set to
-     */
-    pointer(byte: number, bit?: number): Promise<void>;
-    /**
-     * Change position directly to address.
-     *
-     * Note: Will extend array if strict mode is off and outside of max size.
-     *
-     * @param {number} byte - byte to set to
-     * @param {number?} bit - bit to set to
-     */
-    warp(byte: number, bit?: number): Promise<void>;
-    /**
-     * Set byte and bit position to start of data.
-     */
-    rewind(): void;
-    /**
-     * Set byte and bit position to start of data.
-     */
-    gotoStart(): void;
-    /**
-     * Set current byte and bit position to end of data.
-     */
-    last(): void;
-    /**
-     * Set current byte and bit position to end of data.
-     */
-    gotoEnd(): void;
-    /**
-     * Set byte and bit position to start of data.
-     */
-    EoF(): void;
-    /**
-     * Deletes part of data from start to current byte position unless supplied, returns removed.
-     *
-     * Note: Errors in strict mode.
-     *
-     * @param {number} startOffset - Start location (default 0)
-     * @param {number} endOffset - End location (default current position)
-     * @param {boolean} consume - Move position to end of removed data (default false)
-     */
-    delete(startOffset?: number, endOffset?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
-    /**
-     * Deletes part of data from current byte position to end, returns removed.
-     *
-     * Note: Errors in strict mode.
-     */
-    clip(): Promise<ReturnMapping<DataType>>;
-    /**
-     * Deletes part of data from current byte position to end, returns removed.
-     *
-     * Note: Errors in strict mode.
-     */
-    trim(): Promise<ReturnMapping<DataType>>;
-    /**
-     * Deletes part of data from current byte position to supplied length, returns removed.
-     *
-     * Note: Errors in strict mode.
-     *
-     * @param {number} length - Length of data in bytes to remove
-     * @param {boolean} consume - Move position to end of removed data (default false)
-     */
-    crop(length?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
-    /**
-     * Deletes part of data from current position to supplied length, returns removed.
-     *
-     * Note: Only works in strict mode.
-     *
-     * @param {number} length - Length of data in bytes to remove
-     * @param {boolean} consume - Move position to end of removed data (default false)
-     */
-    drop(length?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
-    /**
-     * Replaces data in data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {Uint8Array | Buffer} data - ``Uint8Array`` or ``Buffer`` to replace in data
-     * @param {number} offset - Offset to add it at (defaults to current position)
-     * @param {boolean} consume - Move current byte position to end of data (default false)
-     */
-    replace(data: Uint8Array | Buffer, offset?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
-    /**
-     * Replaces data in data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {Uint8Array | Buffer} data - ``Uint8Array`` or ``Buffer`` to replace in data
-     * @param {number} offset - Offset to add it at (defaults to current position)
-     * @param {boolean} consume - Move current byte position to end of data (default false)
-     */
-    overwrite(data: Uint8Array | Buffer, offset?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
-    /**
-     * Returns part of data from current byte position to end of data unless supplied.
-     *
-     * @param {number} startOffset - Start location (default current position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move position to end of lifted data (default false)
-     * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     */
-    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<ReturnMapping<DataType>>;
-    /**
-     * Returns part of data from current byte position to end of data unless supplied.
-     *
-     * @param {number} startOffset - Start location (default current position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move position to end of lifted data (default false)
-     * @param {number} fillValue - Byte value to to fill returned data (does NOT fill unless supplied)
-     */
-    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<ReturnMapping<DataType>>;
-    /**
-     * Returns part of data from current byte position to end of data unless supplied.
-     *
-     * @param {number} startOffset - Start location (default current position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move position to end of lifted data (default false)
-     */
-    subarray(startOffset?: number, endOffset?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
-    /**
-     * Extract data from current position to length supplied.
-     *
-     * Note: Does not affect supplied data.
-     *
-     * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {boolean} consume - Moves offset to end of length
-     */
-    extract(length?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
-    /**
-     * Extract data from current position to length supplied.
-     *
-     * Note: Does not affect supplied data.
-     *
-     * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {boolean} consume - Moves offset to end of length
-     */
-    slice(length?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
-    /**
-     * Extract data from current position to length supplied.
-     *
-     * Note: Does not affect supplied data.
-     *
-     * @param {number} length - Length of data in bytes to copy from current offset
-     * @param {boolean} consume - Moves offset to end of length
-     */
-    wrap(length?: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
-    /**
-     * Inserts data into data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {number} offset - Byte position to add at (defaults to current position)
-     * @param {boolean} consume - Move current byte position to end of data (default true)
-     */
-    insert(data: ReturnMapping<DataType>, offset?: number, consume?: boolean): Promise<void>;
-    /**
-     * Inserts data into data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {number} offset - Byte position to add at (defaults to current position)
-     * @param {boolean} consume - Move current byte position to end of data (default true)
-     */
-    place(data: ReturnMapping<DataType>, offset?: number, consume?: boolean): Promise<void>;
-    /**
-     * Adds data to start of supplied data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current write position to end of data (default false)
-     */
-    unshift(data: ReturnMapping<DataType>, consume?: boolean): Promise<void>;
-    /**
-     * Adds data to start of supplied data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current write position to end of data (default false)
-     */
-    prepend(data: ReturnMapping<DataType>, consume?: boolean): Promise<void>;
-    /**
-     * Adds data to end of supplied data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current write position to end of data (default false)
-     */
-    push(data: ReturnMapping<DataType>, consume?: boolean): Promise<void>;
-    /**
-     * Adds data to end of supplied data.
-     *
-     * Note: Errors on strict mode.
-     *
-     * @param {ReturnMapping<DataType>} data - ``Uint8Array`` or ``Buffer`` to add to data
-     * @param {boolean} consume - Move current write position to end of data (default false)
-     */
-    append(data: ReturnMapping<DataType>, consume?: boolean): Promise<void>;
-    /**
-     * XOR data.
-     *
-     * @param {number|string|Uint8Array|Buffer} xorKey - Value, string or array to XOR
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    xor(xorKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): Promise<void>;
-    /**
-     * XOR data.
-     *
-     * @param {number|string|Uint8Array|Buffer} xorKey - Value, string or array to XOR
-     * @param {number} length - Length in bytes to XOR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    xorThis(xorKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): Promise<void>;
-    /**
-     * OR data
-     *
-     * @param {number|string|Uint8Array|Buffer} orKey - Value, string or array to OR
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    or(orKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): Promise<void>;
-    /**
-     * OR data.
-     *
-     * @param {number|string|Uint8Array|Buffer} orKey - Value, string or array to OR
-     * @param {number} length - Length in bytes to OR from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    orThis(orKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): Promise<void>;
-    /**
-     * AND data.
-     *
-     * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    and(andKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): Promise<void>;
-    /**
-     * AND data.
-     *
-     * @param {number|string|Uint8Array|Buffer} andKey - Value, string or array to AND
-     * @param {number} length - Length in bytes to AND from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    andThis(andKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): Promise<void>;
-    /**
-     * Add value to data.
-     *
-     * @param {number|string|Uint8Array|Buffer} addKey - Value, string or array to add to data
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    add(addKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): Promise<void>;
-    /**
-     * Add value to data.
-     *
-     * @param {number|string|Uint8Array|Buffer} addKey - Value, string or array to add to data
-     * @param {number} length - Length in bytes to add from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    addThis(addKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): Promise<void>;
-    /**
-     * Not data.
-     *
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    not(startOffset?: number, endOffset?: number, consume?: boolean): Promise<void>;
-    /**
-     * Not data.
-     *
-     * @param {number} length - Length in bytes to NOT from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    notThis(length?: number, consume?: boolean): Promise<void>;
-    /**
-     * Left shift data.
-     *
-     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to left shift data
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    lShift(shiftKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): Promise<void>;
-    /**
-     * Left shift data.
-     *
-     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to left shift data
-     * @param {number} length - Length in bytes to left shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    lShiftThis(shiftKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): Promise<void>;
-    /**
-     * Right shift data.
-     *
-     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to right shift data
-     * @param {number} startOffset - Start location (default current byte position)
-     * @param {number} endOffset - End location (default end of data)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    rShift(shiftKey: number | string | Uint8Array | Buffer, startOffset?: number, endOffset?: number, consume?: boolean): Promise<void>;
-    /**
-     * Right shift data.
-     *
-     * @param {number|string|Uint8Array|Buffer} shiftKey - Value, string or array to right shift data
-     * @param {number} length - Length in bytes to right shift from curent position (default 1 byte for value, length of string or array for Uint8Array or Buffer)
-     * @param {boolean} consume - Move current position to end of data (default false)
-     */
-    rShiftThis(shiftKey: number | string | Uint8Array | Buffer, length?: number, consume?: boolean): Promise<void>;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after read
-     */
-    readBit(bits?: number, unsigned?: boolean, endian?: endian, consume?: boolean): Promise<number>;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     */
-    readUBitBE(bits: number): Promise<number>;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     */
-    readUBitLE(bits: number): Promise<number>;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     */
-    readBitBE(bits: number, unsigned?: boolean): Promise<number>;
-    /**
-     * Bit field reader.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @param {number} bits - bits to read
-     * @param {boolean} unsigned - if the value is unsigned
-     */
-    readBitLE(bits: number, unsigned?: boolean): Promise<number>;
-    /**
-     *
-     * Write bits, must have at least value and number of bits.
-     *
-     * ``Note``: When returning to a byte write, remaining bits are skipped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - number of bits to write
-     * @param {boolean} unsigned - if value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after write
-     */
-    writeBit(value: number, bits: number, unsigned?: boolean, endian?: endian, consume?: boolean): Promise<void>;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @returns number
-     */
-    writeUBitBE(value: number, bits: number): Promise<void>;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @returns number
-     */
-    writeUBitLE(value: number, bits: number): Promise<void>;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns number
-     */
-    writeBitBE(value: number, bits: number, unsigned?: boolean): Promise<void>;
-    /**
-     * Bit field writer.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     * @param {number} bits - bits to write
-     * @param {boolean} unsigned - if the value is unsigned
-     * @returns number
-     */
-    writeBitLE(value: number, bits: number, unsigned?: boolean): Promise<void>;
-    /**
-     * Read byte.
-     *
-     * @param {boolean} unsigned - if the value is unsigned or not
-     * @param {boolean} consume - move offset after read
-     */
+    get bitOffset(): number;
+    get remaining(): number;
+    /** Run `fn` with exclusive access to the cursor. Reentrant. Opens the source first. */
+    runExclusive<T>(fn: () => Promise<T> | T): Promise<T>;
     readByte(unsigned?: boolean, consume?: boolean): Promise<number>;
-    /**
-     * Read unsigned byte.
-     *
-     * @param {boolean} consume - move offset after read
-     */
-    readUByte(consume?: boolean): Promise<number>;
-    /**
-     * Read multiple bytes.
-     *
-     * @param {number} amount - amount of bytes to read
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @param {boolean} consume - move offset after read
-     */
-    readBytes(amount: number, unsigned?: boolean, consume?: boolean): Promise<Array<number>>;
-    /**
-     * Read multiple unsigned bytes.
-     *
-     * @param {number} amount - amount of bytes to read
-     * @param {boolean} consume - move offset after read
-     */
-    readUBytes(amount: number, consume?: boolean): Promise<ReturnMapping<DataType>>;
-    /**
-     * Write byte.
-     *
-     * @param {number} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {boolean} consume - move offset after write
-     */
+    readInt16(unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<number>;
+    readInt32(unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<number>;
+    readInt64(unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<ReturnBigValueMapping<alwaysBigInt>>;
+    readHalfFloat(endian?: Endian, consume?: boolean): Promise<number>;
+    readFloat(endian?: Endian, consume?: boolean): Promise<number>;
+    readDoubleFloat(endian?: Endian, consume?: boolean): Promise<number>;
     writeByte(value: number, unsigned?: boolean, consume?: boolean): Promise<void>;
-    /**
-     * Write multiple bytes.
-     *
-     * @param {Array<number> | Buffer | Uint8Array} values - array of values as int
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {boolean} consume - move offset after write
-     */
-    writeBytes(values: Array<number> | Buffer | Uint8Array, unsigned?: boolean, consume?: boolean): Promise<void>;
-    /**
-     * Write multiple unsigned bytes.
-     *
-     * @param {Array<number> | Buffer | Uint8Array} values - array of values as int
-     * @param {boolean} consume - move offset after write
-     */
-    writeUBytes(values: Array<number> | Buffer | Uint8Array, consume?: boolean): Promise<void>;
-    /**
-     * Write unsigned byte.
-     *
-     * @param {number} value - value as int
-     * @param {boolean} consume - move offset after write
-     */
-    writeUByte(value: number, consume?: boolean): Promise<void>;
-    /**
-     * Read short.
-     *
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after read
-     */
-    readInt16(unsigned?: boolean, endian?: endian, consume?: boolean): Promise<number>;
-    /**
-     * Read unsigned short.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    readUInt16(endian?: endian): Promise<number>;
-    /**
-     * Read unsigned short in little endian.
-     */
-    readUInt16LE(): Promise<number>;
-    /**
-     * Read unsigned short in big endian.
-     */
-    readUInt16BE(): Promise<number>;
-    /**
-     * Read signed short in little endian.
-     */
-    readInt16LE(): Promise<number>;
-    /**
-    * Read signed short in big endian.
-    */
-    readInt16BE(): Promise<number>;
-    /**
-     * Write int16.
-     *
-     * @param {number} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after write
-     */
-    writeInt16(value: number, unsigned?: boolean, endian?: endian, consume?: boolean): Promise<void>;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt16(value: number, endian?: endian): Promise<void>;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    writeUInt16BE(value: number): Promise<void>;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    writeUInt16LE(value: number): Promise<void>;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    writeInt16LE(value: number): Promise<void>;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    writeInt16BE(value: number): Promise<void>;
-    /**
-     * Read 16 bit float.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after read
-     */
-    readHalfFloat(endian?: endian, consume?: boolean): Promise<number>;
-    /**
-     * Read 16 bit float.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after read
-     */
-    readFloat16(endian?: endian, consume?: boolean): Promise<number>;
-    /**
-    * Read 16 bit float.
-    */
-    readHalfFloatBE(): Promise<number>;
-    /**
-    * Read 16 bit float.
-    */
-    readFloat16BE(): Promise<number>;
-    /**
-     * Read 16 bit float.
-     */
-    readHalfFloatLE(): Promise<number>;
-    /**
-     * Read 16 bit float.
-     */
-    readFloat16LE(): Promise<number>;
-    /**
-     * Writes 16 bit float.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after write
-     */
-    writeHalfFloat(value: number, endian?: endian, consume?: boolean): Promise<void>;
-    /**
-     * Writes 16 bit float.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after write
-     */
-    writeFloat16(value: number, endian?: endian, consume?: boolean): Promise<void>;
-    /**
-     * Writes 16 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeHalfFloatBE(value: number): Promise<void>;
-    /**
-     * Writes 16 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloat16BE(value: number): Promise<void>;
-    /**
-     * Writes 16 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeHalfFloatLE(value: number): Promise<void>;
-    /**
-     * Writes 16 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloat16LE(value: number): Promise<void>;
-    /**
-     * Read signed 32 bit integer.
-     */
-    readInt32(unsigned?: boolean, endian?: endian, consume?: boolean): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     */
-    readInt(endian?: endian): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     */
-    readInt32BE(): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     */
-    readInt32LE(): Promise<number>;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    readUInt32(endian?: endian): Promise<number>;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    readUInt(endian?: endian): Promise<number>;
-    /**
-     * Read unsigned 32 bit integer.
-     */
-    readUInt32BE(): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     */
-    readUInt32LE(): Promise<number>;
-    /**
-     * Write 32 bit integer.
-     *
-     * @param {number} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after write
-     */
-    writeInt32(value: number, unsigned?: boolean, endian?: endian, consume?: boolean): Promise<void>;
-    /**
-     * Write signed 32 bit integer.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeInt(value: number, endian?: endian): Promise<void>;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    writeInt32LE(value: number): Promise<void>;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    writeInt32BE(value: number): Promise<void>;
-    /**
-     * Write unsigned 32 bit integer.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt(value: number, endian?: endian): Promise<void>;
-    /**
-     * Write unsigned 32 bit integer.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt32(value: number, endian?: endian): Promise<void>;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    writeUInt32BE(value: number): Promise<void>;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    writeUInt32LE(value: number): Promise<void>;
-    /**
-     * Read 32 bit float.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after read
-     */
-    readFloat(endian?: endian, consume?: boolean): Promise<number>;
-    /**
-     * Read 32 bit float.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after read
-     */
-    readFloat32(endian?: endian, consume?: boolean): Promise<number>;
-    /**
-     * Read 32 bit float.
-     */
-    readFloatBE(): Promise<number>;
-    /**
-     * Read 32 bit float.
-     */
-    readFloat32BE(): Promise<number>;
-    /**
-     * Read 32 bit float.
-     */
-    readFloatLE(): Promise<number>;
-    /**
-     * Read 32 bit float.
-     */
-    readFloat32LE(): Promise<number>;
-    /**
-     * Write 32 bit float.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after write
-     */
-    writeFloat(value: number, endian?: endian, consume?: boolean): Promise<void>;
-    /**
-     * Write 32 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloatLE(value: number): Promise<void>;
-    /**
-     * Write 32 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloat32LE(value: number): Promise<void>;
-    /**
-     * Write 32 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloat32BE(value: number): Promise<void>;
-    /**
-     * Write 32 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloatBE(value: number): Promise<void>;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     *
-     * @param {boolean} unsigned - if value is unsigned or not
-     * @param {endian?} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after read
-     */
-    readInt64(unsigned?: boolean, endian?: endian, consume?: boolean): Promise<ReturnBigValueMapping<alwaysBigInt>>;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    readUInt64(): Promise<ReturnBigValueMapping<alwaysBigInt>>;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    readInt64BE(): Promise<ReturnBigValueMapping<alwaysBigInt>>;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    readInt64LE(): Promise<ReturnBigValueMapping<alwaysBigInt>>;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    readUInt64BE(): Promise<ReturnBigValueMapping<alwaysBigInt>>;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    readUInt64LE(): Promise<ReturnBigValueMapping<alwaysBigInt>>;
-    /**
-     * Write 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     * @param {boolean} unsigned - if the value is unsigned
-     * @param {endian} endian - ``big`` or ``little``
-     * @param {boolean} consume - move offset after write
-     */
-    writeInt64(value: BigValue, unsigned?: boolean, endian?: endian, consume?: boolean): Promise<void>;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeUInt64(value: BigValue, endian?: endian): Promise<void>;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeInt64LE(value: BigValue): Promise<void>;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeInt64BE(value: BigValue): Promise<void>;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeUInt64LE(value: BigValue): Promise<void>;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    writeUInt64BE(value: BigValue): Promise<void>;
-    /**
-     * Read 64 bit float.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    readDoubleFloat(endian?: endian, consume?: boolean): Promise<number>;
-    /**
-     * Read 64 bit float.
-     *
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    readFloat64(endian?: endian): Promise<number>;
-    /**
-     * Read 64 bit float.
-     */
-    readDoubleFloatBE(): Promise<number>;
-    /**
-     * Read 64 bit float.
-     */
-    readFloat64BE(): Promise<number>;
-    /**
-     * Read 64 bit float.
-     */
-    readDoubleFloatLE(): Promise<number>;
-    /**
-     * Read 64 bit float.
-     */
-    readFloat64LE(): Promise<number>;
-    /**
-     * Writes 64 bit float.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeDoubleFloat(value: number, endian?: endian, consume?: boolean): Promise<void>;
-    /**
-     * Writes 64 bit float.
-     *
-     * @param {number} value - value as int
-     * @param {endian} endian - ``big`` or ``little``
-     */
-    writeFloat64(value: number, endian?: endian): Promise<void>;
-    /**
-     * Writes 64 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeDoubleFloatBE(value: number): Promise<void>;
-    /**
-     * Writes 64 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloat64BE(value: number): Promise<void>;
-    /**
-     * Writes 64 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeDoubleFloatLE(value: number): Promise<void>;
-    /**
-     * Writes 64 bit float.
-     *
-     * @param {number} value - value as int
-     */
-    writeFloat64LE(value: number): Promise<void>;
-    /**
-    * Reads string, use options object for different types.
-    *
-    * @param {stringOptions} options
-    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
-    * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
-    * @param {stringOptions["lengthReadSize"]?} options.lengthReadSize - for pascal strings. 1, 2 or 4 byte length read size
-    * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal, double-wide-pascal and utf-16, utf-32
-    * @param {boolean} consume - move offset after read
-    */
+    writeInt16(value: number, unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<void>;
+    writeInt32(value: number, unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<void>;
+    writeInt64(value: number | bigint, unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<void>;
+    writeHalfFloat(value: number, endian?: Endian, consume?: boolean): Promise<void>;
+    writeFloat(value: number, endian?: Endian, consume?: boolean): Promise<void>;
+    writeDoubleFloat(value: number, endian?: Endian, consume?: boolean): Promise<void>;
+    readBit(bits: number, unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<number>;
+    writeBit(value: number, bits: number, unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<void>;
+    /** Move to an absolute byte/bit, enforcing bounds (strict throws, else grows). */
+    goto(byte?: number, bit?: number): Promise<void>;
+    /** Relative move by bytes/bits, enforcing bounds. */
+    skip(bytes?: number, bits?: number): Promise<void>;
+    rewind(): void;
+    last(): void;
+    align(n: number): Promise<void>;
+    readInt16At(offset: number, unsigned?: boolean, endian?: Endian): Promise<number>;
+    readUInt16At(offset: number, endian?: Endian): Promise<number>;
+    readInt32At(offset: number, unsigned?: boolean, endian?: Endian): Promise<number>;
+    readUInt32At(offset: number, endian?: Endian): Promise<number>;
+    readUInt8At(offset: number): Promise<number>;
+    writeInt16At(offset: number, value: number, unsigned?: boolean, endian?: Endian): Promise<void>;
+    writeInt32At(offset: number, value: number, unsigned?: boolean, endian?: Endian): Promise<void>;
+    /** Insert bytes at `offset`, growing the source. */
+    insert(data: Uint8Array, offset?: number, consume?: boolean): Promise<void>;
+    unshift(data: Uint8Array, consume?: boolean): Promise<void>;
+    prepend(data: Uint8Array, consume?: boolean): Promise<void>;
+    push(data: Uint8Array, consume?: boolean): Promise<void>;
+    append(data: Uint8Array, consume?: boolean): Promise<void>;
+    /** Delete [startOffset, endOffset), returning the removed bytes. */
+    delete(startOffset?: number, endOffset?: number, consume?: boolean): Promise<Uint8Array>;
+    clip(): Promise<Uint8Array>;
+    trim(): Promise<Uint8Array>;
+    crop(length?: number, consume?: boolean): Promise<Uint8Array>;
+    drop(length?: number, consume?: boolean): Promise<Uint8Array>;
+    /** Overwrite bytes at `offset` (grows if needed; does not shift the tail). */
+    replace(data: Uint8Array, offset?: number, consume?: boolean): Promise<void>;
+    overwrite(data: Uint8Array, offset?: number, consume?: boolean): Promise<void>;
+    /** Copy out [startOffset, endOffset); if `fillValue` given, overwrite that range with it. */
+    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<Uint8Array>;
+    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<Uint8Array>;
+    subarray(startOffset?: number, endOffset?: number, consume?: boolean): Promise<Uint8Array>;
+    extract(length?: number, consume?: boolean): Promise<Uint8Array>;
+    slice(length?: number, consume?: boolean): Promise<Uint8Array>;
+    wrap(length?: number, consume?: boolean): Promise<Uint8Array>;
+    /** Reads a string; batched - a single source read + synchronous decode. */
     readString(options?: stringOptions, consume?: boolean): Promise<string>;
-    /**
-    * Writes string, use options object for different types.
-    *
-    * @param {string} string - text string
-    * @param {stringOptions?} options
-    * @param {stringOptions["length"]?} options.length - for fixed length, non-terminate value utf strings
-    * @param {stringOptions["stringType"]?} options.stringType - utf-8, utf-16, utf-32, pascal, wide-pascal or double-wide-pascal
-    * @param {stringOptions["terminateValue"]?} options.terminateValue - only with stringType: "utf"
-    * @param {stringOptions["lengthWriteSize"]?} options.lengthWriteSize - for pascal strings. 1, 2 or 4 byte length write size
-    * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
-    * @param {stringOptions["endian"]?} options.endian - for wide-pascal, double-wide-pascal and utf-16, utf-32
-    * @param {boolean} consume - move offset after write
-    */
-    writeString(string: string, options?: stringOptions, consume?: boolean): Promise<void>;
+    /** Writes a string; batched - assembled in memory then one source write. */
+    writeString(str: string, options?: stringOptions, consume?: boolean): Promise<void>;
+    xor(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): Promise<void>;
+    or(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): Promise<void>;
+    and(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): Promise<void>;
+    add(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): Promise<void>;
+    not(start?: number, end?: number, consume?: boolean): Promise<void>;
+    lShift(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): Promise<void>;
+    rShift(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): Promise<void>;
+    xorThis(key: number | string | Uint8Array, length?: number, consume?: boolean): Promise<void>;
+    orThis(key: number | string | Uint8Array, length?: number, consume?: boolean): Promise<void>;
+    andThis(key: number | string | Uint8Array, length?: number, consume?: boolean): Promise<void>;
+    addThis(key: number | string | Uint8Array, length?: number, consume?: boolean): Promise<void>;
+    notThis(length?: number, consume?: boolean): Promise<void>;
+    lShiftThis(key: number | string | Uint8Array, length?: number, consume?: boolean): Promise<void>;
+    rShiftThis(key: number | string | Uint8Array, length?: number, consume?: boolean): Promise<void>;
+    findBytes(bytesToFind: Uint8Array | number[]): Promise<number>;
+    findString(str: string, bytesPerChar?: 1 | 2 | 4): Promise<number>;
+    findByte(value: number, unsigned?: boolean, endian?: Endian): Promise<number>;
+    findShort(value: number, unsigned?: boolean, endian?: Endian): Promise<number>;
+    findInt(value: number, unsigned?: boolean, endian?: Endian): Promise<number>;
+    readUByte(consume?: boolean): Promise<number>;
+    readUInt16(endian?: Endian): Promise<number>;
+    readUInt16LE(): Promise<number>;
+    readUInt16BE(): Promise<number>;
+    readInt16LE(): Promise<number>;
+    readInt16BE(): Promise<number>;
+    readInt(endian?: Endian): Promise<number>;
+    readUInt(endian?: Endian): Promise<number>;
+    readUInt32(endian?: Endian): Promise<number>;
+    readInt32LE(): Promise<number>;
+    readInt32BE(): Promise<number>;
+    readUInt32LE(): Promise<number>;
+    readUInt32BE(): Promise<number>;
+    readFloat32(endian?: Endian, consume?: boolean): Promise<number>;
+    readFloatLE(): Promise<number>;
+    readFloatBE(): Promise<number>;
+    readFloat32LE(): Promise<number>;
+    readFloat32BE(): Promise<number>;
+    readFloat16(endian?: Endian, consume?: boolean): Promise<number>;
+    readHalfFloatLE(): Promise<number>;
+    readHalfFloatBE(): Promise<number>;
+    readFloat16LE(): Promise<number>;
+    readFloat16BE(): Promise<number>;
+    readFloat64(endian?: Endian, consume?: boolean): Promise<number>;
+    readDoubleFloatLE(): Promise<number>;
+    readDoubleFloatBE(): Promise<number>;
+    readFloat64LE(): Promise<number>;
+    readFloat64BE(): Promise<number>;
+    readUInt64(): Promise<ReturnBigValueMapping<alwaysBigInt>>;
+    readInt64LE(): Promise<ReturnBigValueMapping<alwaysBigInt>>;
+    readInt64BE(): Promise<ReturnBigValueMapping<alwaysBigInt>>;
+    readUInt64LE(): Promise<ReturnBigValueMapping<alwaysBigInt>>;
+    readUInt64BE(): Promise<ReturnBigValueMapping<alwaysBigInt>>;
+    readUBitBE(bits: number): Promise<number>;
+    readUBitLE(bits: number): Promise<number>;
+    readBitBE(bits: number, unsigned?: boolean): Promise<number>;
+    readBitLE(bits: number, unsigned?: boolean): Promise<number>;
+    readBytes(amount: number, unsigned?: boolean, consume?: boolean): Promise<number[]>;
+    readUBytes(amount: number, consume?: boolean): Promise<Uint8Array>;
+    writeUInt16(value: number, endian?: Endian): Promise<void>;
+    writeUInt16LE(value: number): Promise<void>;
+    writeUInt16BE(value: number): Promise<void>;
+    writeInt16LE(value: number): Promise<void>;
+    writeInt16BE(value: number): Promise<void>;
+    writeInt(value: number, endian?: Endian): Promise<void>;
+    writeUInt(value: number, endian?: Endian): Promise<void>;
+    writeUInt32(value: number, endian?: Endian): Promise<void>;
+    writeInt32LE(value: number): Promise<void>;
+    writeInt32BE(value: number): Promise<void>;
+    writeUInt32LE(value: number): Promise<void>;
+    writeUInt32BE(value: number): Promise<void>;
+    writeFloat32(value: number, endian?: Endian, consume?: boolean): Promise<void>;
+    writeFloatLE(value: number): Promise<void>;
+    writeFloatBE(value: number): Promise<void>;
+    writeFloat32LE(value: number): Promise<void>;
+    writeFloat32BE(value: number): Promise<void>;
+    writeFloat16(value: number, endian?: Endian, consume?: boolean): Promise<void>;
+    writeHalfFloatLE(value: number): Promise<void>;
+    writeHalfFloatBE(value: number): Promise<void>;
+    writeFloat16LE(value: number): Promise<void>;
+    writeFloat16BE(value: number): Promise<void>;
+    writeFloat64(value: number, endian?: Endian, consume?: boolean): Promise<void>;
+    writeDoubleFloatLE(value: number): Promise<void>;
+    writeDoubleFloatBE(value: number): Promise<void>;
+    writeFloat64LE(value: number): Promise<void>;
+    writeFloat64BE(value: number): Promise<void>;
+    writeUInt64(value: number | bigint, endian?: Endian): Promise<void>;
+    writeInt64LE(value: number | bigint): Promise<void>;
+    writeInt64BE(value: number | bigint): Promise<void>;
+    writeUInt64LE(value: number | bigint): Promise<void>;
+    writeUInt64BE(value: number | bigint): Promise<void>;
+    writeUByte(value: number, consume?: boolean): Promise<void>;
+    writeUBitBE(value: number, bits: number): Promise<void>;
+    writeUBitLE(value: number, bits: number): Promise<void>;
+    writeBitBE(value: number, bits: number, unsigned?: boolean): Promise<void>;
+    writeBitLE(value: number, bits: number, unsigned?: boolean): Promise<void>;
+    writeBytes(values: number[] | Uint8Array, unsigned?: boolean, consume?: boolean): Promise<void>;
+    writeUBytes(values: number[] | Uint8Array, consume?: boolean): Promise<void>;
+    endianness(endian: Endian): void;
+    bigEndian(): void;
+    big(): void;
+    be(): void;
+    littleEndian(): void;
+    little(): void;
+    le(): void;
+    get bitSize(): number;
+    get length(): number;
+    get len(): number;
+    get fileSize(): number;
+    get FileSize(): number;
+    get lengthBits(): number;
+    get sizeBits(): number;
+    get fileBitSize(): number;
+    get fileSizeBits(): number;
+    get lenBits(): number;
+    get off(): number;
+    get getOffset(): number;
+    get tell(): number;
+    get FTell(): number;
+    get saveOffset(): number;
+    get byteOffset(): number;
+    setOffset(value: number): Promise<void>;
+    setByteOffset(value: number): Promise<void>;
+    get offsetBits(): number;
+    get getBitOffset(): number;
+    get saveBitOffset(): number;
+    get FTellBits(): number;
+    get tellBits(): number;
+    get offBits(): number;
+    setOffsetBits(value: number): Promise<void>;
+    setBitOffset(value: number): Promise<void>;
+    get getInsetBit(): number;
+    get saveInsetBit(): number;
+    get inBit(): number;
+    get bitTell(): number;
+    setInsetBit(value: number): Promise<void>;
+    get remain(): number;
+    get remainBytes(): number;
+    get FEoF(): number;
+    get remainBits(): number;
+    get FEoFBits(): number;
+    get getLine(): number;
+    get row(): number;
+    jump(bytes: number, bits?: number): Promise<void>;
+    seek(bytes: number, bits?: number): Promise<void>;
+    FSeek(byte: number, bit?: number): Promise<void>;
+    pointer(byte: number, bit?: number): Promise<void>;
+    warp(byte: number, bit?: number): Promise<void>;
+    gotoStart(): void;
+    gotoEnd(): void;
+    EoF(): void;
+    alignRev(number: number): Promise<void>;
+    isBufferOrUint8Array(obj: any): obj is Uint8Array;
+    isBuffer(obj: any): obj is Uint8Array;
+    isUint8Array(obj: any): boolean;
+    restrict(): void;
+    unrestrict(): void;
+    errorDumpOff(): void;
+    errorDumpOn(): void;
+    set strSettings(settings: stringOptions);
+    hexdump(options?: hexdumpOptions): Promise<void | string>;
+    readByteAt(offset: number, unsigned?: boolean): Promise<number>;
+    readBytesAt(offset: number, length: number): Promise<Uint8Array>;
+    readFloat32At(offset: number, endian?: Endian): Promise<number>;
+    readFloat64At(offset: number, endian?: Endian): Promise<number>;
+    readBigInt64At(offset: number, endian?: Endian): Promise<bigint>;
+    readBigUInt64At(offset: number, endian?: Endian): Promise<bigint>;
+    writeByteAt(offset: number, value: number, unsigned?: boolean): Promise<void>;
+    writeBytesAt(offset: number, data: Uint8Array): Promise<void>;
+    writeUInt16At(offset: number, value: number, endian?: Endian): Promise<void>;
+    writeUInt32At(offset: number, value: number, endian?: Endian): Promise<void>;
+    writeFloat32At(offset: number, value: number, endian?: Endian): Promise<void>;
+    writeFloat64At(offset: number, value: number, endian?: Endian): Promise<void>;
+    writeBigInt64At(offset: number, value: number | bigint, unsigned?: boolean, endian?: Endian): Promise<void>;
+    writeBigUInt64At(offset: number, value: number | bigint, endian?: Endian): Promise<void>;
+    /** In-memory buffer (memory mode); null in file mode - use get()/getData(). */
+    get data(): Uint8Array | null;
+    /** DataView over the in-memory buffer (memory mode only). */
+    get view(): DataView | null;
+    commit(): Promise<void>;
+    flush(): Promise<void>;
+    /** Returns the current data (trimmed to the write position if the buffer was expanded). */
+    get(): Promise<Uint8Array>;
+    getData(): Promise<Uint8Array>;
+    getFullBuffer(): Promise<Uint8Array>;
+    return(): Promise<Uint8Array>;
+    end(): Promise<Uint8Array | void>;
+    done(): Promise<Uint8Array | void>;
+    finished(): Promise<Uint8Array | void>;
+    close(): Promise<Uint8Array | void>;
+    /** Enable/disable writing + expanding (changes strict AND readOnly). */
+    writeMode(mode?: boolean): Promise<void>;
+    renameFile(newFilePath: string): Promise<void>;
+    deleteFile(): Promise<void>;
 }
 
 /**
@@ -8467,7 +2774,7 @@ declare class BiBaseAsync<DataType, alwaysBigInt> {
  *
  * @since 4.0
  */
-declare class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType, alwaysBigInt> {
+declare class BiReaderAsync<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiEngine<alwaysBigInt> {
     constructor(input: DataType, options?: BiOptions<alwaysBigInt>);
     /**
      * Creates and opens a new `BiReaderAsync`.
@@ -8485,7 +2792,7 @@ declare class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType
      *
      * @since 4.0
      */
-    static create<DataType, alwaysBigInt>(input: DataType, options?: BiOptions<alwaysBigInt>): Promise<BiReaderAsync<DataType, alwaysBigInt>>;
+    static create<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false>(input: DataType, options?: BiOptions<alwaysBigInt>): Promise<BiReaderAsync<DataType, alwaysBigInt>>;
     /**
      * Bit field reader.
      *
@@ -8545,2016 +2852,548 @@ declare class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType
      * @returns {Promise<number>}
      */
     bitle(bits: number, unsigned?: boolean): Promise<number>;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit1(): Promise<number>;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit1le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit1be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit1(): Promise<number>;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit1le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 1 bit.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit1be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit2(): Promise<number>;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit2le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit2be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit2(): Promise<number>;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit2le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 2 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit2be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit3(): Promise<number>;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit3le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit3be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit3(): Promise<number>;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit3le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 3 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit3be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit4(): Promise<number>;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit4le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit4be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit4(): Promise<number>;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit4le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 4 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit4be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit5(): Promise<number>;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit5le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit5be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit5(): Promise<number>;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit5le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 5 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit5be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit6(): Promise<number>;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit6le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit6be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit6(): Promise<number>;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit6le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 6 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit6be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit7(): Promise<number>;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit7le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit7be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit7(): Promise<number>;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit7le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 7 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit7be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit8(): Promise<number>;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit8le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit8be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit8(): Promise<number>;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit8le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 8 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit8be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit9(): Promise<number>;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit9le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit9be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit9(): Promise<number>;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit9le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 9 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit9be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit10(): Promise<number>;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit10le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit10be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit10(): Promise<number>;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit10le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 10 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit10be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit11(): Promise<number>;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit11le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit11be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit11(): Promise<number>;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit11le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 11 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit11be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit12(): Promise<number>;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit12le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit12be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit12(): Promise<number>;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit12le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 12 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit12be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit13(): Promise<number>;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit13le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit13be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit13(): Promise<number>;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit13le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 13 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit13be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit14(): Promise<number>;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit14le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit14be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit14(): Promise<number>;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit14le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 14 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit14be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit15(): Promise<number>;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {promise<number>}
-     */
-    bit15le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {promise<number>}
-     */
-    bit15be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit15(): Promise<number>;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit15le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 15 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit15be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit16(): Promise<number>;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit16le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit16be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit16(): Promise<number>;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit16le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 16 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit16be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit17(): Promise<number>;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit17le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit17be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit17(): Promise<number>;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit17le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 17 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit17be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit18(): Promise<number>;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit18le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit18be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit18(): Promise<number>;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit18le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 18 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit18be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit19(): Promise<number>;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit19le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit19be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit19(): Promise<number>;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit19le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 19 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit19be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit20(): Promise<number>;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit20le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit20be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit20(): Promise<number>;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit20le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 20 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit20be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit21(): Promise<number>;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit21le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit21be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit21(): Promise<number>;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit21le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 21 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit21be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit22(): Promise<number>;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit22le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit22be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit22(): Promise<number>;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit22le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 22 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit22be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit23(): Promise<number>;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit23le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit23be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit23(): Promise<number>;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit23le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 23 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit23be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit24(): Promise<number>;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit24le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit24be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit24(): Promise<number>;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit24le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 24 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit24be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit25(): Promise<number>;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit25le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit25be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit25(): Promise<number>;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit25le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 25 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit25be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit26(): Promise<number>;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit26le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit26be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit26(): Promise<number>;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit26le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 26 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit26be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit27(): Promise<number>;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit27le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit27be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit27(): Promise<number>;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit27le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 27 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit27be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit28(): Promise<number>;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit28le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit28be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit28(): Promise<number>;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit28le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 28 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit28be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit29(): Promise<number>;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit29le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit29be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit29(): Promise<number>;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit29le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 29 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit29be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit30(): Promise<number>;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit30le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit30be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit30(): Promise<number>;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit30le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 30 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit30be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit31(): Promise<number>;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit31le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit31be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit31(): Promise<number>;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit31le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 31 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit31be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit32(): Promise<number>;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit32le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    bit32be(): Promise<number>;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit32(): Promise<number>;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit32le(): Promise<number>;
-    /**
-     * Bit field reader. Reads 32 bits.
-     *
-     * Note: When returning to a byte read, remaining bits are dropped.
-     *
-     * @returns {Promise<number>}
-     */
-    ubit32be(): Promise<number>;
-    /**
-     * Read byte.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 8-bit integer. */
     byte(): Promise<number>;
-    /**
-     * Read byte.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 8-bit integer. */
     int8(): Promise<number>;
-    /**
-     * Read unsigned byte.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read an unsigned 8-bit integer. */
     uint8(): Promise<number>;
-    /**
-     * Read unsigned byte.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read an unsigned 8-bit integer. */
     ubyte(): Promise<number>;
-    /**
-     * Read short.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 16-bit integer. */
     int16(): Promise<number>;
-    /**
-     * Read short.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 16-bit integer. */
     short(): Promise<number>;
-    /**
-     * Read short.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 16-bit integer. */
     word(): Promise<number>;
-    /**
-     * Read unsigned short.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read an unsigned 16-bit integer. */
     uint16(): Promise<number>;
-    /**
-     * Read unsigned short.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read an unsigned 16-bit integer. */
     ushort(): Promise<number>;
-    /**
-     * Read unsigned short.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read an unsigned 16-bit integer. */
     uword(): Promise<number>;
-    /**
-     * Read unsigned short in little endian.
-     *
-     * @returns {Promise<number>}
-     */
-    uint16le(): Promise<number>;
-    /**
-     * Read unsigned short in little endian.
-     *
-     * @returns {Promise<number>}
-     */
-    ushortle(): Promise<number>;
-    /**
-     * Read unsigned short in little endian.
-     *
-     * @returns {Promise<number>}
-     */
-    uwordle(): Promise<number>;
-    /**
-     * Read signed short in little endian.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 16-bit integer (little-endian). */
     int16le(): Promise<number>;
-    /**
-     * Read signed short in little endian.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 16-bit integer (little-endian). */
     shortle(): Promise<number>;
-    /**
-     * Read signed short in little endian.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 16-bit integer (little-endian). */
     wordle(): Promise<number>;
-    /**
-     * Read unsigned short in big endian.
-     *
-     * @returns {Promise<number>}
-     */
-    uint16be(): Promise<number>;
-    /**
-     * Read unsigned short in big endian.
-     *
-     * @returns {Promise<number>}
-     */
-    ushortbe(): Promise<number>;
-    /**
-     * Read unsigned short in big endian.
-     *
-     * @returns {Promise<number>}
-     */
-    uwordbe(): Promise<number>;
-    /**
-     * Read signed short in big endian.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read an unsigned 16-bit integer (little-endian). */
+    uint16le(): Promise<number>;
+    /** Read an unsigned 16-bit integer (little-endian). */
+    ushortle(): Promise<number>;
+    /** Read an unsigned 16-bit integer (little-endian). */
+    uwordle(): Promise<number>;
+    /** Read a signed 16-bit integer (big-endian). */
     int16be(): Promise<number>;
-    /**
-     * Read signed short in big endian.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 16-bit integer (big-endian). */
     shortbe(): Promise<number>;
-    /**
-     * Read signed short in big endian.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 16-bit integer (big-endian). */
     wordbe(): Promise<number>;
-    /**
-     * Read half float.
-     *
-     * @returns {Promise<number>}
-     */
-    halffloat(): Promise<number>;
-    /**
-     * Read half float
-     *
-     * @returns {Promise<number>}
-     */
-    half(): Promise<number>;
-    /**
-     * Read half float.
-     *
-     * @returns {Promise<number>}
-     */
-    halffloatbe(): Promise<number>;
-    /**
-     * Read half float.
-     *
-     * @returns {Promise<number>}
-     */
-    halfbe(): Promise<number>;
-    /**
-     * Read half float.
-     *
-     * @returns {Promise<number>}
-     */
-    halffloatle(): Promise<number>;
-    /**
-     * Read half float.
-     *
-     * @returns {Promise<number>}
-     */
-    halfle(): Promise<number>;
-    /**
-     * Read 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read an unsigned 16-bit integer (big-endian). */
+    uint16be(): Promise<number>;
+    /** Read an unsigned 16-bit integer (big-endian). */
+    ushortbe(): Promise<number>;
+    /** Read an unsigned 16-bit integer (big-endian). */
+    uwordbe(): Promise<number>;
+    /** Read a signed 32-bit integer. */
     int(): Promise<number>;
-    /**
-     * Read 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
-    double(): Promise<number>;
-    /**
-     * Read 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 32-bit integer. */
+    dword(): Promise<number>;
+    /** Read a signed 32-bit integer. */
     int32(): Promise<number>;
-    /**
-     * Read 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 32-bit integer. */
     long(): Promise<number>;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read an unsigned 32-bit integer. */
     uint(): Promise<number>;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
-    udouble(): Promise<number>;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read an unsigned 32-bit integer. */
+    udword(): Promise<number>;
+    /** Read an unsigned 32-bit integer. */
     uint32(): Promise<number>;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read an unsigned 32-bit integer. */
     ulong(): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
-    intbe(): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
-    doublebe(): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
-    int32be(): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
-    longbe(): Promise<number>;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
-    uintbe(): Promise<number>;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
-    udoublebe(): Promise<number>;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
-    uint32be(): Promise<number>;
-    /**
-     * Read unsigned 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
-    ulongbe(): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 32-bit integer (little-endian). */
     intle(): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
-    doublele(): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 32-bit integer (little-endian). */
+    dwordle(): Promise<number>;
+    /** Read a signed 32-bit integer (little-endian). */
     int32le(): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 32-bit integer (little-endian). */
     longle(): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read an unsigned 32-bit integer (little-endian). */
     uintle(): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
-    udoublele(): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read an unsigned 32-bit integer (little-endian). */
+    udwordle(): Promise<number>;
+    /** Read an unsigned 32-bit integer (little-endian). */
     uint32le(): Promise<number>;
-    /**
-     * Read signed 32 bit integer.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read an unsigned 32-bit integer (little-endian). */
     ulongle(): Promise<number>;
-    /**
-     * Read float.
-     *
-     * @returns {Promise<number>}
-     */
-    float(): Promise<number>;
-    /**
-     * Read float.
-     *
-     * @returns {Promise<number>}
-     */
-    floatbe(): Promise<number>;
-    /**
-     * Read float.
-     *
-     * @returns {Promise<number>}
-     */
-    floatle(): Promise<number>;
-    /**
-     * Read signed 64 bit integer
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read a signed 32-bit integer (big-endian). */
+    intbe(): Promise<number>;
+    /** Read a signed 32-bit integer (big-endian). */
+    dwordbe(): Promise<number>;
+    /** Read a signed 32-bit integer (big-endian). */
+    int32be(): Promise<number>;
+    /** Read a signed 32-bit integer (big-endian). */
+    longbe(): Promise<number>;
+    /** Read an unsigned 32-bit integer (big-endian). */
+    uintbe(): Promise<number>;
+    /** Read an unsigned 32-bit integer (big-endian). */
+    udwordbe(): Promise<number>;
+    /** Read an unsigned 32-bit integer (big-endian). */
+    uint32be(): Promise<number>;
+    /** Read an unsigned 32-bit integer (big-endian). */
+    ulongbe(): Promise<number>;
+    /** Read a signed 64-bit integer. */
     int64(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read a signed 64-bit integer. */
     bigint(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read a signed 64-bit integer. */
     quad(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read an unsigned 64-bit integer. */
     uint64(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read an unsigned 64-bit integer. */
     ubigint(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read an unsigned 64-bit integer. */
     uquad(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    int64be(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    bigintbe(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    quadbe(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    uint64be(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    ubigintbe(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
-    uquadbe(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read a signed 64-bit integer (little-endian). */
     int64le(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read a signed 64-bit integer (little-endian). */
     bigintle(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read signed 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read a signed 64-bit integer (little-endian). */
     quadle(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read an unsigned 64-bit integer (little-endian). */
     uint64le(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read an unsigned 64-bit integer (little-endian). */
     ubigintle(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read unsigned 64 bit integer.
-     *
-     * Note: If ``enforceBigInt`` was set to ``true``, this always returns a ``BigInt`` otherwise it will return a ``number`` if integer safe.
-     */
+    /** Read an unsigned 64-bit integer (little-endian). */
     uquadle(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
-    /**
-     * Read double float.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a signed 64-bit integer (big-endian). */
+    int64be(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
+    /** Read a signed 64-bit integer (big-endian). */
+    bigintbe(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
+    /** Read a signed 64-bit integer (big-endian). */
+    quadbe(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
+    /** Read an unsigned 64-bit integer (big-endian). */
+    uint64be(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
+    /** Read an unsigned 64-bit integer (big-endian). */
+    ubigintbe(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
+    /** Read an unsigned 64-bit integer (big-endian). */
+    uquadbe(): Promise<alwaysBigInt extends true ? bigint : BigValue>;
+    /** Read a 32-bit float. */
+    float(): Promise<number>;
+    /** Read a 32-bit float (little-endian). */
+    floatle(): Promise<number>;
+    /** Read a 32-bit float (big-endian). */
+    floatbe(): Promise<number>;
+    /** Read a 16-bit float. */
+    halffloat(): Promise<number>;
+    /** Read a 16-bit float. */
+    half(): Promise<number>;
+    /** Read a 16-bit float (little-endian). */
+    halffloatle(): Promise<number>;
+    /** Read a 16-bit float (little-endian). */
+    halfle(): Promise<number>;
+    /** Read a 16-bit float (big-endian). */
+    halffloatbe(): Promise<number>;
+    /** Read a 16-bit float (big-endian). */
+    halfbe(): Promise<number>;
+    /** Read a 64-bit float. */
     doublefloat(): Promise<number>;
-    /**
-     * Read double float.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a 64-bit float. */
     dfloat(): Promise<number>;
-    /**
-     * Read double float.
-     *
-     * @returns {Promise<number>}
-     */
-    dfloatbe(): Promise<number>;
-    /**
-     * Read double float.
-     *
-     * @returns {Promise<number>}
-     */
-    doublefloatbe(): Promise<number>;
-    /**
-     * Read double float.
-     *
-     * @returns {Promise<number>}
-     */
-    dfloatle(): Promise<number>;
-    /**
-     * Read double float.
-     *
-     * @returns {Promise<number>}
-     */
+    /** Read a 64-bit float (little-endian). */
     doublefloatle(): Promise<number>;
+    /** Read a 64-bit float (little-endian). */
+    dfloatle(): Promise<number>;
+    /** Read a 64-bit float (big-endian). */
+    doublefloatbe(): Promise<number>;
+    /** Read a 64-bit float (big-endian). */
+    dfloatbe(): Promise<number>;
+    /** Read 1 signed bit. */
+    bit1(): Promise<number>;
+    /** Read 1 unsigned bit. */
+    ubit1(): Promise<number>;
+    /** Read 1 signed bit (little-endian). */
+    bit1le(): Promise<number>;
+    /** Read 1 unsigned bit (little-endian). */
+    ubit1le(): Promise<number>;
+    /** Read 1 signed bit (big-endian). */
+    bit1be(): Promise<number>;
+    /** Read 1 unsigned bit (big-endian). */
+    ubit1be(): Promise<number>;
+    /** Read 2 signed bits. */
+    bit2(): Promise<number>;
+    /** Read 2 unsigned bits. */
+    ubit2(): Promise<number>;
+    /** Read 2 signed bits (little-endian). */
+    bit2le(): Promise<number>;
+    /** Read 2 unsigned bits (little-endian). */
+    ubit2le(): Promise<number>;
+    /** Read 2 signed bits (big-endian). */
+    bit2be(): Promise<number>;
+    /** Read 2 unsigned bits (big-endian). */
+    ubit2be(): Promise<number>;
+    /** Read 3 signed bits. */
+    bit3(): Promise<number>;
+    /** Read 3 unsigned bits. */
+    ubit3(): Promise<number>;
+    /** Read 3 signed bits (little-endian). */
+    bit3le(): Promise<number>;
+    /** Read 3 unsigned bits (little-endian). */
+    ubit3le(): Promise<number>;
+    /** Read 3 signed bits (big-endian). */
+    bit3be(): Promise<number>;
+    /** Read 3 unsigned bits (big-endian). */
+    ubit3be(): Promise<number>;
+    /** Read 4 signed bits. */
+    bit4(): Promise<number>;
+    /** Read 4 unsigned bits. */
+    ubit4(): Promise<number>;
+    /** Read 4 signed bits (little-endian). */
+    bit4le(): Promise<number>;
+    /** Read 4 unsigned bits (little-endian). */
+    ubit4le(): Promise<number>;
+    /** Read 4 signed bits (big-endian). */
+    bit4be(): Promise<number>;
+    /** Read 4 unsigned bits (big-endian). */
+    ubit4be(): Promise<number>;
+    /** Read 5 signed bits. */
+    bit5(): Promise<number>;
+    /** Read 5 unsigned bits. */
+    ubit5(): Promise<number>;
+    /** Read 5 signed bits (little-endian). */
+    bit5le(): Promise<number>;
+    /** Read 5 unsigned bits (little-endian). */
+    ubit5le(): Promise<number>;
+    /** Read 5 signed bits (big-endian). */
+    bit5be(): Promise<number>;
+    /** Read 5 unsigned bits (big-endian). */
+    ubit5be(): Promise<number>;
+    /** Read 6 signed bits. */
+    bit6(): Promise<number>;
+    /** Read 6 unsigned bits. */
+    ubit6(): Promise<number>;
+    /** Read 6 signed bits (little-endian). */
+    bit6le(): Promise<number>;
+    /** Read 6 unsigned bits (little-endian). */
+    ubit6le(): Promise<number>;
+    /** Read 6 signed bits (big-endian). */
+    bit6be(): Promise<number>;
+    /** Read 6 unsigned bits (big-endian). */
+    ubit6be(): Promise<number>;
+    /** Read 7 signed bits. */
+    bit7(): Promise<number>;
+    /** Read 7 unsigned bits. */
+    ubit7(): Promise<number>;
+    /** Read 7 signed bits (little-endian). */
+    bit7le(): Promise<number>;
+    /** Read 7 unsigned bits (little-endian). */
+    ubit7le(): Promise<number>;
+    /** Read 7 signed bits (big-endian). */
+    bit7be(): Promise<number>;
+    /** Read 7 unsigned bits (big-endian). */
+    ubit7be(): Promise<number>;
+    /** Read 8 signed bits. */
+    bit8(): Promise<number>;
+    /** Read 8 unsigned bits. */
+    ubit8(): Promise<number>;
+    /** Read 8 signed bits (little-endian). */
+    bit8le(): Promise<number>;
+    /** Read 8 unsigned bits (little-endian). */
+    ubit8le(): Promise<number>;
+    /** Read 8 signed bits (big-endian). */
+    bit8be(): Promise<number>;
+    /** Read 8 unsigned bits (big-endian). */
+    ubit8be(): Promise<number>;
+    /** Read 9 signed bits. */
+    bit9(): Promise<number>;
+    /** Read 9 unsigned bits. */
+    ubit9(): Promise<number>;
+    /** Read 9 signed bits (little-endian). */
+    bit9le(): Promise<number>;
+    /** Read 9 unsigned bits (little-endian). */
+    ubit9le(): Promise<number>;
+    /** Read 9 signed bits (big-endian). */
+    bit9be(): Promise<number>;
+    /** Read 9 unsigned bits (big-endian). */
+    ubit9be(): Promise<number>;
+    /** Read 10 signed bits. */
+    bit10(): Promise<number>;
+    /** Read 10 unsigned bits. */
+    ubit10(): Promise<number>;
+    /** Read 10 signed bits (little-endian). */
+    bit10le(): Promise<number>;
+    /** Read 10 unsigned bits (little-endian). */
+    ubit10le(): Promise<number>;
+    /** Read 10 signed bits (big-endian). */
+    bit10be(): Promise<number>;
+    /** Read 10 unsigned bits (big-endian). */
+    ubit10be(): Promise<number>;
+    /** Read 11 signed bits. */
+    bit11(): Promise<number>;
+    /** Read 11 unsigned bits. */
+    ubit11(): Promise<number>;
+    /** Read 11 signed bits (little-endian). */
+    bit11le(): Promise<number>;
+    /** Read 11 unsigned bits (little-endian). */
+    ubit11le(): Promise<number>;
+    /** Read 11 signed bits (big-endian). */
+    bit11be(): Promise<number>;
+    /** Read 11 unsigned bits (big-endian). */
+    ubit11be(): Promise<number>;
+    /** Read 12 signed bits. */
+    bit12(): Promise<number>;
+    /** Read 12 unsigned bits. */
+    ubit12(): Promise<number>;
+    /** Read 12 signed bits (little-endian). */
+    bit12le(): Promise<number>;
+    /** Read 12 unsigned bits (little-endian). */
+    ubit12le(): Promise<number>;
+    /** Read 12 signed bits (big-endian). */
+    bit12be(): Promise<number>;
+    /** Read 12 unsigned bits (big-endian). */
+    ubit12be(): Promise<number>;
+    /** Read 13 signed bits. */
+    bit13(): Promise<number>;
+    /** Read 13 unsigned bits. */
+    ubit13(): Promise<number>;
+    /** Read 13 signed bits (little-endian). */
+    bit13le(): Promise<number>;
+    /** Read 13 unsigned bits (little-endian). */
+    ubit13le(): Promise<number>;
+    /** Read 13 signed bits (big-endian). */
+    bit13be(): Promise<number>;
+    /** Read 13 unsigned bits (big-endian). */
+    ubit13be(): Promise<number>;
+    /** Read 14 signed bits. */
+    bit14(): Promise<number>;
+    /** Read 14 unsigned bits. */
+    ubit14(): Promise<number>;
+    /** Read 14 signed bits (little-endian). */
+    bit14le(): Promise<number>;
+    /** Read 14 unsigned bits (little-endian). */
+    ubit14le(): Promise<number>;
+    /** Read 14 signed bits (big-endian). */
+    bit14be(): Promise<number>;
+    /** Read 14 unsigned bits (big-endian). */
+    ubit14be(): Promise<number>;
+    /** Read 15 signed bits. */
+    bit15(): Promise<number>;
+    /** Read 15 unsigned bits. */
+    ubit15(): Promise<number>;
+    /** Read 15 signed bits (little-endian). */
+    bit15le(): Promise<number>;
+    /** Read 15 unsigned bits (little-endian). */
+    ubit15le(): Promise<number>;
+    /** Read 15 signed bits (big-endian). */
+    bit15be(): Promise<number>;
+    /** Read 15 unsigned bits (big-endian). */
+    ubit15be(): Promise<number>;
+    /** Read 16 signed bits. */
+    bit16(): Promise<number>;
+    /** Read 16 unsigned bits. */
+    ubit16(): Promise<number>;
+    /** Read 16 signed bits (little-endian). */
+    bit16le(): Promise<number>;
+    /** Read 16 unsigned bits (little-endian). */
+    ubit16le(): Promise<number>;
+    /** Read 16 signed bits (big-endian). */
+    bit16be(): Promise<number>;
+    /** Read 16 unsigned bits (big-endian). */
+    ubit16be(): Promise<number>;
+    /** Read 17 signed bits. */
+    bit17(): Promise<number>;
+    /** Read 17 unsigned bits. */
+    ubit17(): Promise<number>;
+    /** Read 17 signed bits (little-endian). */
+    bit17le(): Promise<number>;
+    /** Read 17 unsigned bits (little-endian). */
+    ubit17le(): Promise<number>;
+    /** Read 17 signed bits (big-endian). */
+    bit17be(): Promise<number>;
+    /** Read 17 unsigned bits (big-endian). */
+    ubit17be(): Promise<number>;
+    /** Read 18 signed bits. */
+    bit18(): Promise<number>;
+    /** Read 18 unsigned bits. */
+    ubit18(): Promise<number>;
+    /** Read 18 signed bits (little-endian). */
+    bit18le(): Promise<number>;
+    /** Read 18 unsigned bits (little-endian). */
+    ubit18le(): Promise<number>;
+    /** Read 18 signed bits (big-endian). */
+    bit18be(): Promise<number>;
+    /** Read 18 unsigned bits (big-endian). */
+    ubit18be(): Promise<number>;
+    /** Read 19 signed bits. */
+    bit19(): Promise<number>;
+    /** Read 19 unsigned bits. */
+    ubit19(): Promise<number>;
+    /** Read 19 signed bits (little-endian). */
+    bit19le(): Promise<number>;
+    /** Read 19 unsigned bits (little-endian). */
+    ubit19le(): Promise<number>;
+    /** Read 19 signed bits (big-endian). */
+    bit19be(): Promise<number>;
+    /** Read 19 unsigned bits (big-endian). */
+    ubit19be(): Promise<number>;
+    /** Read 20 signed bits. */
+    bit20(): Promise<number>;
+    /** Read 20 unsigned bits. */
+    ubit20(): Promise<number>;
+    /** Read 20 signed bits (little-endian). */
+    bit20le(): Promise<number>;
+    /** Read 20 unsigned bits (little-endian). */
+    ubit20le(): Promise<number>;
+    /** Read 20 signed bits (big-endian). */
+    bit20be(): Promise<number>;
+    /** Read 20 unsigned bits (big-endian). */
+    ubit20be(): Promise<number>;
+    /** Read 21 signed bits. */
+    bit21(): Promise<number>;
+    /** Read 21 unsigned bits. */
+    ubit21(): Promise<number>;
+    /** Read 21 signed bits (little-endian). */
+    bit21le(): Promise<number>;
+    /** Read 21 unsigned bits (little-endian). */
+    ubit21le(): Promise<number>;
+    /** Read 21 signed bits (big-endian). */
+    bit21be(): Promise<number>;
+    /** Read 21 unsigned bits (big-endian). */
+    ubit21be(): Promise<number>;
+    /** Read 22 signed bits. */
+    bit22(): Promise<number>;
+    /** Read 22 unsigned bits. */
+    ubit22(): Promise<number>;
+    /** Read 22 signed bits (little-endian). */
+    bit22le(): Promise<number>;
+    /** Read 22 unsigned bits (little-endian). */
+    ubit22le(): Promise<number>;
+    /** Read 22 signed bits (big-endian). */
+    bit22be(): Promise<number>;
+    /** Read 22 unsigned bits (big-endian). */
+    ubit22be(): Promise<number>;
+    /** Read 23 signed bits. */
+    bit23(): Promise<number>;
+    /** Read 23 unsigned bits. */
+    ubit23(): Promise<number>;
+    /** Read 23 signed bits (little-endian). */
+    bit23le(): Promise<number>;
+    /** Read 23 unsigned bits (little-endian). */
+    ubit23le(): Promise<number>;
+    /** Read 23 signed bits (big-endian). */
+    bit23be(): Promise<number>;
+    /** Read 23 unsigned bits (big-endian). */
+    ubit23be(): Promise<number>;
+    /** Read 24 signed bits. */
+    bit24(): Promise<number>;
+    /** Read 24 unsigned bits. */
+    ubit24(): Promise<number>;
+    /** Read 24 signed bits (little-endian). */
+    bit24le(): Promise<number>;
+    /** Read 24 unsigned bits (little-endian). */
+    ubit24le(): Promise<number>;
+    /** Read 24 signed bits (big-endian). */
+    bit24be(): Promise<number>;
+    /** Read 24 unsigned bits (big-endian). */
+    ubit24be(): Promise<number>;
+    /** Read 25 signed bits. */
+    bit25(): Promise<number>;
+    /** Read 25 unsigned bits. */
+    ubit25(): Promise<number>;
+    /** Read 25 signed bits (little-endian). */
+    bit25le(): Promise<number>;
+    /** Read 25 unsigned bits (little-endian). */
+    ubit25le(): Promise<number>;
+    /** Read 25 signed bits (big-endian). */
+    bit25be(): Promise<number>;
+    /** Read 25 unsigned bits (big-endian). */
+    ubit25be(): Promise<number>;
+    /** Read 26 signed bits. */
+    bit26(): Promise<number>;
+    /** Read 26 unsigned bits. */
+    ubit26(): Promise<number>;
+    /** Read 26 signed bits (little-endian). */
+    bit26le(): Promise<number>;
+    /** Read 26 unsigned bits (little-endian). */
+    ubit26le(): Promise<number>;
+    /** Read 26 signed bits (big-endian). */
+    bit26be(): Promise<number>;
+    /** Read 26 unsigned bits (big-endian). */
+    ubit26be(): Promise<number>;
+    /** Read 27 signed bits. */
+    bit27(): Promise<number>;
+    /** Read 27 unsigned bits. */
+    ubit27(): Promise<number>;
+    /** Read 27 signed bits (little-endian). */
+    bit27le(): Promise<number>;
+    /** Read 27 unsigned bits (little-endian). */
+    ubit27le(): Promise<number>;
+    /** Read 27 signed bits (big-endian). */
+    bit27be(): Promise<number>;
+    /** Read 27 unsigned bits (big-endian). */
+    ubit27be(): Promise<number>;
+    /** Read 28 signed bits. */
+    bit28(): Promise<number>;
+    /** Read 28 unsigned bits. */
+    ubit28(): Promise<number>;
+    /** Read 28 signed bits (little-endian). */
+    bit28le(): Promise<number>;
+    /** Read 28 unsigned bits (little-endian). */
+    ubit28le(): Promise<number>;
+    /** Read 28 signed bits (big-endian). */
+    bit28be(): Promise<number>;
+    /** Read 28 unsigned bits (big-endian). */
+    ubit28be(): Promise<number>;
+    /** Read 29 signed bits. */
+    bit29(): Promise<number>;
+    /** Read 29 unsigned bits. */
+    ubit29(): Promise<number>;
+    /** Read 29 signed bits (little-endian). */
+    bit29le(): Promise<number>;
+    /** Read 29 unsigned bits (little-endian). */
+    ubit29le(): Promise<number>;
+    /** Read 29 signed bits (big-endian). */
+    bit29be(): Promise<number>;
+    /** Read 29 unsigned bits (big-endian). */
+    ubit29be(): Promise<number>;
+    /** Read 30 signed bits. */
+    bit30(): Promise<number>;
+    /** Read 30 unsigned bits. */
+    ubit30(): Promise<number>;
+    /** Read 30 signed bits (little-endian). */
+    bit30le(): Promise<number>;
+    /** Read 30 unsigned bits (little-endian). */
+    ubit30le(): Promise<number>;
+    /** Read 30 signed bits (big-endian). */
+    bit30be(): Promise<number>;
+    /** Read 30 unsigned bits (big-endian). */
+    ubit30be(): Promise<number>;
+    /** Read 31 signed bits. */
+    bit31(): Promise<number>;
+    /** Read 31 unsigned bits. */
+    ubit31(): Promise<number>;
+    /** Read 31 signed bits (little-endian). */
+    bit31le(): Promise<number>;
+    /** Read 31 unsigned bits (little-endian). */
+    ubit31le(): Promise<number>;
+    /** Read 31 signed bits (big-endian). */
+    bit31be(): Promise<number>;
+    /** Read 31 unsigned bits (big-endian). */
+    ubit31be(): Promise<number>;
+    /** Read 32 signed bits. */
+    bit32(): Promise<number>;
+    /** Read 32 unsigned bits. */
+    ubit32(): Promise<number>;
+    /** Read 32 signed bits (little-endian). */
+    bit32le(): Promise<number>;
+    /** Read 32 unsigned bits (little-endian). */
+    ubit32le(): Promise<number>;
+    /** Read 32 signed bits (big-endian). */
+    bit32be(): Promise<number>;
+    /** Read 32 unsigned bits (big-endian). */
+    ubit32be(): Promise<number>;
     /**
     * Reads string, use options object for different types.
     *
@@ -11036,7 +3875,7 @@ declare class BiReaderAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType
  *
  * @since 4.0
  */
-declare class BiWriterAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType, alwaysBigInt> {
+declare class BiWriterAsync<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiEngine<alwaysBigInt> {
     constructor(input?: DataType, options?: BiOptions<alwaysBigInt>);
     /**
      *
@@ -11054,7 +3893,7 @@ declare class BiWriterAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType
      *
      * @returns {Promise<BiWriterAsync<DataType, alwaysBigInt>>}
      */
-    static create<DataType, alwaysBigInt>(input: DataType, options?: BiOptions<alwaysBigInt>): Promise<BiWriterAsync<DataType, alwaysBigInt>>;
+    static create<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false>(input: DataType, options?: BiOptions<alwaysBigInt>): Promise<BiWriterAsync<DataType, alwaysBigInt>>;
     /**
      * Bit field writer.
      *
@@ -11114,2022 +3953,554 @@ declare class BiWriterAsync<DataType, alwaysBigInt> extends BiBaseAsync<DataType
      * @param {boolean} unsigned - if the value is unsigned
      */
     bitle(value: number, bits: number, unsigned?: boolean): Promise<void>;
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit1(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit1le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit1be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit1(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit1le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 1 bit.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit1be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit2(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit2le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit2be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit2(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit2le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 2 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit2be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit3(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit3le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit3be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit3(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit3le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 3 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit3be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit4(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit4le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit4be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit4(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit4le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 4 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit4be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit5(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit5le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit5be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit5(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit5le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 5 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit5be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit6(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit6le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit6be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit6(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit6le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 6 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit6be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit7(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit7le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit7be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit7(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit7le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 7 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit7be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit8(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit8le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit8be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit8(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit8le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 8 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit8be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit9(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit9le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit9be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit9(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit9le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 9 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit9be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit10(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit10le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit10be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit10(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit10le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 10 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit10be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit11(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit11le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit11be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit11(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit11le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 11 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit11be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit12(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit12le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit12be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit12(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit12le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 12 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit12be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit13(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit13le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit13be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit13(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit13le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 13 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit13be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit14(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit14le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit14be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit14(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit14le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 14 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit14be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit15(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit15le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit15be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit15(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit15le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 15 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit15be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit16(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit16le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit16be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit16(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit16le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 16 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit16be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit17(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit17le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit17be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit17(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit17le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 17 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit17be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit18(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit18le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit18be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit18(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit18le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 18 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit18be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit19(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit19le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit19be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit19(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit19le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 19 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit19be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit20(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit20le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit20be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit20(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit20le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 20 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit20be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit21(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit21le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit21be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit21(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit21le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 21 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit21be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit22(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit22le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit22be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit22(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit22le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 22 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit22be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit23(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit23le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit23be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit23(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit23le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 23 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit23be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit24(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit24le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit24be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit24(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit24le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 24 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit24be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit25(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit25le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit25be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit25(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit25le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 25 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit25be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit26(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit26le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit26be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit26(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit26le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 26 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit26be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit27(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit27le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit27be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit27(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit27le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 27 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit27be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit28(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit28le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit28be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit28(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit28le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 28 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit28be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit29(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit29le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit29be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit29(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit29le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 29 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit29be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit30(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit30le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit30be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit30(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit30le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 30 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit30be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit31(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit31le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit31be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit31(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit31le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 31 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit31be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit32(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit32le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    bit32be(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit32(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit32le(value: number): Promise<void>;
-    /**
-     * Bit field writer. Writes 32 bits.
-     *
-     * Note: When returning to a byte write, remaining bits are dropped.
-     *
-     * @param {number} value - value as int
-     */
-    ubit32be(value: number): Promise<void>;
-    /**
-     * Write byte.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 8-bit integer. */
     byte(value: number): Promise<void>;
-    /**
-     * Write byte.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 8-bit integer. */
     int8(value: number): Promise<void>;
-    /**
-     * Write unsigned byte.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 8-bit integer. */
     uint8(value: number): Promise<void>;
-    /**
-     * Write unsigned byte.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 8-bit integer. */
     ubyte(value: number): Promise<void>;
-    /**
-     * Write int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 16-bit integer. */
     int16(value: number): Promise<void>;
-    /**
-     * Write int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 16-bit integer. */
     short(value: number): Promise<void>;
-    /**
-     * Write int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 16-bit integer. */
     word(value: number): Promise<void>;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 16-bit integer. */
     uint16(value: number): Promise<void>;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 16-bit integer. */
     ushort(value: number): Promise<void>;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 16-bit integer. */
     uword(value: number): Promise<void>;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    int16be(value: number): Promise<void>;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    shortbe(value: number): Promise<void>;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
-    wordbe(value: number): Promise<void>;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    uint16be(value: number): Promise<void>;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    ushortbe(value: number): Promise<void>;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
-    uwordbe(value: number): Promise<void>;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 16-bit integer (little-endian). */
     int16le(value: number): Promise<void>;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 16-bit integer (little-endian). */
     shortle(value: number): Promise<void>;
-    /**
-     * Write signed int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 16-bit integer (little-endian). */
     wordle(value: number): Promise<void>;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 16-bit integer (little-endian). */
     uint16le(value: number): Promise<void>;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 16-bit integer (little-endian). */
     ushortle(value: number): Promise<void>;
-    /**
-     * Write unsigned int16.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 16-bit integer (little-endian). */
     uwordle(value: number): Promise<void>;
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    half(value: number): Promise<void>;
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    halffloat(value: number): Promise<void>;
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    halffloatbe(value: number): Promise<void>;
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    halfbe(value: number): Promise<void>;
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    halffloatle(value: number): Promise<void>;
-    /**
-     * Writes half float.
-     *
-     * @param {number} value - value as int
-     */
-    halfle(value: number): Promise<void>;
-    /**
-     * Write int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 16-bit integer (big-endian). */
+    int16be(value: number): Promise<void>;
+    /** Write a signed 16-bit integer (big-endian). */
+    shortbe(value: number): Promise<void>;
+    /** Write a signed 16-bit integer (big-endian). */
+    wordbe(value: number): Promise<void>;
+    /** Write an unsigned 16-bit integer (big-endian). */
+    uint16be(value: number): Promise<void>;
+    /** Write an unsigned 16-bit integer (big-endian). */
+    ushortbe(value: number): Promise<void>;
+    /** Write an unsigned 16-bit integer (big-endian). */
+    uwordbe(value: number): Promise<void>;
+    /** Write a signed 32-bit integer. */
     int(value: number): Promise<void>;
-    /**
-    * Write int32.
-    *
-    * @param {number} value - value as int
-    */
+    /** Write a signed 32-bit integer. */
+    dword(value: number): Promise<void>;
+    /** Write a signed 32-bit integer. */
     int32(value: number): Promise<void>;
-    /**
-     * Write int32.
-     *
-     * @param {number} value - value as int
-     */
-    double(value: number): Promise<void>;
-    /**
-     * Write int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 32-bit integer. */
     long(value: number): Promise<void>;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    uint32(value: number): Promise<void>;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 32-bit integer. */
     uint(value: number): Promise<void>;
-    /**
-    * Write unsigned int32.
-    *
-    * @param {number} value - value as int
-    */
-    udouble(value: number): Promise<void>;
-    /**
-    * Write unsigned int32.
-    *
-    * @param {number} value - value as int
-    */
+    /** Write an unsigned 32-bit integer. */
+    udword(value: number): Promise<void>;
+    /** Write an unsigned 32-bit integer. */
+    uint32(value: number): Promise<void>;
+    /** Write an unsigned 32-bit integer. */
     ulong(value: number): Promise<void>;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    int32le(value: number): Promise<void>;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 32-bit integer (little-endian). */
     intle(value: number): Promise<void>;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    doublele(value: number): Promise<void>;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 32-bit integer (little-endian). */
+    dwordle(value: number): Promise<void>;
+    /** Write a signed 32-bit integer (little-endian). */
+    int32le(value: number): Promise<void>;
+    /** Write a signed 32-bit integer (little-endian). */
     longle(value: number): Promise<void>;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    uint32le(value: number): Promise<void>;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 32-bit integer (little-endian). */
     uintle(value: number): Promise<void>;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    udoublele(value: number): Promise<void>;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write an unsigned 32-bit integer (little-endian). */
+    udwordle(value: number): Promise<void>;
+    /** Write an unsigned 32-bit integer (little-endian). */
+    uint32le(value: number): Promise<void>;
+    /** Write an unsigned 32-bit integer (little-endian). */
     ulongle(value: number): Promise<void>;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 32-bit integer (big-endian). */
     intbe(value: number): Promise<void>;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 32-bit integer (big-endian). */
+    dwordbe(value: number): Promise<void>;
+    /** Write a signed 32-bit integer (big-endian). */
     int32be(value: number): Promise<void>;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
-    doublebe(value: number): Promise<void>;
-    /**
-     * Write signed int32.
-     *
-     * @param {number} value - value as int
-     */
+    /** Write a signed 32-bit integer (big-endian). */
     longbe(value: number): Promise<void>;
+    /** Write an unsigned 32-bit integer (big-endian). */
+    uintbe(value: number): Promise<void>;
+    /** Write an unsigned 32-bit integer (big-endian). */
+    udwordbe(value: number): Promise<void>;
+    /** Write an unsigned 32-bit integer (big-endian). */
+    uint32be(value: number): Promise<void>;
+    /** Write an unsigned 32-bit integer (big-endian). */
+    ulongbe(value: number): Promise<void>;
+    /** Write a signed 64-bit integer. */
+    int64(value: BigValue): Promise<void>;
+    /** Write a signed 64-bit integer. */
+    bigint(value: BigValue): Promise<void>;
+    /** Write a signed 64-bit integer. */
+    quad(value: BigValue): Promise<void>;
+    /** Write an unsigned 64-bit integer. */
+    uint64(value: BigValue): Promise<void>;
+    /** Write an unsigned 64-bit integer. */
+    ubigint(value: BigValue): Promise<void>;
+    /** Write an unsigned 64-bit integer. */
+    uquad(value: BigValue): Promise<void>;
+    /** Write a signed 64-bit integer (little-endian). */
+    int64le(value: BigValue): Promise<void>;
+    /** Write a signed 64-bit integer (little-endian). */
+    bigintle(value: BigValue): Promise<void>;
+    /** Write a signed 64-bit integer (little-endian). */
+    quadle(value: BigValue): Promise<void>;
+    /** Write an unsigned 64-bit integer (little-endian). */
+    uint64le(value: BigValue): Promise<void>;
+    /** Write an unsigned 64-bit integer (little-endian). */
+    ubigintle(value: BigValue): Promise<void>;
+    /** Write an unsigned 64-bit integer (little-endian). */
+    uquadle(value: BigValue): Promise<void>;
+    /** Write a signed 64-bit integer (big-endian). */
+    int64be(value: BigValue): Promise<void>;
+    /** Write a signed 64-bit integer (big-endian). */
+    bigintbe(value: BigValue): Promise<void>;
+    /** Write a signed 64-bit integer (big-endian). */
+    quadbe(value: BigValue): Promise<void>;
+    /** Write an unsigned 64-bit integer (big-endian). */
+    uint64be(value: BigValue): Promise<void>;
+    /** Write an unsigned 64-bit integer (big-endian). */
+    ubigintbe(value: BigValue): Promise<void>;
+    /** Write an unsigned 64-bit integer (big-endian). */
+    uquadbe(value: BigValue): Promise<void>;
+    /** Write a 32-bit float. */
+    float(value: number): Promise<void>;
+    /** Write a 32-bit float (little-endian). */
+    floatle(value: number): Promise<void>;
+    /** Write a 32-bit float (big-endian). */
+    floatbe(value: number): Promise<void>;
+    /** Write a 16-bit float. */
+    halffloat(value: number): Promise<void>;
+    /** Write a 16-bit float. */
+    half(value: number): Promise<void>;
+    /** Write a 16-bit float (little-endian). */
+    halffloatle(value: number): Promise<void>;
+    /** Write a 16-bit float (little-endian). */
+    halfle(value: number): Promise<void>;
+    /** Write a 16-bit float (big-endian). */
+    halffloatbe(value: number): Promise<void>;
+    /** Write a 16-bit float (big-endian). */
+    halfbe(value: number): Promise<void>;
+    /** Write a 64-bit float. */
+    doublefloat(value: number): Promise<void>;
+    /** Write a 64-bit float. */
+    dfloat(value: number): Promise<void>;
+    /** Write a 64-bit float (little-endian). */
+    doublefloatle(value: number): Promise<void>;
+    /** Write a 64-bit float (little-endian). */
+    dfloatle(value: number): Promise<void>;
+    /** Write a 64-bit float (big-endian). */
+    doublefloatbe(value: number): Promise<void>;
+    /** Write a 64-bit float (big-endian). */
+    dfloatbe(value: number): Promise<void>;
+    /** Write 1 signed bit. */
+    bit1(value: number): Promise<void>;
+    /** Write 1 unsigned bit. */
+    ubit1(value: number): Promise<void>;
+    /** Write 1 signed bit (little-endian). */
+    bit1le(value: number): Promise<void>;
+    /** Write 1 unsigned bit (little-endian). */
+    ubit1le(value: number): Promise<void>;
+    /** Write 1 signed bit (big-endian). */
+    bit1be(value: number): Promise<void>;
+    /** Write 1 unsigned bit (big-endian). */
+    ubit1be(value: number): Promise<void>;
+    /** Write 2 signed bits. */
+    bit2(value: number): Promise<void>;
+    /** Write 2 unsigned bits. */
+    ubit2(value: number): Promise<void>;
+    /** Write 2 signed bits (little-endian). */
+    bit2le(value: number): Promise<void>;
+    /** Write 2 unsigned bits (little-endian). */
+    ubit2le(value: number): Promise<void>;
+    /** Write 2 signed bits (big-endian). */
+    bit2be(value: number): Promise<void>;
+    /** Write 2 unsigned bits (big-endian). */
+    ubit2be(value: number): Promise<void>;
+    /** Write 3 signed bits. */
+    bit3(value: number): Promise<void>;
+    /** Write 3 unsigned bits. */
+    ubit3(value: number): Promise<void>;
+    /** Write 3 signed bits (little-endian). */
+    bit3le(value: number): Promise<void>;
+    /** Write 3 unsigned bits (little-endian). */
+    ubit3le(value: number): Promise<void>;
+    /** Write 3 signed bits (big-endian). */
+    bit3be(value: number): Promise<void>;
+    /** Write 3 unsigned bits (big-endian). */
+    ubit3be(value: number): Promise<void>;
+    /** Write 4 signed bits. */
+    bit4(value: number): Promise<void>;
+    /** Write 4 unsigned bits. */
+    ubit4(value: number): Promise<void>;
+    /** Write 4 signed bits (little-endian). */
+    bit4le(value: number): Promise<void>;
+    /** Write 4 unsigned bits (little-endian). */
+    ubit4le(value: number): Promise<void>;
+    /** Write 4 signed bits (big-endian). */
+    bit4be(value: number): Promise<void>;
+    /** Write 4 unsigned bits (big-endian). */
+    ubit4be(value: number): Promise<void>;
+    /** Write 5 signed bits. */
+    bit5(value: number): Promise<void>;
+    /** Write 5 unsigned bits. */
+    ubit5(value: number): Promise<void>;
+    /** Write 5 signed bits (little-endian). */
+    bit5le(value: number): Promise<void>;
+    /** Write 5 unsigned bits (little-endian). */
+    ubit5le(value: number): Promise<void>;
+    /** Write 5 signed bits (big-endian). */
+    bit5be(value: number): Promise<void>;
+    /** Write 5 unsigned bits (big-endian). */
+    ubit5be(value: number): Promise<void>;
+    /** Write 6 signed bits. */
+    bit6(value: number): Promise<void>;
+    /** Write 6 unsigned bits. */
+    ubit6(value: number): Promise<void>;
+    /** Write 6 signed bits (little-endian). */
+    bit6le(value: number): Promise<void>;
+    /** Write 6 unsigned bits (little-endian). */
+    ubit6le(value: number): Promise<void>;
+    /** Write 6 signed bits (big-endian). */
+    bit6be(value: number): Promise<void>;
+    /** Write 6 unsigned bits (big-endian). */
+    ubit6be(value: number): Promise<void>;
+    /** Write 7 signed bits. */
+    bit7(value: number): Promise<void>;
+    /** Write 7 unsigned bits. */
+    ubit7(value: number): Promise<void>;
+    /** Write 7 signed bits (little-endian). */
+    bit7le(value: number): Promise<void>;
+    /** Write 7 unsigned bits (little-endian). */
+    ubit7le(value: number): Promise<void>;
+    /** Write 7 signed bits (big-endian). */
+    bit7be(value: number): Promise<void>;
+    /** Write 7 unsigned bits (big-endian). */
+    ubit7be(value: number): Promise<void>;
+    /** Write 8 signed bits. */
+    bit8(value: number): Promise<void>;
+    /** Write 8 unsigned bits. */
+    ubit8(value: number): Promise<void>;
+    /** Write 8 signed bits (little-endian). */
+    bit8le(value: number): Promise<void>;
+    /** Write 8 unsigned bits (little-endian). */
+    ubit8le(value: number): Promise<void>;
+    /** Write 8 signed bits (big-endian). */
+    bit8be(value: number): Promise<void>;
+    /** Write 8 unsigned bits (big-endian). */
+    ubit8be(value: number): Promise<void>;
+    /** Write 9 signed bits. */
+    bit9(value: number): Promise<void>;
+    /** Write 9 unsigned bits. */
+    ubit9(value: number): Promise<void>;
+    /** Write 9 signed bits (little-endian). */
+    bit9le(value: number): Promise<void>;
+    /** Write 9 unsigned bits (little-endian). */
+    ubit9le(value: number): Promise<void>;
+    /** Write 9 signed bits (big-endian). */
+    bit9be(value: number): Promise<void>;
+    /** Write 9 unsigned bits (big-endian). */
+    ubit9be(value: number): Promise<void>;
+    /** Write 10 signed bits. */
+    bit10(value: number): Promise<void>;
+    /** Write 10 unsigned bits. */
+    ubit10(value: number): Promise<void>;
+    /** Write 10 signed bits (little-endian). */
+    bit10le(value: number): Promise<void>;
+    /** Write 10 unsigned bits (little-endian). */
+    ubit10le(value: number): Promise<void>;
+    /** Write 10 signed bits (big-endian). */
+    bit10be(value: number): Promise<void>;
+    /** Write 10 unsigned bits (big-endian). */
+    ubit10be(value: number): Promise<void>;
+    /** Write 11 signed bits. */
+    bit11(value: number): Promise<void>;
+    /** Write 11 unsigned bits. */
+    ubit11(value: number): Promise<void>;
+    /** Write 11 signed bits (little-endian). */
+    bit11le(value: number): Promise<void>;
+    /** Write 11 unsigned bits (little-endian). */
+    ubit11le(value: number): Promise<void>;
+    /** Write 11 signed bits (big-endian). */
+    bit11be(value: number): Promise<void>;
+    /** Write 11 unsigned bits (big-endian). */
+    ubit11be(value: number): Promise<void>;
+    /** Write 12 signed bits. */
+    bit12(value: number): Promise<void>;
+    /** Write 12 unsigned bits. */
+    ubit12(value: number): Promise<void>;
+    /** Write 12 signed bits (little-endian). */
+    bit12le(value: number): Promise<void>;
+    /** Write 12 unsigned bits (little-endian). */
+    ubit12le(value: number): Promise<void>;
+    /** Write 12 signed bits (big-endian). */
+    bit12be(value: number): Promise<void>;
+    /** Write 12 unsigned bits (big-endian). */
+    ubit12be(value: number): Promise<void>;
+    /** Write 13 signed bits. */
+    bit13(value: number): Promise<void>;
+    /** Write 13 unsigned bits. */
+    ubit13(value: number): Promise<void>;
+    /** Write 13 signed bits (little-endian). */
+    bit13le(value: number): Promise<void>;
+    /** Write 13 unsigned bits (little-endian). */
+    ubit13le(value: number): Promise<void>;
+    /** Write 13 signed bits (big-endian). */
+    bit13be(value: number): Promise<void>;
+    /** Write 13 unsigned bits (big-endian). */
+    ubit13be(value: number): Promise<void>;
+    /** Write 14 signed bits. */
+    bit14(value: number): Promise<void>;
+    /** Write 14 unsigned bits. */
+    ubit14(value: number): Promise<void>;
+    /** Write 14 signed bits (little-endian). */
+    bit14le(value: number): Promise<void>;
+    /** Write 14 unsigned bits (little-endian). */
+    ubit14le(value: number): Promise<void>;
+    /** Write 14 signed bits (big-endian). */
+    bit14be(value: number): Promise<void>;
+    /** Write 14 unsigned bits (big-endian). */
+    ubit14be(value: number): Promise<void>;
+    /** Write 15 signed bits. */
+    bit15(value: number): Promise<void>;
+    /** Write 15 unsigned bits. */
+    ubit15(value: number): Promise<void>;
+    /** Write 15 signed bits (little-endian). */
+    bit15le(value: number): Promise<void>;
+    /** Write 15 unsigned bits (little-endian). */
+    ubit15le(value: number): Promise<void>;
+    /** Write 15 signed bits (big-endian). */
+    bit15be(value: number): Promise<void>;
+    /** Write 15 unsigned bits (big-endian). */
+    ubit15be(value: number): Promise<void>;
+    /** Write 16 signed bits. */
+    bit16(value: number): Promise<void>;
+    /** Write 16 unsigned bits. */
+    ubit16(value: number): Promise<void>;
+    /** Write 16 signed bits (little-endian). */
+    bit16le(value: number): Promise<void>;
+    /** Write 16 unsigned bits (little-endian). */
+    ubit16le(value: number): Promise<void>;
+    /** Write 16 signed bits (big-endian). */
+    bit16be(value: number): Promise<void>;
+    /** Write 16 unsigned bits (big-endian). */
+    ubit16be(value: number): Promise<void>;
+    /** Write 17 signed bits. */
+    bit17(value: number): Promise<void>;
+    /** Write 17 unsigned bits. */
+    ubit17(value: number): Promise<void>;
+    /** Write 17 signed bits (little-endian). */
+    bit17le(value: number): Promise<void>;
+    /** Write 17 unsigned bits (little-endian). */
+    ubit17le(value: number): Promise<void>;
+    /** Write 17 signed bits (big-endian). */
+    bit17be(value: number): Promise<void>;
+    /** Write 17 unsigned bits (big-endian). */
+    ubit17be(value: number): Promise<void>;
+    /** Write 18 signed bits. */
+    bit18(value: number): Promise<void>;
+    /** Write 18 unsigned bits. */
+    ubit18(value: number): Promise<void>;
+    /** Write 18 signed bits (little-endian). */
+    bit18le(value: number): Promise<void>;
+    /** Write 18 unsigned bits (little-endian). */
+    ubit18le(value: number): Promise<void>;
+    /** Write 18 signed bits (big-endian). */
+    bit18be(value: number): Promise<void>;
+    /** Write 18 unsigned bits (big-endian). */
+    ubit18be(value: number): Promise<void>;
+    /** Write 19 signed bits. */
+    bit19(value: number): Promise<void>;
+    /** Write 19 unsigned bits. */
+    ubit19(value: number): Promise<void>;
+    /** Write 19 signed bits (little-endian). */
+    bit19le(value: number): Promise<void>;
+    /** Write 19 unsigned bits (little-endian). */
+    ubit19le(value: number): Promise<void>;
+    /** Write 19 signed bits (big-endian). */
+    bit19be(value: number): Promise<void>;
+    /** Write 19 unsigned bits (big-endian). */
+    ubit19be(value: number): Promise<void>;
+    /** Write 20 signed bits. */
+    bit20(value: number): Promise<void>;
+    /** Write 20 unsigned bits. */
+    ubit20(value: number): Promise<void>;
+    /** Write 20 signed bits (little-endian). */
+    bit20le(value: number): Promise<void>;
+    /** Write 20 unsigned bits (little-endian). */
+    ubit20le(value: number): Promise<void>;
+    /** Write 20 signed bits (big-endian). */
+    bit20be(value: number): Promise<void>;
+    /** Write 20 unsigned bits (big-endian). */
+    ubit20be(value: number): Promise<void>;
+    /** Write 21 signed bits. */
+    bit21(value: number): Promise<void>;
+    /** Write 21 unsigned bits. */
+    ubit21(value: number): Promise<void>;
+    /** Write 21 signed bits (little-endian). */
+    bit21le(value: number): Promise<void>;
+    /** Write 21 unsigned bits (little-endian). */
+    ubit21le(value: number): Promise<void>;
+    /** Write 21 signed bits (big-endian). */
+    bit21be(value: number): Promise<void>;
+    /** Write 21 unsigned bits (big-endian). */
+    ubit21be(value: number): Promise<void>;
+    /** Write 22 signed bits. */
+    bit22(value: number): Promise<void>;
+    /** Write 22 unsigned bits. */
+    ubit22(value: number): Promise<void>;
+    /** Write 22 signed bits (little-endian). */
+    bit22le(value: number): Promise<void>;
+    /** Write 22 unsigned bits (little-endian). */
+    ubit22le(value: number): Promise<void>;
+    /** Write 22 signed bits (big-endian). */
+    bit22be(value: number): Promise<void>;
+    /** Write 22 unsigned bits (big-endian). */
+    ubit22be(value: number): Promise<void>;
+    /** Write 23 signed bits. */
+    bit23(value: number): Promise<void>;
+    /** Write 23 unsigned bits. */
+    ubit23(value: number): Promise<void>;
+    /** Write 23 signed bits (little-endian). */
+    bit23le(value: number): Promise<void>;
+    /** Write 23 unsigned bits (little-endian). */
+    ubit23le(value: number): Promise<void>;
+    /** Write 23 signed bits (big-endian). */
+    bit23be(value: number): Promise<void>;
+    /** Write 23 unsigned bits (big-endian). */
+    ubit23be(value: number): Promise<void>;
+    /** Write 24 signed bits. */
+    bit24(value: number): Promise<void>;
+    /** Write 24 unsigned bits. */
+    ubit24(value: number): Promise<void>;
+    /** Write 24 signed bits (little-endian). */
+    bit24le(value: number): Promise<void>;
+    /** Write 24 unsigned bits (little-endian). */
+    ubit24le(value: number): Promise<void>;
+    /** Write 24 signed bits (big-endian). */
+    bit24be(value: number): Promise<void>;
+    /** Write 24 unsigned bits (big-endian). */
+    ubit24be(value: number): Promise<void>;
+    /** Write 25 signed bits. */
+    bit25(value: number): Promise<void>;
+    /** Write 25 unsigned bits. */
+    ubit25(value: number): Promise<void>;
+    /** Write 25 signed bits (little-endian). */
+    bit25le(value: number): Promise<void>;
+    /** Write 25 unsigned bits (little-endian). */
+    ubit25le(value: number): Promise<void>;
+    /** Write 25 signed bits (big-endian). */
+    bit25be(value: number): Promise<void>;
+    /** Write 25 unsigned bits (big-endian). */
+    ubit25be(value: number): Promise<void>;
+    /** Write 26 signed bits. */
+    bit26(value: number): Promise<void>;
+    /** Write 26 unsigned bits. */
+    ubit26(value: number): Promise<void>;
+    /** Write 26 signed bits (little-endian). */
+    bit26le(value: number): Promise<void>;
+    /** Write 26 unsigned bits (little-endian). */
+    ubit26le(value: number): Promise<void>;
+    /** Write 26 signed bits (big-endian). */
+    bit26be(value: number): Promise<void>;
+    /** Write 26 unsigned bits (big-endian). */
+    ubit26be(value: number): Promise<void>;
+    /** Write 27 signed bits. */
+    bit27(value: number): Promise<void>;
+    /** Write 27 unsigned bits. */
+    ubit27(value: number): Promise<void>;
+    /** Write 27 signed bits (little-endian). */
+    bit27le(value: number): Promise<void>;
+    /** Write 27 unsigned bits (little-endian). */
+    ubit27le(value: number): Promise<void>;
+    /** Write 27 signed bits (big-endian). */
+    bit27be(value: number): Promise<void>;
+    /** Write 27 unsigned bits (big-endian). */
+    ubit27be(value: number): Promise<void>;
+    /** Write 28 signed bits. */
+    bit28(value: number): Promise<void>;
+    /** Write 28 unsigned bits. */
+    ubit28(value: number): Promise<void>;
+    /** Write 28 signed bits (little-endian). */
+    bit28le(value: number): Promise<void>;
+    /** Write 28 unsigned bits (little-endian). */
+    ubit28le(value: number): Promise<void>;
+    /** Write 28 signed bits (big-endian). */
+    bit28be(value: number): Promise<void>;
+    /** Write 28 unsigned bits (big-endian). */
+    ubit28be(value: number): Promise<void>;
+    /** Write 29 signed bits. */
+    bit29(value: number): Promise<void>;
+    /** Write 29 unsigned bits. */
+    ubit29(value: number): Promise<void>;
+    /** Write 29 signed bits (little-endian). */
+    bit29le(value: number): Promise<void>;
+    /** Write 29 unsigned bits (little-endian). */
+    ubit29le(value: number): Promise<void>;
+    /** Write 29 signed bits (big-endian). */
+    bit29be(value: number): Promise<void>;
+    /** Write 29 unsigned bits (big-endian). */
+    ubit29be(value: number): Promise<void>;
+    /** Write 30 signed bits. */
+    bit30(value: number): Promise<void>;
+    /** Write 30 unsigned bits. */
+    ubit30(value: number): Promise<void>;
+    /** Write 30 signed bits (little-endian). */
+    bit30le(value: number): Promise<void>;
+    /** Write 30 unsigned bits (little-endian). */
+    ubit30le(value: number): Promise<void>;
+    /** Write 30 signed bits (big-endian). */
+    bit30be(value: number): Promise<void>;
+    /** Write 30 unsigned bits (big-endian). */
+    ubit30be(value: number): Promise<void>;
+    /** Write 31 signed bits. */
+    bit31(value: number): Promise<void>;
+    /** Write 31 unsigned bits. */
+    ubit31(value: number): Promise<void>;
+    /** Write 31 signed bits (little-endian). */
+    bit31le(value: number): Promise<void>;
+    /** Write 31 unsigned bits (little-endian). */
+    ubit31le(value: number): Promise<void>;
+    /** Write 31 signed bits (big-endian). */
+    bit31be(value: number): Promise<void>;
+    /** Write 31 unsigned bits (big-endian). */
+    ubit31be(value: number): Promise<void>;
+    /** Write 32 signed bits. */
+    bit32(value: number): Promise<void>;
+    /** Write 32 unsigned bits. */
+    ubit32(value: number): Promise<void>;
+    /** Write 32 signed bits (little-endian). */
+    bit32le(value: number): Promise<void>;
+    /** Write 32 unsigned bits (little-endian). */
+    ubit32le(value: number): Promise<void>;
+    /** Write 32 signed bits (big-endian). */
+    bit32be(value: number): Promise<void>;
+    /** Write 32 unsigned bits (big-endian). */
+    ubit32be(value: number): Promise<void>;
     /**
      * Write unsigned int32.
      *
      * @param {number} value - value as int
      */
     writeUInt32BE(value: number): Promise<void>;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    uint32be(value: number): Promise<void>;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    uintbe(value: number): Promise<void>;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    udoublebe(value: number): Promise<void>;
-    /**
-     * Write unsigned int32.
-     *
-     * @param {number} value - value as int
-     */
-    ulongbe(value: number): Promise<void>;
-    /**
-    * Write float.
-    *
-    * @param {number} value - value as int
-    */
-    float(value: number): Promise<void>;
-    /**
-     * Write float.
-     *
-     * @param {number} value - value as int
-     */
-    floatle(value: number): Promise<void>;
-    /**
-    * Write float.
-    *
-    * @param {number} value - value as int
-    */
-    floatbe(value: number): Promise<void>;
-    /**
-     * Write 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    int64(value: BigValue): Promise<void>;
-    /**
-    * Write 64 bit integer.
-    *
-    * @param {BigValue} value - value as int
-    */
-    quad(value: BigValue): Promise<void>;
-    /**
-     * Write 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    bigint(value: BigValue): Promise<void>;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    uint64(value: BigValue): Promise<void>;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    ubigint(value: BigValue): Promise<void>;
-    /**
-    * Write unsigned 64 bit integer.
-    *
-    * @param {BigValue} value - value as int
-    */
-    uquad(value: BigValue): Promise<void>;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    int64le(value: BigValue): Promise<void>;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    bigintle(value: BigValue): Promise<void>;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    quadle(value: BigValue): Promise<void>;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    uint64le(value: BigValue): Promise<void>;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    ubigintle(value: BigValue): Promise<void>;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    uquadle(value: BigValue): Promise<void>;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    int64be(value: BigValue): Promise<void>;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    bigintbe(value: BigValue): Promise<void>;
-    /**
-     * Write signed 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    quadbe(value: BigValue): Promise<void>;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    uint64be(value: BigValue): Promise<void>;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    ubigintbe(value: BigValue): Promise<void>;
-    /**
-     * Write unsigned 64 bit integer.
-     *
-     * @param {BigValue} value - value as int
-     */
-    uquadbe(value: BigValue): Promise<void>;
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    doublefloat(value: number): Promise<void>;
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    dfloat(value: number): Promise<void>;
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    dfloatbe(value: number): Promise<void>;
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    doublefloatbe(value: number): Promise<void>;
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    dfloatle(value: number): Promise<void>;
-    /**
-     * Writes double float.
-     *
-     * @param {number} value - value as int
-     */
-    doublefloatle(value: number): Promise<void>;
     /**
     * Writes string, use options object for different types.
     *
@@ -13532,4 +4903,4 @@ declare class BiFileWriter {
     constructor();
 }
 
-export { BiBase, BiFileReader, BiFileWriter, BiReader, BiReaderAsync, BiReaderStream, BiWriter, BiWriterAsync, BiWriterStream, bireader, biwriter, hexdump };
+export { BiFileReader, BiFileWriter, BiReader, BiReaderAsync, BiReaderStream, BiWriter, BiWriterAsync, BiWriterStream, bireader, biwriter, hexdump };

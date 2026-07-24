@@ -5,3 +5,4 @@ tsconfig.esm.json
 src/
 test*
 rollup.config.js
+dist-test/

@@ -11,20 +11,23 @@ Feature rich binary reader ***and writer*** that keeps track of your position to
 - **Dual mode**: Sync or Async file reader (`r+` / `r`) on disk **or** pure in-memory `Buffer` or `Uint8Array`
 - **Chunked async loading** – configurable `windowSize` (default 4 KiB)  
   → Set `windowSize: 0` to load the entire file in **one** async read
-- **Byte cursor**: Track and change location with `offset` +Bit cursor `bitOffset`
+- **Byte cursor**: Track and change location with `offset` + bit cursor `bitOffset`
 - **Full bitfield support** – `readBit()` / `writeBit()` with:
   - signed / unsigned
-  - big-endian (`'be'`) or little-endian (`'le'`)
+  - big-endian (`be`) or little-endian (`le`)
   - any alignment (bits can start anywhere)
 - **Structural edits**:
-  - `insert()` – insert data anywhere
-  - `remove()` – delete data and **return** the removed chunk
-  - `trim()` – shrink (returns removed tail)
-  - `push()` – Grows start
+  - `insert()` – insert data anywhere (grows the buffer)
+  - `delete()` – remove data and **return** the removed chunk
+  - `trim()` / `clip()` – shrink from the cursor to the end (returns removed tail)
+  - `push()` / `append()` – add to the **end**; `unshift()` / `prepend()` – add to the **start**
+  - `replace()` / `fill()` / `extract()` – overwrite, fill-a-range, or copy-out
 - **Expandable files** with smart `growthIncrement` (default 1 MiB) to minimize syscalls
-- `return()` – flushes changes and returns the complete current content
-- `readonly` and `strict` modes (for limiting `growthIncrement`)
-- In `async` class, all operations automatically wait for required chunks
+- **Concurrency-safe async** – every async op is serialized on its instance, plus cursor-free
+  `*At(offset)` reads/writes and `runExclusive()` for atomic sequences (see [Async](#async))
+- `get()` / `return()` – flushes changes and returns the current content
+- `readOnly` and `strict` modes (for limiting `growthIncrement`)
+- Built on a small, fully-tested engine (v5) - `DataView`-based codecs, strict-null-safe
 - Zero dependencies (only `fs` & `fs/promises` in Node)
 
 ---
@@ -35,13 +38,25 @@ Feature rich binary reader ***and writer*** that keeps track of your position to
 - [Bytes](#byte) ([u]int8, byte) 8 bit signed or unsigned value
 - [Shorts](#short) ([u]int16, word, short{le|be}) 16 bit signed or unsigned value in big or little endian order
 - [Half Floats](#half-float) (halffloat, half{le|be}) 16 bit decimal value in big or little endian order
-- [Integers](#integer) ([u]int32, long, int, double{le|be}) 32 bit signed or unsigned value in big or little endian order
+- [Integers](#integer) ([u]int32, long, int, dword{le|be}) 32 bit signed or unsigned value in big or little endian order
 - [Floats](#float) (float{le|be}) 32 bit decimal value in big or little endian
 - [Quadwords](#quadword) ([u]int64, quad, bigint{le|be}) 64 bit signed or unsigned in big or little endian
 - [Double Floats](#double-float) (doublefloat, dfloat{le|be}) 64 bit decimal value in big or little endian
 - [Strings](#strings) (string) Fixed and non-fixed length, UTF, pascal, wide pascal. Includes all `TextEncoder` types
 
 ## ⭐ What's New?
+
+### v5
+ * **Internals rewritten** into a small, unit-tested engine - the two legacy base classes
+   were replaced and deleted (~9,600 lines), the facades shrank ~57%, and the mechanical
+   aliases (`uint32le`, `bit8be`, …) are now **generated** from a single table.
+ * **Concurrency-safe async**: every async operation on an instance is serialized by a
+   built-in queue (overlapping cursor calls no longer corrupt state). Added cursor-free
+   `*At(offset)` reads/writes (safe to call concurrently) and `runExclusive()` for atomic
+   sequences.
+ * **Faster async strings** (single batched read/write) and a lighter `close()` in file mode.
+ * Whole codebase compiles under `strictNullChecks`; the pre-`DataView` fallback codecs were
+   removed (every supported runtime has `DataView`; only the manual `float16` path remains).
 
 ### v4
  * Added `BiReaderAsync` and `BiWriterAsync`. See [Async](#async) classes.
@@ -94,18 +109,18 @@ import { BiReader, BiWriter } from 'bireader';
 const data = new Uint8Array([0x01, 0x02, 0x03, 0x04 /* ... */]);
 const br = new BiReader(data);
 
-console.log(br.uint32le);        // auto-advances cursor
+console.log(br.uint32le);              // auto-advances cursor
 console.log(br.halffloatle);
-console.log(br.readString(10));  // or use .pstring2le, .widestring, etc.
+console.log(br.string({ length: 10 })); // or presets: .cstring(), .pstring2le(), .utf16string()
 
 // === Writing (auto-grows) ===
 const bw = new BiWriter();
 bw.uint32le = 0xCAFEBABE;
 bw.halffloatle = 3.1416;
 bw.pstring2le("Hello World");
-bw.writeBit(0b101, 3);           // bit-level control
+bw.writeBit(0b101, 3);                 // bit-level control
 
-const finalBuffer = bw.data;     // or bw.toBuffer()
+const finalBuffer = bw.data;           // the current buffer (or bw.get())
 ```
 **Node.js file support (still sync)**
 
@@ -122,9 +137,9 @@ import { BiReaderAsync, BiWriterAsync } from 'bireader';
 // === Async Reader (random access, no full load into RAM) ===
 const brAsync = await BiReaderAsync.create('massive-50gb-file.bin');
 
-await brAsync.seek(1024 * 1024 * 1024);    // jump to 1 GB mark
-const magic = await brAsync.str();         // or .uint32le, .halffloatle, etc.
-const value = await brAsync.readUint64();  // all methods are now async
+await brAsync.goto(1024 * 1024 * 1024);    // jump to the 1 GB mark (absolute)
+const magic = await brAsync.str();         // in async classes get/set become methods: await brAsync.uint32le(), etc.
+const value = await brAsync.readUInt64();  // all methods are now async
 
 await brAsync.close();
 ```
@@ -134,44 +149,51 @@ await brAsync.close();
 ```javascript
 const bwAsync = await BiWriterAsync.create('output-huge.bin');
 
-await bwAsync.writeUint32(0xDEADBEEF);
+await bwAsync.writeUInt32(0xDEADBEEF);
 await bwAsync.halffloatle(1.618);
-await bwAsync.writeString("Header data", { stringType: 'utf8', terminateValue: 0 });
+await bwAsync.writeString("Header data", { stringType: 'utf-8', terminateValue: 0 });
 
 await bwAsync.close();   // flushes everything
 ```
 
 **Important: `BiReaderAsync` / `BiWriterAsync` are Node.js only (they use `fs/promises`).**
 
+> In the async classes, the `get`/`set` presets from the sync classes become **methods**:
+> `br.uint32le` → `await br.uint32le()`, and `bw.uint32le = x` → `await bw.uint32le(x)`.
+
 ### 3. Bit-Field Example (works on all 4 classes)
 
 ```javascript
+// Reading (BiReader)
 const br = new BiReader(myData);
 br.goto(0x100);
 
 // Bit-level presets (auto-advance cursor)
-console.log(br.ubit4);     // 4 bits
+console.log(br.ubit4);     // 4 bits, unsigned
 console.log(br.bit8);      // signed 8 bits
 console.log(br.ubit24be);  // 24 bits big-endian
 
-// Manual bit control
-br.insetBit = 3;
-console.log(br.readBit(5));        // read any number of bits
-br.writeBit(0b10110, 5);           // write any number of bits
+br.insetBit = 3;           // manual bit control within the current byte
+console.log(br.readBit(5));        // read any number of bits (1-32)
+
+// Writing (BiWriter - a BiReader is read-only by default)
+const bw = new BiWriter(new Uint8Array(16));
+bw.writeBit(0b10110, 5);           // write any number of bits (1-32)
+bw.ubit4 = 0xF;                    // preset setters also work
 ```
 
 ### 4. String Handling (all variants)
 
 ```javascript
 const bw = new BiWriter();
-bw.strSettings = { length: 8, stringType: 'utf16le', terminateValue: 0 };
+bw.strSettings = { length: 8, stringType: 'utf-16', terminateValue: 0 };
 
-bw.str = "Hello 🌍";           // uses current strSettings
+bw.str = "Hello 🌍";              // uses current strSettings
 bw.pstring2le("Pascal string");
-bw.widestring("UTF-16 wide string");
+bw.utf16string("UTF-16 wide string"); // aka .unistring()
 
 const br = new BiReader(bw.data);
-console.log(br.cstring());       // null-terminated
+console.log(br.cstring());          // null-terminated
 console.log(br.pstring4be());
 ```
 
@@ -182,10 +204,32 @@ const bw = new BiWriter(data);
 bw.xor(0xAA);                  // XOR entire buffer with key
 bw.lShift(1, 0, 8);            // left-shift first 8 bytes by 1 bit
 bw.and(0x0F, 0, 4);            // AND bytes 0-3 with 0x0F
-console.log(bw.toHex());       // nice hexdump helper
+bw.hexdump();                  // console.log a hex dump (or { returnString: true })
 ```
 
-### 6. Real-World Complete Example (WebP parser)
+### 6. Concurrency (async only - v5)
+
+The async classes share one cursor, so overlapping cursor-based calls on the **same instance**
+are serialized automatically. For explicit control:
+
+```javascript
+const r = await BiReaderAsync.create('data.bin');
+
+// runExclusive: run a sequence atomically (queued if another op is in flight)
+const [a, b] = await Promise.all([
+  r.runExclusive(() => r.readUInt32()),
+  r.runExclusive(() => r.readUInt32()),
+]);                                   // deterministic, sequential
+
+// *At(offset): cursor-free reads/writes - safe to call concurrently, never move the cursor
+const [header, len] = await Promise.all([
+  r.readUInt32At(0, 'big'),
+  r.readUInt16At(8, 'little'),
+]);
+// write side: writeUInt32At, writeBytesAt, writeFloat64At, writeBigInt64At, ...
+```
+
+### 7. Real-World Complete Example (WebP parser)
 
 <details>
 <summary>Click to expand</summary>
@@ -462,14 +506,14 @@ Naming is shared across sync and async classes.
   <tr>
   <tr>
     <td>Class</td>
-    <td>new BiReader(<b>dataOrPath</b>, {byteOffset, bitOffset, endianess, strict, growthIncrement, enforceBigInt, readOnly})</td>
-    <td  rowspan="2"><b>dataOrPath:</b> string path or Buffer or Uint8Array</b><br><b>byteOffset:</b> byte offset (default <code>0</code>)<br><b>bitOffset:</b> bit offset (overides <code>byteOffset</code>) (default <code>0</code>)<br><b>endianess:</b> endian big or little (default <code>little</code>)<br><b>strict:</b> strict mode restrict extending initially supplied data (default <code>true</code> for reader, <code>false</code> for writer)<br><b>growthIncrement:</b> default extended Buffer size (default <code>1 MiB</code>)<br><b>enforceBigInt:</b> always return <code>bigint</code> values on 64 bit reads (default <code>false</code>)<br><b>readOnly:</b> read only Buffer or file (default <code>true</code> in writer)
+    <td>new BiReader(<b>dataOrPath</b>, {byteOffset, bitOffset, endianness, strict, growthIncrement, enforceBigInt, readOnly})</td>
+    <td  rowspan="2"><b>dataOrPath:</b> string path or Buffer or Uint8Array</b><br><b>byteOffset:</b> byte offset (default <code>0</code>)<br><b>bitOffset:</b> bit offset (overides <code>byteOffset</code>) (default <code>0</code>)<br><b>endianness:</b> endian big or little (default <code>little</code>)<br><b>strict:</b> strict mode restrict extending initially supplied data (default <code>true</code> for reader, <code>false</code> for writer)<br><b>growthIncrement:</b> default extended Buffer size (default <code>1 MiB</code>)<br><b>enforceBigInt:</b> always return <code>bigint</code> values on 64 bit reads (default <code>false</code>)<br><b>readOnly:</b> read only Buffer or file (default <code>true</code> in writer)
     </td>
     <td rowspan="2">Start with new Constructor.<br><br><b>File Note:</b> When writing to a file, you must use close() when finished, or commit() to make sure changes are committed.<br><br><b>Data Note:</b> Supplied data can always be found with <b>.data</b>.<br><br><b>Supplied data note:</b> While BiWriter can be created with a 0 length Uint8Array or Buffer, the default <code>growthIncrement</code> will prevent a new array created on each operation (leading to a degraded performance). It's best to supply a larger than needed buffer when creating the Writer and use <b>.trim()</b> after you're finished.</td>
   </tr>
   <tr>
     <td>Class</td>
-    <td>new BiWriter(<b>dataOrPath</b>, {byteOffset, bitOffset, endianess, strict, growthIncrement, enforceBigInt, writeable})</td>
+    <td>new BiWriter(<b>dataOrPath</b>, {byteOffset, bitOffset, endianness, strict, growthIncrement, enforceBigInt, readOnly})</td>
   </tr>
   <th align="center" colspan="4"><i>File Mode</i></th>
   <tr>
@@ -828,7 +872,7 @@ Naming is shared across sync and async classes.
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>place(<b>data</b>, consume, offset), write(<b>data</b>, consume, offset)</td>
+    <td>place(<b>data</b>, offset, consume)</td>
   </tr>
   <tr>
     <td>Function</td>
@@ -940,9 +984,18 @@ Naming is shared across sync and async classes.
 
 ## Async
 
-With 4.0 you can now use ``BiReaderAsync`` and ``BiWriterAsync`` for async operations. Pass a normal Buffer, Uint8Array or a string path (only in Node.js). When passed a Buffer or Uint8Array, it's uses the same logic as the sync class. When working with reading or creating a file, the class async loads the files in chunks for quick editing (window size is editing). This class is designed for larger files where you don't want to load the whole file buffer into memory all at once or need an async class.
+With 4.0 you can now use ``BiReaderAsync`` and ``BiWriterAsync`` for async operations. Pass a normal Buffer, Uint8Array or a string path (only in Node.js). When passed a Buffer or Uint8Array, it uses the same logic as the sync class. When reading or creating a file, the class loads the file in chunks for quick editing (the chunk size is configurable via `windowSize`). This class is designed for larger files where you don't want to load the whole file buffer into memory all at once, or when you need an async class.
 
-**Naming:** Same function naming applies to async as [Common Functions](#common-functions) section but these classes use all async functions, **so `get` and `set` methods are now also async functions.**
+**Naming:** Same function naming applies to async as the [Common Functions](#common-functions) section, but these classes use all async functions, **so the `get` / `set` presets from the sync classes become async methods** (`br.uint32le` → `await br.uint32le()`, `bw.uint32le = x` → `await bw.uint32le(x)`).
+
+**Async-only additions (v5):**
+- **`runExclusive(fn)`** - run a sequence of cursor operations atomically; overlapping calls on
+  one instance are queued and run one at a time (reentrant).
+- **`readXAt(offset, …)` / `writeXAt(offset, …)`** - read/write at an absolute offset **without**
+  moving the cursor, so they're safe to call concurrently. Available for `UInt8`, `Int16`/`UInt16`,
+  `Int32`/`UInt32`, `Float32`, `Float64`, `BigInt64`/`BigUInt64`, and raw `Bytes`.
+
+See [Concurrency](#6-concurrency-async-only--v5) for examples.
 
 <table>
 <thead>
@@ -955,19 +1008,19 @@ With 4.0 you can now use ``BiReaderAsync`` and ``BiWriterAsync`` for async opera
 <tbody>
   <tr>
     <td>Class</td>
-    <td>new BiReaderAsync(<b>dataOrFilePath</b>, {byteOffset, bitOffset, endianess, strict, growthIncrement, readOnly, windowSize})</td>
-    <td  rowspan="2"><b>dataOrPath:</b> string path or Buffer or Uint8Array</b><br><b>byteOffset:</b> byte offset (default <code>0</code>)<br><b>bitOffset:</b> bit offset (overides <code>byteOffset</code>) (default <code>0</code>)<br><b>endianess:</b> endian big or little (default <code>little</code>)<br><b>strict:</b> strict mode restrict extending initially supplied data (default <code>true</code> for reader, <code>false</code> for writer)<br><b>growthIncrement:</b> default extended Buffer size (default <code>1 MiB</code>)<br><b>enforceBigInt:</b> always return <code>bigint</code> values on 64 bit reads (default <code>false</code>)<br><b>readOnly:</b> read only Buffer or file (default <code>true</code> in writer)<br><b>windowSize:</b> The chunk size when reading files. Set to <code>0</code> if you want the whole file read in one async cycle (default <code>4 KiB</code>)
+    <td>new BiReaderAsync(<b>dataOrFilePath</b>, {byteOffset, bitOffset, endianness, strict, growthIncrement, readOnly, windowSize})</td>
+    <td  rowspan="2"><b>dataOrPath:</b> string path or Buffer or Uint8Array</b><br><b>byteOffset:</b> byte offset (default <code>0</code>)<br><b>bitOffset:</b> bit offset (overides <code>byteOffset</code>) (default <code>0</code>)<br><b>endianness:</b> endian big or little (default <code>little</code>)<br><b>strict:</b> strict mode restrict extending initially supplied data (default <code>true</code> for reader, <code>false</code> for writer)<br><b>growthIncrement:</b> default extended Buffer size (default <code>1 MiB</code>)<br><b>enforceBigInt:</b> always return <code>bigint</code> values on 64 bit reads (default <code>false</code>)<br><b>readOnly:</b> read only Buffer or file (default <code>true</code> in writer)<br><b>windowSize:</b> The chunk size when reading files. Set to <code>0</code> if you want the whole file read in one async cycle (default <code>4 KiB</code>)
     </td>
     <td rowspan="2">Start with new Constructor.<br><br><b>Note:</b> The file must be opened with await <code>.open()</code> and closed with await <code>.close()</code>. The <b>.data</b> can't be used in file mode, so use await <code>.get()</code> or <code>.return()</code></td>
   </tr>
   <tr>
     <td>Class</td>
-    <td>new BiWriterAsync(<b>dataOrFilePath</b>, {byteOffset, bitOffset, endianess, strict, growthIncrement, readOnly, windowSize})</td>
+    <td>new BiWriterAsync(<b>dataOrFilePath</b>, {byteOffset, bitOffset, endianness, strict, growthIncrement, readOnly, windowSize})</td>
   </tr>
   <th align="center" colspan="4"><i>Quick Create</i></th>
   <tr>
     <td>Function</td>
-    <td>create(<b>dataOrFilePath</b>, {byteOffset, bitOffset, endianess, strict, growthIncrement, readOnly, windowSize})
+    <td>create(<b>dataOrFilePath</b>, {byteOffset, bitOffset, endianness, strict, growthIncrement, readOnly, windowSize})
     <td>Same as above</tb>
     <td>Static async function that creates and opens the class all at once.</td>
   </tr>
@@ -978,7 +1031,7 @@ With 4.0 you can now use ``BiReaderAsync`` and ``BiWriterAsync`` for async opera
 
 Parse value as a bit field. There are 32 functions from bit1 to bit32 and can be signed or unsigned (with a `u` at the start) and in little or big endian order (`be` or `le` at the end).
 
-**Note:** Remaining bits are dropped when returning to a byte read. Example, after using `bit4` then `ubyte`, the read locations drops the remaining 4 bits after `bit4` when reading `ubyte`. Any bit reading under 8 will always be unsigned.
+**Note:** Remaining bits are dropped when returning to a byte read. Example, after using `bit4` then `ubyte`, the read location drops the remaining 4 bits after `bit4` when reading `ubyte`. The `bitN` presets are signed (the top bit is the sign) and the `ubitN` presets are unsigned; a 1-bit value is always unsigned.
 
 <table>
 <thead>
@@ -996,7 +1049,7 @@ Parse value as a bit field. There are 32 functions from bit1 to bit32 and can be
   </tr>
   <tr>
     <td>writeBit(<b>value, bits</b>, unsigned, endian)</td>
-    <td><b>value to write, number of bits</b>, if the value is written unsigned, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
+    <td><b>value to write, number of bits</b>, if the value is written unsigned, big or little endian<br>Note: values are clamped to the type's range; writing past the end throws only in strict mode</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
@@ -1030,8 +1083,8 @@ Parse value as a byte (aka int8). Can be signed or unsigned (with a `u` at the s
     <td>if the value is returned unsigned</td>
   </tr>
   <tr>
-    <td>writeByte(<b>value</b>, offsetBytes, unsigned)</td>
-    <td><b>value to write</b>, byte offset from current position, if the value is written unsigned<br>Note: Will throw error if value is outside of size of data</td>
+    <td>writeByte(<b>value</b>, unsigned)</td>
+    <td><b>value to write</b>, if the value is written unsigned<br>Note: values are clamped to the type's range; writing past the end throws only in strict mode</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
@@ -1066,7 +1119,7 @@ Parse value as a int16 (aka short or word). Can be signed or unsigned (with a `u
   </tr>
   <tr>
     <td>writeInt16(<b>value</b>, unsigned, endian)</td>
-    <td><b>value to write</b>, if the value is written unsigned, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
+    <td><b>value to write</b>, if the value is written unsigned, big or little endian<br>Note: values are clamped to the type's range; writing past the end throws only in strict mode</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
@@ -1101,7 +1154,7 @@ Parse value as a half float (aka half). Can be in little or big endian order (`b
   </tr>
   <tr>
     <td>writeHalfFloat(<b>value</b>, endian)</td>
-    <td><b>value to write</b>, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
+    <td><b>value to write</b>, big or little endian<br>Note: values are clamped to the type's range; writing past the end throws only in strict mode</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
@@ -1118,7 +1171,9 @@ Parse value as a half float (aka half). Can be in little or big endian order (`b
 
 ## Integer
 
-Parse value as a int32 (aka int, long or  double). Can be signed or unsigned (with a `u` at the start) and in little or big endian order (`be` or `le` at the end).
+Parse value as a int32 (aka int, long or dword). Can be signed or unsigned (with a `u` at the start) and in little or big endian order (`be` or `le` at the end).
+
+> **v5 breaking change:** the 32-bit `double` alias was renamed to **`dword`** (it's a 32-bit "double word", not an 8-byte float - that's `doublefloat` / `dfloat`).
 
 <table>
 <thead>
@@ -1136,16 +1191,16 @@ Parse value as a int32 (aka int, long or  double). Can be signed or unsigned (wi
   </tr>
   <tr>
     <td>writeInt32(<b>value</b>, unsigned, endian)</td>
-    <td><b>value to write</b>, if the value is written unsigned, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
+    <td><b>value to write</b>, if the value is written unsigned, big or little endian<br>Note: values are clamped to the type's range; writing past the end throws only in strict mode</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
-    <td>[u]{int32|long|int|double}{be|le}</td>
+    <td>[u]{int32|long|int|dword}{be|le}</td>
     <td>*Note: in BiReader these are get, not functions.</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (writer)</b></td>
-    <td>[u]{int32|long|int|double}{be|le} = <b>value</b></td>
+    <td>[u]{int32|long|int|dword}{be|le} = <b>value</b></td>
     <td>*Note: in BiWriter these are set, not functions.</td>
   </tr>
 </tbody>
@@ -1170,8 +1225,8 @@ Parse value as a float. Can be in little or big endian order (`be` or `le` at th
     <td>big or little endian</td>
   </tr>
   <tr>
-    <td>writeInt64(<b>value</b>, endian)</td>
-    <td><b>value to write</b>, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
+    <td>writeFloat(<b>value</b>, endian)</td>
+    <td><b>value to write</b>, big or little endian<br>Note: values are clamped to the type's range; writing past the end throws only in strict mode</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
@@ -1206,7 +1261,7 @@ Parse value as a int64 (aka quad or bigint). Can be signed or unsigned (with a `
   </tr>
   <tr>
     <td>writeInt64(<b>value</b>, unsigned, endian)</td>
-    <td><b>value to write</b>, if the value is written unsigned, big or little endian<br>Note: Will throw error if value is outside of size of data</td>
+    <td><b>value to write</b>, if the value is written unsigned, big or little endian<br>Note: values are clamped to the type's range; writing past the end throws only in strict mode</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>
@@ -1241,7 +1296,7 @@ Parse value as a double float (aka dfloat). Can be in little or big endian order
   </tr>
   <tr>
     <td>writeDoubleFloat(<b>value</b>, endian)</td>
-    <td><b>value to write</b>, big or little endian.<br>Note: Will throw error if value is outside of size of data</td>
+    <td><b>value to write</b>, big or little endian.<br>Note: values are clamped to the type's range; writing past the end throws only in strict mode</td>
   </tr>
   <tr>
     <td align="center"><b>Presets (reader)</b></td>

@@ -1,0 +1,9 @@
+{
+  // Compiles src to an ISOLATED dir for the engine unit tests (test/*.engine.spec.ts),
+  // which import compiled per-file modules. Kept OUT of ./dist so it never touches the
+  // published release artifacts (those are produced only by `npm run build` / rollup).
+  "extends": "./tsconfig.esm.json",
+  "compilerOptions": {
+    "outDir": "./dist-test"
+  }
+}

@@ -1,9 +1,9 @@
 {
   "name": "bireader",
-  "version": "4.0.14",
+  "version": "5.0.0",
   "description": "Read and write binary data in JavaScript",
   "type": "module",
-  "main": "./dist/cjs/index.js",
+  "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/indexImport.js",
   "browser": "./dist/esm/indexBrowser.js",
   "repository": {
@@ -23,13 +23,13 @@
   "scripts": {
     "build": "npm run clean && rollup -c",
     "build:rollup": "npm run build",
-    "build:ts": "npm run clean && npm run build:esm && npm run build:cjs && npm run build:types",
-    "build:esm": "tsc -p tsconfig.esm.json",
-    "build:cjs": "tsc -p tsconfig.cjs.json",
-    "build:types": "tsc -p tsconfig.d.ts.json",
     "clean": "rimraf dist",
+    "clean:test": "rimraf dist-test",
+    "typecheck": "tsc -p tsconfig.esm.json --noEmit",
     "test": "mocha --require ts-node/register test/**/*.test.ts ",
-    "test:fallback": "mocha --require ts-node/register test/**/*.test.ts -- FALLBACK=true"
+    "test:engine": "npm run clean:test && tsc -p tsconfig.test.json && mocha --require ts-node/register test/*.engine.spec.ts",
+    "apply:aliases": "node scripts/apply-aliases.mjs",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "buffer",

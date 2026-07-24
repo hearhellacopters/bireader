@@ -3,18 +3,14 @@ import fs from 'fs';
 import fsp from 'fs/promises';
 import { BiReader } from './BiReader.js';
 import { BiWriter } from './BiWriter.js';
-import { BiBase } from './core/BiBase.js';
+import { BiSyncEngine } from './core/engine/sync-engine.js';
 import { BiReaderAsync } from './BiReaderAsync.js';
 import { BiWriterAsync } from './BiWriterAsync.js';
-import { BiBaseAsync } from './core/BiBaseAsync.js';
+import { BiEngine } from './core/engine/engine.js';
 export { hexdump } from './common.js';
 
-BiReader.fs = fs;
-BiWriter.fs = fs;
-BiBase.fs = fs;
-BiReaderAsync.fs = fsp;
-BiWriterAsync.fs = fsp;
-BiBaseAsync.fs = fsp;
+BiSyncEngine.fs = fs;
+BiEngine.fs = fsp;
 
 export{
     BiReader,

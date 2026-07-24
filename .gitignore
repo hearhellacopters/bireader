@@ -2,3 +2,4 @@ node_modules/
 package-lock.json
 _test*
 CODE_REVIEW*
+dist-test/

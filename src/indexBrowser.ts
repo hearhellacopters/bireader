@@ -1,7 +1,6 @@
 // browser import
 export { BiReader } from './BiReader.js';
 export { BiWriter } from './BiWriter.js';
-export { BiBase } from './core/BiBase.js'
 export { BiReaderAsync } from './BiReaderAsync.js';
 export { BiWriterAsync } from './BiWriterAsync.js';
 export { hexdump } from './common.js';
