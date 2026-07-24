@@ -1,6 +1,6 @@
 {
   "name": "bireader",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "description": "Read and write binary data in JavaScript",
   "type": "module",
   "main": "./dist/cjs/index.cjs",

@@ -1022,7 +1022,9 @@ class BiSyncEngine {
         }
     }
     // #region lifecycle / source
+    /** True when backed by an in-memory buffer rather than a file. */
     get isMemoryMode() { return this.#source instanceof MemorySyncSource; }
+    /** The live {@link SyncSource} (opens the file lazily in file mode). */
     get source() { return this.#src; }
     get #src() {
         if (!this.#source)
@@ -1048,6 +1050,7 @@ class BiSyncEngine {
             throw new Error('No data source');
         return this.#source;
     }
+    /** Opens the file for reading / writing. Optionally swaps in a new in-memory buffer. */
     open(data) {
         if (data && isBufferOrUint8Array(data)) {
             this.#source = new MemorySyncSource(data, this.readOnly);
@@ -1057,12 +1060,19 @@ class BiSyncEngine {
         this.#ensureOpen();
     }
     // #region position / size
+    /** Current buffer / file size in bytes. */
     get size() { return this.#source ? this.#source.size : 0; }
+    /** Current byte position. */
     get offset() { return this.#cursor.byte; }
+    /** Moves the current byte position. */
     set offset(value) { this.goto(value); }
+    /** Current bit position within the current byte (0-7). */
     get insetBit() { return this.#cursor.bit; }
+    /** Moves the bit position within the current byte (0-7). */
     set insetBit(value) { this.goto(this.#cursor.byte, value % 8); }
+    /** Current absolute bit position (byte * 8 + inset bit). */
     get bitOffset() { return this.#cursor.bitPosition; }
+    /** Moves to an absolute bit position (byte * 8 + inset bit). */
     set bitOffset(value) { this.goto(value - (value % 8), value % 8); }
     // #region internals
     #alignByte() { this.#cursor.alignByte(); }
@@ -1105,6 +1115,7 @@ class BiSyncEngine {
             this.#cursor.set(at + width);
     }
     // #region numeric reads
+    /** Reads an 8 bit value (signed unless `unsigned`) at the current byte position. */
     readByte(unsigned = false, consume = true) {
         const { view, at } = this.#readAlignedView(1);
         const v = readInt(view, 0, 8, !unsigned, false);
@@ -1112,6 +1123,7 @@ class BiSyncEngine {
             this.#cursor.set(at + 1);
         return v;
     }
+    /** Reads a 16 bit value (short / word) in the given endian order. */
     readInt16(unsigned = false, endian = this.endian, consume = true) {
         const { view, at } = this.#readAlignedView(2);
         const v = readInt(view, 0, 16, !unsigned, endian === 'little');
@@ -1119,6 +1131,7 @@ class BiSyncEngine {
             this.#cursor.set(at + 2);
         return v;
     }
+    /** Reads a 32 bit value (int / long / dword) in the given endian order. */
     readInt32(unsigned = false, endian = this.endian, consume = true) {
         const { view, at } = this.#readAlignedView(4);
         const v = readInt(view, 0, 32, !unsigned, endian === 'little');
@@ -1126,6 +1139,10 @@ class BiSyncEngine {
             this.#cursor.set(at + 4);
         return v;
     }
+    /**
+     * Reads a 64 bit value (quad / bigint) in the given endian order. Returns a `number` when the
+     * value is integer safe, otherwise a `bigint` (always `bigint` when `enforceBigInt` is set).
+     */
     readInt64(unsigned = false, endian = this.endian, consume = true) {
         if (!hasBigInt$1)
             throw new Error("System doesn't support BigInt values.");
@@ -1145,34 +1162,45 @@ class BiSyncEngine {
             this.#cursor.set(at + width / 8);
         return v;
     }
+    /** Reads a 16 bit half float in the given endian order. */
     readHalfFloat(endian = this.endian, consume = true) { return this.#readFloatN(16, endian, consume); }
+    /** Reads a 32 bit float in the given endian order. */
     readFloat(endian = this.endian, consume = true) { return this.#readFloatN(32, endian, consume); }
+    /** Reads a 64 bit double float in the given endian order. */
     readDoubleFloat(endian = this.endian, consume = true) { return this.#readFloatN(64, endian, consume); }
     // #region numeric writes
+    /** Writes an 8 bit value at the current byte position. Value is clamped to the type's range. */
     writeByte(value, unsigned = false, consume = true) {
         this.#writeAlignedView(1, v => writeInt(v, 0, numberSafe(value, 8, unsigned), 8, !unsigned, false), consume);
     }
+    /** Writes a 16 bit value (short / word) in the given endian order. Value is clamped to the type's range. */
     writeInt16(value, unsigned = false, endian = this.endian, consume = true) {
         this.#writeAlignedView(2, v => writeInt(v, 0, numberSafe(value, 16, unsigned), 16, !unsigned, endian === 'little'), consume);
     }
+    /** Writes a 32 bit value (int / long / dword) in the given endian order. Value is clamped to the type's range. */
     writeInt32(value, unsigned = false, endian = this.endian, consume = true) {
         this.#writeAlignedView(4, v => writeInt(v, 0, numberSafe(value, 32, unsigned), 32, !unsigned, endian === 'little'), consume);
     }
+    /** Writes a 64 bit value (quad / bigint) in the given endian order. Value is clamped to the type's range. */
     writeInt64(value, unsigned = false, endian = this.endian, consume = true) {
         if (!hasBigInt$1)
             throw new Error("System doesn't support BigInt values.");
         this.#writeAlignedView(8, v => writeBig(v, 0, numberSafe(value, 64, unsigned), !unsigned, endian === 'little'), consume);
     }
+    /** Writes a 16 bit half float in the given endian order. */
     writeHalfFloat(value, endian = this.endian, consume = true) {
         this.#writeAlignedView(2, v => writeFloat16(v, 0, value, endian === 'little'), consume);
     }
+    /** Writes a 32 bit float in the given endian order. */
     writeFloat(value, endian = this.endian, consume = true) {
         this.#writeAlignedView(4, v => writeFloat32(v, 0, value, endian === 'little'), consume);
     }
+    /** Writes a 64 bit double float in the given endian order. */
     writeDoubleFloat(value, endian = this.endian, consume = true) {
         this.#writeAlignedView(8, v => writeFloat64(v, 0, value, endian === 'little'), consume);
     }
     // #region bit fields
+    /** Reads a bit field of 1-32 bits from the current bit position, signed or unsigned, in either endian order. */
     readBit(bits, unsigned = false, endian = this.endian, consume = true) {
         if (bits === 0)
             return 0;
@@ -1186,6 +1214,7 @@ class BiSyncEngine {
             this.#cursor.skip(0, bits);
         return v;
     }
+    /** Writes a bit field of 1-32 bits at the current bit position. Value is clamped to the bit width. */
     writeBit(value, bits, unsigned = false, endian = this.endian, consume = true) {
         if (bits === 0)
             return;
@@ -1201,6 +1230,7 @@ class BiSyncEngine {
             this.#cursor.skip(0, bits);
     }
     // #region raw bytes
+    /** Reads `amount` bytes from the current byte position as a number array (signed unless `unsigned`). */
     readBytes(amount, unsigned, consume = true) {
         const data = this.readUBytes(amount, consume);
         const out = [];
@@ -1210,6 +1240,7 @@ class BiSyncEngine {
         }
         return out;
     }
+    /** Reads `amount` unsigned bytes from the current byte position as a `Uint8Array` copy. */
     readUBytes(amount, consume = true) {
         this.#alignByte();
         const at = this.#cursor.byte;
@@ -1219,25 +1250,33 @@ class BiSyncEngine {
             this.#cursor.set(at + amount);
         return bytes;
     }
+    /** Writes raw bytes at the current byte position, overwriting existing data. */
     writeBytes(values, unsigned, consume = true) {
         const data = isBufferOrUint8Array(values) ? values : new Uint8Array(values);
         this.overwrite(data, this.offset, consume);
     }
+    /** Writes raw unsigned bytes at the current byte position, overwriting existing data. */
     writeUBytes(values, consume = true) { this.writeBytes(values, true, consume); }
     // #region positioning
+    /** Moves to an absolute byte / bit position. Throws in strict mode when outside the data size. */
     goto(byte = 0, bit = 0) {
         this.#reach(byte + Math.ceil(bit / 8));
         this.#cursor.set(byte, bit);
     }
+    /** Moves the position by a relative number of bytes / bits. Use negative values to go back. */
     skip(bytes = 0, bits = 0) {
         const target = this.#cursor.bitPosition + bytes * 8 + bits;
         this.#reach(Math.ceil(Math.max(target, 0) / 8));
         this.#cursor.skip(bytes, bits);
     }
+    /** Moves the current byte position to the start of the data. */
     rewind() { this.#cursor.set(0, 0); }
+    /** Moves the current byte position to the end of the data. */
     last() { this.#cursor.set(this.size, 0); }
+    /** Aligns the current byte position forward to the next multiple of `n`. */
     align(n) { const a = this.#cursor.byte % n; if (a)
         this.skip(n - a, 0); }
+    /** Aligns the current byte position backward to the previous multiple of `n`. */
     alignRev(n) { const a = this.#cursor.byte % n; if (a)
         this.skip(-a, 0); }
     // #region structural edits
@@ -1269,6 +1308,7 @@ class BiSyncEngine {
             writePos += n;
         }
     }
+    /** Inserts new data at `offset`, growing the buffer and shifting the tail forward. Errors in strict mode. */
     insert(data, offset = this.offset, consume = true) {
         this.#assertMutable();
         if (offset < 0 || offset > this.#src.size)
@@ -1282,11 +1322,17 @@ class BiSyncEngine {
         if (consume)
             this.#cursor.set(offset + data.length);
     }
+    /** Alias of {@link insert} - inserts new data at `offset`. */
     place(data, offset = this.offset, consume = true) { this.insert(data, offset, consume); }
+    /** Adds new data to the start of the supplied data. Errors in strict mode. */
     unshift(data, consume = false) { this.insert(data, 0, consume); }
+    /** Alias of {@link unshift} - adds new data to the start of the supplied data. */
     prepend(data, consume = false) { this.insert(data, 0, consume); }
+    /** Adds new data to the end of the supplied data. Errors in strict mode. */
     push(data, consume = false) { this.insert(data, this.size, consume); }
+    /** Alias of {@link push} - adds new data to the end of the supplied data. */
     append(data, consume = false) { this.insert(data, this.size, consume); }
+    /** Removes `[startOffset, endOffset)` and returns the removed bytes. Errors in strict mode. */
     delete(startOffset = 0, endOffset = this.offset, consume = false) {
         this.#assertMutable();
         startOffset = Math.abs(startOffset);
@@ -1303,10 +1349,15 @@ class BiSyncEngine {
             this.#cursor.set(startOffset);
         return removed;
     }
+    /** Removes and returns all data after the current byte position. Errors in strict mode. */
     clip() { return this.delete(this.offset, this.size, false); }
+    /** Alias of {@link clip} - removes and returns all data after the current byte position. */
     trim() { return this.delete(this.offset, this.size, false); }
+    /** Removes and returns `length` bytes from the current byte position. Errors in strict mode. */
     crop(length = 0, consume = false) { return this.delete(this.offset, this.offset + length, consume); }
+    /** Alias of {@link crop} - removes and returns `length` bytes from the current byte position. */
     drop(length = 0, consume = false) { return this.delete(this.offset, this.offset + length, consume); }
+    /** Overwrites data at `offset` (grows if needed, does not shift the tail). */
     replace(data, offset = this.offset, consume = false) {
         if (this.#src.readOnly)
             throw new Error("Can't replace data in readOnly mode!");
@@ -1317,7 +1368,9 @@ class BiSyncEngine {
         if (consume)
             this.#cursor.set(offset + data.length);
     }
+    /** Alias of {@link replace} - overwrites data at `offset`. */
     overwrite(data, offset = this.offset, consume = false) { this.replace(data, offset, consume); }
+    /** Returns a copy of `[startOffset, endOffset)`; when `fillValue` is supplied, that range is filled with it. */
     fill(startOffset = this.offset, endOffset = this.size, consume = false, fillValue) {
         if (this.#src.readOnly && fillValue != undefined)
             throw new Error("Can't fill data in readOnly mode!");
@@ -1333,12 +1386,21 @@ class BiSyncEngine {
             this.#cursor.set(endOffset);
         return slice;
     }
+    /** Alias of {@link fill} - returns data between two byte positions, optionally filling that range. */
     lift(startOffset = this.offset, endOffset = this.size, consume = false, fillValue) { return this.fill(startOffset, endOffset, consume, fillValue); }
+    /** Returns a copy of the data between two byte positions without modifying it. */
     subarray(startOffset = this.offset, endOffset = this.size, consume = false) { return this.fill(startOffset, endOffset, consume); }
+    /** Returns a copy of `length` bytes from the current byte position without modifying the data. */
     extract(length = 0, consume = false) { return this.fill(this.offset, this.offset + length, consume); }
+    /** Alias of {@link extract} - returns a copy of `length` bytes from the current byte position. */
     slice(length = 0, consume = false) { return this.fill(this.offset, this.offset + length, consume); }
+    /** Alias of {@link extract} - returns a copy of `length` bytes from the current byte position. */
     wrap(length = 0, consume = false) { return this.fill(this.offset, this.offset + length, consume); }
     // #region strings
+    /**
+     * Reads a string in any supported format - fixed length or terminated UTF, or Pascal
+     * (`stringType`, `length`, `terminateValue`, `lengthReadSize`, `stripNull`, `encoding`, `endian`).
+     */
     readString(options = this.strDefaults, consume = true) {
         const length = options.length;
         const stringType = options.stringType ?? 'utf-8';
@@ -1367,6 +1429,10 @@ class BiSyncEngine {
             this.#cursor.set(at + pos);
         return str;
     }
+    /**
+     * Writes a string in any supported format - fixed length or terminated UTF, or Pascal
+     * (`stringType`, `length`, `terminateValue`, `lengthWriteSize`, `encoding`, `endian`).
+     */
     writeString(str, options = this.strDefaults, consume = true) {
         const length = options.length;
         const stringType = options.stringType ?? 'utf-8';
@@ -1452,21 +1518,36 @@ class BiSyncEngine {
         const k = typeof key === 'string' ? new TextEncoder().encode(key) : key;
         return { k, len: length ?? k.length };
     }
+    /** XORs the byte range `[start, end)` with the key. The key repeats when shorter than the range. */
     xor(key, start = this.offset, end = this.size, consume = false) { const k = this.#normalizeKey(key); this.#applyRange(start, end, b => _XOR(b, 0, b.length, k), consume); }
+    /** ORs the byte range `[start, end)` with the key. The key repeats when shorter than the range. */
     or(key, start = this.offset, end = this.size, consume = false) { const k = this.#normalizeKey(key); this.#applyRange(start, end, b => _OR(b, 0, b.length, k), consume); }
+    /** ANDs the byte range `[start, end)` with the key. The key repeats when shorter than the range. */
     and(key, start = this.offset, end = this.size, consume = false) { const k = this.#normalizeKey(key); this.#applyRange(start, end, b => _AND(b, 0, b.length, k), consume); }
+    /** Adds the key to each byte in `[start, end)`. The key repeats when shorter than the range. */
     add(key, start = this.offset, end = this.size, consume = false) { const k = this.#normalizeKey(key); this.#applyRange(start, end, b => _ADD(b, 0, b.length, k), consume); }
+    /** NOTs (bitwise inverts) every byte in the range `[start, end)`. */
     not(start = this.offset, end = this.size, consume = false) { this.#applyRange(start, end, b => _NOT(b, 0, b.length), consume); }
+    /** Left shifts each byte in `[start, end)` by the key. The key repeats when shorter than the range. */
     lShift(key, start = this.offset, end = this.size, consume = false) { const k = this.#normalizeKey(key); this.#applyRange(start, end, b => _LSHIFT(b, 0, b.length, k), consume); }
+    /** Right shifts each byte in `[start, end)` by the key. The key repeats when shorter than the range. */
     rShift(key, start = this.offset, end = this.size, consume = false) { const k = this.#normalizeKey(key); this.#applyRange(start, end, b => _RSHIFT(b, 0, b.length, k), consume); }
+    /** XORs `length` bytes from the current byte position with the key (length defaults to the key size). */
     xorThis(key, length, consume = false) { const { k, len } = this.#keyLen(key, length); this.xor(k, this.offset, this.offset + len, consume); }
+    /** ORs `length` bytes from the current byte position with the key (length defaults to the key size). */
     orThis(key, length, consume = false) { const { k, len } = this.#keyLen(key, length); this.or(k, this.offset, this.offset + len, consume); }
+    /** ANDs `length` bytes from the current byte position with the key (length defaults to the key size). */
     andThis(key, length, consume = false) { const { k, len } = this.#keyLen(key, length); this.and(k, this.offset, this.offset + len, consume); }
+    /** Adds the key to `length` bytes from the current byte position (length defaults to the key size). */
     addThis(key, length, consume = false) { const { k, len } = this.#keyLen(key, length); this.add(k, this.offset, this.offset + len, consume); }
+    /** NOTs `length` bytes from the current byte position. */
     notThis(length = 1, consume = false) { this.not(this.offset, this.offset + length, consume); }
+    /** Left shifts `length` bytes from the current byte position by the key (length defaults to the key size). */
     lShiftThis(key, length, consume = false) { const { k, len } = this.#keyLen(key, length); this.lShift(k, this.offset, this.offset + len, consume); }
+    /** Right shifts `length` bytes from the current byte position by the key (length defaults to the key size). */
     rShiftThis(key, length, consume = false) { const { k, len } = this.#keyLen(key, length); this.rShift(k, this.offset, this.offset + len, consume); }
     // #region find
+    /** Searches from the current byte position for a byte sequence. Returns its offset or -1. Does not move the position. */
     findBytes(bytesToFind) {
         const needle = Array.isArray(bytesToFind) ? new Uint8Array(bytesToFind) : bytesToFind;
         const data = this.#src.read(0, this.#src.size);
@@ -1483,6 +1564,7 @@ class BiSyncEngine {
         }
         return -1;
     }
+    /** Searches from the current byte position for a string. Returns its offset or -1. Does not move the position. */
     findString(str, bytesPerChar = 1) { return this.findBytes(textEncode(str, bytesPerChar)); }
     #findNumber(value, bits, unsigned, endian) {
         const data = this.#src.read(0, this.#src.size);
@@ -1494,150 +1576,289 @@ class BiSyncEngine {
         }
         return -1;
     }
+    /** Searches from the current byte position for an 8 bit value. Returns its offset or -1. Does not move the position. */
     findByte(value, unsigned = true, endian = this.endian) { return this.#findNumber(value, 8, unsigned, endian); }
+    /** Searches from the current byte position for a 16 bit value. Returns its offset or -1. Does not move the position. */
     findShort(value, unsigned = true, endian = this.endian) { return this.#findNumber(value, 16, unsigned, endian); }
+    /** Searches from the current byte position for a 32 bit value. Returns its offset or -1. Does not move the position. */
     findInt(value, unsigned = true, endian = this.endian) { return this.#findNumber(value, 32, unsigned, endian); }
     // #region endianness
+    /** Sets the default endian order. Can be changed at any time. */
     endianness(endian) { if (endian !== 'big' && endian !== 'little')
         throw new TypeError('Endian must be big or little'); this.endian = endian; }
+    /** Switches the default endian order to big endian. */
     bigEndian() { this.endian = 'big'; }
+    /** Alias of {@link bigEndian} - switches to big endian. */
     big() { this.endian = 'big'; }
+    /** Alias of {@link bigEndian} - switches to big endian. */
     be() { this.endian = 'big'; }
+    /** Switches the default endian order to little endian. */
     littleEndian() { this.endian = 'little'; }
+    /** Alias of {@link littleEndian} - switches to little endian. */
     little() { this.endian = 'little'; }
+    /** Alias of {@link littleEndian} - switches to little endian. */
     le() { this.endian = 'little'; }
     // #region read/write aliases
+    /** Reads an unsigned 8 bit value. */
     readUByte(consume = true) { return this.readByte(true, consume); }
+    /** Reads an unsigned 16 bit value in the given endian order. */
     readUInt16(endian = this.endian) { return this.readInt16(true, endian); }
+    /** Reads an unsigned 16 bit little endian value. */
     readUInt16LE() { return this.readInt16(true, 'little'); }
+    /** Reads an unsigned 16 bit big endian value. */
     readUInt16BE() { return this.readInt16(true, 'big'); }
+    /** Reads a signed 16 bit little endian value. */
     readInt16LE() { return this.readInt16(false, 'little'); }
+    /** Reads a signed 16 bit big endian value. */
     readInt16BE() { return this.readInt16(false, 'big'); }
+    /** Reads a signed 32 bit value in the given endian order. */
     readInt(endian = this.endian) { return this.readInt32(false, endian); }
+    /** Reads an unsigned 32 bit value in the given endian order. */
     readUInt(endian = this.endian) { return this.readInt32(true, endian); }
+    /** Reads an unsigned 32 bit value in the given endian order. */
     readUInt32(endian = this.endian) { return this.readInt32(true, endian); }
+    /** Reads a signed 32 bit little endian value. */
     readInt32LE() { return this.readInt32(false, 'little'); }
+    /** Reads a signed 32 bit big endian value. */
     readInt32BE() { return this.readInt32(false, 'big'); }
+    /** Reads an unsigned 32 bit little endian value. */
     readUInt32LE() { return this.readInt32(true, 'little'); }
+    /** Reads an unsigned 32 bit big endian value. */
     readUInt32BE() { return this.readInt32(true, 'big'); }
+    /** Reads a 32 bit float in the given endian order. */
     readFloat32(endian = this.endian, consume = true) { return this.readFloat(endian, consume); }
+    /** Reads a 32 bit little endian float. */
     readFloatLE() { return this.readFloat('little'); }
+    /** Reads a 32 bit big endian float. */
     readFloatBE() { return this.readFloat('big'); }
+    /** Reads a 32 bit little endian float. */
     readFloat32LE() { return this.readFloat('little'); }
+    /** Reads a 32 bit big endian float. */
     readFloat32BE() { return this.readFloat('big'); }
+    /** Reads a 16 bit half float in the given endian order. */
     readFloat16(endian = this.endian, consume = true) { return this.readHalfFloat(endian, consume); }
+    /** Reads a 16 bit little endian half float. */
     readHalfFloatLE() { return this.readHalfFloat('little'); }
+    /** Reads a 16 bit big endian half float. */
     readHalfFloatBE() { return this.readHalfFloat('big'); }
+    /** Reads a 16 bit little endian half float. */
     readFloat16LE() { return this.readHalfFloat('little'); }
+    /** Reads a 16 bit big endian half float. */
     readFloat16BE() { return this.readHalfFloat('big'); }
+    /** Reads a 64 bit double float in the given endian order. */
     readFloat64(endian = this.endian, consume = true) { return this.readDoubleFloat(endian, consume); }
+    /** Reads a 64 bit little endian double float. */
     readDoubleFloatLE() { return this.readDoubleFloat('little'); }
+    /** Reads a 64 bit big endian double float. */
     readDoubleFloatBE() { return this.readDoubleFloat('big'); }
+    /** Reads a 64 bit little endian double float. */
     readFloat64LE() { return this.readDoubleFloat('little'); }
+    /** Reads a 64 bit big endian double float. */
     readFloat64BE() { return this.readDoubleFloat('big'); }
+    /** Reads an unsigned 64 bit value in the current endian order. */
     readUInt64() { return this.readInt64(true); }
+    /** Reads a signed 64 bit little endian value. */
     readInt64LE() { return this.readInt64(false, 'little'); }
+    /** Reads a signed 64 bit big endian value. */
     readInt64BE() { return this.readInt64(false, 'big'); }
+    /** Reads an unsigned 64 bit little endian value. */
     readUInt64LE() { return this.readInt64(true, 'little'); }
+    /** Reads an unsigned 64 bit big endian value. */
     readUInt64BE() { return this.readInt64(true, 'big'); }
+    /** Reads an unsigned bit field of 1-32 bits in big endian order. */
     readUBitBE(bits) { return this.readBit(bits, true, 'big'); }
+    /** Reads an unsigned bit field of 1-32 bits in little endian order. */
     readUBitLE(bits) { return this.readBit(bits, true, 'little'); }
+    /** Reads a bit field of 1-32 bits in big endian order. */
     readBitBE(bits, unsigned) { return this.readBit(bits, unsigned, 'big'); }
+    /** Reads a bit field of 1-32 bits in little endian order. */
     readBitLE(bits, unsigned) { return this.readBit(bits, unsigned, 'little'); }
+    /** Writes an unsigned 8 bit value. */
     writeUByte(value, consume = true) { this.writeByte(value, true, consume); }
+    /** Writes an unsigned 16 bit value in the given endian order. */
     writeUInt16(value, endian = this.endian) { this.writeInt16(value, true, endian); }
+    /** Writes an unsigned 16 bit little endian value. */
     writeUInt16LE(value) { this.writeInt16(value, true, 'little'); }
+    /** Writes an unsigned 16 bit big endian value. */
     writeUInt16BE(value) { this.writeInt16(value, true, 'big'); }
+    /** Writes a signed 16 bit little endian value. */
     writeInt16LE(value) { this.writeInt16(value, false, 'little'); }
+    /** Writes a signed 16 bit big endian value. */
     writeInt16BE(value) { this.writeInt16(value, false, 'big'); }
+    /** Writes a signed 32 bit value in the given endian order. */
     writeInt(value, endian = this.endian) { this.writeInt32(value, false, endian); }
+    /** Writes an unsigned 32 bit value in the given endian order. */
     writeUInt(value, endian = this.endian) { this.writeInt32(value, true, endian); }
+    /** Writes an unsigned 32 bit value in the given endian order. */
     writeUInt32(value, endian = this.endian) { this.writeInt32(value, true, endian); }
+    /** Writes a signed 32 bit little endian value. */
     writeInt32LE(value) { this.writeInt32(value, false, 'little'); }
+    /** Writes a signed 32 bit big endian value. */
     writeInt32BE(value) { this.writeInt32(value, false, 'big'); }
+    /** Writes an unsigned 32 bit little endian value. */
     writeUInt32LE(value) { this.writeInt32(value, true, 'little'); }
+    /** Writes an unsigned 32 bit big endian value. */
     writeUInt32BE(value) { this.writeInt32(value, true, 'big'); }
+    /** Writes a 32 bit float in the given endian order. */
     writeFloat32(value, endian = this.endian, consume = true) { this.writeFloat(value, endian, consume); }
+    /** Writes a 32 bit little endian float. */
     writeFloatLE(value) { this.writeFloat(value, 'little'); }
+    /** Writes a 32 bit big endian float. */
     writeFloatBE(value) { this.writeFloat(value, 'big'); }
+    /** Writes a 32 bit little endian float. */
     writeFloat32LE(value) { this.writeFloat(value, 'little'); }
+    /** Writes a 32 bit big endian float. */
     writeFloat32BE(value) { this.writeFloat(value, 'big'); }
+    /** Writes a 16 bit half float in the given endian order. */
     writeFloat16(value, endian = this.endian, consume = true) { this.writeHalfFloat(value, endian, consume); }
+    /** Writes a 16 bit little endian half float. */
     writeHalfFloatLE(value) { this.writeHalfFloat(value, 'little'); }
+    /** Writes a 16 bit big endian half float. */
     writeHalfFloatBE(value) { this.writeHalfFloat(value, 'big'); }
+    /** Writes a 16 bit little endian half float. */
     writeFloat16LE(value) { this.writeHalfFloat(value, 'little'); }
+    /** Writes a 16 bit big endian half float. */
     writeFloat16BE(value) { this.writeHalfFloat(value, 'big'); }
+    /** Writes a 64 bit double float in the given endian order. */
     writeFloat64(value, endian = this.endian, consume = true) { this.writeDoubleFloat(value, endian, consume); }
+    /** Writes a 64 bit little endian double float. */
     writeDoubleFloatLE(value) { this.writeDoubleFloat(value, 'little'); }
+    /** Writes a 64 bit big endian double float. */
     writeDoubleFloatBE(value) { this.writeDoubleFloat(value, 'big'); }
+    /** Writes a 64 bit little endian double float. */
     writeFloat64LE(value) { this.writeDoubleFloat(value, 'little'); }
+    /** Writes a 64 bit big endian double float. */
     writeFloat64BE(value) { this.writeDoubleFloat(value, 'big'); }
+    /** Writes an unsigned 64 bit value in the given endian order. */
     writeUInt64(value, endian = this.endian) { this.writeInt64(value, true, endian); }
+    /** Writes a signed 64 bit little endian value. */
     writeInt64LE(value) { this.writeInt64(value, false, 'little'); }
+    /** Writes a signed 64 bit big endian value. */
     writeInt64BE(value) { this.writeInt64(value, false, 'big'); }
+    /** Writes an unsigned 64 bit little endian value. */
     writeUInt64LE(value) { this.writeInt64(value, true, 'little'); }
+    /** Writes an unsigned 64 bit big endian value. */
     writeUInt64BE(value) { this.writeInt64(value, true, 'big'); }
+    /** Writes an unsigned bit field of 1-32 bits in big endian order. */
     writeUBitBE(value, bits) { this.writeBit(value, bits, true, 'big'); }
+    /** Writes an unsigned bit field of 1-32 bits in little endian order. */
     writeUBitLE(value, bits) { this.writeBit(value, bits, true, 'little'); }
+    /** Writes a bit field of 1-32 bits in big endian order. */
     writeBitBE(value, bits, unsigned) { this.writeBit(value, bits, unsigned, 'big'); }
+    /** Writes a bit field of 1-32 bits in little endian order. */
     writeBitLE(value, bits, unsigned) { this.writeBit(value, bits, unsigned, 'little'); }
     // #region size / position alias getters + setters
+    /** Current buffer size in bits. */
     get bitSize() { return this.size * 8; }
+    /** Current buffer size in bytes. */
     get length() { return this.size; }
+    /** Current buffer size in bytes. */
     get len() { return this.size; }
+    /** Current buffer / file size in bytes. */
     get fileSize() { return this.size; }
+    /** Current buffer / file size in bytes. */
     get FileSize() { return this.size; }
+    /** Current buffer size in bits. */
     get lengthBits() { return this.size * 8; }
+    /** Current buffer size in bits. */
     get sizeBits() { return this.size * 8; }
+    /** Current buffer / file size in bits. */
     get fileBitSize() { return this.size * 8; }
+    /** Current buffer / file size in bits. */
     get fileSizeBits() { return this.size * 8; }
+    /** Current buffer size in bits. */
     get lenBits() { return this.size * 8; }
+    /** Current byte position. */
     get off() { return this.#cursor.byte; }
+    /** Current byte position. */
     get getOffset() { return this.#cursor.byte; }
+    /** Current byte position. */
     get tell() { return this.#cursor.byte; }
+    /** Current byte position. */
     get FTell() { return this.#cursor.byte; }
+    /** Current byte position. */
     get saveOffset() { return this.#cursor.byte; }
+    /** Current byte position. */
     get byteOffset() { return this.#cursor.byte; }
+    /** Moves the current byte position. */
     set setOffset(value) { this.offset = value; }
+    /** Moves the current byte position. */
     set setByteOffset(value) { this.offset = value; }
+    /** Current absolute bit position. */
     get offsetBits() { return this.#cursor.bitPosition; }
+    /** Current absolute bit position. */
     get getBitOffset() { return this.#cursor.bitPosition; }
+    /** Current absolute bit position. */
     get saveBitOffset() { return this.#cursor.bitPosition; }
+    /** Current absolute bit position. */
     get FTellBits() { return this.#cursor.bitPosition; }
+    /** Current bit position within the current byte (0-7). */
     get tellBits() { return this.#cursor.bit; }
+    /** Current absolute bit position. */
     get offBits() { return this.#cursor.bitPosition; }
+    /** Moves to an absolute bit position. */
     set setOffsetBits(value) { this.bitOffset = value; }
+    /** Moves to an absolute bit position. */
     set setBitOffset(value) { this.bitOffset = value; }
+    /** Current bit position within the current byte (0-7). */
     get getInsetBit() { return this.#cursor.bit; }
+    /** Current bit position within the current byte (0-7). */
     get saveInsetBit() { return this.#cursor.bit; }
+    /** Current bit position within the current byte (0-7). */
     get inBit() { return this.#cursor.bit; }
+    /** Current bit position within the current byte (0-7). */
     get bitTell() { return this.#cursor.bit; }
+    /** Moves the bit position within the current byte (0-7). */
     set setInsetBit(value) { this.insetBit = value; }
+    /** Bytes remaining between the current byte position and the end of the data. */
     get remain() { return this.size - this.#cursor.byte; }
+    /** Bytes remaining between the current byte position and the end of the data. */
     get remainBytes() { return this.size - this.#cursor.byte; }
+    /** Bytes remaining between the current byte position and the end of the data. */
     get FEoF() { return this.size - this.#cursor.byte; }
+    /** Bits remaining between the current bit position and the end of the data. */
     get remainBits() { return (this.size * 8) - this.#cursor.bitPosition; }
+    /** Bits remaining between the current bit position and the end of the data. */
     get FEoFBits() { return (this.size * 8) - this.#cursor.bitPosition; }
+    /** Row line of the current byte position (16 bytes per row). */
     get getLine() { return Math.abs(Math.floor((this.#cursor.byte - 1) / 16)); }
+    /** Row line of the current byte position (16 bytes per row). */
     get row() { return this.getLine; }
     // #region move aliases
+    /** Alias of {@link skip} - moves the position by a relative number of bytes / bits. */
     jump(bytes, bits) { this.skip(bytes, bits ?? 0); }
+    /** Alias of {@link skip} - moves the position by a relative number of bytes / bits. */
     seek(bytes, bits) { this.skip(bytes, bits ?? 0); }
+    /** Alias of {@link goto} - moves to an absolute byte / bit position. */
     FSeek(byte, bit) { this.goto(byte, bit ?? 0); }
+    /** Alias of {@link goto} - moves to an absolute byte / bit position. */
     pointer(byte, bit) { this.goto(byte, bit ?? 0); }
+    /** Alias of {@link goto} - moves to an absolute byte / bit position. */
     warp(byte, bit) { this.goto(byte, bit ?? 0); }
+    /** Alias of {@link rewind} - moves the current byte position to the start of the data. */
     gotoStart() { this.rewind(); }
+    /** Alias of {@link last} - moves the current byte position to the end of the data. */
     gotoEnd() { this.last(); }
+    /** Alias of {@link last} - moves the current byte position to the end of the data. */
     EoF() { this.last(); }
     // #region type checks / dump / strict
+    /** True when the value is a `Buffer` or `Uint8Array`. */
     isBufferOrUint8Array(obj) { return isBufferOrUint8Array(obj); }
+    /** True when the value is a Node `Buffer`. */
     isBuffer(obj) { return typeof Buffer !== 'undefined' && Buffer.isBuffer(obj); }
+    /** True when the value is a plain `Uint8Array` (not a `Buffer`). */
     isUint8Array(obj) { return obj instanceof Uint8Array && !this.isBuffer(obj); }
+    /** Turns strict mode on - the data won't be extended past its max size. */
     restrict() { this.strict = true; }
+    /** Turns strict mode off - the data is extended when writing past its max size. */
     unrestrict() { this.strict = false; }
+    /** Turns off the hexdump on error (default). */
     errorDumpOff() { this.errorDump = false; }
+    /** Turns on the hexdump on error. */
     errorDumpOn() { this.errorDump = true; }
+    /** Merges default string options used by the `str` get / set and the string presets. */
     set strSettings(settings) { this.strDefaults = { ...this.strDefaults, ...settings }; }
+    /** Console logs the data as a hex dump, or returns it as a string with `returnString`. */
     hexdump(options = {}) {
         const length = options.length ?? 192;
         const startByte = options.startByte ?? this.#cursor.byte;
@@ -1648,6 +1869,7 @@ class BiSyncEngine {
         return _hexDump(data, options, startByte, endByte);
     }
     // #region data / lifecycle
+    /** The full current buffer data, or null when no source is open. */
     get data() {
         if (this.#source instanceof MemorySyncSource)
             return this.#source.data;
@@ -1655,13 +1877,20 @@ class BiSyncEngine {
             return this.#source.data;
         return null;
     }
+    /** A `DataView` over the current buffer data, or null when no source is open. */
     get view() {
         const d = this.data;
         return d ? new DataView(d.buffer, d.byteOffset, d.byteLength) : null;
     }
+    /** Commits any pending edits to the file. */
     commit() { this.flush(); }
+    /** Flushes any pending edits through to the underlying source. */
     flush() { if (this.#source)
         this.#source.flush(); }
+    /**
+     * Returns the supplied data, trimmed to the current write position when `growthIncrement`
+     * expanded the buffer. Use `.data` for the full padded buffer.
+     */
     get() {
         const src = this.#src;
         src.flush();
@@ -1670,12 +1899,19 @@ class BiSyncEngine {
             return full.subarray(0, this.#cursor.byte);
         return full;
     }
+    /** Alias of {@link get} - returns the supplied data. */
     getData() { return this.get(); }
+    /** Alias of {@link get} - returns the supplied data. */
     getFullBuffer() { return this.get(); }
+    /** Alias of {@link get} - returns the supplied data. */
     return() { return this.get(); }
+    /** Alias of {@link close} - flushes and releases the supplied data. */
     end() { return this.close(); }
+    /** Alias of {@link close} - flushes and releases the supplied data. */
     done() { return this.close(); }
+    /** Alias of {@link close} - flushes and releases the supplied data. */
     finished() { return this.close(); }
+    /** Commits any edits and closes the file. In memory mode returns the buffer instead. */
     close() {
         const src = this.#src;
         src.flush();
@@ -1685,12 +1921,14 @@ class BiSyncEngine {
         this.#source = null;
         this.#pendingPath = this.filePath;
     }
+    /** Enables or disables writing and expanding (sets `strict` and `readOnly`). Reopens the file in file mode. */
     writeMode(mode = true) {
         this.strict = !mode;
         this.readOnly = !mode;
         if (this.#pendingPath || (this.#source && !(this.#source instanceof MemorySyncSource)))
             this.close();
     }
+    /** Renames the file on the file system, keeping the read / write position. This is permanent. */
     renameFile(newFilePath) {
         if (this.isMemoryMode)
             return;
@@ -1702,6 +1940,7 @@ class BiSyncEngine {
         this.#pendingPath = newFilePath;
         this.open();
     }
+    /** Unlinks the file from the file system. This is permanent - it does not go to the recycling bin. */
     deleteFile() {
         if (this.isMemoryMode)
             return;
@@ -4461,6 +4700,7 @@ class BiEngine {
         }
     }
     // #region lifecycle / source
+    /** True when backed by an in-memory buffer rather than a file. */
     get isMemoryMode() {
         return this.#source instanceof MemorySource;
     }
@@ -4507,18 +4747,23 @@ class BiEngine {
         await this.#ensureOpen();
     }
     // #region position / size
+    /** Current buffer / file size in bytes. */
     get size() {
         return this.#source ? this.#src.size : 0;
     }
+    /** Current byte position. */
     get offset() {
         return this.#cursor.byte;
     }
+    /** Current bit position within the current byte (0-7). */
     get insetBit() {
         return this.#cursor.bit;
     }
+    /** Current absolute bit position (byte * 8 + inset bit). */
     get bitOffset() {
         return this.#cursor.bitPosition;
     }
+    /** Bytes remaining between the current byte position and the end of the data. */
     get remaining() {
         return this.size - this.#cursor.byte;
     }
@@ -4583,6 +4828,7 @@ class BiEngine {
         }
     }
     // #region numeric reads
+    /** Reads an 8 bit value (signed unless `unsigned`) at the current byte position. */
     readByte(unsigned = false, consume = true) {
         return this.runExclusive(async () => {
             const { view, at } = await this.#readAligned(1);
@@ -4601,12 +4847,18 @@ class BiEngine {
             return v;
         });
     }
+    /** Reads a 16 bit value (short / word) in the given endian order. */
     readInt16(unsigned = false, endian = this.endian, consume = true) {
         return this.#readIntN(16, unsigned, endian, consume);
     }
+    /** Reads a 32 bit value (int / long / dword) in the given endian order. */
     readInt32(unsigned = false, endian = this.endian, consume = true) {
         return this.#readIntN(32, unsigned, endian, consume);
     }
+    /**
+     * Reads a 64 bit value (quad / bigint) in the given endian order. Returns a `number` when the
+     * value is integer safe, otherwise a `bigint` (always `bigint` when `enforceBigInt` is set).
+     */
     readInt64(unsigned = false, endian = this.endian, consume = true) {
         if (!hasBigInt) {
             throw new Error("System doesn't support BigInt values.");
@@ -4637,25 +4889,32 @@ class BiEngine {
             return v;
         });
     }
+    /** Reads a 16 bit half float in the given endian order. */
     readHalfFloat(endian = this.endian, consume = true) {
         return this.#readFloatN(16, endian, consume);
     }
+    /** Reads a 32 bit float in the given endian order. */
     readFloat(endian = this.endian, consume = true) {
         return this.#readFloatN(32, endian, consume);
     }
+    /** Reads a 64 bit double float in the given endian order. */
     readDoubleFloat(endian = this.endian, consume = true) {
         return this.#readFloatN(64, endian, consume);
     }
     // #region numeric writes
+    /** Writes an 8 bit value at the current byte position. Value is clamped to the type's range. */
     writeByte(value, unsigned = false, consume = true) {
         return this.runExclusive(() => this.#writeAligned(1, view => writeInt(view, 0, numberSafe(value, 8, unsigned), 8, !unsigned, false), consume));
     }
+    /** Writes a 16 bit value (short / word) in the given endian order. Value is clamped to the type's range. */
     writeInt16(value, unsigned = false, endian = this.endian, consume = true) {
         return this.runExclusive(() => this.#writeAligned(2, view => writeInt(view, 0, numberSafe(value, 16, unsigned), 16, !unsigned, endian === 'little'), consume));
     }
+    /** Writes a 32 bit value (int / long / dword) in the given endian order. Value is clamped to the type's range. */
     writeInt32(value, unsigned = false, endian = this.endian, consume = true) {
         return this.runExclusive(() => this.#writeAligned(4, view => writeInt(view, 0, numberSafe(value, 32, unsigned), 32, !unsigned, endian === 'little'), consume));
     }
+    /** Writes a 64 bit value (quad / bigint) in the given endian order. Value is clamped to the type's range. */
     writeInt64(value, unsigned = false, endian = this.endian, consume = true) {
         if (!hasBigInt) {
             throw new Error("System doesn't support BigInt values.");
@@ -4663,16 +4922,20 @@ class BiEngine {
         return this.runExclusive(() => this.#writeAligned(8, view => writeBig(view, 0, numberSafe(value, 64, unsigned), !unsigned, endian === 'little'), consume));
     }
     // #region float writes
+    /** Writes a 16 bit half float in the given endian order. */
     writeHalfFloat(value, endian = this.endian, consume = true) {
         return this.runExclusive(() => this.#writeAligned(2, view => writeFloat16(view, 0, value, endian === 'little'), consume));
     }
+    /** Writes a 32 bit float in the given endian order. */
     writeFloat(value, endian = this.endian, consume = true) {
         return this.runExclusive(() => this.#writeAligned(4, view => writeFloat32(view, 0, value, endian === 'little'), consume));
     }
+    /** Writes a 64 bit double float in the given endian order. */
     writeDoubleFloat(value, endian = this.endian, consume = true) {
         return this.runExclusive(() => this.#writeAligned(8, view => writeFloat64(view, 0, value, endian === 'little'), consume));
     }
     // #region bit fields
+    /** Reads a bit field of 1-32 bits from the current bit position, signed or unsigned, in either endian order. */
     readBit(bits, unsigned = false, endian = this.endian, consume = true) {
         return this.runExclusive(async () => {
             if (bits === 0)
@@ -4688,6 +4951,7 @@ class BiEngine {
             return v;
         });
     }
+    /** Writes a bit field of 1-32 bits at the current bit position. Value is clamped to the bit width. */
     writeBit(value, bits, unsigned = false, endian = this.endian, consume = true) {
         return this.runExclusive(async () => {
             if (bits === 0)
@@ -4728,39 +4992,48 @@ class BiEngine {
         await this.#ensureOpen();
         await this.#ensureWritable(targetByte);
     }
+    /** Moves the current byte position to the start of the data. */
     rewind() {
         this.#cursor.set(0, 0);
     }
+    /** Moves the current byte position to the end of the data. */
     last() {
         this.#cursor.set(this.size, 0);
     }
+    /** Aligns the current byte position forward to the next multiple of `n`. */
     async align(n) {
         const a = this.#cursor.byte % n;
         if (a)
             await this.skip(n - a, 0);
     }
     // #region positional (cursor-free, concurrency-safe)
+    /** Reads a 16 bit value at an absolute offset without moving the cursor (safe to call concurrently). */
     async readInt16At(offset, unsigned = false, endian = this.endian) {
         await this.#ensureOpen();
         const bytes = await this.#src.read(offset, 2);
         return readInt(new DataView(bytes.buffer, bytes.byteOffset, 2), 0, 16, !unsigned, endian === 'little');
     }
+    /** Reads an unsigned 16 bit value at an absolute offset without moving the cursor. */
     async readUInt16At(offset, endian = this.endian) {
         return this.readInt16At(offset, true, endian);
     }
+    /** Reads a 32 bit value at an absolute offset without moving the cursor (safe to call concurrently). */
     async readInt32At(offset, unsigned = false, endian = this.endian) {
         await this.#ensureOpen();
         const bytes = await this.#src.read(offset, 4);
         return readInt(new DataView(bytes.buffer, bytes.byteOffset, 4), 0, 32, !unsigned, endian === 'little');
     }
+    /** Reads an unsigned 32 bit value at an absolute offset without moving the cursor. */
     async readUInt32At(offset, endian = this.endian) {
         return this.readInt32At(offset, true, endian);
     }
+    /** Reads an unsigned 8 bit value at an absolute offset without moving the cursor. */
     async readUInt8At(offset) {
         await this.#ensureOpen();
         const bytes = await this.#src.read(offset, 1);
         return bytes[0];
     }
+    /** Writes a 16 bit value at an absolute offset without moving the cursor (safe to call concurrently). */
     async writeInt16At(offset, value, unsigned = false, endian = this.endian) {
         await this.#ensureOpen();
         if (this.#src.readOnly)
@@ -4770,6 +5043,7 @@ class BiEngine {
         writeInt(new DataView(buf.buffer), 0, numberSafe(value, 16, unsigned), 16, !unsigned, endian === 'little');
         await this.#src.write(offset, buf);
     }
+    /** Writes a 32 bit value at an absolute offset without moving the cursor (safe to call concurrently). */
     async writeInt32At(offset, value, unsigned = false, endian = this.endian) {
         await this.#ensureOpen();
         if (this.#src.readOnly)
@@ -4826,15 +5100,19 @@ class BiEngine {
                 this.#cursor.set(offset + data.length);
         });
     }
+    /** Adds new data to the start of the supplied data. Errors in strict mode. */
     unshift(data, consume = false) {
         return this.insert(data, 0, consume);
     }
+    /** Alias of {@link unshift} - adds new data to the start of the supplied data. */
     prepend(data, consume = false) {
         return this.insert(data, 0, consume);
     }
+    /** Adds new data to the end of the supplied data. Errors in strict mode. */
     push(data, consume = false) {
         return this.insert(data, this.size, consume);
     }
+    /** Alias of {@link push} - adds new data to the end of the supplied data. */
     append(data, consume = false) {
         return this.insert(data, this.size, consume);
     }
@@ -4857,15 +5135,19 @@ class BiEngine {
             return removed;
         });
     }
+    /** Removes and returns all data after the current byte position. Errors in strict mode. */
     clip() {
         return this.delete(this.offset, this.size, false);
     }
+    /** Alias of {@link clip} - removes and returns all data after the current byte position. */
     trim() {
         return this.delete(this.offset, this.size, false);
     }
+    /** Removes and returns `length` bytes from the current byte position. Errors in strict mode. */
     crop(length = 0, consume = false) {
         return this.delete(this.offset, this.offset + length, consume);
     }
+    /** Alias of {@link crop} - removes and returns `length` bytes from the current byte position. */
     drop(length = 0, consume = false) {
         return this.delete(this.offset, this.offset + length, consume);
     }
@@ -4882,6 +5164,7 @@ class BiEngine {
                 this.#cursor.set(offset + data.length);
         });
     }
+    /** Alias of {@link replace} - overwrites data at `offset`. */
     overwrite(data, offset = this.offset, consume = false) {
         return this.replace(data, offset, consume);
     }
@@ -4904,18 +5187,23 @@ class BiEngine {
             return slice;
         });
     }
+    /** Alias of {@link fill} - returns data between two byte positions, optionally filling that range. */
     lift(startOffset = this.offset, endOffset = this.size, consume = false, fillValue) {
         return this.fill(startOffset, endOffset, consume, fillValue);
     }
+    /** Returns a copy of the data between two byte positions without modifying it. */
     subarray(startOffset = this.offset, endOffset = this.size, consume = false) {
         return this.fill(startOffset, endOffset, consume);
     }
+    /** Returns a copy of `length` bytes from the current byte position without modifying the data. */
     extract(length = 0, consume = false) {
         return this.fill(this.offset, this.offset + length, consume);
     }
+    /** Alias of {@link extract} - returns a copy of `length` bytes from the current byte position. */
     slice(length = 0, consume = false) {
         return this.fill(this.offset, this.offset + length, consume);
     }
+    /** Alias of {@link extract} - returns a copy of `length` bytes from the current byte position. */
     wrap(length = 0, consume = false) {
         return this.fill(this.offset, this.offset + length, consume);
     }
@@ -5036,29 +5324,36 @@ class BiEngine {
         if (consume)
             this.#cursor.set(end);
     }
+    /** XORs the byte range `[start, end)` with the key. The key repeats when shorter than the range. */
     xor(key, start = this.offset, end = this.size, consume = false) {
         const k = this.#normalizeKey(key);
         return this.runExclusive(() => this.#applyRange(start, end, b => _XOR(b, 0, b.length, k), consume));
     }
+    /** ORs the byte range `[start, end)` with the key. The key repeats when shorter than the range. */
     or(key, start = this.offset, end = this.size, consume = false) {
         const k = this.#normalizeKey(key);
         return this.runExclusive(() => this.#applyRange(start, end, b => _OR(b, 0, b.length, k), consume));
     }
+    /** ANDs the byte range `[start, end)` with the key. The key repeats when shorter than the range. */
     and(key, start = this.offset, end = this.size, consume = false) {
         const k = this.#normalizeKey(key);
         return this.runExclusive(() => this.#applyRange(start, end, b => _AND(b, 0, b.length, k), consume));
     }
+    /** Adds the key to each byte in `[start, end)`. The key repeats when shorter than the range. */
     add(key, start = this.offset, end = this.size, consume = false) {
         const k = this.#normalizeKey(key);
         return this.runExclusive(() => this.#applyRange(start, end, b => _ADD(b, 0, b.length, k), consume));
     }
+    /** NOTs (bitwise inverts) every byte in the range `[start, end)`. */
     not(start = this.offset, end = this.size, consume = false) {
         return this.runExclusive(() => this.#applyRange(start, end, b => _NOT(b, 0, b.length), consume));
     }
+    /** Left shifts each byte in `[start, end)` by the key. The key repeats when shorter than the range. */
     lShift(key, start = this.offset, end = this.size, consume = false) {
         const k = this.#normalizeKey(key);
         return this.runExclusive(() => this.#applyRange(start, end, b => _LSHIFT(b, 0, b.length, k), consume));
     }
+    /** Right shifts each byte in `[start, end)` by the key. The key repeats when shorter than the range. */
     rShift(key, start = this.offset, end = this.size, consume = false) {
         const k = this.#normalizeKey(key);
         return this.runExclusive(() => this.#applyRange(start, end, b => _RSHIFT(b, 0, b.length, k), consume));
@@ -5070,34 +5365,42 @@ class BiEngine {
         const k = typeof key === 'string' ? new TextEncoder().encode(key) : key;
         return { k, len: length ?? k.length };
     }
+    /** XORs `length` bytes from the current byte position with the key (length defaults to the key size). */
     xorThis(key, length, consume = false) {
         const { k, len } = this.#keyLen(key, length);
         return this.xor(k, this.offset, this.offset + len, consume);
     }
+    /** ORs `length` bytes from the current byte position with the key (length defaults to the key size). */
     orThis(key, length, consume = false) {
         const { k, len } = this.#keyLen(key, length);
         return this.or(k, this.offset, this.offset + len, consume);
     }
+    /** ANDs `length` bytes from the current byte position with the key (length defaults to the key size). */
     andThis(key, length, consume = false) {
         const { k, len } = this.#keyLen(key, length);
         return this.and(k, this.offset, this.offset + len, consume);
     }
+    /** Adds the key to `length` bytes from the current byte position (length defaults to the key size). */
     addThis(key, length, consume = false) {
         const { k, len } = this.#keyLen(key, length);
         return this.add(k, this.offset, this.offset + len, consume);
     }
+    /** NOTs `length` bytes from the current byte position. */
     notThis(length = 1, consume = false) {
         return this.not(this.offset, this.offset + length, consume);
     }
+    /** Left shifts `length` bytes from the current byte position by the key (length defaults to the key size). */
     lShiftThis(key, length, consume = false) {
         const { k, len } = this.#keyLen(key, length);
         return this.lShift(k, this.offset, this.offset + len, consume);
     }
+    /** Right shifts `length` bytes from the current byte position by the key (length defaults to the key size). */
     rShiftThis(key, length, consume = false) {
         const { k, len } = this.#keyLen(key, length);
         return this.rShift(k, this.offset, this.offset + len, consume);
     }
     // #region find (absolute offset, or -1; does not move the cursor)
+    /** Searches from the current byte position for a byte sequence. Returns its offset or -1. Does not move the position. */
     findBytes(bytesToFind) {
         const needle = Array.isArray(bytesToFind) ? new Uint8Array(bytesToFind) : bytesToFind;
         return this.runExclusive(async () => {
@@ -5116,6 +5419,7 @@ class BiEngine {
             return -1;
         });
     }
+    /** Searches from the current byte position for a string. Returns its offset or -1. Does not move the position. */
     findString(str, bytesPerChar = 1) {
         return this.findBytes(textEncode(str, bytesPerChar));
     }
@@ -5131,53 +5435,94 @@ class BiEngine {
             return -1;
         });
     }
+    /** Searches from the current byte position for an 8 bit value. Returns its offset or -1. Does not move the position. */
     findByte(value, unsigned = true, endian = this.endian) {
         return this.#findNumber(value, 8, unsigned, endian);
     }
+    /** Searches from the current byte position for a 16 bit value. Returns its offset or -1. Does not move the position. */
     findShort(value, unsigned = true, endian = this.endian) {
         return this.#findNumber(value, 16, unsigned, endian);
     }
+    /** Searches from the current byte position for a 32 bit value. Returns its offset or -1. Does not move the position. */
     findInt(value, unsigned = true, endian = this.endian) {
         return this.#findNumber(value, 32, unsigned, endian);
     }
     // #region read aliases
+    /** Reads an unsigned 8 bit value. */
     readUByte(consume = true) { return this.readByte(true, consume); }
+    /** Reads an unsigned 16 bit value in the given endian order. */
     readUInt16(endian = this.endian) { return this.readInt16(true, endian); }
+    /** Reads an unsigned 16 bit little endian value. */
     readUInt16LE() { return this.readInt16(true, 'little'); }
+    /** Reads an unsigned 16 bit big endian value. */
     readUInt16BE() { return this.readInt16(true, 'big'); }
+    /** Reads a signed 16 bit little endian value. */
     readInt16LE() { return this.readInt16(false, 'little'); }
+    /** Reads a signed 16 bit big endian value. */
     readInt16BE() { return this.readInt16(false, 'big'); }
+    /** Reads a signed 32 bit value in the given endian order. */
     readInt(endian = this.endian) { return this.readInt32(false, endian); }
+    /** Reads an unsigned 32 bit value in the given endian order. */
     readUInt(endian = this.endian) { return this.readInt32(true, endian); }
+    /** Reads an unsigned 32 bit value in the given endian order. */
     readUInt32(endian = this.endian) { return this.readInt32(true, endian); }
+    /** Reads a signed 32 bit little endian value. */
     readInt32LE() { return this.readInt32(false, 'little'); }
+    /** Reads a signed 32 bit big endian value. */
     readInt32BE() { return this.readInt32(false, 'big'); }
+    /** Reads an unsigned 32 bit little endian value. */
     readUInt32LE() { return this.readInt32(true, 'little'); }
+    /** Reads an unsigned 32 bit big endian value. */
     readUInt32BE() { return this.readInt32(true, 'big'); }
+    /** Reads a 32 bit float in the given endian order. */
     readFloat32(endian = this.endian, consume = true) { return this.readFloat(endian, consume); }
+    /** Reads a 32 bit little endian float. */
     readFloatLE() { return this.readFloat('little'); }
+    /** Reads a 32 bit big endian float. */
     readFloatBE() { return this.readFloat('big'); }
+    /** Reads a 32 bit little endian float. */
     readFloat32LE() { return this.readFloat('little'); }
+    /** Reads a 32 bit big endian float. */
     readFloat32BE() { return this.readFloat('big'); }
+    /** Reads a 16 bit half float in the given endian order. */
     readFloat16(endian = this.endian, consume = true) { return this.readHalfFloat(endian, consume); }
+    /** Reads a 16 bit little endian half float. */
     readHalfFloatLE() { return this.readHalfFloat('little'); }
+    /** Reads a 16 bit big endian half float. */
     readHalfFloatBE() { return this.readHalfFloat('big'); }
+    /** Reads a 16 bit little endian half float. */
     readFloat16LE() { return this.readHalfFloat('little'); }
+    /** Reads a 16 bit big endian half float. */
     readFloat16BE() { return this.readHalfFloat('big'); }
+    /** Reads a 64 bit double float in the given endian order. */
     readFloat64(endian = this.endian, consume = true) { return this.readDoubleFloat(endian, consume); }
+    /** Reads a 64 bit little endian double float. */
     readDoubleFloatLE() { return this.readDoubleFloat('little'); }
+    /** Reads a 64 bit big endian double float. */
     readDoubleFloatBE() { return this.readDoubleFloat('big'); }
+    /** Reads a 64 bit little endian double float. */
     readFloat64LE() { return this.readDoubleFloat('little'); }
+    /** Reads a 64 bit big endian double float. */
     readFloat64BE() { return this.readDoubleFloat('big'); }
+    /** Reads an unsigned 64 bit value in the current endian order. */
     readUInt64() { return this.readInt64(true); }
+    /** Reads a signed 64 bit little endian value. */
     readInt64LE() { return this.readInt64(false, 'little'); }
+    /** Reads a signed 64 bit big endian value. */
     readInt64BE() { return this.readInt64(false, 'big'); }
+    /** Reads an unsigned 64 bit little endian value. */
     readUInt64LE() { return this.readInt64(true, 'little'); }
+    /** Reads an unsigned 64 bit big endian value. */
     readUInt64BE() { return this.readInt64(true, 'big'); }
+    /** Reads an unsigned bit field of 1-32 bits in big endian order. */
     readUBitBE(bits) { return this.readBit(bits, true, 'big'); }
+    /** Reads an unsigned bit field of 1-32 bits in little endian order. */
     readUBitLE(bits) { return this.readBit(bits, true, 'little'); }
+    /** Reads a bit field of 1-32 bits in big endian order. */
     readBitBE(bits, unsigned) { return this.readBit(bits, unsigned, 'big'); }
+    /** Reads a bit field of 1-32 bits in little endian order. */
     readBitLE(bits, unsigned) { return this.readBit(bits, unsigned, 'little'); }
+    /** Reads `amount` bytes from the current byte position as a number array (signed unless `unsigned`). */
     async readBytes(amount, unsigned, consume = true) {
         const data = await this.readUBytes(amount, consume);
         const out = [];
@@ -5187,6 +5532,7 @@ class BiEngine {
         }
         return out;
     }
+    /** Reads `amount` unsigned bytes from the current byte position as a `Uint8Array` copy. */
     readUBytes(amount, consume = true) {
         return this.runExclusive(async () => {
             this.#alignByte();
@@ -5199,127 +5545,229 @@ class BiEngine {
         });
     }
     // #region write aliases
+    /** Writes an unsigned 16 bit value in the given endian order. */
     writeUInt16(value, endian = this.endian) { return this.writeInt16(value, true, endian); }
+    /** Writes an unsigned 16 bit little endian value. */
     writeUInt16LE(value) { return this.writeInt16(value, true, 'little'); }
+    /** Writes an unsigned 16 bit big endian value. */
     writeUInt16BE(value) { return this.writeInt16(value, true, 'big'); }
+    /** Writes a signed 16 bit little endian value. */
     writeInt16LE(value) { return this.writeInt16(value, false, 'little'); }
+    /** Writes a signed 16 bit big endian value. */
     writeInt16BE(value) { return this.writeInt16(value, false, 'big'); }
+    /** Writes a signed 32 bit value in the given endian order. */
     writeInt(value, endian = this.endian) { return this.writeInt32(value, false, endian); }
+    /** Writes an unsigned 32 bit value in the given endian order. */
     writeUInt(value, endian = this.endian) { return this.writeInt32(value, true, endian); }
+    /** Writes an unsigned 32 bit value in the given endian order. */
     writeUInt32(value, endian = this.endian) { return this.writeInt32(value, true, endian); }
+    /** Writes a signed 32 bit little endian value. */
     writeInt32LE(value) { return this.writeInt32(value, false, 'little'); }
+    /** Writes a signed 32 bit big endian value. */
     writeInt32BE(value) { return this.writeInt32(value, false, 'big'); }
+    /** Writes an unsigned 32 bit little endian value. */
     writeUInt32LE(value) { return this.writeInt32(value, true, 'little'); }
+    /** Writes an unsigned 32 bit big endian value. */
     writeUInt32BE(value) { return this.writeInt32(value, true, 'big'); }
+    /** Writes a 32 bit float in the given endian order. */
     writeFloat32(value, endian = this.endian, consume = true) { return this.writeFloat(value, endian, consume); }
+    /** Writes a 32 bit little endian float. */
     writeFloatLE(value) { return this.writeFloat(value, 'little'); }
+    /** Writes a 32 bit big endian float. */
     writeFloatBE(value) { return this.writeFloat(value, 'big'); }
+    /** Writes a 32 bit little endian float. */
     writeFloat32LE(value) { return this.writeFloat(value, 'little'); }
+    /** Writes a 32 bit big endian float. */
     writeFloat32BE(value) { return this.writeFloat(value, 'big'); }
+    /** Writes a 16 bit half float in the given endian order. */
     writeFloat16(value, endian = this.endian, consume = true) { return this.writeHalfFloat(value, endian, consume); }
+    /** Writes a 16 bit little endian half float. */
     writeHalfFloatLE(value) { return this.writeHalfFloat(value, 'little'); }
+    /** Writes a 16 bit big endian half float. */
     writeHalfFloatBE(value) { return this.writeHalfFloat(value, 'big'); }
+    /** Writes a 16 bit little endian half float. */
     writeFloat16LE(value) { return this.writeHalfFloat(value, 'little'); }
+    /** Writes a 16 bit big endian half float. */
     writeFloat16BE(value) { return this.writeHalfFloat(value, 'big'); }
+    /** Writes a 64 bit double float in the given endian order. */
     writeFloat64(value, endian = this.endian, consume = true) { return this.writeDoubleFloat(value, endian, consume); }
+    /** Writes a 64 bit little endian double float. */
     writeDoubleFloatLE(value) { return this.writeDoubleFloat(value, 'little'); }
+    /** Writes a 64 bit big endian double float. */
     writeDoubleFloatBE(value) { return this.writeDoubleFloat(value, 'big'); }
+    /** Writes a 64 bit little endian double float. */
     writeFloat64LE(value) { return this.writeDoubleFloat(value, 'little'); }
+    /** Writes a 64 bit big endian double float. */
     writeFloat64BE(value) { return this.writeDoubleFloat(value, 'big'); }
+    /** Writes an unsigned 64 bit value in the given endian order. */
     writeUInt64(value, endian = this.endian) { return this.writeInt64(value, true, endian); }
+    /** Writes a signed 64 bit little endian value. */
     writeInt64LE(value) { return this.writeInt64(value, false, 'little'); }
+    /** Writes a signed 64 bit big endian value. */
     writeInt64BE(value) { return this.writeInt64(value, false, 'big'); }
+    /** Writes an unsigned 64 bit little endian value. */
     writeUInt64LE(value) { return this.writeInt64(value, true, 'little'); }
+    /** Writes an unsigned 64 bit big endian value. */
     writeUInt64BE(value) { return this.writeInt64(value, true, 'big'); }
+    /** Writes an unsigned 8 bit value. */
     writeUByte(value, consume = true) { return this.writeByte(value, true, consume); }
+    /** Writes an unsigned bit field of 1-32 bits in big endian order. */
     writeUBitBE(value, bits) { return this.writeBit(value, bits, true, 'big'); }
+    /** Writes an unsigned bit field of 1-32 bits in little endian order. */
     writeUBitLE(value, bits) { return this.writeBit(value, bits, true, 'little'); }
+    /** Writes a bit field of 1-32 bits in big endian order. */
     writeBitBE(value, bits, unsigned) { return this.writeBit(value, bits, unsigned, 'big'); }
+    /** Writes a bit field of 1-32 bits in little endian order. */
     writeBitLE(value, bits, unsigned) { return this.writeBit(value, bits, unsigned, 'little'); }
+    /** Writes raw bytes at the current byte position, overwriting existing data. */
     writeBytes(values, unsigned, consume = true) {
         const data = isBufferOrUint8Array(values) ? values : new Uint8Array(values);
         return this.overwrite(data, this.offset, consume);
     }
+    /** Writes raw unsigned bytes at the current byte position, overwriting existing data. */
     writeUBytes(values, consume = true) {
         return this.writeBytes(values, true, consume);
     }
     // #region endianness
+    /** Sets the default endian order. Can be changed at any time. */
     endianness(endian) {
         if (endian !== 'big' && endian !== 'little')
             throw new TypeError('Endian must be big or little');
         this.endian = endian;
     }
+    /** Switches the default endian order to big endian. */
     bigEndian() { this.endian = 'big'; }
+    /** Alias of {@link bigEndian} - switches to big endian. */
     big() { this.endian = 'big'; }
+    /** Alias of {@link bigEndian} - switches to big endian. */
     be() { this.endian = 'big'; }
+    /** Switches the default endian order to little endian. */
     littleEndian() { this.endian = 'little'; }
+    /** Alias of {@link littleEndian} - switches to little endian. */
     little() { this.endian = 'little'; }
+    /** Alias of {@link littleEndian} - switches to little endian. */
     le() { this.endian = 'little'; }
     // #region size / position aliases
+    /** Current buffer size in bits. */
     get bitSize() { return this.size * 8; }
+    /** Current buffer size in bytes. */
     get length() { return this.size; }
+    /** Current buffer size in bytes. */
     get len() { return this.size; }
+    /** Current buffer / file size in bytes. */
     get fileSize() { return this.size; }
+    /** Current buffer / file size in bytes. */
     get FileSize() { return this.size; }
+    /** Current buffer size in bits. */
     get lengthBits() { return this.size * 8; }
+    /** Current buffer size in bits. */
     get sizeBits() { return this.size * 8; }
+    /** Current buffer / file size in bits. */
     get fileBitSize() { return this.size * 8; }
+    /** Current buffer / file size in bits. */
     get fileSizeBits() { return this.size * 8; }
+    /** Current buffer size in bits. */
     get lenBits() { return this.size * 8; }
+    /** Current byte position. */
     get off() { return this.#cursor.byte; }
+    /** Current byte position. */
     get getOffset() { return this.#cursor.byte; }
+    /** Current byte position. */
     get tell() { return this.#cursor.byte; }
+    /** Current byte position. */
     get FTell() { return this.#cursor.byte; }
+    /** Current byte position. */
     get saveOffset() { return this.#cursor.byte; }
+    /** Current byte position. */
     get byteOffset() { return this.#cursor.byte; }
+    /** Moves the current byte position. */
     async setOffset(value) { await this.goto(value); }
+    /** Moves the current byte position. */
     async setByteOffset(value) { await this.goto(value); }
+    /** Current absolute bit position. */
     get offsetBits() { return this.#cursor.bitPosition; }
+    /** Current absolute bit position. */
     get getBitOffset() { return this.#cursor.bitPosition; }
+    /** Current absolute bit position. */
     get saveBitOffset() { return this.#cursor.bitPosition; }
+    /** Current absolute bit position. */
     get FTellBits() { return this.#cursor.bitPosition; }
+    /** Current bit position within the current byte (0-7). */
     get tellBits() { return this.#cursor.bit; }
+    /** Current absolute bit position. */
     get offBits() { return this.#cursor.bitPosition; }
+    /** Moves to an absolute bit position. */
     async setOffsetBits(value) { await this.goto(value - (value % 8), value % 8); }
+    /** Moves to an absolute bit position. */
     async setBitOffset(value) { await this.setOffsetBits(value); }
+    /** Current bit position within the current byte (0-7). */
     get getInsetBit() { return this.#cursor.bit; }
+    /** Current bit position within the current byte (0-7). */
     get saveInsetBit() { return this.#cursor.bit; }
+    /** Current bit position within the current byte (0-7). */
     get inBit() { return this.#cursor.bit; }
+    /** Current bit position within the current byte (0-7). */
     get bitTell() { return this.#cursor.bit; }
+    /** Moves the bit position within the current byte (0-7). */
     async setInsetBit(value) { await this.goto(this.#cursor.byte, value % 8); }
+    /** Bytes remaining between the current byte position and the end of the data. */
     get remain() { return this.size - this.#cursor.byte; }
+    /** Bytes remaining between the current byte position and the end of the data. */
     get remainBytes() { return this.size - this.#cursor.byte; }
+    /** Bytes remaining between the current byte position and the end of the data. */
     get FEoF() { return this.size - this.#cursor.byte; }
+    /** Bits remaining between the current bit position and the end of the data. */
     get remainBits() { return (this.size * 8) - this.#cursor.bitPosition; }
+    /** Bits remaining between the current bit position and the end of the data. */
     get FEoFBits() { return (this.size * 8) - this.#cursor.bitPosition; }
+    /** Row line of the current byte position (16 bytes per row). */
     get getLine() { return Math.abs(Math.floor((this.#cursor.byte - 1) / 16)); }
+    /** Row line of the current byte position (16 bytes per row). */
     get row() { return this.getLine; }
     // #region move aliases
+    /** Alias of {@link skip} - moves the position by a relative number of bytes / bits. */
     async jump(bytes, bits) { await this.skip(bytes, bits ?? 0); }
+    /** Alias of {@link skip} - moves the position by a relative number of bytes / bits. */
     async seek(bytes, bits) { await this.skip(bytes, bits ?? 0); }
+    /** Alias of {@link goto} - moves to an absolute byte / bit position. */
     async FSeek(byte, bit) { await this.goto(byte, bit ?? 0); }
+    /** Alias of {@link goto} - moves to an absolute byte / bit position. */
     async pointer(byte, bit) { await this.goto(byte, bit ?? 0); }
+    /** Alias of {@link goto} - moves to an absolute byte / bit position. */
     async warp(byte, bit) { await this.goto(byte, bit ?? 0); }
+    /** Alias of {@link rewind} - moves the current byte position to the start of the data. */
     gotoStart() { this.rewind(); }
+    /** Alias of {@link last} - moves the current byte position to the end of the data. */
     gotoEnd() { this.last(); }
+    /** Alias of {@link last} - moves the current byte position to the end of the data. */
     EoF() { this.last(); }
+    /** Aligns the current byte position backward to the previous multiple of `number`. */
     async alignRev(number) {
         const a = this.#cursor.byte % number;
         if (a)
             await this.skip(-a, 0);
     }
     // #region type checks
+    /** True when the value is a `Buffer` or `Uint8Array`. */
     isBufferOrUint8Array(obj) { return isBufferOrUint8Array(obj); }
+    /** True when the value is a Node `Buffer`. */
     isBuffer(obj) { return typeof Buffer !== 'undefined' && Buffer.isBuffer(obj); }
+    /** True when the value is a plain `Uint8Array` (not a `Buffer`). */
     isUint8Array(obj) { return obj instanceof Uint8Array && !this.isBuffer(obj); }
     // #region strict / dump
+    /** Turns strict mode on - the data won't be extended past its max size. */
     restrict() { this.strict = true; }
+    /** Turns strict mode off - the data is extended when writing past its max size. */
     unrestrict() { this.strict = false; }
+    /** Turns off the hexdump on error (default). */
     errorDumpOff() { this.errorDump = false; }
+    /** Turns on the hexdump on error. */
     errorDumpOn() { this.errorDump = true; }
+    /** Merges default string options used by the `str` read / write and the string presets. */
     set strSettings(settings) {
         this.strDefaults = { ...this.strDefaults, ...settings };
     }
+    /** Console logs the data as a hex dump, or returns it as a string with `returnString`. */
     async hexdump(options = {}) {
         await this.#ensureOpen();
         const length = options.length ?? 192;
@@ -5332,35 +5780,42 @@ class BiEngine {
         return _hexDump(data, options, startByte, endByte);
     }
     // #region positional (additional)
+    /** Reads an 8 bit value at an absolute offset without moving the cursor. */
     async readByteAt(offset, unsigned = true) {
         await this.#ensureOpen();
         const v = (await this.#src.read(offset, 1))[0];
         return unsigned ? (v & 0xFF) : (v > 127 ? v - 256 : v);
     }
+    /** Reads `length` raw bytes at an absolute offset without moving the cursor. */
     async readBytesAt(offset, length) {
         await this.#ensureOpen();
         return (await this.#src.read(offset, length)).slice();
     }
+    /** Reads a 32 bit float at an absolute offset without moving the cursor. */
     async readFloat32At(offset, endian = this.endian) {
         await this.#ensureOpen();
         const b = await this.#src.read(offset, 4);
         return readFloat32(new DataView(b.buffer, b.byteOffset, 4), 0, endian === 'little');
     }
+    /** Reads a 64 bit double float at an absolute offset without moving the cursor. */
     async readFloat64At(offset, endian = this.endian) {
         await this.#ensureOpen();
         const b = await this.#src.read(offset, 8);
         return readFloat64(new DataView(b.buffer, b.byteOffset, 8), 0, endian === 'little');
     }
+    /** Reads a signed 64 bit `bigint` at an absolute offset without moving the cursor. */
     async readBigInt64At(offset, endian = this.endian) {
         await this.#ensureOpen();
         const b = await this.#src.read(offset, 8);
         return readBig(new DataView(b.buffer, b.byteOffset, 8), 0, true, endian === 'little');
     }
+    /** Reads an unsigned 64 bit `bigint` at an absolute offset without moving the cursor. */
     async readBigUInt64At(offset, endian = this.endian) {
         await this.#ensureOpen();
         const b = await this.#src.read(offset, 8);
         return readBig(new DataView(b.buffer, b.byteOffset, 8), 0, false, endian === 'little');
     }
+    /** Writes an 8 bit value at an absolute offset without moving the cursor. */
     async writeByteAt(offset, value, unsigned = true) {
         await this.#ensureOpen();
         if (this.#src.readOnly)
@@ -5368,6 +5823,7 @@ class BiEngine {
         await this.#ensureWritable(offset + 1);
         await this.#src.write(offset, new Uint8Array([numberSafe(value, 8, unsigned) & 0xFF]));
     }
+    /** Writes raw bytes at an absolute offset without moving the cursor. */
     async writeBytesAt(offset, data) {
         await this.#ensureOpen();
         if (this.#src.readOnly)
@@ -5375,8 +5831,11 @@ class BiEngine {
         await this.#ensureWritable(offset + data.length);
         await this.#src.write(offset, data);
     }
+    /** Writes an unsigned 16 bit value at an absolute offset without moving the cursor. */
     async writeUInt16At(offset, value, endian = this.endian) { return this.writeInt16At(offset, value, true, endian); }
+    /** Writes an unsigned 32 bit value at an absolute offset without moving the cursor. */
     async writeUInt32At(offset, value, endian = this.endian) { return this.writeInt32At(offset, value, true, endian); }
+    /** Writes a 32 bit float at an absolute offset without moving the cursor. */
     async writeFloat32At(offset, value, endian = this.endian) {
         await this.#ensureOpen();
         if (this.#src.readOnly)
@@ -5386,6 +5845,7 @@ class BiEngine {
         writeFloat32(new DataView(buf.buffer), 0, value, endian === 'little');
         await this.#src.write(offset, buf);
     }
+    /** Writes a 64 bit double float at an absolute offset without moving the cursor. */
     async writeFloat64At(offset, value, endian = this.endian) {
         await this.#ensureOpen();
         if (this.#src.readOnly)
@@ -5395,6 +5855,7 @@ class BiEngine {
         writeFloat64(new DataView(buf.buffer), 0, value, endian === 'little');
         await this.#src.write(offset, buf);
     }
+    /** Writes a 64 bit value at an absolute offset without moving the cursor. */
     async writeBigInt64At(offset, value, unsigned = false, endian = this.endian) {
         await this.#ensureOpen();
         if (this.#src.readOnly)
@@ -5404,6 +5865,7 @@ class BiEngine {
         writeBig(new DataView(buf.buffer), 0, numberSafe(value, 64, unsigned), !unsigned, endian === 'little');
         await this.#src.write(offset, buf);
     }
+    /** Writes an unsigned 64 bit value at an absolute offset without moving the cursor. */
     async writeBigUInt64At(offset, value, endian = this.endian) { return this.writeBigInt64At(offset, value, true, endian); }
     // #region data / lifecycle
     /** In-memory buffer (memory mode); null in file mode - use get()/getData(). */
@@ -5415,9 +5877,11 @@ class BiEngine {
         const d = this.data;
         return d ? new DataView(d.buffer, d.byteOffset, d.byteLength) : null;
     }
+    /** Commits any pending edits to the file. */
     async commit() {
         await this.flush();
     }
+    /** Flushes any pending edits through to the underlying source. */
     async flush() {
         if (this.#source)
             await this.#source.flush();
@@ -5434,12 +5898,19 @@ class BiEngine {
         }
         return full;
     }
+    /** Alias of {@link get} - returns the current data. */
     async getData() { return this.get(); }
+    /** Alias of {@link get} - returns the current data. */
     async getFullBuffer() { return this.get(); }
+    /** Alias of {@link get} - returns the current data. */
     async return() { return this.get(); }
+    /** Alias of {@link close} - flushes and releases the supplied data. */
     async end() { return this.close(); }
+    /** Alias of {@link close} - flushes and releases the supplied data. */
     async done() { return this.close(); }
+    /** Alias of {@link close} - flushes and releases the supplied data. */
     async finished() { return this.close(); }
+    /** Commits any edits and closes the file. In memory mode returns the buffer instead. */
     async close() {
         await this.#ensureOpen();
         await this.flush();
@@ -5458,6 +5929,7 @@ class BiEngine {
             await this.close();
         }
     }
+    /** Renames the file on the file system, keeping the read / write position. This is permanent. */
     async renameFile(newFilePath) {
         if (this.isMemoryMode)
             return;
@@ -5469,6 +5941,7 @@ class BiEngine {
         this.#pendingPath = newFilePath;
         await this.open();
     }
+    /** Unlinks the file from the file system. This is permanent - it does not go to the recycling bin. */
     async deleteFile() {
         if (this.isMemoryMode)
             return;

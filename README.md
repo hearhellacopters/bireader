@@ -775,7 +775,7 @@ Naming is shared across sync and async classes.
   </tr>
   <tr>
     <td>Alias</td>
-    <td>FSeek(<b>byte</b>, bit)<br>seek(<b>byte</b>, bit)<br>jump(<b>bytes</b>, bits)</td>
+    <td>seek(<b>bytes</b>, bits)<br>jump(<b>bytes</b>, bits)</td>
   </tr>
   <tr>
     <td>Function</td>
@@ -785,7 +785,7 @@ Naming is shared across sync and async classes.
   </tr>
   <tr>
     <td>Aliases</td>
-    <td>pointer(<b>byte</b>, bit)<br>warp(<b>byte</b>, bit)</td>
+    <td>FSeek(<b>byte</b>, bit)<br>pointer(<b>byte</b>, bit)<br>warp(<b>byte</b>, bit)</td>
   </tr>
   <tr>
     <td>Function</td>

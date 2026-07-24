@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import { BiEngine } from '../dist-test/core/engine/engine.js';
+import { BiSyncEngine } from '../dist-test/core/engine/sync-engine.js';
 import { MemorySource } from '../dist-test/core/engine/memory-source.js';
 import { BiReaderAsync, BiWriterAsync } from '../dist-test/indexImport.js';
 
@@ -270,5 +271,69 @@ describe('BiEngine - concurrency (op-queue)', () => {
         expect(a).to.equal(await rb.readUInt32At(0, 'big'));
         expect(b).to.equal(await rb.readUInt16At(8, 'little'));
         expect(e.offset).to.equal(before); // cursor untouched
+    });
+});
+
+describe('BiEngine / BiSyncEngine - movement alias semantics', () => {
+    // Pins which aliases are ABSOLUTE (goto family) and which are RELATIVE (skip family).
+    // FSeek is a goto alias despite the "seek" name - the README used to list it under skip.
+    const syncEngine = (data: Uint8Array) => new BiSyncEngine(data, { strict: false });
+
+    it('async: FSeek / pointer / warp are absolute (goto family)', async () => {
+        for (const m of ['FSeek', 'pointer', 'warp', 'goto'] as const) {
+            const e = engine(SRC(), { strict: false });
+            await e.goto(6);
+            await (e as any)[m](10);
+            expect(e.offset, `${m} should be absolute`).to.equal(10);
+        }
+    });
+
+    it('async: skip / seek / jump are relative to the current position', async () => {
+        for (const m of ['skip', 'seek', 'jump'] as const) {
+            const e = engine(SRC(), { strict: false });
+            await e.goto(6);
+            await (e as any)[m](4);
+            expect(e.offset, `${m} should be relative`).to.equal(10);
+        }
+    });
+
+    it('sync: FSeek / pointer / warp are absolute (goto family)', () => {
+        for (const m of ['FSeek', 'pointer', 'warp', 'goto'] as const) {
+            const e = syncEngine(SRC());
+            e.goto(6);
+            (e as any)[m](10);
+            expect(e.offset, `${m} should be absolute`).to.equal(10);
+        }
+    });
+
+    it('sync: skip / seek / jump are relative to the current position', () => {
+        for (const m of ['skip', 'seek', 'jump'] as const) {
+            const e = syncEngine(SRC());
+            e.goto(6);
+            (e as any)[m](4);
+            expect(e.offset, `${m} should be relative`).to.equal(10);
+        }
+    });
+
+    it('skip accepts negatives; FSeek does not treat its arg as an offset', async () => {
+        const e = engine(SRC(), { strict: false });
+        await e.goto(10);
+        await e.skip(-4);
+        expect(e.offset).to.equal(6);
+
+        await e.FSeek(4);
+        expect(e.offset).to.equal(4); // absolute, NOT 6 + 4
+    });
+
+    it('the goto family carries the bit argument through', async () => {
+        const e = engine(SRC(), { strict: false });
+        await e.FSeek(3, 5);
+        expect(e.offset).to.equal(3);
+        expect(e.insetBit).to.equal(5);
+
+        const s = syncEngine(SRC());
+        s.FSeek(3, 5);
+        expect(s.offset).to.equal(3);
+        expect(s.insetBit).to.equal(5);
     });
 });

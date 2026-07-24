@@ -154,232 +154,471 @@ declare class BiSyncEngine<alwaysBigInt extends boolean = false> {
     errorDump: boolean;
     strDefaults: stringOptions;
     constructor(input: string | Uint8Array, options?: BiSyncEngineOptions);
+    /** True when backed by an in-memory buffer rather than a file. */
     get isMemoryMode(): boolean;
+    /** The live {@link SyncSource} (opens the file lazily in file mode). */
     get source(): SyncSource;
+    /** Opens the file for reading / writing. Optionally swaps in a new in-memory buffer. */
     open(data?: Uint8Array): void;
+    /** Current buffer / file size in bytes. */
     get size(): number;
+    /** Current byte position. */
     get offset(): number;
+    /** Moves the current byte position. */
     set offset(value: number);
+    /** Current bit position within the current byte (0-7). */
     get insetBit(): number;
+    /** Moves the bit position within the current byte (0-7). */
     set insetBit(value: number);
+    /** Current absolute bit position (byte * 8 + inset bit). */
     get bitOffset(): number;
+    /** Moves to an absolute bit position (byte * 8 + inset bit). */
     set bitOffset(value: number);
+    /** Reads an 8 bit value (signed unless `unsigned`) at the current byte position. */
     readByte(unsigned?: boolean, consume?: boolean): number;
+    /** Reads a 16 bit value (short / word) in the given endian order. */
     readInt16(unsigned?: boolean, endian?: Endian$1, consume?: boolean): number;
+    /** Reads a 32 bit value (int / long / dword) in the given endian order. */
     readInt32(unsigned?: boolean, endian?: Endian$1, consume?: boolean): number;
+    /**
+     * Reads a 64 bit value (quad / bigint) in the given endian order. Returns a `number` when the
+     * value is integer safe, otherwise a `bigint` (always `bigint` when `enforceBigInt` is set).
+     */
     readInt64(unsigned?: boolean, endian?: Endian$1, consume?: boolean): ReturnBigValueMapping<alwaysBigInt>;
+    /** Reads a 16 bit half float in the given endian order. */
     readHalfFloat(endian?: Endian$1, consume?: boolean): number;
+    /** Reads a 32 bit float in the given endian order. */
     readFloat(endian?: Endian$1, consume?: boolean): number;
+    /** Reads a 64 bit double float in the given endian order. */
     readDoubleFloat(endian?: Endian$1, consume?: boolean): number;
+    /** Writes an 8 bit value at the current byte position. Value is clamped to the type's range. */
     writeByte(value: number, unsigned?: boolean, consume?: boolean): void;
+    /** Writes a 16 bit value (short / word) in the given endian order. Value is clamped to the type's range. */
     writeInt16(value: number, unsigned?: boolean, endian?: Endian$1, consume?: boolean): void;
+    /** Writes a 32 bit value (int / long / dword) in the given endian order. Value is clamped to the type's range. */
     writeInt32(value: number, unsigned?: boolean, endian?: Endian$1, consume?: boolean): void;
+    /** Writes a 64 bit value (quad / bigint) in the given endian order. Value is clamped to the type's range. */
     writeInt64(value: number | bigint, unsigned?: boolean, endian?: Endian$1, consume?: boolean): void;
+    /** Writes a 16 bit half float in the given endian order. */
     writeHalfFloat(value: number, endian?: Endian$1, consume?: boolean): void;
+    /** Writes a 32 bit float in the given endian order. */
     writeFloat(value: number, endian?: Endian$1, consume?: boolean): void;
+    /** Writes a 64 bit double float in the given endian order. */
     writeDoubleFloat(value: number, endian?: Endian$1, consume?: boolean): void;
+    /** Reads a bit field of 1-32 bits from the current bit position, signed or unsigned, in either endian order. */
     readBit(bits: number, unsigned?: boolean, endian?: Endian$1, consume?: boolean): number;
+    /** Writes a bit field of 1-32 bits at the current bit position. Value is clamped to the bit width. */
     writeBit(value: number, bits: number, unsigned?: boolean, endian?: Endian$1, consume?: boolean): void;
+    /** Reads `amount` bytes from the current byte position as a number array (signed unless `unsigned`). */
     readBytes(amount: number, unsigned?: boolean, consume?: boolean): number[];
+    /** Reads `amount` unsigned bytes from the current byte position as a `Uint8Array` copy. */
     readUBytes(amount: number, consume?: boolean): Uint8Array;
+    /** Writes raw bytes at the current byte position, overwriting existing data. */
     writeBytes(values: number[] | Uint8Array, unsigned?: boolean, consume?: boolean): void;
+    /** Writes raw unsigned bytes at the current byte position, overwriting existing data. */
     writeUBytes(values: number[] | Uint8Array, consume?: boolean): void;
+    /** Moves to an absolute byte / bit position. Throws in strict mode when outside the data size. */
     goto(byte?: number, bit?: number): void;
+    /** Moves the position by a relative number of bytes / bits. Use negative values to go back. */
     skip(bytes?: number, bits?: number): void;
+    /** Moves the current byte position to the start of the data. */
     rewind(): void;
+    /** Moves the current byte position to the end of the data. */
     last(): void;
+    /** Aligns the current byte position forward to the next multiple of `n`. */
     align(n: number): void;
+    /** Aligns the current byte position backward to the previous multiple of `n`. */
     alignRev(n: number): void;
+    /** Inserts new data at `offset`, growing the buffer and shifting the tail forward. Errors in strict mode. */
     insert(data: Uint8Array, offset?: number, consume?: boolean): void;
+    /** Alias of {@link insert} - inserts new data at `offset`. */
     place(data: Uint8Array, offset?: number, consume?: boolean): void;
+    /** Adds new data to the start of the supplied data. Errors in strict mode. */
     unshift(data: Uint8Array, consume?: boolean): void;
+    /** Alias of {@link unshift} - adds new data to the start of the supplied data. */
     prepend(data: Uint8Array, consume?: boolean): void;
+    /** Adds new data to the end of the supplied data. Errors in strict mode. */
     push(data: Uint8Array, consume?: boolean): void;
+    /** Alias of {@link push} - adds new data to the end of the supplied data. */
     append(data: Uint8Array, consume?: boolean): void;
+    /** Removes `[startOffset, endOffset)` and returns the removed bytes. Errors in strict mode. */
     delete(startOffset?: number, endOffset?: number, consume?: boolean): Uint8Array;
+    /** Removes and returns all data after the current byte position. Errors in strict mode. */
     clip(): Uint8Array;
+    /** Alias of {@link clip} - removes and returns all data after the current byte position. */
     trim(): Uint8Array;
+    /** Removes and returns `length` bytes from the current byte position. Errors in strict mode. */
     crop(length?: number, consume?: boolean): Uint8Array;
+    /** Alias of {@link crop} - removes and returns `length` bytes from the current byte position. */
     drop(length?: number, consume?: boolean): Uint8Array;
+    /** Overwrites data at `offset` (grows if needed, does not shift the tail). */
     replace(data: Uint8Array, offset?: number, consume?: boolean): void;
+    /** Alias of {@link replace} - overwrites data at `offset`. */
     overwrite(data: Uint8Array, offset?: number, consume?: boolean): void;
+    /** Returns a copy of `[startOffset, endOffset)`; when `fillValue` is supplied, that range is filled with it. */
     fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Uint8Array;
+    /** Alias of {@link fill} - returns data between two byte positions, optionally filling that range. */
     lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Uint8Array;
+    /** Returns a copy of the data between two byte positions without modifying it. */
     subarray(startOffset?: number, endOffset?: number, consume?: boolean): Uint8Array;
+    /** Returns a copy of `length` bytes from the current byte position without modifying the data. */
     extract(length?: number, consume?: boolean): Uint8Array;
+    /** Alias of {@link extract} - returns a copy of `length` bytes from the current byte position. */
     slice(length?: number, consume?: boolean): Uint8Array;
+    /** Alias of {@link extract} - returns a copy of `length` bytes from the current byte position. */
     wrap(length?: number, consume?: boolean): Uint8Array;
+    /**
+     * Reads a string in any supported format - fixed length or terminated UTF, or Pascal
+     * (`stringType`, `length`, `terminateValue`, `lengthReadSize`, `stripNull`, `encoding`, `endian`).
+     */
     readString(options?: stringOptions, consume?: boolean): string;
+    /**
+     * Writes a string in any supported format - fixed length or terminated UTF, or Pascal
+     * (`stringType`, `length`, `terminateValue`, `lengthWriteSize`, `encoding`, `endian`).
+     */
     writeString(str: string, options?: stringOptions, consume?: boolean): void;
+    /** XORs the byte range `[start, end)` with the key. The key repeats when shorter than the range. */
     xor(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): void;
+    /** ORs the byte range `[start, end)` with the key. The key repeats when shorter than the range. */
     or(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): void;
+    /** ANDs the byte range `[start, end)` with the key. The key repeats when shorter than the range. */
     and(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): void;
+    /** Adds the key to each byte in `[start, end)`. The key repeats when shorter than the range. */
     add(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): void;
+    /** NOTs (bitwise inverts) every byte in the range `[start, end)`. */
     not(start?: number, end?: number, consume?: boolean): void;
+    /** Left shifts each byte in `[start, end)` by the key. The key repeats when shorter than the range. */
     lShift(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): void;
+    /** Right shifts each byte in `[start, end)` by the key. The key repeats when shorter than the range. */
     rShift(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): void;
+    /** XORs `length` bytes from the current byte position with the key (length defaults to the key size). */
     xorThis(key: number | string | Uint8Array, length?: number, consume?: boolean): void;
+    /** ORs `length` bytes from the current byte position with the key (length defaults to the key size). */
     orThis(key: number | string | Uint8Array, length?: number, consume?: boolean): void;
+    /** ANDs `length` bytes from the current byte position with the key (length defaults to the key size). */
     andThis(key: number | string | Uint8Array, length?: number, consume?: boolean): void;
+    /** Adds the key to `length` bytes from the current byte position (length defaults to the key size). */
     addThis(key: number | string | Uint8Array, length?: number, consume?: boolean): void;
+    /** NOTs `length` bytes from the current byte position. */
     notThis(length?: number, consume?: boolean): void;
+    /** Left shifts `length` bytes from the current byte position by the key (length defaults to the key size). */
     lShiftThis(key: number | string | Uint8Array, length?: number, consume?: boolean): void;
+    /** Right shifts `length` bytes from the current byte position by the key (length defaults to the key size). */
     rShiftThis(key: number | string | Uint8Array, length?: number, consume?: boolean): void;
+    /** Searches from the current byte position for a byte sequence. Returns its offset or -1. Does not move the position. */
     findBytes(bytesToFind: Uint8Array | number[]): number;
+    /** Searches from the current byte position for a string. Returns its offset or -1. Does not move the position. */
     findString(str: string, bytesPerChar?: 1 | 2 | 4): number;
+    /** Searches from the current byte position for an 8 bit value. Returns its offset or -1. Does not move the position. */
     findByte(value: number, unsigned?: boolean, endian?: Endian$1): number;
+    /** Searches from the current byte position for a 16 bit value. Returns its offset or -1. Does not move the position. */
     findShort(value: number, unsigned?: boolean, endian?: Endian$1): number;
+    /** Searches from the current byte position for a 32 bit value. Returns its offset or -1. Does not move the position. */
     findInt(value: number, unsigned?: boolean, endian?: Endian$1): number;
+    /** Sets the default endian order. Can be changed at any time. */
     endianness(endian: Endian$1): void;
+    /** Switches the default endian order to big endian. */
     bigEndian(): void;
+    /** Alias of {@link bigEndian} - switches to big endian. */
     big(): void;
+    /** Alias of {@link bigEndian} - switches to big endian. */
     be(): void;
+    /** Switches the default endian order to little endian. */
     littleEndian(): void;
+    /** Alias of {@link littleEndian} - switches to little endian. */
     little(): void;
+    /** Alias of {@link littleEndian} - switches to little endian. */
     le(): void;
+    /** Reads an unsigned 8 bit value. */
     readUByte(consume?: boolean): number;
+    /** Reads an unsigned 16 bit value in the given endian order. */
     readUInt16(endian?: Endian$1): number;
+    /** Reads an unsigned 16 bit little endian value. */
     readUInt16LE(): number;
+    /** Reads an unsigned 16 bit big endian value. */
     readUInt16BE(): number;
+    /** Reads a signed 16 bit little endian value. */
     readInt16LE(): number;
+    /** Reads a signed 16 bit big endian value. */
     readInt16BE(): number;
+    /** Reads a signed 32 bit value in the given endian order. */
     readInt(endian?: Endian$1): number;
+    /** Reads an unsigned 32 bit value in the given endian order. */
     readUInt(endian?: Endian$1): number;
+    /** Reads an unsigned 32 bit value in the given endian order. */
     readUInt32(endian?: Endian$1): number;
+    /** Reads a signed 32 bit little endian value. */
     readInt32LE(): number;
+    /** Reads a signed 32 bit big endian value. */
     readInt32BE(): number;
+    /** Reads an unsigned 32 bit little endian value. */
     readUInt32LE(): number;
+    /** Reads an unsigned 32 bit big endian value. */
     readUInt32BE(): number;
+    /** Reads a 32 bit float in the given endian order. */
     readFloat32(endian?: Endian$1, consume?: boolean): number;
+    /** Reads a 32 bit little endian float. */
     readFloatLE(): number;
+    /** Reads a 32 bit big endian float. */
     readFloatBE(): number;
+    /** Reads a 32 bit little endian float. */
     readFloat32LE(): number;
+    /** Reads a 32 bit big endian float. */
     readFloat32BE(): number;
+    /** Reads a 16 bit half float in the given endian order. */
     readFloat16(endian?: Endian$1, consume?: boolean): number;
+    /** Reads a 16 bit little endian half float. */
     readHalfFloatLE(): number;
+    /** Reads a 16 bit big endian half float. */
     readHalfFloatBE(): number;
+    /** Reads a 16 bit little endian half float. */
     readFloat16LE(): number;
+    /** Reads a 16 bit big endian half float. */
     readFloat16BE(): number;
+    /** Reads a 64 bit double float in the given endian order. */
     readFloat64(endian?: Endian$1, consume?: boolean): number;
+    /** Reads a 64 bit little endian double float. */
     readDoubleFloatLE(): number;
+    /** Reads a 64 bit big endian double float. */
     readDoubleFloatBE(): number;
+    /** Reads a 64 bit little endian double float. */
     readFloat64LE(): number;
+    /** Reads a 64 bit big endian double float. */
     readFloat64BE(): number;
+    /** Reads an unsigned 64 bit value in the current endian order. */
     readUInt64(): ReturnBigValueMapping<alwaysBigInt>;
+    /** Reads a signed 64 bit little endian value. */
     readInt64LE(): ReturnBigValueMapping<alwaysBigInt>;
+    /** Reads a signed 64 bit big endian value. */
     readInt64BE(): ReturnBigValueMapping<alwaysBigInt>;
+    /** Reads an unsigned 64 bit little endian value. */
     readUInt64LE(): ReturnBigValueMapping<alwaysBigInt>;
+    /** Reads an unsigned 64 bit big endian value. */
     readUInt64BE(): ReturnBigValueMapping<alwaysBigInt>;
+    /** Reads an unsigned bit field of 1-32 bits in big endian order. */
     readUBitBE(bits: number): number;
+    /** Reads an unsigned bit field of 1-32 bits in little endian order. */
     readUBitLE(bits: number): number;
+    /** Reads a bit field of 1-32 bits in big endian order. */
     readBitBE(bits: number, unsigned?: boolean): number;
+    /** Reads a bit field of 1-32 bits in little endian order. */
     readBitLE(bits: number, unsigned?: boolean): number;
+    /** Writes an unsigned 8 bit value. */
     writeUByte(value: number, consume?: boolean): void;
+    /** Writes an unsigned 16 bit value in the given endian order. */
     writeUInt16(value: number, endian?: Endian$1): void;
+    /** Writes an unsigned 16 bit little endian value. */
     writeUInt16LE(value: number): void;
+    /** Writes an unsigned 16 bit big endian value. */
     writeUInt16BE(value: number): void;
+    /** Writes a signed 16 bit little endian value. */
     writeInt16LE(value: number): void;
+    /** Writes a signed 16 bit big endian value. */
     writeInt16BE(value: number): void;
+    /** Writes a signed 32 bit value in the given endian order. */
     writeInt(value: number, endian?: Endian$1): void;
+    /** Writes an unsigned 32 bit value in the given endian order. */
     writeUInt(value: number, endian?: Endian$1): void;
+    /** Writes an unsigned 32 bit value in the given endian order. */
     writeUInt32(value: number, endian?: Endian$1): void;
+    /** Writes a signed 32 bit little endian value. */
     writeInt32LE(value: number): void;
+    /** Writes a signed 32 bit big endian value. */
     writeInt32BE(value: number): void;
+    /** Writes an unsigned 32 bit little endian value. */
     writeUInt32LE(value: number): void;
+    /** Writes an unsigned 32 bit big endian value. */
     writeUInt32BE(value: number): void;
+    /** Writes a 32 bit float in the given endian order. */
     writeFloat32(value: number, endian?: Endian$1, consume?: boolean): void;
+    /** Writes a 32 bit little endian float. */
     writeFloatLE(value: number): void;
+    /** Writes a 32 bit big endian float. */
     writeFloatBE(value: number): void;
+    /** Writes a 32 bit little endian float. */
     writeFloat32LE(value: number): void;
+    /** Writes a 32 bit big endian float. */
     writeFloat32BE(value: number): void;
+    /** Writes a 16 bit half float in the given endian order. */
     writeFloat16(value: number, endian?: Endian$1, consume?: boolean): void;
+    /** Writes a 16 bit little endian half float. */
     writeHalfFloatLE(value: number): void;
+    /** Writes a 16 bit big endian half float. */
     writeHalfFloatBE(value: number): void;
+    /** Writes a 16 bit little endian half float. */
     writeFloat16LE(value: number): void;
+    /** Writes a 16 bit big endian half float. */
     writeFloat16BE(value: number): void;
+    /** Writes a 64 bit double float in the given endian order. */
     writeFloat64(value: number, endian?: Endian$1, consume?: boolean): void;
+    /** Writes a 64 bit little endian double float. */
     writeDoubleFloatLE(value: number): void;
+    /** Writes a 64 bit big endian double float. */
     writeDoubleFloatBE(value: number): void;
+    /** Writes a 64 bit little endian double float. */
     writeFloat64LE(value: number): void;
+    /** Writes a 64 bit big endian double float. */
     writeFloat64BE(value: number): void;
+    /** Writes an unsigned 64 bit value in the given endian order. */
     writeUInt64(value: number | bigint, endian?: Endian$1): void;
+    /** Writes a signed 64 bit little endian value. */
     writeInt64LE(value: number | bigint): void;
+    /** Writes a signed 64 bit big endian value. */
     writeInt64BE(value: number | bigint): void;
+    /** Writes an unsigned 64 bit little endian value. */
     writeUInt64LE(value: number | bigint): void;
+    /** Writes an unsigned 64 bit big endian value. */
     writeUInt64BE(value: number | bigint): void;
+    /** Writes an unsigned bit field of 1-32 bits in big endian order. */
     writeUBitBE(value: number, bits: number): void;
+    /** Writes an unsigned bit field of 1-32 bits in little endian order. */
     writeUBitLE(value: number, bits: number): void;
+    /** Writes a bit field of 1-32 bits in big endian order. */
     writeBitBE(value: number, bits: number, unsigned?: boolean): void;
+    /** Writes a bit field of 1-32 bits in little endian order. */
     writeBitLE(value: number, bits: number, unsigned?: boolean): void;
+    /** Current buffer size in bits. */
     get bitSize(): number;
+    /** Current buffer size in bytes. */
     get length(): number;
+    /** Current buffer size in bytes. */
     get len(): number;
+    /** Current buffer / file size in bytes. */
     get fileSize(): number;
+    /** Current buffer / file size in bytes. */
     get FileSize(): number;
+    /** Current buffer size in bits. */
     get lengthBits(): number;
+    /** Current buffer size in bits. */
     get sizeBits(): number;
+    /** Current buffer / file size in bits. */
     get fileBitSize(): number;
+    /** Current buffer / file size in bits. */
     get fileSizeBits(): number;
+    /** Current buffer size in bits. */
     get lenBits(): number;
+    /** Current byte position. */
     get off(): number;
+    /** Current byte position. */
     get getOffset(): number;
+    /** Current byte position. */
     get tell(): number;
+    /** Current byte position. */
     get FTell(): number;
+    /** Current byte position. */
     get saveOffset(): number;
+    /** Current byte position. */
     get byteOffset(): number;
+    /** Moves the current byte position. */
     set setOffset(value: number);
+    /** Moves the current byte position. */
     set setByteOffset(value: number);
+    /** Current absolute bit position. */
     get offsetBits(): number;
+    /** Current absolute bit position. */
     get getBitOffset(): number;
+    /** Current absolute bit position. */
     get saveBitOffset(): number;
+    /** Current absolute bit position. */
     get FTellBits(): number;
+    /** Current bit position within the current byte (0-7). */
     get tellBits(): number;
+    /** Current absolute bit position. */
     get offBits(): number;
+    /** Moves to an absolute bit position. */
     set setOffsetBits(value: number);
+    /** Moves to an absolute bit position. */
     set setBitOffset(value: number);
+    /** Current bit position within the current byte (0-7). */
     get getInsetBit(): number;
+    /** Current bit position within the current byte (0-7). */
     get saveInsetBit(): number;
+    /** Current bit position within the current byte (0-7). */
     get inBit(): number;
+    /** Current bit position within the current byte (0-7). */
     get bitTell(): number;
+    /** Moves the bit position within the current byte (0-7). */
     set setInsetBit(value: number);
+    /** Bytes remaining between the current byte position and the end of the data. */
     get remain(): number;
+    /** Bytes remaining between the current byte position and the end of the data. */
     get remainBytes(): number;
+    /** Bytes remaining between the current byte position and the end of the data. */
     get FEoF(): number;
+    /** Bits remaining between the current bit position and the end of the data. */
     get remainBits(): number;
+    /** Bits remaining between the current bit position and the end of the data. */
     get FEoFBits(): number;
+    /** Row line of the current byte position (16 bytes per row). */
     get getLine(): number;
+    /** Row line of the current byte position (16 bytes per row). */
     get row(): number;
+    /** Alias of {@link skip} - moves the position by a relative number of bytes / bits. */
     jump(bytes: number, bits?: number): void;
+    /** Alias of {@link skip} - moves the position by a relative number of bytes / bits. */
     seek(bytes: number, bits?: number): void;
+    /** Alias of {@link goto} - moves to an absolute byte / bit position. */
     FSeek(byte: number, bit?: number): void;
+    /** Alias of {@link goto} - moves to an absolute byte / bit position. */
     pointer(byte: number, bit?: number): void;
+    /** Alias of {@link goto} - moves to an absolute byte / bit position. */
     warp(byte: number, bit?: number): void;
+    /** Alias of {@link rewind} - moves the current byte position to the start of the data. */
     gotoStart(): void;
+    /** Alias of {@link last} - moves the current byte position to the end of the data. */
     gotoEnd(): void;
+    /** Alias of {@link last} - moves the current byte position to the end of the data. */
     EoF(): void;
+    /** True when the value is a `Buffer` or `Uint8Array`. */
     isBufferOrUint8Array(obj: any): obj is Uint8Array;
+    /** True when the value is a Node `Buffer`. */
     isBuffer(obj: any): obj is Uint8Array;
+    /** True when the value is a plain `Uint8Array` (not a `Buffer`). */
     isUint8Array(obj: any): boolean;
+    /** Turns strict mode on - the data won't be extended past its max size. */
     restrict(): void;
+    /** Turns strict mode off - the data is extended when writing past its max size. */
     unrestrict(): void;
+    /** Turns off the hexdump on error (default). */
     errorDumpOff(): void;
+    /** Turns on the hexdump on error. */
     errorDumpOn(): void;
+    /** Merges default string options used by the `str` get / set and the string presets. */
     set strSettings(settings: stringOptions);
+    /** Console logs the data as a hex dump, or returns it as a string with `returnString`. */
     hexdump(options?: hexdumpOptions): void | string;
+    /** The full current buffer data, or null when no source is open. */
     get data(): Uint8Array | null;
+    /** A `DataView` over the current buffer data, or null when no source is open. */
     get view(): DataView | null;
+    /** Commits any pending edits to the file. */
     commit(): void;
+    /** Flushes any pending edits through to the underlying source. */
     flush(): void;
+    /**
+     * Returns the supplied data, trimmed to the current write position when `growthIncrement`
+     * expanded the buffer. Use `.data` for the full padded buffer.
+     */
     get(): Uint8Array;
+    /** Alias of {@link get} - returns the supplied data. */
     getData(): Uint8Array;
+    /** Alias of {@link get} - returns the supplied data. */
     getFullBuffer(): Uint8Array;
+    /** Alias of {@link get} - returns the supplied data. */
     return(): Uint8Array;
+    /** Alias of {@link close} - flushes and releases the supplied data. */
     end(): Uint8Array | void;
+    /** Alias of {@link close} - flushes and releases the supplied data. */
     done(): Uint8Array | void;
+    /** Alias of {@link close} - flushes and releases the supplied data. */
     finished(): Uint8Array | void;
+    /** Commits any edits and closes the file. In memory mode returns the buffer instead. */
     close(): Uint8Array | void;
+    /** Enables or disables writing and expanding (sets `strict` and `readOnly`). Reopens the file in file mode. */
     writeMode(mode?: boolean): void;
+    /** Renames the file on the file system, keeping the read / write position. This is permanent. */
     renameFile(newFilePath: string): void;
+    /** Unlinks the file from the file system. This is permanent - it does not go to the recycling bin. */
     deleteFile(): void;
 }
 
@@ -2495,266 +2734,500 @@ declare class BiEngine<alwaysBigInt extends boolean = false> {
     errorDump: boolean;
     strDefaults: stringOptions;
     constructor(input: string | Uint8Array, options?: BiEngineOptions);
+    /** True when backed by an in-memory buffer rather than a file. */
     get isMemoryMode(): boolean;
     /** The live Source (throws if not yet opened). */
     get source(): Source;
     /** Open the source. Optionally swap to a new in-memory buffer. */
     open(data?: Uint8Array): Promise<void>;
+    /** Current buffer / file size in bytes. */
     get size(): number;
+    /** Current byte position. */
     get offset(): number;
+    /** Current bit position within the current byte (0-7). */
     get insetBit(): number;
+    /** Current absolute bit position (byte * 8 + inset bit). */
     get bitOffset(): number;
+    /** Bytes remaining between the current byte position and the end of the data. */
     get remaining(): number;
     /** Run `fn` with exclusive access to the cursor. Reentrant. Opens the source first. */
     runExclusive<T>(fn: () => Promise<T> | T): Promise<T>;
+    /** Reads an 8 bit value (signed unless `unsigned`) at the current byte position. */
     readByte(unsigned?: boolean, consume?: boolean): Promise<number>;
+    /** Reads a 16 bit value (short / word) in the given endian order. */
     readInt16(unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<number>;
+    /** Reads a 32 bit value (int / long / dword) in the given endian order. */
     readInt32(unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<number>;
+    /**
+     * Reads a 64 bit value (quad / bigint) in the given endian order. Returns a `number` when the
+     * value is integer safe, otherwise a `bigint` (always `bigint` when `enforceBigInt` is set).
+     */
     readInt64(unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<ReturnBigValueMapping<alwaysBigInt>>;
+    /** Reads a 16 bit half float in the given endian order. */
     readHalfFloat(endian?: Endian, consume?: boolean): Promise<number>;
+    /** Reads a 32 bit float in the given endian order. */
     readFloat(endian?: Endian, consume?: boolean): Promise<number>;
+    /** Reads a 64 bit double float in the given endian order. */
     readDoubleFloat(endian?: Endian, consume?: boolean): Promise<number>;
+    /** Writes an 8 bit value at the current byte position. Value is clamped to the type's range. */
     writeByte(value: number, unsigned?: boolean, consume?: boolean): Promise<void>;
+    /** Writes a 16 bit value (short / word) in the given endian order. Value is clamped to the type's range. */
     writeInt16(value: number, unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<void>;
+    /** Writes a 32 bit value (int / long / dword) in the given endian order. Value is clamped to the type's range. */
     writeInt32(value: number, unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<void>;
+    /** Writes a 64 bit value (quad / bigint) in the given endian order. Value is clamped to the type's range. */
     writeInt64(value: number | bigint, unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<void>;
+    /** Writes a 16 bit half float in the given endian order. */
     writeHalfFloat(value: number, endian?: Endian, consume?: boolean): Promise<void>;
+    /** Writes a 32 bit float in the given endian order. */
     writeFloat(value: number, endian?: Endian, consume?: boolean): Promise<void>;
+    /** Writes a 64 bit double float in the given endian order. */
     writeDoubleFloat(value: number, endian?: Endian, consume?: boolean): Promise<void>;
+    /** Reads a bit field of 1-32 bits from the current bit position, signed or unsigned, in either endian order. */
     readBit(bits: number, unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<number>;
+    /** Writes a bit field of 1-32 bits at the current bit position. Value is clamped to the bit width. */
     writeBit(value: number, bits: number, unsigned?: boolean, endian?: Endian, consume?: boolean): Promise<void>;
     /** Move to an absolute byte/bit, enforcing bounds (strict throws, else grows). */
     goto(byte?: number, bit?: number): Promise<void>;
     /** Relative move by bytes/bits, enforcing bounds. */
     skip(bytes?: number, bits?: number): Promise<void>;
+    /** Moves the current byte position to the start of the data. */
     rewind(): void;
+    /** Moves the current byte position to the end of the data. */
     last(): void;
+    /** Aligns the current byte position forward to the next multiple of `n`. */
     align(n: number): Promise<void>;
+    /** Reads a 16 bit value at an absolute offset without moving the cursor (safe to call concurrently). */
     readInt16At(offset: number, unsigned?: boolean, endian?: Endian): Promise<number>;
+    /** Reads an unsigned 16 bit value at an absolute offset without moving the cursor. */
     readUInt16At(offset: number, endian?: Endian): Promise<number>;
+    /** Reads a 32 bit value at an absolute offset without moving the cursor (safe to call concurrently). */
     readInt32At(offset: number, unsigned?: boolean, endian?: Endian): Promise<number>;
+    /** Reads an unsigned 32 bit value at an absolute offset without moving the cursor. */
     readUInt32At(offset: number, endian?: Endian): Promise<number>;
+    /** Reads an unsigned 8 bit value at an absolute offset without moving the cursor. */
     readUInt8At(offset: number): Promise<number>;
+    /** Writes a 16 bit value at an absolute offset without moving the cursor (safe to call concurrently). */
     writeInt16At(offset: number, value: number, unsigned?: boolean, endian?: Endian): Promise<void>;
+    /** Writes a 32 bit value at an absolute offset without moving the cursor (safe to call concurrently). */
     writeInt32At(offset: number, value: number, unsigned?: boolean, endian?: Endian): Promise<void>;
     /** Insert bytes at `offset`, growing the source. */
     insert(data: Uint8Array, offset?: number, consume?: boolean): Promise<void>;
+    /** Adds new data to the start of the supplied data. Errors in strict mode. */
     unshift(data: Uint8Array, consume?: boolean): Promise<void>;
+    /** Alias of {@link unshift} - adds new data to the start of the supplied data. */
     prepend(data: Uint8Array, consume?: boolean): Promise<void>;
+    /** Adds new data to the end of the supplied data. Errors in strict mode. */
     push(data: Uint8Array, consume?: boolean): Promise<void>;
+    /** Alias of {@link push} - adds new data to the end of the supplied data. */
     append(data: Uint8Array, consume?: boolean): Promise<void>;
     /** Delete [startOffset, endOffset), returning the removed bytes. */
     delete(startOffset?: number, endOffset?: number, consume?: boolean): Promise<Uint8Array>;
+    /** Removes and returns all data after the current byte position. Errors in strict mode. */
     clip(): Promise<Uint8Array>;
+    /** Alias of {@link clip} - removes and returns all data after the current byte position. */
     trim(): Promise<Uint8Array>;
+    /** Removes and returns `length` bytes from the current byte position. Errors in strict mode. */
     crop(length?: number, consume?: boolean): Promise<Uint8Array>;
+    /** Alias of {@link crop} - removes and returns `length` bytes from the current byte position. */
     drop(length?: number, consume?: boolean): Promise<Uint8Array>;
     /** Overwrite bytes at `offset` (grows if needed; does not shift the tail). */
     replace(data: Uint8Array, offset?: number, consume?: boolean): Promise<void>;
+    /** Alias of {@link replace} - overwrites data at `offset`. */
     overwrite(data: Uint8Array, offset?: number, consume?: boolean): Promise<void>;
     /** Copy out [startOffset, endOffset); if `fillValue` given, overwrite that range with it. */
     fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<Uint8Array>;
+    /** Alias of {@link fill} - returns data between two byte positions, optionally filling that range. */
     lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<Uint8Array>;
+    /** Returns a copy of the data between two byte positions without modifying it. */
     subarray(startOffset?: number, endOffset?: number, consume?: boolean): Promise<Uint8Array>;
+    /** Returns a copy of `length` bytes from the current byte position without modifying the data. */
     extract(length?: number, consume?: boolean): Promise<Uint8Array>;
+    /** Alias of {@link extract} - returns a copy of `length` bytes from the current byte position. */
     slice(length?: number, consume?: boolean): Promise<Uint8Array>;
+    /** Alias of {@link extract} - returns a copy of `length` bytes from the current byte position. */
     wrap(length?: number, consume?: boolean): Promise<Uint8Array>;
     /** Reads a string; batched - a single source read + synchronous decode. */
     readString(options?: stringOptions, consume?: boolean): Promise<string>;
     /** Writes a string; batched - assembled in memory then one source write. */
     writeString(str: string, options?: stringOptions, consume?: boolean): Promise<void>;
+    /** XORs the byte range `[start, end)` with the key. The key repeats when shorter than the range. */
     xor(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): Promise<void>;
+    /** ORs the byte range `[start, end)` with the key. The key repeats when shorter than the range. */
     or(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): Promise<void>;
+    /** ANDs the byte range `[start, end)` with the key. The key repeats when shorter than the range. */
     and(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): Promise<void>;
+    /** Adds the key to each byte in `[start, end)`. The key repeats when shorter than the range. */
     add(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): Promise<void>;
+    /** NOTs (bitwise inverts) every byte in the range `[start, end)`. */
     not(start?: number, end?: number, consume?: boolean): Promise<void>;
+    /** Left shifts each byte in `[start, end)` by the key. The key repeats when shorter than the range. */
     lShift(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): Promise<void>;
+    /** Right shifts each byte in `[start, end)` by the key. The key repeats when shorter than the range. */
     rShift(key: number | string | Uint8Array, start?: number, end?: number, consume?: boolean): Promise<void>;
+    /** XORs `length` bytes from the current byte position with the key (length defaults to the key size). */
     xorThis(key: number | string | Uint8Array, length?: number, consume?: boolean): Promise<void>;
+    /** ORs `length` bytes from the current byte position with the key (length defaults to the key size). */
     orThis(key: number | string | Uint8Array, length?: number, consume?: boolean): Promise<void>;
+    /** ANDs `length` bytes from the current byte position with the key (length defaults to the key size). */
     andThis(key: number | string | Uint8Array, length?: number, consume?: boolean): Promise<void>;
+    /** Adds the key to `length` bytes from the current byte position (length defaults to the key size). */
     addThis(key: number | string | Uint8Array, length?: number, consume?: boolean): Promise<void>;
+    /** NOTs `length` bytes from the current byte position. */
     notThis(length?: number, consume?: boolean): Promise<void>;
+    /** Left shifts `length` bytes from the current byte position by the key (length defaults to the key size). */
     lShiftThis(key: number | string | Uint8Array, length?: number, consume?: boolean): Promise<void>;
+    /** Right shifts `length` bytes from the current byte position by the key (length defaults to the key size). */
     rShiftThis(key: number | string | Uint8Array, length?: number, consume?: boolean): Promise<void>;
+    /** Searches from the current byte position for a byte sequence. Returns its offset or -1. Does not move the position. */
     findBytes(bytesToFind: Uint8Array | number[]): Promise<number>;
+    /** Searches from the current byte position for a string. Returns its offset or -1. Does not move the position. */
     findString(str: string, bytesPerChar?: 1 | 2 | 4): Promise<number>;
+    /** Searches from the current byte position for an 8 bit value. Returns its offset or -1. Does not move the position. */
     findByte(value: number, unsigned?: boolean, endian?: Endian): Promise<number>;
+    /** Searches from the current byte position for a 16 bit value. Returns its offset or -1. Does not move the position. */
     findShort(value: number, unsigned?: boolean, endian?: Endian): Promise<number>;
+    /** Searches from the current byte position for a 32 bit value. Returns its offset or -1. Does not move the position. */
     findInt(value: number, unsigned?: boolean, endian?: Endian): Promise<number>;
+    /** Reads an unsigned 8 bit value. */
     readUByte(consume?: boolean): Promise<number>;
+    /** Reads an unsigned 16 bit value in the given endian order. */
     readUInt16(endian?: Endian): Promise<number>;
+    /** Reads an unsigned 16 bit little endian value. */
     readUInt16LE(): Promise<number>;
+    /** Reads an unsigned 16 bit big endian value. */
     readUInt16BE(): Promise<number>;
+    /** Reads a signed 16 bit little endian value. */
     readInt16LE(): Promise<number>;
+    /** Reads a signed 16 bit big endian value. */
     readInt16BE(): Promise<number>;
+    /** Reads a signed 32 bit value in the given endian order. */
     readInt(endian?: Endian): Promise<number>;
+    /** Reads an unsigned 32 bit value in the given endian order. */
     readUInt(endian?: Endian): Promise<number>;
+    /** Reads an unsigned 32 bit value in the given endian order. */
     readUInt32(endian?: Endian): Promise<number>;
+    /** Reads a signed 32 bit little endian value. */
     readInt32LE(): Promise<number>;
+    /** Reads a signed 32 bit big endian value. */
     readInt32BE(): Promise<number>;
+    /** Reads an unsigned 32 bit little endian value. */
     readUInt32LE(): Promise<number>;
+    /** Reads an unsigned 32 bit big endian value. */
     readUInt32BE(): Promise<number>;
+    /** Reads a 32 bit float in the given endian order. */
     readFloat32(endian?: Endian, consume?: boolean): Promise<number>;
+    /** Reads a 32 bit little endian float. */
     readFloatLE(): Promise<number>;
+    /** Reads a 32 bit big endian float. */
     readFloatBE(): Promise<number>;
+    /** Reads a 32 bit little endian float. */
     readFloat32LE(): Promise<number>;
+    /** Reads a 32 bit big endian float. */
     readFloat32BE(): Promise<number>;
+    /** Reads a 16 bit half float in the given endian order. */
     readFloat16(endian?: Endian, consume?: boolean): Promise<number>;
+    /** Reads a 16 bit little endian half float. */
     readHalfFloatLE(): Promise<number>;
+    /** Reads a 16 bit big endian half float. */
     readHalfFloatBE(): Promise<number>;
+    /** Reads a 16 bit little endian half float. */
     readFloat16LE(): Promise<number>;
+    /** Reads a 16 bit big endian half float. */
     readFloat16BE(): Promise<number>;
+    /** Reads a 64 bit double float in the given endian order. */
     readFloat64(endian?: Endian, consume?: boolean): Promise<number>;
+    /** Reads a 64 bit little endian double float. */
     readDoubleFloatLE(): Promise<number>;
+    /** Reads a 64 bit big endian double float. */
     readDoubleFloatBE(): Promise<number>;
+    /** Reads a 64 bit little endian double float. */
     readFloat64LE(): Promise<number>;
+    /** Reads a 64 bit big endian double float. */
     readFloat64BE(): Promise<number>;
+    /** Reads an unsigned 64 bit value in the current endian order. */
     readUInt64(): Promise<ReturnBigValueMapping<alwaysBigInt>>;
+    /** Reads a signed 64 bit little endian value. */
     readInt64LE(): Promise<ReturnBigValueMapping<alwaysBigInt>>;
+    /** Reads a signed 64 bit big endian value. */
     readInt64BE(): Promise<ReturnBigValueMapping<alwaysBigInt>>;
+    /** Reads an unsigned 64 bit little endian value. */
     readUInt64LE(): Promise<ReturnBigValueMapping<alwaysBigInt>>;
+    /** Reads an unsigned 64 bit big endian value. */
     readUInt64BE(): Promise<ReturnBigValueMapping<alwaysBigInt>>;
+    /** Reads an unsigned bit field of 1-32 bits in big endian order. */
     readUBitBE(bits: number): Promise<number>;
+    /** Reads an unsigned bit field of 1-32 bits in little endian order. */
     readUBitLE(bits: number): Promise<number>;
+    /** Reads a bit field of 1-32 bits in big endian order. */
     readBitBE(bits: number, unsigned?: boolean): Promise<number>;
+    /** Reads a bit field of 1-32 bits in little endian order. */
     readBitLE(bits: number, unsigned?: boolean): Promise<number>;
+    /** Reads `amount` bytes from the current byte position as a number array (signed unless `unsigned`). */
     readBytes(amount: number, unsigned?: boolean, consume?: boolean): Promise<number[]>;
+    /** Reads `amount` unsigned bytes from the current byte position as a `Uint8Array` copy. */
     readUBytes(amount: number, consume?: boolean): Promise<Uint8Array>;
+    /** Writes an unsigned 16 bit value in the given endian order. */
     writeUInt16(value: number, endian?: Endian): Promise<void>;
+    /** Writes an unsigned 16 bit little endian value. */
     writeUInt16LE(value: number): Promise<void>;
+    /** Writes an unsigned 16 bit big endian value. */
     writeUInt16BE(value: number): Promise<void>;
+    /** Writes a signed 16 bit little endian value. */
     writeInt16LE(value: number): Promise<void>;
+    /** Writes a signed 16 bit big endian value. */
     writeInt16BE(value: number): Promise<void>;
+    /** Writes a signed 32 bit value in the given endian order. */
     writeInt(value: number, endian?: Endian): Promise<void>;
+    /** Writes an unsigned 32 bit value in the given endian order. */
     writeUInt(value: number, endian?: Endian): Promise<void>;
+    /** Writes an unsigned 32 bit value in the given endian order. */
     writeUInt32(value: number, endian?: Endian): Promise<void>;
+    /** Writes a signed 32 bit little endian value. */
     writeInt32LE(value: number): Promise<void>;
+    /** Writes a signed 32 bit big endian value. */
     writeInt32BE(value: number): Promise<void>;
+    /** Writes an unsigned 32 bit little endian value. */
     writeUInt32LE(value: number): Promise<void>;
+    /** Writes an unsigned 32 bit big endian value. */
     writeUInt32BE(value: number): Promise<void>;
+    /** Writes a 32 bit float in the given endian order. */
     writeFloat32(value: number, endian?: Endian, consume?: boolean): Promise<void>;
+    /** Writes a 32 bit little endian float. */
     writeFloatLE(value: number): Promise<void>;
+    /** Writes a 32 bit big endian float. */
     writeFloatBE(value: number): Promise<void>;
+    /** Writes a 32 bit little endian float. */
     writeFloat32LE(value: number): Promise<void>;
+    /** Writes a 32 bit big endian float. */
     writeFloat32BE(value: number): Promise<void>;
+    /** Writes a 16 bit half float in the given endian order. */
     writeFloat16(value: number, endian?: Endian, consume?: boolean): Promise<void>;
+    /** Writes a 16 bit little endian half float. */
     writeHalfFloatLE(value: number): Promise<void>;
+    /** Writes a 16 bit big endian half float. */
     writeHalfFloatBE(value: number): Promise<void>;
+    /** Writes a 16 bit little endian half float. */
     writeFloat16LE(value: number): Promise<void>;
+    /** Writes a 16 bit big endian half float. */
     writeFloat16BE(value: number): Promise<void>;
+    /** Writes a 64 bit double float in the given endian order. */
     writeFloat64(value: number, endian?: Endian, consume?: boolean): Promise<void>;
+    /** Writes a 64 bit little endian double float. */
     writeDoubleFloatLE(value: number): Promise<void>;
+    /** Writes a 64 bit big endian double float. */
     writeDoubleFloatBE(value: number): Promise<void>;
+    /** Writes a 64 bit little endian double float. */
     writeFloat64LE(value: number): Promise<void>;
+    /** Writes a 64 bit big endian double float. */
     writeFloat64BE(value: number): Promise<void>;
+    /** Writes an unsigned 64 bit value in the given endian order. */
     writeUInt64(value: number | bigint, endian?: Endian): Promise<void>;
+    /** Writes a signed 64 bit little endian value. */
     writeInt64LE(value: number | bigint): Promise<void>;
+    /** Writes a signed 64 bit big endian value. */
     writeInt64BE(value: number | bigint): Promise<void>;
+    /** Writes an unsigned 64 bit little endian value. */
     writeUInt64LE(value: number | bigint): Promise<void>;
+    /** Writes an unsigned 64 bit big endian value. */
     writeUInt64BE(value: number | bigint): Promise<void>;
+    /** Writes an unsigned 8 bit value. */
     writeUByte(value: number, consume?: boolean): Promise<void>;
+    /** Writes an unsigned bit field of 1-32 bits in big endian order. */
     writeUBitBE(value: number, bits: number): Promise<void>;
+    /** Writes an unsigned bit field of 1-32 bits in little endian order. */
     writeUBitLE(value: number, bits: number): Promise<void>;
+    /** Writes a bit field of 1-32 bits in big endian order. */
     writeBitBE(value: number, bits: number, unsigned?: boolean): Promise<void>;
+    /** Writes a bit field of 1-32 bits in little endian order. */
     writeBitLE(value: number, bits: number, unsigned?: boolean): Promise<void>;
+    /** Writes raw bytes at the current byte position, overwriting existing data. */
     writeBytes(values: number[] | Uint8Array, unsigned?: boolean, consume?: boolean): Promise<void>;
+    /** Writes raw unsigned bytes at the current byte position, overwriting existing data. */
     writeUBytes(values: number[] | Uint8Array, consume?: boolean): Promise<void>;
+    /** Sets the default endian order. Can be changed at any time. */
     endianness(endian: Endian): void;
+    /** Switches the default endian order to big endian. */
     bigEndian(): void;
+    /** Alias of {@link bigEndian} - switches to big endian. */
     big(): void;
+    /** Alias of {@link bigEndian} - switches to big endian. */
     be(): void;
+    /** Switches the default endian order to little endian. */
     littleEndian(): void;
+    /** Alias of {@link littleEndian} - switches to little endian. */
     little(): void;
+    /** Alias of {@link littleEndian} - switches to little endian. */
     le(): void;
+    /** Current buffer size in bits. */
     get bitSize(): number;
+    /** Current buffer size in bytes. */
     get length(): number;
+    /** Current buffer size in bytes. */
     get len(): number;
+    /** Current buffer / file size in bytes. */
     get fileSize(): number;
+    /** Current buffer / file size in bytes. */
     get FileSize(): number;
+    /** Current buffer size in bits. */
     get lengthBits(): number;
+    /** Current buffer size in bits. */
     get sizeBits(): number;
+    /** Current buffer / file size in bits. */
     get fileBitSize(): number;
+    /** Current buffer / file size in bits. */
     get fileSizeBits(): number;
+    /** Current buffer size in bits. */
     get lenBits(): number;
+    /** Current byte position. */
     get off(): number;
+    /** Current byte position. */
     get getOffset(): number;
+    /** Current byte position. */
     get tell(): number;
+    /** Current byte position. */
     get FTell(): number;
+    /** Current byte position. */
     get saveOffset(): number;
+    /** Current byte position. */
     get byteOffset(): number;
+    /** Moves the current byte position. */
     setOffset(value: number): Promise<void>;
+    /** Moves the current byte position. */
     setByteOffset(value: number): Promise<void>;
+    /** Current absolute bit position. */
     get offsetBits(): number;
+    /** Current absolute bit position. */
     get getBitOffset(): number;
+    /** Current absolute bit position. */
     get saveBitOffset(): number;
+    /** Current absolute bit position. */
     get FTellBits(): number;
+    /** Current bit position within the current byte (0-7). */
     get tellBits(): number;
+    /** Current absolute bit position. */
     get offBits(): number;
+    /** Moves to an absolute bit position. */
     setOffsetBits(value: number): Promise<void>;
+    /** Moves to an absolute bit position. */
     setBitOffset(value: number): Promise<void>;
+    /** Current bit position within the current byte (0-7). */
     get getInsetBit(): number;
+    /** Current bit position within the current byte (0-7). */
     get saveInsetBit(): number;
+    /** Current bit position within the current byte (0-7). */
     get inBit(): number;
+    /** Current bit position within the current byte (0-7). */
     get bitTell(): number;
+    /** Moves the bit position within the current byte (0-7). */
     setInsetBit(value: number): Promise<void>;
+    /** Bytes remaining between the current byte position and the end of the data. */
     get remain(): number;
+    /** Bytes remaining between the current byte position and the end of the data. */
     get remainBytes(): number;
+    /** Bytes remaining between the current byte position and the end of the data. */
     get FEoF(): number;
+    /** Bits remaining between the current bit position and the end of the data. */
     get remainBits(): number;
+    /** Bits remaining between the current bit position and the end of the data. */
     get FEoFBits(): number;
+    /** Row line of the current byte position (16 bytes per row). */
     get getLine(): number;
+    /** Row line of the current byte position (16 bytes per row). */
     get row(): number;
+    /** Alias of {@link skip} - moves the position by a relative number of bytes / bits. */
     jump(bytes: number, bits?: number): Promise<void>;
+    /** Alias of {@link skip} - moves the position by a relative number of bytes / bits. */
     seek(bytes: number, bits?: number): Promise<void>;
+    /** Alias of {@link goto} - moves to an absolute byte / bit position. */
     FSeek(byte: number, bit?: number): Promise<void>;
+    /** Alias of {@link goto} - moves to an absolute byte / bit position. */
     pointer(byte: number, bit?: number): Promise<void>;
+    /** Alias of {@link goto} - moves to an absolute byte / bit position. */
     warp(byte: number, bit?: number): Promise<void>;
+    /** Alias of {@link rewind} - moves the current byte position to the start of the data. */
     gotoStart(): void;
+    /** Alias of {@link last} - moves the current byte position to the end of the data. */
     gotoEnd(): void;
+    /** Alias of {@link last} - moves the current byte position to the end of the data. */
     EoF(): void;
+    /** Aligns the current byte position backward to the previous multiple of `number`. */
     alignRev(number: number): Promise<void>;
+    /** True when the value is a `Buffer` or `Uint8Array`. */
     isBufferOrUint8Array(obj: any): obj is Uint8Array;
+    /** True when the value is a Node `Buffer`. */
     isBuffer(obj: any): obj is Uint8Array;
+    /** True when the value is a plain `Uint8Array` (not a `Buffer`). */
     isUint8Array(obj: any): boolean;
+    /** Turns strict mode on - the data won't be extended past its max size. */
     restrict(): void;
+    /** Turns strict mode off - the data is extended when writing past its max size. */
     unrestrict(): void;
+    /** Turns off the hexdump on error (default). */
     errorDumpOff(): void;
+    /** Turns on the hexdump on error. */
     errorDumpOn(): void;
+    /** Merges default string options used by the `str` read / write and the string presets. */
     set strSettings(settings: stringOptions);
+    /** Console logs the data as a hex dump, or returns it as a string with `returnString`. */
     hexdump(options?: hexdumpOptions): Promise<void | string>;
+    /** Reads an 8 bit value at an absolute offset without moving the cursor. */
     readByteAt(offset: number, unsigned?: boolean): Promise<number>;
+    /** Reads `length` raw bytes at an absolute offset without moving the cursor. */
     readBytesAt(offset: number, length: number): Promise<Uint8Array>;
+    /** Reads a 32 bit float at an absolute offset without moving the cursor. */
     readFloat32At(offset: number, endian?: Endian): Promise<number>;
+    /** Reads a 64 bit double float at an absolute offset without moving the cursor. */
     readFloat64At(offset: number, endian?: Endian): Promise<number>;
+    /** Reads a signed 64 bit `bigint` at an absolute offset without moving the cursor. */
     readBigInt64At(offset: number, endian?: Endian): Promise<bigint>;
+    /** Reads an unsigned 64 bit `bigint` at an absolute offset without moving the cursor. */
     readBigUInt64At(offset: number, endian?: Endian): Promise<bigint>;
+    /** Writes an 8 bit value at an absolute offset without moving the cursor. */
     writeByteAt(offset: number, value: number, unsigned?: boolean): Promise<void>;
+    /** Writes raw bytes at an absolute offset without moving the cursor. */
     writeBytesAt(offset: number, data: Uint8Array): Promise<void>;
+    /** Writes an unsigned 16 bit value at an absolute offset without moving the cursor. */
     writeUInt16At(offset: number, value: number, endian?: Endian): Promise<void>;
+    /** Writes an unsigned 32 bit value at an absolute offset without moving the cursor. */
     writeUInt32At(offset: number, value: number, endian?: Endian): Promise<void>;
+    /** Writes a 32 bit float at an absolute offset without moving the cursor. */
     writeFloat32At(offset: number, value: number, endian?: Endian): Promise<void>;
+    /** Writes a 64 bit double float at an absolute offset without moving the cursor. */
     writeFloat64At(offset: number, value: number, endian?: Endian): Promise<void>;
+    /** Writes a 64 bit value at an absolute offset without moving the cursor. */
     writeBigInt64At(offset: number, value: number | bigint, unsigned?: boolean, endian?: Endian): Promise<void>;
+    /** Writes an unsigned 64 bit value at an absolute offset without moving the cursor. */
     writeBigUInt64At(offset: number, value: number | bigint, endian?: Endian): Promise<void>;
     /** In-memory buffer (memory mode); null in file mode - use get()/getData(). */
     get data(): Uint8Array | null;
     /** DataView over the in-memory buffer (memory mode only). */
     get view(): DataView | null;
+    /** Commits any pending edits to the file. */
     commit(): Promise<void>;
+    /** Flushes any pending edits through to the underlying source. */
     flush(): Promise<void>;
     /** Returns the current data (trimmed to the write position if the buffer was expanded). */
     get(): Promise<Uint8Array>;
+    /** Alias of {@link get} - returns the current data. */
     getData(): Promise<Uint8Array>;
+    /** Alias of {@link get} - returns the current data. */
     getFullBuffer(): Promise<Uint8Array>;
+    /** Alias of {@link get} - returns the current data. */
     return(): Promise<Uint8Array>;
+    /** Alias of {@link close} - flushes and releases the supplied data. */
     end(): Promise<Uint8Array | void>;
+    /** Alias of {@link close} - flushes and releases the supplied data. */
     done(): Promise<Uint8Array | void>;
+    /** Alias of {@link close} - flushes and releases the supplied data. */
     finished(): Promise<Uint8Array | void>;
+    /** Commits any edits and closes the file. In memory mode returns the buffer instead. */
     close(): Promise<Uint8Array | void>;
     /** Enable/disable writing + expanding (changes strict AND readOnly). */
     writeMode(mode?: boolean): Promise<void>;
+    /** Renames the file on the file system, keeping the read / write position. This is permanent. */
     renameFile(newFilePath: string): Promise<void>;
+    /** Unlinks the file from the file system. This is permanent - it does not go to the recycling bin. */
     deleteFile(): Promise<void>;
 }
 
