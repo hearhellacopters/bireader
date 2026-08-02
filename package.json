@@ -13,6 +13,10 @@
   },
   "exports": {
     ".": {
+      "browser": {
+        "types": "./dist/esm/indexBrowser.d.ts",
+        "default": "./dist/esm/indexBrowser.js"
+      },
       "import": {
         "types": "./dist/esm/indexImport.d.ts",
         "default": "./dist/esm/indexImport.js"
@@ -20,10 +24,6 @@
       "require": {
         "types": "./dist/cjs/index.d.cts",
         "default": "./dist/cjs/index.cjs"
-      },
-      "browser": {
-        "types": "./dist/esm/indexBrowser.d.ts",
-        "default": "./dist/esm/indexBrowser.js"
       }
     }
   },
