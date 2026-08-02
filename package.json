@@ -1,26 +1,25 @@
 {
   "name": "bireader",
-  "version": "5.0.2",
+  "version": "5.0.3",
   "description": "Read and write binary data in JavaScript",
   "type": "module",
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/indexImport.js",
   "browser": "./dist/esm/indexBrowser.js",
-  "types": "./dist/cjs/index.d.ts",
+  "types": "./dist/esm/indexImport.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/hearhellacopters/bireader.git"
   },
   "exports": {
     ".": {
-      "types": "./dist/cjs/index.d.ts",
-      "require": {
-        "types": "./dist/cjs/index.d.ts",
-        "default": "./dist/cjs/index.cjs"
-      },
       "import": {
         "types": "./dist/esm/indexImport.d.ts",
         "default": "./dist/esm/indexImport.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.cts",
+        "default": "./dist/cjs/index.cjs"
       },
       "browser": {
         "types": "./dist/esm/indexBrowser.d.ts",

@@ -89,8 +89,11 @@ export default [
   // ── 4. Types build
   {
     input: 'src/index.ts',
+    // Emit .d.cts (not .d.ts): in a "type": "module" package a plain .d.ts is treated as
+    // ESM, so `require`-based consumers under moduleResolution NodeNext fail with TS1479.
+    // A .d.cts is always CommonJS, matching the index.cjs it describes.
     output: {
-      file: 'dist/cjs/index.d.ts',
+      file: 'dist/cjs/index.d.cts',
       format: 'es'
     },
     plugins: [
