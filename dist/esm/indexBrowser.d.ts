@@ -4,6 +4,18 @@ import * as fs_promises from 'fs/promises';
 type endian = "little" | "big";
 type BigValue = number | bigint;
 type ReturnBigValueMapping<alwaysBigInt> = alwaysBigInt extends true ? bigint : BigValue;
+/**
+ * Maps a reader/writer's input source type to the type its sub-array methods
+ * ({@link extract}, `subarray`, `fill`, `delete`, `readUBytes`, `get`, ...) return,
+ * so the output echoes the input: a `Buffer` in - or a file path, read as a `Buffer` -
+ * yields `Buffer`s; a `Uint8Array` yields plain `Uint8Array`s. Wrapped in tuples so a
+ * union input type does not distribute (it falls back to `Uint8Array`).
+ */
+type BytesOutput<DataType> = [
+    DataType
+] extends [string] ? Buffer : [
+    DataType
+] extends [Buffer] ? Buffer : Uint8Array;
 type BiOptions<alwaysBigInt> = {
     /**
      * Byte offset to start, default is 0
@@ -124,6 +136,12 @@ declare function hexdump(src: Uint8Array | Buffer, options?: hexdumpOptions): vo
 interface SyncSource {
     readonly size: number;
     readonly readOnly: boolean;
+    /**
+     * Whether sub-array results should be returned as Node `Buffer`s rather than
+     * plain `Uint8Array`s - true for file-backed sources and for memory sources
+     * created from a `Buffer`, so `extract`/`subarray`/etc. echo the input type.
+     */
+    readonly isBuffer: boolean;
     read(offset: number, length: number): Uint8Array;
     write(offset: number, data: Uint8Array): void;
     resize(size: number): void;
@@ -141,7 +159,7 @@ interface BiSyncEngineOptions {
     byteOffset?: number;
     bitOffset?: number;
 }
-declare class BiSyncEngine<alwaysBigInt extends boolean = false> {
+declare class BiSyncEngine<alwaysBigInt extends boolean = false, BytesOut extends Uint8Array = Uint8Array> {
     #private;
     /** File system (node:fs), injected by the entry point for file mode. */
     static fs: typeof fs;
@@ -211,8 +229,8 @@ declare class BiSyncEngine<alwaysBigInt extends boolean = false> {
     writeBit(value: number, bits: number, unsigned?: boolean, endian?: Endian$1, consume?: boolean): void;
     /** Reads `amount` bytes from the current byte position as a number array (signed unless `unsigned`). */
     readBytes(amount: number, unsigned?: boolean, consume?: boolean): number[];
-    /** Reads `amount` unsigned bytes from the current byte position as a `Uint8Array` copy. */
-    readUBytes(amount: number, consume?: boolean): Uint8Array;
+    /** Reads `amount` unsigned bytes from the current byte position as a copy in the source's native type. */
+    readUBytes(amount: number, consume?: boolean): BytesOut;
     /** Writes raw bytes at the current byte position, overwriting existing data. */
     writeBytes(values: number[] | Uint8Array, unsigned?: boolean, consume?: boolean): void;
     /** Writes raw unsigned bytes at the current byte position, overwriting existing data. */
@@ -241,32 +259,32 @@ declare class BiSyncEngine<alwaysBigInt extends boolean = false> {
     push(data: Uint8Array, consume?: boolean): void;
     /** Alias of {@link push} - adds new data to the end of the supplied data. */
     append(data: Uint8Array, consume?: boolean): void;
-    /** Removes `[startOffset, endOffset)` and returns the removed bytes. Errors in strict mode. */
-    delete(startOffset?: number, endOffset?: number, consume?: boolean): Uint8Array;
+    /** Removes `[startOffset, endOffset)` and returns the removed bytes (as the source's native type). Errors in strict mode. */
+    delete(startOffset?: number, endOffset?: number, consume?: boolean): BytesOut;
     /** Removes and returns all data after the current byte position. Errors in strict mode. */
-    clip(): Uint8Array;
+    clip(): BytesOut;
     /** Alias of {@link clip} - removes and returns all data after the current byte position. */
-    trim(): Uint8Array;
+    trim(): BytesOut;
     /** Removes and returns `length` bytes from the current byte position. Errors in strict mode. */
-    crop(length?: number, consume?: boolean): Uint8Array;
+    crop(length?: number, consume?: boolean): BytesOut;
     /** Alias of {@link crop} - removes and returns `length` bytes from the current byte position. */
-    drop(length?: number, consume?: boolean): Uint8Array;
+    drop(length?: number, consume?: boolean): BytesOut;
     /** Overwrites data at `offset` (grows if needed, does not shift the tail). */
     replace(data: Uint8Array, offset?: number, consume?: boolean): void;
     /** Alias of {@link replace} - overwrites data at `offset`. */
     overwrite(data: Uint8Array, offset?: number, consume?: boolean): void;
-    /** Returns a copy of `[startOffset, endOffset)`; when `fillValue` is supplied, that range is filled with it. */
-    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Uint8Array;
+    /** Returns a copy of `[startOffset, endOffset)` (as the source's native type); when `fillValue` is supplied, that range is filled with it. */
+    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): BytesOut;
     /** Alias of {@link fill} - returns data between two byte positions, optionally filling that range. */
-    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Uint8Array;
+    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): BytesOut;
     /** Returns a copy of the data between two byte positions without modifying it. */
-    subarray(startOffset?: number, endOffset?: number, consume?: boolean): Uint8Array;
+    subarray(startOffset?: number, endOffset?: number, consume?: boolean): BytesOut;
     /** Returns a copy of `length` bytes from the current byte position without modifying the data. */
-    extract(length?: number, consume?: boolean): Uint8Array;
+    extract(length?: number, consume?: boolean): BytesOut;
     /** Alias of {@link extract} - returns a copy of `length` bytes from the current byte position. */
-    slice(length?: number, consume?: boolean): Uint8Array;
+    slice(length?: number, consume?: boolean): BytesOut;
     /** Alias of {@link extract} - returns a copy of `length` bytes from the current byte position. */
-    wrap(length?: number, consume?: boolean): Uint8Array;
+    wrap(length?: number, consume?: boolean): BytesOut;
     /**
      * Reads a string in any supported format - fixed length or terminated UTF, or Pascal
      * (`stringType`, `length`, `terminateValue`, `lengthReadSize`, `stripNull`, `encoding`, `endian`).
@@ -587,8 +605,8 @@ declare class BiSyncEngine<alwaysBigInt extends boolean = false> {
     set strSettings(settings: stringOptions);
     /** Console logs the data as a hex dump, or returns it as a string with `returnString`. */
     hexdump(options?: hexdumpOptions): void | string;
-    /** The full current buffer data, or null when no source is open. */
-    get data(): Uint8Array | null;
+    /** The full current buffer data (as the source's native type), or null when no source is open. */
+    get data(): BytesOut | null;
     /** A `DataView` over the current buffer data, or null when no source is open. */
     get view(): DataView | null;
     /** Commits any pending edits to the file. */
@@ -599,21 +617,21 @@ declare class BiSyncEngine<alwaysBigInt extends boolean = false> {
      * Returns the supplied data, trimmed to the current write position when `growthIncrement`
      * expanded the buffer. Use `.data` for the full padded buffer.
      */
-    get(): Uint8Array;
+    get(): BytesOut;
     /** Alias of {@link get} - returns the supplied data. */
-    getData(): Uint8Array;
+    getData(): BytesOut;
     /** Alias of {@link get} - returns the supplied data. */
-    getFullBuffer(): Uint8Array;
+    getFullBuffer(): BytesOut;
     /** Alias of {@link get} - returns the supplied data. */
-    return(): Uint8Array;
+    return(): BytesOut;
     /** Alias of {@link close} - flushes and releases the supplied data. */
-    end(): Uint8Array | void;
+    end(): BytesOut | void;
     /** Alias of {@link close} - flushes and releases the supplied data. */
-    done(): Uint8Array | void;
+    done(): BytesOut | void;
     /** Alias of {@link close} - flushes and releases the supplied data. */
-    finished(): Uint8Array | void;
+    finished(): BytesOut | void;
     /** Commits any edits and closes the file. In memory mode returns the buffer instead. */
-    close(): Uint8Array | void;
+    close(): BytesOut | void;
     /** Enables or disables writing and expanding (sets `strict` and `readOnly`). Reopens the file in file mode. */
     writeMode(mode?: boolean): void;
     /** Renames the file on the file system, keeping the read / write position. This is permanent. */
@@ -637,7 +655,7 @@ declare class BiSyncEngine<alwaysBigInt extends boolean = false> {
  *
  * @since 2.0
  */
-declare class BiReader<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiSyncEngine<alwaysBigInt> {
+declare class BiReader<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiSyncEngine<alwaysBigInt, BytesOutput<DataType>> {
     constructor(input: DataType, options?: BiOptions<alwaysBigInt>);
     /**
      * Bit field reader.
@@ -1720,7 +1738,7 @@ declare class BiReader<DataType extends string | Uint8Array | Buffer = Uint8Arra
  *
  * @since 2.0
  */
-declare class BiWriter<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiSyncEngine<alwaysBigInt> {
+declare class BiWriter<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiSyncEngine<alwaysBigInt, BytesOutput<DataType>> {
     constructor(input?: DataType, options?: BiOptions<alwaysBigInt>);
     /**
      * Bit field writer.
@@ -2697,6 +2715,12 @@ interface Source {
     readonly size: number;
     /** Whether writes are permitted. */
     readonly readOnly: boolean;
+    /**
+     * Whether sub-array results should be returned as Node `Buffer`s rather than
+     * plain `Uint8Array`s - true for file-backed sources and for memory sources
+     * created from a `Buffer`, so `extract`/`subarray`/etc. echo the input type.
+     */
+    readonly isBuffer: boolean;
     /** Read exactly `length` bytes at absolute `offset` (no cursor involved). */
     read(offset: number, length: number): Promise<Uint8Array>;
     /** Write `data` at absolute `offset` (no cursor involved). */
@@ -2720,7 +2744,7 @@ interface BiEngineOptions {
     byteOffset?: number;
     bitOffset?: number;
 }
-declare class BiEngine<alwaysBigInt extends boolean = false> {
+declare class BiEngine<alwaysBigInt extends boolean = false, BytesOut extends Uint8Array = Uint8Array> {
     #private;
     /** File system (fs/promises), injected by the entry point for file mode. */
     static fs: typeof fs_promises;
@@ -2822,31 +2846,31 @@ declare class BiEngine<alwaysBigInt extends boolean = false> {
     /** Alias of {@link push} - adds new data to the end of the supplied data. */
     append(data: Uint8Array, consume?: boolean): Promise<void>;
     /** Delete [startOffset, endOffset), returning the removed bytes. */
-    delete(startOffset?: number, endOffset?: number, consume?: boolean): Promise<Uint8Array>;
+    delete(startOffset?: number, endOffset?: number, consume?: boolean): Promise<BytesOut>;
     /** Removes and returns all data after the current byte position. Errors in strict mode. */
-    clip(): Promise<Uint8Array>;
+    clip(): Promise<BytesOut>;
     /** Alias of {@link clip} - removes and returns all data after the current byte position. */
-    trim(): Promise<Uint8Array>;
+    trim(): Promise<BytesOut>;
     /** Removes and returns `length` bytes from the current byte position. Errors in strict mode. */
-    crop(length?: number, consume?: boolean): Promise<Uint8Array>;
+    crop(length?: number, consume?: boolean): Promise<BytesOut>;
     /** Alias of {@link crop} - removes and returns `length` bytes from the current byte position. */
-    drop(length?: number, consume?: boolean): Promise<Uint8Array>;
+    drop(length?: number, consume?: boolean): Promise<BytesOut>;
     /** Overwrite bytes at `offset` (grows if needed; does not shift the tail). */
     replace(data: Uint8Array, offset?: number, consume?: boolean): Promise<void>;
     /** Alias of {@link replace} - overwrites data at `offset`. */
     overwrite(data: Uint8Array, offset?: number, consume?: boolean): Promise<void>;
     /** Copy out [startOffset, endOffset); if `fillValue` given, overwrite that range with it. */
-    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<Uint8Array>;
+    fill(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<BytesOut>;
     /** Alias of {@link fill} - returns data between two byte positions, optionally filling that range. */
-    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<Uint8Array>;
+    lift(startOffset?: number, endOffset?: number, consume?: boolean, fillValue?: number): Promise<BytesOut>;
     /** Returns a copy of the data between two byte positions without modifying it. */
-    subarray(startOffset?: number, endOffset?: number, consume?: boolean): Promise<Uint8Array>;
+    subarray(startOffset?: number, endOffset?: number, consume?: boolean): Promise<BytesOut>;
     /** Returns a copy of `length` bytes from the current byte position without modifying the data. */
-    extract(length?: number, consume?: boolean): Promise<Uint8Array>;
+    extract(length?: number, consume?: boolean): Promise<BytesOut>;
     /** Alias of {@link extract} - returns a copy of `length` bytes from the current byte position. */
-    slice(length?: number, consume?: boolean): Promise<Uint8Array>;
+    slice(length?: number, consume?: boolean): Promise<BytesOut>;
     /** Alias of {@link extract} - returns a copy of `length` bytes from the current byte position. */
-    wrap(length?: number, consume?: boolean): Promise<Uint8Array>;
+    wrap(length?: number, consume?: boolean): Promise<BytesOut>;
     /** Reads a string; batched - a single source read + synchronous decode. */
     readString(options?: stringOptions, consume?: boolean): Promise<string>;
     /** Writes a string; batched - assembled in memory then one source write. */
@@ -2966,7 +2990,7 @@ declare class BiEngine<alwaysBigInt extends boolean = false> {
     /** Reads `amount` bytes from the current byte position as a number array (signed unless `unsigned`). */
     readBytes(amount: number, unsigned?: boolean, consume?: boolean): Promise<number[]>;
     /** Reads `amount` unsigned bytes from the current byte position as a `Uint8Array` copy. */
-    readUBytes(amount: number, consume?: boolean): Promise<Uint8Array>;
+    readUBytes(amount: number, consume?: boolean): Promise<BytesOut>;
     /** Writes an unsigned 16 bit value in the given endian order. */
     writeUInt16(value: number, endian?: Endian): Promise<void>;
     /** Writes an unsigned 16 bit little endian value. */
@@ -3174,7 +3198,7 @@ declare class BiEngine<alwaysBigInt extends boolean = false> {
     /** Reads an 8 bit value at an absolute offset without moving the cursor. */
     readByteAt(offset: number, unsigned?: boolean): Promise<number>;
     /** Reads `length` raw bytes at an absolute offset without moving the cursor. */
-    readBytesAt(offset: number, length: number): Promise<Uint8Array>;
+    readBytesAt(offset: number, length: number): Promise<BytesOut>;
     /** Reads a 32 bit float at an absolute offset without moving the cursor. */
     readFloat32At(offset: number, endian?: Endian): Promise<number>;
     /** Reads a 64 bit double float at an absolute offset without moving the cursor. */
@@ -3199,8 +3223,8 @@ declare class BiEngine<alwaysBigInt extends boolean = false> {
     writeBigInt64At(offset: number, value: number | bigint, unsigned?: boolean, endian?: Endian): Promise<void>;
     /** Writes an unsigned 64 bit value at an absolute offset without moving the cursor. */
     writeBigUInt64At(offset: number, value: number | bigint, endian?: Endian): Promise<void>;
-    /** In-memory buffer (memory mode); null in file mode - use get()/getData(). */
-    get data(): Uint8Array | null;
+    /** In-memory buffer (memory mode, as the source's native type); null in file mode - use get()/getData(). */
+    get data(): BytesOut | null;
     /** DataView over the in-memory buffer (memory mode only). */
     get view(): DataView | null;
     /** Commits any pending edits to the file. */
@@ -3208,21 +3232,21 @@ declare class BiEngine<alwaysBigInt extends boolean = false> {
     /** Flushes any pending edits through to the underlying source. */
     flush(): Promise<void>;
     /** Returns the current data (trimmed to the write position if the buffer was expanded). */
-    get(): Promise<Uint8Array>;
+    get(): Promise<BytesOut>;
     /** Alias of {@link get} - returns the current data. */
-    getData(): Promise<Uint8Array>;
+    getData(): Promise<BytesOut>;
     /** Alias of {@link get} - returns the current data. */
-    getFullBuffer(): Promise<Uint8Array>;
+    getFullBuffer(): Promise<BytesOut>;
     /** Alias of {@link get} - returns the current data. */
-    return(): Promise<Uint8Array>;
+    return(): Promise<BytesOut>;
     /** Alias of {@link close} - flushes and releases the supplied data. */
-    end(): Promise<Uint8Array | void>;
+    end(): Promise<BytesOut | void>;
     /** Alias of {@link close} - flushes and releases the supplied data. */
-    done(): Promise<Uint8Array | void>;
+    done(): Promise<BytesOut | void>;
     /** Alias of {@link close} - flushes and releases the supplied data. */
-    finished(): Promise<Uint8Array | void>;
+    finished(): Promise<BytesOut | void>;
     /** Commits any edits and closes the file. In memory mode returns the buffer instead. */
-    close(): Promise<Uint8Array | void>;
+    close(): Promise<BytesOut | void>;
     /** Enable/disable writing + expanding (changes strict AND readOnly). */
     writeMode(mode?: boolean): Promise<void>;
     /** Renames the file on the file system, keeping the read / write position. This is permanent. */
@@ -3247,7 +3271,7 @@ declare class BiEngine<alwaysBigInt extends boolean = false> {
  *
  * @since 4.0
  */
-declare class BiReaderAsync<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiEngine<alwaysBigInt> {
+declare class BiReaderAsync<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiEngine<alwaysBigInt, BytesOutput<DataType>> {
     constructor(input: DataType, options?: BiOptions<alwaysBigInt>);
     /**
      * Creates and opens a new `BiReaderAsync`.
@@ -4348,7 +4372,7 @@ declare class BiReaderAsync<DataType extends string | Uint8Array | Buffer = Uint
  *
  * @since 4.0
  */
-declare class BiWriterAsync<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiEngine<alwaysBigInt> {
+declare class BiWriterAsync<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiEngine<alwaysBigInt, BytesOutput<DataType>> {
     constructor(input?: DataType, options?: BiOptions<alwaysBigInt>);
     /**
      *

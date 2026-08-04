@@ -6,6 +6,18 @@ export type BigValue = number | bigint;
 
 export type ReturnBigValueMapping<alwaysBigInt> = alwaysBigInt extends true ? bigint : BigValue;
 
+/**
+ * Maps a reader/writer's input source type to the type its sub-array methods
+ * ({@link extract}, `subarray`, `fill`, `delete`, `readUBytes`, `get`, ...) return,
+ * so the output echoes the input: a `Buffer` in - or a file path, read as a `Buffer` -
+ * yields `Buffer`s; a `Uint8Array` yields plain `Uint8Array`s. Wrapped in tuples so a
+ * union input type does not distribute (it falls back to `Uint8Array`).
+ */
+export type BytesOutput<DataType> =
+    [DataType] extends [string] ? Buffer :
+    [DataType] extends [Buffer] ? Buffer :
+    Uint8Array;
+
 export type BiOptions<alwaysBigInt> = {
     /**
      * Byte offset to start, default is 0 

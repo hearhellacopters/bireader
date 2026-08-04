@@ -58,6 +58,11 @@ export class ChunkedFileSource implements Source {
         return this.#readOnly;
     }
 
+    /** File contents are read as Buffers, so sub-array results are Buffers. */
+    get isBuffer(): boolean {
+        return typeof Buffer !== 'undefined';
+    }
+
     #numChunks(): number {
         return this.#window === 0 ? 1 : Math.ceil(this.#size / this.#window);
     }

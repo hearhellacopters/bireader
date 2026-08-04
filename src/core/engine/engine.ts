@@ -54,7 +54,7 @@ function isSafeInt64(v: bigint): boolean {
     return hasBigInt ? (v >= MIN_SAFE && v <= MAX_SAFE) : false;
 }
 
-export class BiEngine<alwaysBigInt extends boolean = false> {
+export class BiEngine<alwaysBigInt extends boolean = false, BytesOut extends Uint8Array = Uint8Array> {
     /** File system (fs/promises), injected by the entry point for file mode. */
     static fs: typeof import('fs/promises');
 
@@ -231,6 +231,17 @@ export class BiEngine<alwaysBigInt extends boolean = false> {
         if (offset + length > this.#src.size) {
             throw new RangeError(`Read of ${length} at ${offset} exceeds size ${this.#src.size}`);
         }
+    }
+
+    /**
+     * Returns a fresh copy of `bytes` in the source's native type - a `Buffer` when the
+     * source was created from a Buffer or a file path, otherwise a `Uint8Array`. Every
+     * sub-array-returning method (extract/subarray/fill/delete/readUBytes/...) routes
+     * through here so the output type echoes the input type. Always copies (never a view)
+     * - `Buffer.prototype.slice` returns a shared view, so `Buffer.from` is used instead.
+     */
+    #copyOut(bytes: Uint8Array): BytesOut {
+        return (this.#src.isBuffer && typeof Buffer !== 'undefined' ? Buffer.from(bytes) : bytes.slice()) as BytesOut;
     }
 
     /** Ensure [0, endByte) exists for writing, growing the source if allowed. */
@@ -678,7 +689,7 @@ export class BiEngine<alwaysBigInt extends boolean = false> {
     }
 
     /** Delete [startOffset, endOffset), returning the removed bytes. */
-    delete(startOffset = 0, endOffset = this.offset, consume = false): Promise<Uint8Array> {
+    delete(startOffset = 0, endOffset = this.offset, consume = false): Promise<BytesOut> {
         return this.runExclusive(async () => {
             this.#assertMutable();
 
@@ -688,9 +699,9 @@ export class BiEngine<alwaysBigInt extends boolean = false> {
 
             const removeLen = endOffset - startOffset;
 
-            if (removeLen <= 0) return new Uint8Array(0);
+            if (removeLen <= 0) return this.#copyOut(new Uint8Array(0));
 
-            const removed = (await this.#src.read(startOffset, removeLen)).slice();
+            const removed = this.#copyOut(await this.#src.read(startOffset, removeLen));
 
             const oldSize = this.#src.size;
 
@@ -705,22 +716,22 @@ export class BiEngine<alwaysBigInt extends boolean = false> {
     }
 
     /** Removes and returns all data after the current byte position. Errors in strict mode. */
-    clip(): Promise<Uint8Array> {
+    clip(): Promise<BytesOut> {
         return this.delete(this.offset, this.size, false);
     }
 
     /** Alias of {@link clip} - removes and returns all data after the current byte position. */
-    trim(): Promise<Uint8Array> {
+    trim(): Promise<BytesOut> {
         return this.delete(this.offset, this.size, false);
     }
 
     /** Removes and returns `length` bytes from the current byte position. Errors in strict mode. */
-    crop(length = 0, consume = false): Promise<Uint8Array> {
+    crop(length = 0, consume = false): Promise<BytesOut> {
         return this.delete(this.offset, this.offset + length, consume);
     }
 
     /** Alias of {@link crop} - removes and returns `length` bytes from the current byte position. */
-    drop(length = 0, consume = false): Promise<Uint8Array> {
+    drop(length = 0, consume = false): Promise<BytesOut> {
         return this.delete(this.offset, this.offset + length, consume);
     }
 
@@ -745,7 +756,7 @@ export class BiEngine<alwaysBigInt extends boolean = false> {
     }
 
     /** Copy out [startOffset, endOffset); if `fillValue` given, overwrite that range with it. */
-    fill(startOffset = this.offset, endOffset = this.size, consume = false, fillValue?: number): Promise<Uint8Array> {
+    fill(startOffset = this.offset, endOffset = this.size, consume = false, fillValue?: number): Promise<BytesOut> {
         return this.runExclusive(async () => {
             if (this.#src.readOnly && fillValue != undefined) throw new Error("Can't fill data in readOnly mode!");
 
@@ -753,9 +764,9 @@ export class BiEngine<alwaysBigInt extends boolean = false> {
 
             const len = endOffset - startOffset;
 
-            if (len <= 0) return new Uint8Array(0);
+            if (len <= 0) return this.#copyOut(new Uint8Array(0));
 
-            const slice = (await this.#src.read(startOffset, len)).slice();
+            const slice = this.#copyOut(await this.#src.read(startOffset, len));
 
             if (fillValue != undefined) {
                 await this.#src.write(startOffset, new Uint8Array(len).fill(fillValue & 0xff));
@@ -768,27 +779,27 @@ export class BiEngine<alwaysBigInt extends boolean = false> {
     }
 
     /** Alias of {@link fill} - returns data between two byte positions, optionally filling that range. */
-    lift(startOffset = this.offset, endOffset = this.size, consume = false, fillValue?: number): Promise<Uint8Array> {
+    lift(startOffset = this.offset, endOffset = this.size, consume = false, fillValue?: number): Promise<BytesOut> {
         return this.fill(startOffset, endOffset, consume, fillValue);
     }
 
     /** Returns a copy of the data between two byte positions without modifying it. */
-    subarray(startOffset = this.offset, endOffset = this.size, consume = false): Promise<Uint8Array> {
+    subarray(startOffset = this.offset, endOffset = this.size, consume = false): Promise<BytesOut> {
         return this.fill(startOffset, endOffset, consume);
     }
 
     /** Returns a copy of `length` bytes from the current byte position without modifying the data. */
-    extract(length = 0, consume = false): Promise<Uint8Array> {
+    extract(length = 0, consume = false): Promise<BytesOut> {
         return this.fill(this.offset, this.offset + length, consume);
     }
 
     /** Alias of {@link extract} - returns a copy of `length` bytes from the current byte position. */
-    slice(length = 0, consume = false): Promise<Uint8Array> {
+    slice(length = 0, consume = false): Promise<BytesOut> {
         return this.fill(this.offset, this.offset + length, consume);
     }
 
     /** Alias of {@link extract} - returns a copy of `length` bytes from the current byte position. */
-    wrap(length = 0, consume = false): Promise<Uint8Array> {
+    wrap(length = 0, consume = false): Promise<BytesOut> {
         return this.fill(this.offset, this.offset + length, consume);
     }
 
@@ -1176,12 +1187,12 @@ export class BiEngine<alwaysBigInt extends boolean = false> {
     }
 
     /** Reads `amount` unsigned bytes from the current byte position as a `Uint8Array` copy. */
-    readUBytes(amount: number, consume = true): Promise<Uint8Array> {
+    readUBytes(amount: number, consume = true): Promise<BytesOut> {
         return this.runExclusive(async () => {
             this.#alignByte();
             const at = this.#cursor.byte;
             this.#requireReadable(at, amount);
-            const bytes = (await this.#src.read(at, amount)).slice();
+            const bytes = this.#copyOut(await this.#src.read(at, amount));
             if (consume) this.#cursor.set(at + amount);
             return bytes;
         });
@@ -1450,9 +1461,9 @@ export class BiEngine<alwaysBigInt extends boolean = false> {
         return unsigned ? (v & 0xFF) : (v > 127 ? v - 256 : v);
     }
     /** Reads `length` raw bytes at an absolute offset without moving the cursor. */
-    async readBytesAt(offset: number, length: number): Promise<Uint8Array> {
+    async readBytesAt(offset: number, length: number): Promise<BytesOut> {
         await this.#ensureOpen();
-        return (await this.#src.read(offset, length)).slice();
+        return this.#copyOut(await this.#src.read(offset, length));
     }
     /** Reads a 32 bit float at an absolute offset without moving the cursor. */
     async readFloat32At(offset: number, endian = this.endian): Promise<number> {
@@ -1528,9 +1539,9 @@ export class BiEngine<alwaysBigInt extends boolean = false> {
 
     // #region data / lifecycle
 
-    /** In-memory buffer (memory mode); null in file mode - use get()/getData(). */
-    get data(): Uint8Array | null {
-        return this.#source instanceof MemorySource ? this.#source.data : null;
+    /** In-memory buffer (memory mode, as the source's native type); null in file mode - use get()/getData(). */
+    get data(): BytesOut | null {
+        return this.#source instanceof MemorySource ? this.#source.data as BytesOut : null;
     }
 
     /** DataView over the in-memory buffer (memory mode only). */
@@ -1550,38 +1561,38 @@ export class BiEngine<alwaysBigInt extends boolean = false> {
     }
 
     /** Returns the current data (trimmed to the write position if the buffer was expanded). */
-    async get(): Promise<Uint8Array> {
+    async get(): Promise<BytesOut> {
         await this.#ensureOpen();
         await this.flush();
         const full = this.#src instanceof MemorySource
             ? this.#src.data
-            : new Uint8Array(await this.#src.read(0, this.size));
+            : this.#copyOut(await this.#src.read(0, this.size));
         if (this.growthIncrement !== 0 && this.#wasExpanded) {
-            return full.subarray(0, this.#cursor.byte);
+            return full.subarray(0, this.#cursor.byte) as BytesOut;
         }
-        return full;
+        return full as BytesOut;
     }
 
     /** Alias of {@link get} - returns the current data. */
-    async getData(): Promise<Uint8Array> { return this.get(); }
+    async getData(): Promise<BytesOut> { return this.get(); }
     /** Alias of {@link get} - returns the current data. */
-    async getFullBuffer(): Promise<Uint8Array> { return this.get(); }
+    async getFullBuffer(): Promise<BytesOut> { return this.get(); }
     /** Alias of {@link get} - returns the current data. */
-    async return(): Promise<Uint8Array> { return this.get(); }
+    async return(): Promise<BytesOut> { return this.get(); }
 
     /** Alias of {@link close} - flushes and releases the supplied data. */
-    async end(): Promise<Uint8Array | void> { return this.close(); }
+    async end(): Promise<BytesOut | void> { return this.close(); }
     /** Alias of {@link close} - flushes and releases the supplied data. */
-    async done(): Promise<Uint8Array | void> { return this.close(); }
+    async done(): Promise<BytesOut | void> { return this.close(); }
     /** Alias of {@link close} - flushes and releases the supplied data. */
-    async finished(): Promise<Uint8Array | void> { return this.close(); }
+    async finished(): Promise<BytesOut | void> { return this.close(); }
 
     /** Commits any edits and closes the file. In memory mode returns the buffer instead. */
-    async close(): Promise<Uint8Array | void> {
+    async close(): Promise<BytesOut | void> {
         await this.#ensureOpen();
         await this.flush();
         if (this.#src instanceof MemorySource) {
-            return this.#src.data;
+            return this.#src.data as BytesOut;
         }
         await this.#src.close();
         this.#source = null;

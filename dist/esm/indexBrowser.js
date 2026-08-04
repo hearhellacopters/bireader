@@ -103,6 +103,7 @@ class MemorySyncSource {
     }
     get size() { return this.#data.length; }
     get readOnly() { return this.#readOnly; }
+    get isBuffer() { return this.#isBuffer; }
     get data() { return this.#data; }
     read(offset, length) {
         if (offset < 0 || offset + length > this.#data.length) {
@@ -147,14 +148,19 @@ class FileSyncSource {
         this.#fd = fd;
         this.#fs = fs;
         this.#readOnly = readOnly;
-        const { size } = fs.fstatSync(fd);
+        var size = 0;
+        if (this.#fs) {
+            size = this.#fs.fstatSync(fd).size;
+        }
         this.#data = Buffer.alloc(size);
         if (size > 0) {
-            fs.readSync(fd, this.#data, 0, size, 0);
+            this.#fs.readSync(fd, this.#data, 0, size, 0);
         }
     }
     get size() { return this.#data.length; }
     get readOnly() { return this.#readOnly; }
+    /** File contents are loaded into a Buffer, so sub-array results are Buffers. */
+    get isBuffer() { return true; }
     read(offset, length) {
         if (offset < 0 || offset + length > this.#data.length) {
             throw new RangeError(`Read ${offset}..${offset + length} out of range (size ${this.#data.length})`);
@@ -1094,6 +1100,16 @@ class BiSyncEngine {
             throw new Error(`Reached end of data: ${targetByte} of ${this.size}`);
         this.#ensureWritable(targetByte);
     }
+    /**
+     * Returns a fresh copy of `bytes` in the source's native type - a `Buffer` when the
+     * source was created from a Buffer or a file path, otherwise a `Uint8Array`. Every
+     * sub-array-returning method (extract/subarray/fill/delete/readUBytes/...) routes
+     * through here so the output type echoes the input type. Always copies (never a view)
+     * - `Buffer.prototype.slice` returns a shared view, so `Buffer.from` is used instead.
+     */
+    #copyOut(bytes) {
+        return (this.#src.isBuffer && typeof Buffer !== 'undefined' ? Buffer.from(bytes) : bytes.slice());
+    }
     #readAlignedView(width) {
         this.#alignByte();
         const at = this.#cursor.byte;
@@ -1237,12 +1253,12 @@ class BiSyncEngine {
         }
         return out;
     }
-    /** Reads `amount` unsigned bytes from the current byte position as a `Uint8Array` copy. */
+    /** Reads `amount` unsigned bytes from the current byte position as a copy in the source's native type. */
     readUBytes(amount, consume = true) {
         this.#alignByte();
         const at = this.#cursor.byte;
         this.#requireReadable(at, amount);
-        const bytes = this.#src.read(at, amount).slice();
+        const bytes = this.#copyOut(this.#src.read(at, amount));
         if (consume)
             this.#cursor.set(at + amount);
         return bytes;
@@ -1329,7 +1345,7 @@ class BiSyncEngine {
     push(data, consume = false) { this.insert(data, this.size, consume); }
     /** Alias of {@link push} - adds new data to the end of the supplied data. */
     append(data, consume = false) { this.insert(data, this.size, consume); }
-    /** Removes `[startOffset, endOffset)` and returns the removed bytes. Errors in strict mode. */
+    /** Removes `[startOffset, endOffset)` and returns the removed bytes (as the source's native type). Errors in strict mode. */
     delete(startOffset = 0, endOffset = this.offset, consume = false) {
         this.#assertMutable();
         startOffset = Math.abs(startOffset);
@@ -1337,8 +1353,8 @@ class BiSyncEngine {
             throw new RangeError('Remove range out of bounds');
         const removeLen = endOffset - startOffset;
         if (removeLen <= 0)
-            return new Uint8Array(0);
-        const removed = this.#src.read(startOffset, removeLen).slice();
+            return this.#copyOut(new Uint8Array(0));
+        const removed = this.#copyOut(this.#src.read(startOffset, removeLen));
         const oldSize = this.#src.size;
         this.#shiftBackward(startOffset, removeLen, oldSize);
         this.#src.resize(oldSize - removeLen);
@@ -1367,7 +1383,7 @@ class BiSyncEngine {
     }
     /** Alias of {@link replace} - overwrites data at `offset`. */
     overwrite(data, offset = this.offset, consume = false) { this.replace(data, offset, consume); }
-    /** Returns a copy of `[startOffset, endOffset)`; when `fillValue` is supplied, that range is filled with it. */
+    /** Returns a copy of `[startOffset, endOffset)` (as the source's native type); when `fillValue` is supplied, that range is filled with it. */
     fill(startOffset = this.offset, endOffset = this.size, consume = false, fillValue) {
         if (this.#src.readOnly && fillValue != undefined)
             throw new Error("Can't fill data in readOnly mode!");
@@ -1375,8 +1391,8 @@ class BiSyncEngine {
             throw new RangeError('Range out of bounds');
         const len = endOffset - startOffset;
         if (len <= 0)
-            return new Uint8Array(0);
-        const slice = this.#src.read(startOffset, len).slice();
+            return this.#copyOut(new Uint8Array(0));
+        const slice = this.#copyOut(this.#src.read(startOffset, len));
         if (fillValue != undefined)
             this.#src.write(startOffset, new Uint8Array(len).fill(fillValue & 0xff));
         if (consume)
@@ -1866,7 +1882,7 @@ class BiSyncEngine {
         return _hexDump(data, options, startByte, endByte);
     }
     // #region data / lifecycle
-    /** The full current buffer data, or null when no source is open. */
+    /** The full current buffer data (as the source's native type), or null when no source is open. */
     get data() {
         if (this.#source instanceof MemorySyncSource)
             return this.#source.data;
@@ -4420,6 +4436,9 @@ class MemorySource {
     get readOnly() {
         return this.#readOnly;
     }
+    get isBuffer() {
+        return this.#isBuffer;
+    }
     /** The live backing buffer (no copy). */
     get data() {
         return this.#data;
@@ -4487,6 +4506,10 @@ class ChunkedFileSource {
     }
     get readOnly() {
         return this.#readOnly;
+    }
+    /** File contents are read as Buffers, so sub-array results are Buffers. */
+    get isBuffer() {
+        return typeof Buffer !== 'undefined';
     }
     #numChunks() {
         return this.#window === 0 ? 1 : Math.ceil(this.#size / this.#window);
@@ -4794,6 +4817,16 @@ class BiEngine {
         if (offset + length > this.#src.size) {
             throw new RangeError(`Read of ${length} at ${offset} exceeds size ${this.#src.size}`);
         }
+    }
+    /**
+     * Returns a fresh copy of `bytes` in the source's native type - a `Buffer` when the
+     * source was created from a Buffer or a file path, otherwise a `Uint8Array`. Every
+     * sub-array-returning method (extract/subarray/fill/delete/readUBytes/...) routes
+     * through here so the output type echoes the input type. Always copies (never a view)
+     * - `Buffer.prototype.slice` returns a shared view, so `Buffer.from` is used instead.
+     */
+    #copyOut(bytes) {
+        return (this.#src.isBuffer && typeof Buffer !== 'undefined' ? Buffer.from(bytes) : bytes.slice());
     }
     /** Ensure [0, endByte) exists for writing, growing the source if allowed. */
     async #ensureWritable(endByte) {
@@ -5122,8 +5155,8 @@ class BiEngine {
                 throw new RangeError('Remove range out of bounds');
             const removeLen = endOffset - startOffset;
             if (removeLen <= 0)
-                return new Uint8Array(0);
-            const removed = (await this.#src.read(startOffset, removeLen)).slice();
+                return this.#copyOut(new Uint8Array(0));
+            const removed = this.#copyOut(await this.#src.read(startOffset, removeLen));
             const oldSize = this.#src.size;
             await this.#shiftBackward(startOffset, removeLen, oldSize);
             await this.#src.resize(oldSize - removeLen);
@@ -5174,8 +5207,8 @@ class BiEngine {
                 throw new RangeError('Range out of bounds');
             const len = endOffset - startOffset;
             if (len <= 0)
-                return new Uint8Array(0);
-            const slice = (await this.#src.read(startOffset, len)).slice();
+                return this.#copyOut(new Uint8Array(0));
+            const slice = this.#copyOut(await this.#src.read(startOffset, len));
             if (fillValue != undefined) {
                 await this.#src.write(startOffset, new Uint8Array(len).fill(fillValue & 0xff));
             }
@@ -5535,7 +5568,7 @@ class BiEngine {
             this.#alignByte();
             const at = this.#cursor.byte;
             this.#requireReadable(at, amount);
-            const bytes = (await this.#src.read(at, amount)).slice();
+            const bytes = this.#copyOut(await this.#src.read(at, amount));
             if (consume)
                 this.#cursor.set(at + amount);
             return bytes;
@@ -5786,7 +5819,7 @@ class BiEngine {
     /** Reads `length` raw bytes at an absolute offset without moving the cursor. */
     async readBytesAt(offset, length) {
         await this.#ensureOpen();
-        return (await this.#src.read(offset, length)).slice();
+        return this.#copyOut(await this.#src.read(offset, length));
     }
     /** Reads a 32 bit float at an absolute offset without moving the cursor. */
     async readFloat32At(offset, endian = this.endian) {
@@ -5865,7 +5898,7 @@ class BiEngine {
     /** Writes an unsigned 64 bit value at an absolute offset without moving the cursor. */
     async writeBigUInt64At(offset, value, endian = this.endian) { return this.writeBigInt64At(offset, value, true, endian); }
     // #region data / lifecycle
-    /** In-memory buffer (memory mode); null in file mode - use get()/getData(). */
+    /** In-memory buffer (memory mode, as the source's native type); null in file mode - use get()/getData(). */
     get data() {
         return this.#source instanceof MemorySource ? this.#source.data : null;
     }
@@ -5889,7 +5922,7 @@ class BiEngine {
         await this.flush();
         const full = this.#src instanceof MemorySource
             ? this.#src.data
-            : new Uint8Array(await this.#src.read(0, this.size));
+            : this.#copyOut(await this.#src.read(0, this.size));
         if (this.growthIncrement !== 0 && this.#wasExpanded) {
             return full.subarray(0, this.#cursor.byte);
         }

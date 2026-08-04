@@ -35,10 +35,9 @@ export default [
         }
       )
     ],
-    external: [
-      "node:fs",
-      "node:fs/promises"
-    ]
+    // Match both bare (`fs`) and prefixed (`node:fs`) builtins so rollup marks
+    // them external instead of warning about unresolved dependencies.
+    external: isExternalNodeBuiltin
   },
 
   // ── 2. ESM (Node import + modern bundlers)
@@ -59,10 +58,7 @@ export default [
         declaration: false
       })
     ],
-    external: [
-      "node:fs",
-      "node:fs/promises"
-    ]
+    external: isExternalNodeBuiltin
   },
 
   // ── 3. Browser (ESM bundle – modern bundlers/Vite/Webpack pick this)
@@ -101,10 +97,7 @@ export default [
         tsconfig: './tsconfig.d.ts.json'
       })
     ],
-    external: [
-      "node:fs",
-      "node:fs/promises"
-    ]
+    external: isExternalNodeBuiltin
   },
   {
     input: 'src/indexImport.ts',
@@ -117,10 +110,7 @@ export default [
         tsconfig: './tsconfig.d.ts.json'
       })
     ],
-    external: [
-      "node:fs",
-      "node:fs/promises"
-    ]
+    external: isExternalNodeBuiltin
   },
   {
     input: 'src/indexBrowser.ts',
@@ -132,6 +122,9 @@ export default [
       dts({
         tsconfig: './tsconfig.d.ts.json'
       })
-    ]
+    ],
+    // The flattened browser declarations still reference `typeof import('fs')`
+    // from the engine types, so mark the builtins external here too.
+    external: isExternalNodeBuiltin
   }
 ];

@@ -1,6 +1,7 @@
 import {
     BigValue,
     BiOptions,
+    BytesOutput,
     endian,
     stringOptions,
 } from "./common.js";
@@ -21,7 +22,7 @@ import { BiEngine } from './core/engine/engine.js';
  * 
  * @since 4.0
  */
-export class BiWriterAsync<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiEngine<alwaysBigInt> {
+export class BiWriterAsync<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiEngine<alwaysBigInt, BytesOutput<DataType>> {
     constructor(input?: DataType, options: BiOptions<alwaysBigInt> = {}) {
         const growthIncrement = options.growthIncrement ?? 0x100000;
 

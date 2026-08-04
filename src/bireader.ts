@@ -1,6 +1,7 @@
 import {
     BiOptions,
     BigValue,
+    BytesOutput,
     endian,
     stringOptions
 } from "./common.js";
@@ -21,7 +22,7 @@ import { BiSyncEngine } from './core/engine/sync-engine.js';
  * 
  * @since 2.0
  */
-export class BiReader<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiSyncEngine<alwaysBigInt> {
+export class BiReader<DataType extends string | Uint8Array | Buffer = Uint8Array, alwaysBigInt extends boolean = false> extends BiSyncEngine<alwaysBigInt, BytesOutput<DataType>> {
     constructor(input: DataType, options: BiOptions<alwaysBigInt> = {}) {
         if (input == undefined) {
             throw new Error("Can not start BiReader without data.");

@@ -30,6 +30,10 @@ export class MemorySource implements Source {
         return this.#readOnly;
     }
 
+    get isBuffer(): boolean {
+        return this.#isBuffer;
+    }
+
     /** The live backing buffer (no copy). */
     get data(): Uint8Array {
         return this.#data;

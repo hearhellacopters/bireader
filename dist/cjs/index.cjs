@@ -146,6 +146,7 @@ class MemorySyncSource {
     }
     get size() { return __classPrivateFieldGet(this, _MemorySyncSource_data, "f").length; }
     get readOnly() { return __classPrivateFieldGet(this, _MemorySyncSource_readOnly, "f"); }
+    get isBuffer() { return __classPrivateFieldGet(this, _MemorySyncSource_isBuffer, "f"); }
     get data() { return __classPrivateFieldGet(this, _MemorySyncSource_data, "f"); }
     read(offset, length) {
         if (offset < 0 || offset + length > __classPrivateFieldGet(this, _MemorySyncSource_data, "f").length) {
@@ -191,14 +192,19 @@ class FileSyncSource {
         __classPrivateFieldSet(this, _FileSyncSource_fd, fd, "f");
         __classPrivateFieldSet(this, _FileSyncSource_fs, fs, "f");
         __classPrivateFieldSet(this, _FileSyncSource_readOnly, readOnly, "f");
-        const { size } = fs.fstatSync(fd);
+        var size = 0;
+        if (__classPrivateFieldGet(this, _FileSyncSource_fs, "f")) {
+            size = __classPrivateFieldGet(this, _FileSyncSource_fs, "f").fstatSync(fd).size;
+        }
         __classPrivateFieldSet(this, _FileSyncSource_data, Buffer.alloc(size), "f");
         if (size > 0) {
-            fs.readSync(fd, __classPrivateFieldGet(this, _FileSyncSource_data, "f"), 0, size, 0);
+            __classPrivateFieldGet(this, _FileSyncSource_fs, "f").readSync(fd, __classPrivateFieldGet(this, _FileSyncSource_data, "f"), 0, size, 0);
         }
     }
     get size() { return __classPrivateFieldGet(this, _FileSyncSource_data, "f").length; }
     get readOnly() { return __classPrivateFieldGet(this, _FileSyncSource_readOnly, "f"); }
+    /** File contents are loaded into a Buffer, so sub-array results are Buffers. */
+    get isBuffer() { return true; }
     read(offset, length) {
         if (offset < 0 || offset + length > __classPrivateFieldGet(this, _FileSyncSource_data, "f").length) {
             throw new RangeError(`Read ${offset}..${offset + length} out of range (size ${__classPrivateFieldGet(this, _FileSyncSource_data, "f").length})`);
@@ -1025,7 +1031,7 @@ function _wstring(encodedString, stringType, endian, terminateValue, lengthWrite
     }
 }
 
-var _BiSyncEngine_instances, _a$1, _BiSyncEngine_source, _BiSyncEngine_cursor, _BiSyncEngine_pendingPath, _BiSyncEngine_wasExpanded, _BiSyncEngine_src_get, _BiSyncEngine_ensureOpen, _BiSyncEngine_alignByte, _BiSyncEngine_requireReadable, _BiSyncEngine_ensureWritable, _BiSyncEngine_reach, _BiSyncEngine_readAlignedView, _BiSyncEngine_writeAlignedView, _BiSyncEngine_readFloatN, _BiSyncEngine_assertMutable, _BiSyncEngine_shiftForward, _BiSyncEngine_shiftBackward, _BiSyncEngine_normalizeKey, _BiSyncEngine_applyRange, _BiSyncEngine_keyLen, _BiSyncEngine_findNumber;
+var _BiSyncEngine_instances, _a$1, _BiSyncEngine_source, _BiSyncEngine_cursor, _BiSyncEngine_pendingPath, _BiSyncEngine_wasExpanded, _BiSyncEngine_src_get, _BiSyncEngine_ensureOpen, _BiSyncEngine_alignByte, _BiSyncEngine_requireReadable, _BiSyncEngine_ensureWritable, _BiSyncEngine_reach, _BiSyncEngine_copyOut, _BiSyncEngine_readAlignedView, _BiSyncEngine_writeAlignedView, _BiSyncEngine_readFloatN, _BiSyncEngine_assertMutable, _BiSyncEngine_shiftForward, _BiSyncEngine_shiftBackward, _BiSyncEngine_normalizeKey, _BiSyncEngine_applyRange, _BiSyncEngine_keyLen, _BiSyncEngine_findNumber;
 const hasBigInt$1 = typeof BigInt === 'function';
 const MIN_SAFE$1 = hasBigInt$1 ? BigInt(Number.MIN_SAFE_INTEGER) : 0n;
 const MAX_SAFE$1 = hasBigInt$1 ? BigInt(Number.MAX_SAFE_INTEGER) : 0n;
@@ -1204,12 +1210,12 @@ class BiSyncEngine {
         }
         return out;
     }
-    /** Reads `amount` unsigned bytes from the current byte position as a `Uint8Array` copy. */
+    /** Reads `amount` unsigned bytes from the current byte position as a copy in the source's native type. */
     readUBytes(amount, consume = true) {
         __classPrivateFieldGet(this, _BiSyncEngine_instances, "m", _BiSyncEngine_alignByte).call(this);
         const at = __classPrivateFieldGet(this, _BiSyncEngine_cursor, "f").byte;
         __classPrivateFieldGet(this, _BiSyncEngine_instances, "m", _BiSyncEngine_requireReadable).call(this, at, amount);
-        const bytes = __classPrivateFieldGet(this, _BiSyncEngine_instances, "a", _BiSyncEngine_src_get).read(at, amount).slice();
+        const bytes = __classPrivateFieldGet(this, _BiSyncEngine_instances, "m", _BiSyncEngine_copyOut).call(this, __classPrivateFieldGet(this, _BiSyncEngine_instances, "a", _BiSyncEngine_src_get).read(at, amount));
         if (consume)
             __classPrivateFieldGet(this, _BiSyncEngine_cursor, "f").set(at + amount);
         return bytes;
@@ -1267,7 +1273,7 @@ class BiSyncEngine {
     push(data, consume = false) { this.insert(data, this.size, consume); }
     /** Alias of {@link push} - adds new data to the end of the supplied data. */
     append(data, consume = false) { this.insert(data, this.size, consume); }
-    /** Removes `[startOffset, endOffset)` and returns the removed bytes. Errors in strict mode. */
+    /** Removes `[startOffset, endOffset)` and returns the removed bytes (as the source's native type). Errors in strict mode. */
     delete(startOffset = 0, endOffset = this.offset, consume = false) {
         __classPrivateFieldGet(this, _BiSyncEngine_instances, "m", _BiSyncEngine_assertMutable).call(this);
         startOffset = Math.abs(startOffset);
@@ -1275,8 +1281,8 @@ class BiSyncEngine {
             throw new RangeError('Remove range out of bounds');
         const removeLen = endOffset - startOffset;
         if (removeLen <= 0)
-            return new Uint8Array(0);
-        const removed = __classPrivateFieldGet(this, _BiSyncEngine_instances, "a", _BiSyncEngine_src_get).read(startOffset, removeLen).slice();
+            return __classPrivateFieldGet(this, _BiSyncEngine_instances, "m", _BiSyncEngine_copyOut).call(this, new Uint8Array(0));
+        const removed = __classPrivateFieldGet(this, _BiSyncEngine_instances, "m", _BiSyncEngine_copyOut).call(this, __classPrivateFieldGet(this, _BiSyncEngine_instances, "a", _BiSyncEngine_src_get).read(startOffset, removeLen));
         const oldSize = __classPrivateFieldGet(this, _BiSyncEngine_instances, "a", _BiSyncEngine_src_get).size;
         __classPrivateFieldGet(this, _BiSyncEngine_instances, "m", _BiSyncEngine_shiftBackward).call(this, startOffset, removeLen, oldSize);
         __classPrivateFieldGet(this, _BiSyncEngine_instances, "a", _BiSyncEngine_src_get).resize(oldSize - removeLen);
@@ -1305,7 +1311,7 @@ class BiSyncEngine {
     }
     /** Alias of {@link replace} - overwrites data at `offset`. */
     overwrite(data, offset = this.offset, consume = false) { this.replace(data, offset, consume); }
-    /** Returns a copy of `[startOffset, endOffset)`; when `fillValue` is supplied, that range is filled with it. */
+    /** Returns a copy of `[startOffset, endOffset)` (as the source's native type); when `fillValue` is supplied, that range is filled with it. */
     fill(startOffset = this.offset, endOffset = this.size, consume = false, fillValue) {
         if (__classPrivateFieldGet(this, _BiSyncEngine_instances, "a", _BiSyncEngine_src_get).readOnly && fillValue != undefined)
             throw new Error("Can't fill data in readOnly mode!");
@@ -1313,8 +1319,8 @@ class BiSyncEngine {
             throw new RangeError('Range out of bounds');
         const len = endOffset - startOffset;
         if (len <= 0)
-            return new Uint8Array(0);
-        const slice = __classPrivateFieldGet(this, _BiSyncEngine_instances, "a", _BiSyncEngine_src_get).read(startOffset, len).slice();
+            return __classPrivateFieldGet(this, _BiSyncEngine_instances, "m", _BiSyncEngine_copyOut).call(this, new Uint8Array(0));
+        const slice = __classPrivateFieldGet(this, _BiSyncEngine_instances, "m", _BiSyncEngine_copyOut).call(this, __classPrivateFieldGet(this, _BiSyncEngine_instances, "a", _BiSyncEngine_src_get).read(startOffset, len));
         if (fillValue != undefined)
             __classPrivateFieldGet(this, _BiSyncEngine_instances, "a", _BiSyncEngine_src_get).write(startOffset, new Uint8Array(len).fill(fillValue & 0xff));
         if (consume)
@@ -1771,7 +1777,7 @@ class BiSyncEngine {
         return _hexDump(data, options, startByte, endByte);
     }
     // #region data / lifecycle
-    /** The full current buffer data, or null when no source is open. */
+    /** The full current buffer data (as the source's native type), or null when no source is open. */
     get data() {
         if (__classPrivateFieldGet(this, _BiSyncEngine_source, "f") instanceof MemorySyncSource)
             return __classPrivateFieldGet(this, _BiSyncEngine_source, "f").data;
@@ -1896,6 +1902,8 @@ _a$1 = BiSyncEngine, _BiSyncEngine_source = new WeakMap(), _BiSyncEngine_cursor 
     if (this.strict || this.readOnly)
         throw new Error(`Reached end of data: ${targetByte} of ${this.size}`);
     __classPrivateFieldGet(this, _BiSyncEngine_instances, "m", _BiSyncEngine_ensureWritable).call(this, targetByte);
+}, _BiSyncEngine_copyOut = function _BiSyncEngine_copyOut(bytes) {
+    return (__classPrivateFieldGet(this, _BiSyncEngine_instances, "a", _BiSyncEngine_src_get).isBuffer && typeof Buffer !== 'undefined' ? Buffer.from(bytes) : bytes.slice());
 }, _BiSyncEngine_readAlignedView = function _BiSyncEngine_readAlignedView(width) {
     __classPrivateFieldGet(this, _BiSyncEngine_instances, "m", _BiSyncEngine_alignByte).call(this);
     const at = __classPrivateFieldGet(this, _BiSyncEngine_cursor, "f").byte;
@@ -4441,6 +4449,9 @@ class MemorySource {
     get readOnly() {
         return __classPrivateFieldGet(this, _MemorySource_readOnly, "f");
     }
+    get isBuffer() {
+        return __classPrivateFieldGet(this, _MemorySource_isBuffer, "f");
+    }
     /** The live backing buffer (no copy). */
     get data() {
         return __classPrivateFieldGet(this, _MemorySource_data, "f");
@@ -4511,6 +4522,10 @@ class ChunkedFileSource {
     }
     get readOnly() {
         return __classPrivateFieldGet(this, _ChunkedFileSource_readOnly, "f");
+    }
+    /** File contents are read as Buffers, so sub-array results are Buffers. */
+    get isBuffer() {
+        return typeof Buffer !== 'undefined';
     }
     async read(offset, length) {
         if (offset < 0 || offset + length > __classPrivateFieldGet(this, _ChunkedFileSource_size, "f")) {
@@ -4672,7 +4687,7 @@ _ChunkedFileSource_fd = new WeakMap(), _ChunkedFileSource_size = new WeakMap(), 
     await Promise.all(promises);
 };
 
-var _BiEngine_instances, _a, _BiEngine_source, _BiEngine_cursor, _BiEngine_pendingPath, _BiEngine_lock, _BiEngine_inOp, _BiEngine_wasExpanded, _BiEngine_src_get, _BiEngine_ensureOpen, _BiEngine_alignByte, _BiEngine_requireReadable, _BiEngine_ensureWritable, _BiEngine_readAligned, _BiEngine_writeAligned, _BiEngine_readIntN, _BiEngine_readFloatN, _BiEngine_reach, _BiEngine_assertMutable, _BiEngine_shiftForward, _BiEngine_shiftBackward, _BiEngine_normalizeKey, _BiEngine_applyRange, _BiEngine_keyLen, _BiEngine_findNumber;
+var _BiEngine_instances, _a, _BiEngine_source, _BiEngine_cursor, _BiEngine_pendingPath, _BiEngine_lock, _BiEngine_inOp, _BiEngine_wasExpanded, _BiEngine_src_get, _BiEngine_ensureOpen, _BiEngine_alignByte, _BiEngine_requireReadable, _BiEngine_copyOut, _BiEngine_ensureWritable, _BiEngine_readAligned, _BiEngine_writeAligned, _BiEngine_readIntN, _BiEngine_readFloatN, _BiEngine_reach, _BiEngine_assertMutable, _BiEngine_shiftForward, _BiEngine_shiftBackward, _BiEngine_normalizeKey, _BiEngine_applyRange, _BiEngine_keyLen, _BiEngine_findNumber;
 const hasBigInt = typeof BigInt === 'function';
 const MIN_SAFE = hasBigInt ? BigInt(Number.MIN_SAFE_INTEGER) : 0n;
 const MAX_SAFE = hasBigInt ? BigInt(Number.MAX_SAFE_INTEGER) : 0n;
@@ -5006,8 +5021,8 @@ class BiEngine {
                 throw new RangeError('Remove range out of bounds');
             const removeLen = endOffset - startOffset;
             if (removeLen <= 0)
-                return new Uint8Array(0);
-            const removed = (await __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).read(startOffset, removeLen)).slice();
+                return __classPrivateFieldGet(this, _BiEngine_instances, "m", _BiEngine_copyOut).call(this, new Uint8Array(0));
+            const removed = __classPrivateFieldGet(this, _BiEngine_instances, "m", _BiEngine_copyOut).call(this, await __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).read(startOffset, removeLen));
             const oldSize = __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).size;
             await __classPrivateFieldGet(this, _BiEngine_instances, "m", _BiEngine_shiftBackward).call(this, startOffset, removeLen, oldSize);
             await __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).resize(oldSize - removeLen);
@@ -5058,8 +5073,8 @@ class BiEngine {
                 throw new RangeError('Range out of bounds');
             const len = endOffset - startOffset;
             if (len <= 0)
-                return new Uint8Array(0);
-            const slice = (await __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).read(startOffset, len)).slice();
+                return __classPrivateFieldGet(this, _BiEngine_instances, "m", _BiEngine_copyOut).call(this, new Uint8Array(0));
+            const slice = __classPrivateFieldGet(this, _BiEngine_instances, "m", _BiEngine_copyOut).call(this, await __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).read(startOffset, len));
             if (fillValue != undefined) {
                 await __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).write(startOffset, new Uint8Array(len).fill(fillValue & 0xff));
             }
@@ -5383,7 +5398,7 @@ class BiEngine {
             __classPrivateFieldGet(this, _BiEngine_instances, "m", _BiEngine_alignByte).call(this);
             const at = __classPrivateFieldGet(this, _BiEngine_cursor, "f").byte;
             __classPrivateFieldGet(this, _BiEngine_instances, "m", _BiEngine_requireReadable).call(this, at, amount);
-            const bytes = (await __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).read(at, amount)).slice();
+            const bytes = __classPrivateFieldGet(this, _BiEngine_instances, "m", _BiEngine_copyOut).call(this, await __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).read(at, amount));
             if (consume)
                 __classPrivateFieldGet(this, _BiEngine_cursor, "f").set(at + amount);
             return bytes;
@@ -5634,7 +5649,7 @@ class BiEngine {
     /** Reads `length` raw bytes at an absolute offset without moving the cursor. */
     async readBytesAt(offset, length) {
         await __classPrivateFieldGet(this, _BiEngine_instances, "m", _BiEngine_ensureOpen).call(this);
-        return (await __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).read(offset, length)).slice();
+        return __classPrivateFieldGet(this, _BiEngine_instances, "m", _BiEngine_copyOut).call(this, await __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).read(offset, length));
     }
     /** Reads a 32 bit float at an absolute offset without moving the cursor. */
     async readFloat32At(offset, endian = this.endian) {
@@ -5713,7 +5728,7 @@ class BiEngine {
     /** Writes an unsigned 64 bit value at an absolute offset without moving the cursor. */
     async writeBigUInt64At(offset, value, endian = this.endian) { return this.writeBigInt64At(offset, value, true, endian); }
     // #region data / lifecycle
-    /** In-memory buffer (memory mode); null in file mode - use get()/getData(). */
+    /** In-memory buffer (memory mode, as the source's native type); null in file mode - use get()/getData(). */
     get data() {
         return __classPrivateFieldGet(this, _BiEngine_source, "f") instanceof MemorySource ? __classPrivateFieldGet(this, _BiEngine_source, "f").data : null;
     }
@@ -5737,7 +5752,7 @@ class BiEngine {
         await this.flush();
         const full = __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get) instanceof MemorySource
             ? __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).data
-            : new Uint8Array(await __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).read(0, this.size));
+            : __classPrivateFieldGet(this, _BiEngine_instances, "m", _BiEngine_copyOut).call(this, await __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).read(0, this.size));
         if (this.growthIncrement !== 0 && __classPrivateFieldGet(this, _BiEngine_wasExpanded, "f")) {
             return full.subarray(0, __classPrivateFieldGet(this, _BiEngine_cursor, "f").byte);
         }
@@ -5831,6 +5846,8 @@ async function _BiEngine_ensureOpen() {
     if (offset + length > __classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).size) {
         throw new RangeError(`Read of ${length} at ${offset} exceeds size ${__classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).size}`);
     }
+}, _BiEngine_copyOut = function _BiEngine_copyOut(bytes) {
+    return (__classPrivateFieldGet(this, _BiEngine_instances, "a", _BiEngine_src_get).isBuffer && typeof Buffer !== 'undefined' ? Buffer.from(bytes) : bytes.slice());
 }, _BiEngine_ensureWritable = 
 /** Ensure [0, endByte) exists for writing, growing the source if allowed. */
 async function _BiEngine_ensureWritable(endByte) {

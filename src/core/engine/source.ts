@@ -16,6 +16,13 @@ export interface Source {
     /** Whether writes are permitted. */
     readonly readOnly: boolean;
 
+    /**
+     * Whether sub-array results should be returned as Node `Buffer`s rather than
+     * plain `Uint8Array`s - true for file-backed sources and for memory sources
+     * created from a `Buffer`, so `extract`/`subarray`/etc. echo the input type.
+     */
+    readonly isBuffer: boolean;
+
     /** Read exactly `length` bytes at absolute `offset` (no cursor involved). */
     read(offset: number, length: number): Promise<Uint8Array>;
 

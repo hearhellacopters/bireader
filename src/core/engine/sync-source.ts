@@ -12,6 +12,12 @@
 export interface SyncSource {
     readonly size: number;
     readonly readOnly: boolean;
+    /**
+     * Whether sub-array results should be returned as Node `Buffer`s rather than
+     * plain `Uint8Array`s - true for file-backed sources and for memory sources
+     * created from a `Buffer`, so `extract`/`subarray`/etc. echo the input type.
+     */
+    readonly isBuffer: boolean;
     read(offset: number, length: number): Uint8Array;
     write(offset: number, data: Uint8Array): void;
     resize(size: number): void;
@@ -34,6 +40,7 @@ export class MemorySyncSource implements SyncSource {
 
     get size(): number { return this.#data.length; }
     get readOnly(): boolean { return this.#readOnly; }
+    get isBuffer(): boolean { return this.#isBuffer; }
     get data(): Uint8Array { return this.#data; }
 
     read(offset: number, length: number): Uint8Array {
@@ -92,17 +99,23 @@ export class FileSyncSource implements SyncSource {
 
         this.#readOnly = readOnly;
 
-        const { size } = fs.fstatSync(fd);
+        var size = 0;
 
+        if(this.#fs){
+            size = this.#fs.fstatSync(fd).size;
+        }
+        
         this.#data = Buffer.alloc(size);
 
         if (size > 0) {
-            fs.readSync(fd, this.#data, 0, size, 0);
+            this.#fs.readSync(fd, this.#data, 0, size, 0);
         }
     }
 
     get size(): number { return this.#data.length; }
     get readOnly(): boolean { return this.#readOnly; }
+    /** File contents are loaded into a Buffer, so sub-array results are Buffers. */
+    get isBuffer(): boolean { return true; }
 
     read(offset: number, length: number): Uint8Array {
         if (offset < 0 || offset + length > this.#data.length) {
