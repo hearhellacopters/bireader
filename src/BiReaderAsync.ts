@@ -982,10 +982,11 @@ export class BiReaderAsync<DataType extends string | Uint8Array | Buffer = Uint8
     * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types 
     * @param {stringOptions["endian"]?} options.endian - for utf-16, utf-32, wide-pascal or double-wide-pascal
+    * @param {boolean} [consume=true] - advance the read position past the string (default `true`)
     * @returns {string}
     */
-    async string(options?: stringOptions): Promise<string> {
-        return await this.readString(options);
+    async string(options?: stringOptions, consume: boolean = true): Promise<string> {
+        return await this.readString(options, consume);
     };
 
     /**

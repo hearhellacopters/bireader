@@ -1269,9 +1269,10 @@ declare class BiReader<DataType extends string | Uint8Array | Buffer = Uint8Arra
     * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
     * @param {stringOptions["endian"]?} options.endian - for utf-16, utf-32, wide-pascal or double-wide-pascal
+    * @param {boolean} [consume=true] - advance the read position past the string (default `true`)
     * @returns {string}
     */
-    string(options?: stringOptions): string;
+    string(options?: stringOptions, consume?: boolean): string;
     /**
     * Reads string using setting from .strDefaults
     *
@@ -3902,9 +3903,10 @@ declare class BiReaderAsync<DataType extends string | Uint8Array | Buffer = Uint
     * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
     * @param {stringOptions["endian"]?} options.endian - for utf-16, utf-32, wide-pascal or double-wide-pascal
+    * @param {boolean} [consume=true] - advance the read position past the string (default `true`)
     * @returns {string}
     */
-    string(options?: stringOptions): Promise<string>;
+    string(options?: stringOptions, consume?: boolean): Promise<string>;
     /**
     * Reads string using setting from .strDefaults
     *

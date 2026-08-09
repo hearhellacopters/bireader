@@ -904,7 +904,11 @@ function _NOT(data, start, end) {
     }
     return { offset: end, bitoffset: 0 };
 }
-function _rstring(stringType, lengthReadSize, readLengthinBytes, terminateValue, stripNull, encoding, endian, readUByte, readUInt16, readUInt32) {
+function _rstring(stringType, lengthReadSize, readLengthinBytes, terminateValue, stripNull, encoding, endian, readUByte, readUInt16, readUInt32, 
+// Fixed-length reads consume the full `readLengthinBytes` even when a terminator
+// appears early: the terminator ends the string *content*, not the field. Terminated
+// reads (no fixed length) stop consuming at the terminator, as before.
+fixedLength = false) {
     const encodedBytes = [];
     if (stringType === 'pascal' || stringType === 'wide-pascal' || stringType === "double-wide-pascal") {
         // NaN disables the terminator check (read == NaN is always false); pascal is length-based.
@@ -935,6 +939,9 @@ function _rstring(stringType, lengthReadSize, readLengthinBytes, terminateValue,
             readSize = 4;
             break;
     }
+    // `terminated` freezes the string content at the first terminator; the loop keeps
+    // running for fixed-length reads so the caller's cursor advances the full field.
+    let terminated = false;
     for (let i = 0; i < readLengthinBytes; i++) {
         var read = terminateValue;
         switch (readSize) {
@@ -956,12 +963,16 @@ function _rstring(stringType, lengthReadSize, readLengthinBytes, terminateValue,
                 break;
         }
         if (read == terminateValue) {
-            break;
-        }
-        else {
-            if (!(stripNull == true && read == 0)) {
-                encodedBytes.push(read);
+            terminated = true;
+            // Terminated (non-fixed) reads stop here; fixed-length reads keep
+            // consuming the remaining bytes of the field without appending them.
+            if (!fixedLength) {
+                break;
             }
+            continue;
+        }
+        if (!terminated && !(stripNull == true && read == 0)) {
+            encodedBytes.push(read);
         }
     }
     switch (stringType) {
@@ -1365,7 +1376,7 @@ class BiSyncEngine {
         const rU8 = () => bytes[pos++];
         const rU16 = (e) => { const v = readInt(dv, pos, 16, false, e === 'little'); pos += 2; return v; };
         const rU32 = (e) => { const v = readInt(dv, pos, 32, false, e === 'little') >>> 0; pos += 4; return v; };
-        const str = _rstring(stringType, lengthReadSize, readLengthinBytes, terminate, stripNull, encoding, endian, rU8, rU16, rU32);
+        const str = _rstring(stringType, lengthReadSize, readLengthinBytes, terminate, stripNull, encoding, endian, rU8, rU16, rU32, length != undefined);
         if (consume)
             __classPrivateFieldGet(this, _BiSyncEngine_cursor, "f").set(at + pos);
         return str;
@@ -2655,10 +2666,11 @@ class BiReader extends BiSyncEngine {
     * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
     * @param {stringOptions["endian"]?} options.endian - for utf-16, utf-32, wide-pascal or double-wide-pascal
+    * @param {boolean} [consume=true] - advance the read position past the string (default `true`)
     * @returns {string}
     */
-    string(options = this.strDefaults) {
-        return this.readString(options);
+    string(options = this.strDefaults, consume = true) {
+        return this.readString(options, consume);
     }
     ;
     /**
@@ -5130,7 +5142,7 @@ class BiEngine {
             const rU8 = () => bytes[pos++];
             const rU16 = (e) => { const v = readInt(dv, pos, 16, false, e === 'little'); pos += 2; return v; };
             const rU32 = (e) => { const v = readInt(dv, pos, 32, false, e === 'little') >>> 0; pos += 4; return v; };
-            const str = _rstring(stringType, lengthReadSize, readLengthinBytes, terminate, stripNull, encoding, endian, rU8, rU16, rU32);
+            const str = _rstring(stringType, lengthReadSize, readLengthinBytes, terminate, stripNull, encoding, endian, rU8, rU16, rU32, length != undefined);
             if (consume)
                 __classPrivateFieldGet(this, _BiEngine_cursor, "f").set(at + pos);
             return str;
@@ -6663,10 +6675,11 @@ class BiReaderAsync extends BiEngine {
     * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types
     * @param {stringOptions["endian"]?} options.endian - for utf-16, utf-32, wide-pascal or double-wide-pascal
+    * @param {boolean} [consume=true] - advance the read position past the string (default `true`)
     * @returns {string}
     */
-    async string(options) {
-        return await this.readString(options);
+    async string(options, consume = true) {
+        return await this.readString(options, consume);
     }
     ;
     /**

@@ -468,7 +468,7 @@ export class BiSyncEngine<alwaysBigInt extends boolean = false, BytesOut extends
         const rU8 = () => bytes[pos++];
         const rU16 = (e: Endian) => { const v = readInt(dv, pos, 16, false, e === 'little'); pos += 2; return v; };
         const rU32 = (e: Endian) => { const v = readInt(dv, pos, 32, false, e === 'little') >>> 0; pos += 4; return v; };
-        const str = _rstring(stringType, lengthReadSize, readLengthinBytes, terminate, stripNull, encoding, endian, rU8, rU16, rU32);
+        const str = _rstring(stringType, lengthReadSize, readLengthinBytes, terminate, stripNull, encoding, endian, rU8, rU16, rU32, length != undefined);
         if (consume) this.#cursor.set(at + pos);
         return str;
     }

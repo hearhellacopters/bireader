@@ -659,7 +659,11 @@ export function _rstring(
     endian: "little" | "big",
     readUByte: () => number,
     readUInt16: (endian: "little" | "big") => number,
-    readUInt32: (endian: "little" | "big") => number) {
+    readUInt32: (endian: "little" | "big") => number,
+    // Fixed-length reads consume the full `readLengthinBytes` even when a terminator
+    // appears early: the terminator ends the string *content*, not the field. Terminated
+    // reads (no fixed length) stop consuming at the terminator, as before.
+    fixedLength: boolean = false) {
     const encodedBytes: Array<number> = [];
 
     if (stringType === 'pascal' || stringType === 'wide-pascal' || stringType === "double-wide-pascal") {
@@ -698,6 +702,10 @@ export function _rstring(
             break;
     }
 
+    // `terminated` freezes the string content at the first terminator; the loop keeps
+    // running for fixed-length reads so the caller's cursor advances the full field.
+    let terminated = false;
+
     for (let i = 0; i < readLengthinBytes; i++) {
         var read = terminateValue;
 
@@ -723,11 +731,19 @@ export function _rstring(
         }
 
         if (read == terminateValue) {
-            break;
-        } else {
-            if (!(stripNull == true && read == 0)) {
-                encodedBytes.push(read);
+            terminated = true;
+
+            // Terminated (non-fixed) reads stop here; fixed-length reads keep
+            // consuming the remaining bytes of the field without appending them.
+            if (!fixedLength) {
+                break;
             }
+
+            continue;
+        }
+
+        if (!terminated && !(stripNull == true && read == 0)) {
+            encodedBytes.push(read);
         }
     }
 

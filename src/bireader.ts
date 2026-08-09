@@ -956,10 +956,11 @@ export class BiReader<DataType extends string | Uint8Array | Buffer = Uint8Array
     * @param {stringOptions["stripNull"]?} options.stripNull - removes 0x00 characters
     * @param {stringOptions["encoding"]?} options.encoding - TextEncoder accepted types 
     * @param {stringOptions["endian"]?} options.endian - for utf-16, utf-32, wide-pascal or double-wide-pascal
+    * @param {boolean} [consume=true] - advance the read position past the string (default `true`)
     * @returns {string}
     */
-    string(options: stringOptions = this.strDefaults): string {
-        return this.readString(options);
+    string(options: stringOptions = this.strDefaults, consume: boolean = true): string {
+        return this.readString(options, consume);
     };
 
     /**
